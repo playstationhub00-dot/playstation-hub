@@ -15,6 +15,7 @@
     <a href="/ps-plus">PS Plus Deluxe</a>
     <a href="/how-it-works">How It Works</a>
     <a href="/admin" class="admin-btn">Admin Panel</a>
+    <a href="/admin/logout" style="background:#222;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.45rem 0.9rem;font-size:0.8rem;font-weight:600;text-decoration:none;margin-left:0.5rem;">🔒 Logout</a>
   </div>
 </nav>
 
@@ -577,11 +578,37 @@
   </div>
 </div>
 
+<!-- CHANGE PASSWORD -->
+<div class="admin-container" style="padding-top:0;">
+  <div class="form-card" style="border-color:rgba(255,50,50,0.2);background:linear-gradient(135deg,#1a0a0a,#1a1a1a);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">🔒 Change Admin Password</h2>
+    <form method="POST" action="/admin/change-password">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Current Password</label>
+          <input type="password" name="current_password" placeholder="Current password" required>
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" name="new_password" placeholder="New password (min 4 chars)" required>
+        </div>
+        <div class="form-group">
+          <label>Confirm New Password</label>
+          <input type="password" name="confirm_password" placeholder="Repeat new password" required>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn" style="background:#c0392b;color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Change Password</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const params = new URLSearchParams(window.location.search);
 const msg = params.get('msg');
 if (msg) {
-  const messages = { added: '✅ Game added!', updated: '✅ Game updated!', deleted: '🗑 Game deleted!', announcement: '📢 Announcement saved!', upcoming_added: '🔜 Upcoming game added!', upcoming_updated: '✅ Upcoming game updated!', upcoming_deleted: '🗑 Upcoming game deleted!', psplus_added: '⭐ Monthly entry added!', psplus_updated: '✅ Monthly entry updated!', psplus_deleted: '🗑 Monthly entry deleted!', psplus_prices: '💰 PS Plus prices saved!', popular_added: '🔥 Game added to Most Played!', popular_updated: '✅ Most Played game updated!', popular_deleted: '🗑 Game removed from Most Played!' };
+  const messages = { added: '✅ Game added!', updated: '✅ Game updated!', deleted: '🗑 Game deleted!', announcement: '📢 Announcement saved!', upcoming_added: '🔜 Upcoming game added!', upcoming_updated: '✅ Upcoming game updated!', upcoming_deleted: '🗑 Upcoming game deleted!', psplus_added: '⭐ Monthly entry added!', psplus_updated: '✅ Monthly entry updated!', psplus_deleted: '🗑 Monthly entry deleted!', psplus_prices: '💰 PS Plus prices saved!', popular_added: '🔥 Game added to Most Played!', popular_updated: '✅ Most Played game updated!', popular_deleted: '🗑 Game removed from Most Played!', settings_saved: '⚙️ Settings saved!', password_changed: '🔒 Password changed!', wrong_password: '❌ Current password is wrong!', password_mismatch: '❌ Passwords do not match!', password_too_short: '❌ Password must be at least 4 characters!' };
   const text = messages[msg];
   if (text) {
     const toast = document.createElement('div');

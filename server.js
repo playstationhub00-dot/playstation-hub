@@ -1,9 +1,10 @@
-const express = require('express');
+﻿const express = require('express');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +28,8 @@ db.defaults({
     tr_price_10d: 399, tr_price_15d: 499, tr_price_30d: 699
   },
   announcement: { text: '📢 Monthly subscription renters can enjoy unlimited swap of games! Message us for more info.', active: true },
-  site_settings: { title: 'Playstation Hub', logo_path: '/logo.svg', hero_bg: { type: 'default', path: '' } }
+  site_settings: { title: 'Playstation Hub', logo_path: '/logo.svg', hero_bg: { type: 'default', path: '' } },
+  admin_password: 'admin123'
 }).write();
 
 // Migrate existing games to new fields if missing
@@ -86,6 +88,39 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'pshub-secret-2026',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 1000 * 60 * 60 * 8 } // 8 hours
+}));
+
+// Auth middleware — protects all /admin routes
+function requireAuth(req, res, next) {
+  if (req.session && req.session.isAdmin) return next();
+  res.redirect('/admin/login');
+}
+
+// Login routes (public)
+app.get('/admin/login', (req, res) => {
+  res.render('login', { error: null, settings: getSiteSettings() });
+});
+
+app.post('/admin/login', (req, res) => {
+  const { password } = req.body;
+  const correct = db.get('admin_password').value();
+  if (password === correct) {
+    req.session.isAdmin = true;
+    res.redirect('/admin');
+  } else {
+    res.render('login', { error: 'Incorrect password. Try again.', settings: getSiteSettings() });
+  }
+});
+
+app.get('/admin/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/admin/login');
+});
 
 function getGames() { return db.get('games').value(); }
 function getGame(id) { return db.get('games').find({ id: parseInt(id) }).value(); }
@@ -153,7 +188,7 @@ app.get('/ps-plus', (req, res) => {
 });
 
 // PS Plus admin CRUD
-app.post('/admin/psplus/add', upload.single('cover_image'), (req, res) => {
+app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { year, month, games_list, notes } = req.body;
   if (!year || !month) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
@@ -170,13 +205,13 @@ app.post('/admin/psplus/add', upload.single('cover_image'), (req, res) => {
   res.redirect('/admin?msg=psplus_added');
 });
 
-app.get('/admin/psplus/edit/:id', (req, res) => {
+app.get('/admin/psplus/edit/:id', requireAuth, (req, res) => {
   const entry = getPsplusEntry(req.params.id);
   if (!entry) return res.redirect('/admin');
   res.render('edit-psplus', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/edit/:id', upload.single('cover_image'), (req, res) => {
+app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { year, month, games_list, notes } = req.body;
   const existing = getPsplusEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
@@ -192,7 +227,7 @@ app.post('/admin/psplus/edit/:id', upload.single('cover_image'), (req, res) => {
   res.redirect('/admin?msg=psplus_updated');
 });
 
-app.post('/admin/psplus/delete/:id', (req, res) => {
+app.post('/admin/psplus/delete/:id', requireAuth, (req, res) => {
   const entry = getPsplusEntry(req.params.id);
   if (entry?.cover_image) {
     const fp = path.join(__dirname, 'public', entry.cover_image);
@@ -203,7 +238,7 @@ app.post('/admin/psplus/delete/:id', (req, res) => {
 });
 
 // PS Plus Popular CRUD
-app.post('/admin/psplus/popular/add', upload.single('cover_image'), (req, res) => {
+app.post('/admin/psplus/popular/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, description, rank } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
@@ -220,13 +255,13 @@ app.post('/admin/psplus/popular/add', upload.single('cover_image'), (req, res) =
   res.redirect('/admin?msg=popular_added');
 });
 
-app.get('/admin/psplus/popular/edit/:id', (req, res) => {
+app.get('/admin/psplus/popular/edit/:id', requireAuth, (req, res) => {
   const entry = getPsplusPopularEntry(req.params.id);
   if (!entry) return res.redirect('/admin');
   res.render('edit-psplus-popular', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), (req, res) => {
+app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, description, rank } = req.body;
   const existing = getPsplusPopularEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
@@ -238,7 +273,7 @@ app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), (req, r
   res.redirect('/admin?msg=popular_updated');
 });
 
-app.post('/admin/psplus/popular/delete/:id', (req, res) => {
+app.post('/admin/psplus/popular/delete/:id', requireAuth, (req, res) => {
   const entry = getPsplusPopularEntry(req.params.id);
   if (entry?.cover_image) {
     const fp = path.join(__dirname, 'public', entry.cover_image);
@@ -249,7 +284,7 @@ app.post('/admin/psplus/popular/delete/:id', (req, res) => {
 });
 
 // Update PS Plus global prices
-app.post('/admin/psplus/prices', (req, res) => {
+app.post('/admin/psplus/prices', requireAuth, (req, res) => {
   const { nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   db.set('psplus_prices', {
     nt_price_10d: parseInt(nt_price_10d) || 349,
@@ -281,7 +316,7 @@ app.get('/browse', (req, res) => {
   res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, announcement: getAnnouncement(), settings: getSiteSettings() });
 });
 
-app.get('/admin', (req, res) => {
+app.get('/admin', requireAuth, (req, res) => {
   const games = [...getGames()].sort((a, b) => b.id - a.id);
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
@@ -290,7 +325,7 @@ app.get('/admin', (req, res) => {
 });
 
 // Upcoming CRUD
-app.post('/admin/upcoming/add', upload.single('cover_image'), (req, res) => {
+app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, release_date, description } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
@@ -307,13 +342,13 @@ app.post('/admin/upcoming/add', upload.single('cover_image'), (req, res) => {
   res.redirect('/admin?msg=upcoming_added');
 });
 
-app.get('/admin/upcoming/edit/:id', (req, res) => {
+app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
   const game = getUpcomingGame(req.params.id);
   if (!game) return res.redirect('/admin');
   res.render('edit-upcoming', { game, settings: getSiteSettings() });
 });
 
-app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), (req, res) => {
+app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, release_date, description } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
@@ -325,7 +360,7 @@ app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), (req, res) =>
   res.redirect('/admin?msg=upcoming_updated');
 });
 
-app.post('/admin/upcoming/delete/:id', (req, res) => {
+app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
   const game = getUpcomingGame(req.params.id);
   if (game?.cover_image) {
     const fp = path.join(__dirname, 'public', game.cover_image);
@@ -335,13 +370,13 @@ app.post('/admin/upcoming/delete/:id', (req, res) => {
   res.redirect('/admin?msg=upcoming_deleted');
 });
 
-app.post('/admin/announcement', (req, res) => {
+app.post('/admin/announcement', requireAuth, (req, res) => {
   const { text, active } = req.body;
   db.set('announcement', { text: text || '', active: active === 'on' }).write();
   res.redirect('/admin?msg=announcement');
 });
 
-app.post('/admin/add', upload.single('cover_image'), (req, res) => {
+app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
@@ -369,13 +404,13 @@ app.post('/admin/add', upload.single('cover_image'), (req, res) => {
   res.redirect('/admin?msg=added');
 });
 
-app.get('/admin/edit/:id', (req, res) => {
+app.get('/admin/edit/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (!game) return res.redirect('/admin');
   res.render('edit', { game, settings: getSiteSettings() });
 });
 
-app.post('/admin/edit/:id', upload.single('cover_image'), (req, res) => {
+app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
@@ -400,7 +435,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), (req, res) => {
   res.redirect('/admin?msg=updated');
 });
 
-app.post('/admin/delete/:id', (req, res) => {
+app.post('/admin/delete/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (game?.cover_image) {
     const filePath = path.join(__dirname, 'public', game.cover_image);
@@ -410,7 +445,17 @@ app.post('/admin/delete/:id', (req, res) => {
   res.redirect('/admin?msg=deleted');
 });
 
-app.post('/admin/site-settings', upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_bg_file', maxCount: 1 }]), (req, res) => {
+app.post('/admin/change-password', requireAuth, (req, res) => {
+  const { current_password, new_password, confirm_password } = req.body;
+  const correct = db.get('admin_password').value();
+  if (current_password !== correct) return res.redirect('/admin?msg=wrong_password');
+  if (!new_password || new_password.length < 4) return res.redirect('/admin?msg=password_too_short');
+  if (new_password !== confirm_password) return res.redirect('/admin?msg=password_mismatch');
+  db.set('admin_password', new_password).write();
+  res.redirect('/admin?msg=password_changed');
+});
+
+app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_bg_file', maxCount: 1 }]), (req, res) => {
   const { title, hero_bg_type } = req.body;
   const existing = getSiteSettings();
   let logo_path = existing.logo_path;
@@ -455,3 +500,4 @@ app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
   console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
 });
+
