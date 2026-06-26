@@ -244,26 +244,65 @@
   </div>
 
   <!-- ANNOUNCEMENT EDITOR -->
-  <div class="form-card" style="border-color: rgba(0,112,209,0.4); background: linear-gradient(135deg, #1a1a1a 0%, #0d1a2e 100%);">
-    <h2 style="display:flex;align-items:center;gap:0.5rem;">📢 Announcement Bar</h2>
-    <form method="POST" action="/admin/announcement">
-      <div class="form-grid">
-        <div class="form-group full">
-          <label>Announcement Text</label>
-          <textarea name="text" rows="2" placeholder="Type your announcement here..."><%= announcement.text %></textarea>
-        </div>
-        <div class="form-group">
-          <label>Show on Website</label>
-          <label class="toggle-switch">
-            <input type="checkbox" name="active" <%= announcement.active ? 'checked' : '' %>>
-            <span class="toggle-slider" style=""></span>
-          </label>
+  <div class="form-card" style="border-color:rgba(0,112,209,0.4);background:linear-gradient(135deg,#1a1a1a 0%,#0d1a2e 100%);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">📢 Announcements <span style="font-size:0.78rem;font-weight:400;color:#555;margin-left:0.25rem;">— rotate through multiple banners</span></h2>
+
+    <!-- Existing announcements -->
+    <% if (announcements && announcements.length > 0) { %>
+    <div style="display:flex;flex-direction:column;gap:0.65rem;margin-bottom:1.25rem;">
+      <% announcements.forEach((ann, i) => { %>
+      <div style="background:#0a0a14;border:1px solid #1a1a3a;border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:flex-start;gap:0.75rem;">
+        <span style="font-size:1rem;margin-top:0.1rem;">📢</span>
+        <div style="flex:1;">
+          <form method="POST" action="/admin/announcements/edit/<%= ann.id %>" style="display:flex;flex-direction:column;gap:0.6rem;">
+            <textarea name="text" rows="2" style="width:100%;resize:vertical;"><%= ann.text %></textarea>
+            <div style="display:flex;align-items:center;gap:1rem;">
+              <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.82rem;cursor:pointer;">
+                <label class="toggle-switch" style="width:38px;height:20px;">
+                  <input type="checkbox" name="active" <%= ann.active ? 'checked' : '' %>>
+                  <span class="toggle-slider"></span>
+                </label>
+                <span style="color:<%= ann.active ? '#22c55e' : '#555' %>"><%= ann.active ? 'Active' : 'Hidden' %></span>
+              </label>
+              <button type="submit" class="btn btn-primary" style="padding:0.35rem 0.9rem;font-size:0.8rem;">Save</button>
+              <button type="button" class="btn btn-outline" style="padding:0.35rem 0.9rem;font-size:0.8rem;border-color:#7f1d1d;color:#ef4444;"
+                onclick="if(confirm('Delete this announcement?')) fetch('/admin/announcements/delete/<%= ann.id %>',{method:'POST'}).then(()=>location.reload());">
+                Delete
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-      <div class="form-actions" style="margin-top:0.75rem;">
-        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save Announcement</button>
+      <% }) %>
+    </div>
+    <% } else { %>
+    <p style="color:#444;font-size:0.82rem;margin-bottom:1rem;font-style:italic;">No announcements yet.</p>
+    <% } %>
+
+    <!-- Add new announcement -->
+    <details style="background:#050514;border:1px dashed #1a1a3a;border-radius:10px;overflow:hidden;">
+      <summary style="padding:0.85rem 1rem;cursor:pointer;color:#4a9eff;font-weight:700;font-size:0.9rem;list-style:none;">+ Add New Announcement</summary>
+      <div style="padding:1rem;border-top:1px dashed #1a1a3a;">
+        <form method="POST" action="/admin/announcements/add">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Announcement Text *</label>
+              <textarea name="text" rows="2" placeholder="📢 Your announcement here..." required></textarea>
+            </div>
+            <div class="form-group">
+              <label>Show on Website</label>
+              <label class="toggle-switch">
+                <input type="checkbox" name="active" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="form-actions" style="margin-top:0.75rem;">
+            <button type="submit" class="btn btn-primary" style="background:#1d4ed8;">Add Announcement</button>
+          </div>
+        </form>
       </div>
-    </form>
+    </details>
   </div>
 
   <!-- UPCOMING GAMES SECTION -->

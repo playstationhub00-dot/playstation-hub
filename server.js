@@ -33,6 +33,8 @@ db.defaults({
     tr_price_10d: 399, tr_price_15d: 499, tr_price_30d: 699
   },
   announcement: { text: '📢 Monthly subscription renters can enjoy unlimited swap of games! Message us for more info.', active: true },
+  announcements: [],
+  nextAnnouncementId: 1,
   site_settings: {
     title: 'Playstation Hub',
     logo_path: '/logo.svg',
@@ -240,6 +242,19 @@ function resolveGamePrices(game) {
   return { ...game, _category_name: null };
 }
 
+function getAnnouncements() {
+  // Migrate legacy single announcement to list on first access
+  let list = db.get('announcements').value();
+  if (!list || list.length === 0) {
+    const legacy = db.get('announcement').value();
+    if (legacy && legacy.text) {
+      const migrated = [{ id: 1, text: legacy.text, active: legacy.active !== false }];
+      db.set('announcements', migrated).set('nextAnnouncementId', 2).write();
+      list = migrated;
+    }
+  }
+  return list || [];
+}
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
@@ -266,7 +281,7 @@ function getSiteSettings() {
 }
 
 app.get('/how-it-works', (req, res) => {
-  res.render('how-it-works', { announcement: getAnnouncement(), settings: getSiteSettings() });
+  res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // PS Plus Deluxe public page
@@ -281,7 +296,7 @@ app.get('/ps-plus', (req, res) => {
   Object.keys(byYear).forEach(y => byYear[y].sort((a, b) => a.month - b.month));
   const years = Object.keys(byYear).sort((a, b) => b - a); // newest year first
   const popular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), announcement: getAnnouncement(), settings: getSiteSettings() });
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // PS Plus admin CRUD
@@ -398,7 +413,7 @@ app.get('/', (req, res) => {
   const all = getGames().map(resolveGamePrices);
   const featured = [...all].sort((a, b) => b.renters - a.renters).slice(0, 5);
   const upcoming = getUpcoming().sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
-  res.render('index', { featured, games: all, upcoming, announcement: getAnnouncement(), settings: getSiteSettings() });
+  res.render('index', { featured, games: all, upcoming, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/browse', (req, res) => {
@@ -410,7 +425,7 @@ app.get('/browse', (req, res) => {
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
   const upcoming = getUpcoming().sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, announcement: getAnnouncement(), settings: getSiteSettings() });
+  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/admin', requireAuth, (req, res) => {
@@ -418,7 +433,7 @@ app.get('/admin', requireAuth, (req, res) => {
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), settings: getSiteSettings(), priceCategories: getPriceCategories() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories() });
 });
 
 // Upcoming CRUD
@@ -470,6 +485,27 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
 app.post('/admin/announcement', requireAuth, (req, res) => {
   const { text, active } = req.body;
   db.set('announcement', { text: text || '', active: active === 'on' }).write();
+  res.redirect('/admin?msg=announcement');
+});
+
+app.post('/admin/announcements/add', requireAuth, (req, res) => {
+  const { text, active } = req.body;
+  if (!text || !text.trim()) return res.redirect('/admin?msg=error');
+  const id = db.get('nextAnnouncementId').value();
+  db.get('announcements').push({ id, text: text.trim(), active: active === 'on' }).write();
+  db.set('nextAnnouncementId', id + 1).write();
+  res.redirect('/admin?msg=announcement');
+});
+
+app.post('/admin/announcements/edit/:id', requireAuth, (req, res) => {
+  const { text, active } = req.body;
+  db.get('announcements').find({ id: parseInt(req.params.id) })
+    .assign({ text: text || '', active: active === 'on' }).write();
+  res.redirect('/admin?msg=announcement');
+});
+
+app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
+  db.get('announcements').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?msg=announcement');
 });
 

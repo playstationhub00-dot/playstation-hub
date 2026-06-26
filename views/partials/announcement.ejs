@@ -1,15 +1,38 @@
-<% if (announcement && announcement.active && announcement.text) { %>
+<% const activeAnnouncements = (announcements || []).filter(a => a.active && a.text); %>
+<% if (activeAnnouncements.length > 0) { %>
 <div class="announcement-bar" id="announcementBar">
-  <%= announcement.text %>
+  <span id="announcementText"><%= activeAnnouncements[0].text %></span>
+  <% if (activeAnnouncements.length > 1) { %>
+    <span id="announcementPager" style="opacity:0.6;font-size:0.78rem;margin-left:0.5rem;">1 / <%= activeAnnouncements.length %></span>
+  <% } %>
   <button class="announcement-close" onclick="dismissAnnouncement()" title="Dismiss">✕</button>
 </div>
 <script>
-function dismissAnnouncement() {
-  document.getElementById('announcementBar').style.display = 'none';
-  sessionStorage.setItem('announcementDismissed', '1');
-}
-if (sessionStorage.getItem('announcementDismissed') === '1') {
-  document.getElementById('announcementBar').style.display = 'none';
-}
+(function(){
+  const items = <%- JSON.stringify(activeAnnouncements.map(a => a.text)) %>;
+  let idx = 0;
+  const textEl = document.getElementById('announcementText');
+  const pagerEl = document.getElementById('announcementPager');
+  if (items.length > 1) {
+    setInterval(function() {
+      idx = (idx + 1) % items.length;
+      textEl.style.opacity = '0';
+      setTimeout(function() {
+        textEl.textContent = items[idx];
+        textEl.style.opacity = '1';
+        if (pagerEl) pagerEl.textContent = (idx+1) + ' / ' + items.length;
+      }, 300);
+    }, 5000);
+    textEl.style.transition = 'opacity 0.3s';
+  }
+  function dismissAnnouncement() {
+    document.getElementById('announcementBar').style.display = 'none';
+    sessionStorage.setItem('announcementDismissed', '1');
+  }
+  window.dismissAnnouncement = dismissAnnouncement;
+  if (sessionStorage.getItem('announcementDismissed') === '1') {
+    document.getElementById('announcementBar').style.display = 'none';
+  }
+})();
 </script>
 <% } %>
