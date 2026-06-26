@@ -356,6 +356,84 @@
   </div>
   <% } %>
 
+  <!-- PRICE CATEGORIES -->
+  <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">🏷️ Price Categories</h2>
+    <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
+
+    <!-- Existing categories -->
+    <% if (priceCategories.length > 0) { %>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
+      <% priceCategories.forEach(cat => { %>
+      <details style="background:#0a0a0a;border:1px solid #1a2a1a;border-radius:10px;overflow:hidden;">
+        <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none;">
+          <span style="font-size:1rem;">🏷️</span>
+          <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %></span>
+          <span style="font-size:0.75rem;color:#555;">
+            NT: ₱<%= cat.nt_price_10d %> / ₱<%= cat.nt_price_15d %> / ₱<%= cat.nt_price_30d %> &nbsp;|&nbsp;
+            TR: ₱<%= cat.tr_price_10d %> / ₱<%= cat.tr_price_15d %> / ₱<%= cat.tr_price_30d %>
+          </span>
+          <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
+        </summary>
+        <div style="padding:1rem;border-top:1px solid #1a2a1a;">
+          <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>">
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Category Name</label>
+                <input type="text" name="name" value="<%= cat.name %>" required>
+              </div>
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
+              <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="<%= cat.nt_price_10d %>" min="1"></div>
+              <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="<%= cat.nt_price_15d %>" min="1"></div>
+              <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
+              <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="<%= cat.tr_price_10d %>" min="1"></div>
+              <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="<%= cat.tr_price_15d %>" min="1"></div>
+              <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
+            </div>
+            <div class="form-actions" style="margin-top:0.75rem;">
+              <button type="submit" class="btn btn-primary" style="background:#166534;">Save Category</button>
+              <button type="button" class="btn btn-outline" style="border-color:#7f1d1d;color:#ef4444;"
+                onclick="if(confirm('Delete this category? Games using it will switch to custom price.')) { fetch('/admin/price-categories/delete/<%= cat.id %>',{method:'POST'}).then(()=>location.reload()); }">
+                Delete
+              </button>
+            </div>
+          </form>
+        </div>
+      </details>
+      <% }) %>
+    </div>
+    <% } else { %>
+    <p style="color:#444;font-size:0.82rem;margin-bottom:1.25rem;font-style:italic;">No categories yet. Add one below.</p>
+    <% } %>
+
+    <!-- Add new category -->
+    <details style="background:#050f05;border:1px dashed #1a3a1a;border-radius:10px;overflow:hidden;">
+      <summary style="padding:0.85rem 1rem;cursor:pointer;color:#22c55e;font-weight:700;font-size:0.9rem;list-style:none;">+ Add New Price Category</summary>
+      <div style="padding:1rem;border-top:1px dashed #1a3a1a;">
+        <form method="POST" action="/admin/price-categories/add">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Category Name *</label>
+              <input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required>
+            </div>
+            <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
+            <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="149" min="1"></div>
+            <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="199" min="1"></div>
+            <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
+            <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
+            <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="199" min="1"></div>
+            <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="249" min="1"></div>
+            <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
+          </div>
+          <div class="form-actions" style="margin-top:0.75rem;">
+            <button type="submit" class="btn btn-primary" style="background:#166534;">Create Category</button>
+          </div>
+        </form>
+      </div>
+    </details>
+  </div>
+
   <!-- ADD GAME FORM -->
   <div class="form-card">
     <h2>+ Add New Game</h2>
@@ -386,38 +464,51 @@
           <input type="number" name="renters" value="0" min="0">
         </div>
 
-        <!-- Non-Trophy prices -->
-        <div class="form-group full" style="margin-bottom:0;">
-          <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
+        <!-- Pricing mode -->
+        <div class="form-group full">
+          <label>Pricing</label>
+          <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
+            <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-weight:600;">
+              <input type="radio" name="price_mode" value="category" id="add_mode_cat" onchange="toggleAddPriceMode(this.value)" <%= priceCategories.length ? '' : 'disabled' %>>
+              🏷️ Use Category
+            </label>
+            <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-weight:600;">
+              <input type="radio" name="price_mode" value="custom" id="add_mode_custom" onchange="toggleAddPriceMode(this.value)" checked>
+              ✏️ Custom Price
+            </label>
+          </div>
+          <!-- Category selector -->
+          <div id="add_cat_section" style="display:none;">
+            <select name="price_category_id" style="width:100%;">
+              <option value="">— Select a category —</option>
+              <% priceCategories.forEach(cat => { %>
+              <option value="<%= cat.id %>"><%= cat.name %> (NT: ₱<%= cat.nt_price_10d %>/₱<%= cat.nt_price_15d %>/₱<%= cat.nt_price_30d %>)</option>
+              <% }) %>
+            </select>
+          </div>
         </div>
-        <div class="form-group">
-          <label>10 Days</label>
-          <input type="number" name="nt_price_10d" value="149" min="1">
+
+        <!-- Custom prices (shown by default) -->
+        <div id="add_custom_prices">
+          <div class="form-group full" style="margin-bottom:0;">
+            <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
+          </div>
+          <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="149" min="1"></div>
+          <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="199" min="1"></div>
+          <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label>
+          </div>
+          <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="199" min="1"></div>
+          <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="249" min="1"></div>
+          <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
         </div>
-        <div class="form-group">
-          <label>15 Days</label>
-          <input type="number" name="nt_price_15d" value="199" min="1">
-        </div>
-        <div class="form-group">
-          <label>30 Days</label>
-          <input type="number" name="nt_price_30d" value="349" min="1">
-        </div>
-        <!-- Trophy prices -->
-        <div class="form-group full" style="margin-bottom:0;">
-          <label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label>
-        </div>
-        <div class="form-group">
-          <label>10 Days</label>
-          <input type="number" name="tr_price_10d" value="199" min="1">
-        </div>
-        <div class="form-group">
-          <label>15 Days</label>
-          <input type="number" name="tr_price_15d" value="249" min="1">
-        </div>
-        <div class="form-group">
-          <label>30 Days</label>
-          <input type="number" name="tr_price_30d" value="399" min="1">
-        </div>
+        <script>
+        function toggleAddPriceMode(v) {
+          document.getElementById('add_cat_section').style.display = v==='category' ? 'block' : 'none';
+          document.getElementById('add_custom_prices').style.display = v==='category' ? 'none' : 'contents';
+        }
+        </script>
 
         <div class="form-group">
           <label>Cover Image</label>
@@ -475,7 +566,12 @@
                 <div class="table-cover-placeholder">🎮</div>
               <% } %>
             </td>
-            <td><strong><%= game.title %></strong></td>
+            <td>
+              <strong><%= game.title %></strong>
+              <% if (game._category_name) { %>
+                <span style="display:inline-block;margin-left:0.4rem;background:#0a2a0a;border:1px solid #166534;border-radius:20px;padding:0.1rem 0.5rem;font-size:0.68rem;color:#22c55e;font-weight:600;">🏷️ <%= game._category_name %></span>
+              <% } %>
+            </td>
             <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
             <td>
               <% if (game.available_slots > 0) { %>

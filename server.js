@@ -48,7 +48,9 @@ db.defaults({
       subtitle_color: '#aaaaaa'
     }
   },
-  admin_password: 'admin123'
+  admin_password: 'admin123',
+  price_categories: [],
+  nextPriceCategoryId: 1
 }).write();
 
 // Migrate existing games to new fields if missing
@@ -216,6 +218,28 @@ db.write = function() {
   return r;
 };
 
+function getPriceCategories() { return db.get('price_categories').value() || []; }
+function getPriceCategory(id) { return db.get('price_categories').find({ id: parseInt(id) }).value(); }
+function newPriceCategoryId() {
+  const id = db.get('nextPriceCategoryId').value();
+  db.set('nextPriceCategoryId', id + 1).write();
+  return id;
+}
+// Returns the effective prices for a game (from category or its own fields)
+function resolveGamePrices(game) {
+  if (game.price_category_id) {
+    const cat = getPriceCategory(game.price_category_id);
+    if (cat) {
+      return { ...game,
+        nt_price_10d: cat.nt_price_10d, nt_price_15d: cat.nt_price_15d, nt_price_30d: cat.nt_price_30d,
+        tr_price_10d: cat.tr_price_10d, tr_price_15d: cat.tr_price_15d, tr_price_30d: cat.tr_price_30d,
+        _category_name: cat.name
+      };
+    }
+  }
+  return { ...game, _category_name: null };
+}
+
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
@@ -371,7 +395,7 @@ app.post('/admin/psplus/prices', requireAuth, (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  const all = getGames();
+  const all = getGames().map(resolveGamePrices);
   const featured = [...all].sort((a, b) => b.renters - a.renters).slice(0, 5);
   const upcoming = getUpcoming().sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
   res.render('index', { featured, games: all, upcoming, announcement: getAnnouncement(), settings: getSiteSettings() });
@@ -379,7 +403,7 @@ app.get('/', (req, res) => {
 
 app.get('/browse', (req, res) => {
   const { search, platform, genre } = req.query;
-  let games = getGames();
+  let games = getGames().map(resolveGamePrices);
   if (search) games = games.filter(g => g.title.toLowerCase().includes(search.toLowerCase()));
   if (platform) games = games.filter(g => g.platform === platform);
   if (genre) games = games.filter(g => g.genre === genre);
@@ -390,11 +414,11 @@ app.get('/browse', (req, res) => {
 });
 
 app.get('/admin', requireAuth, (req, res) => {
-  const games = [...getGames()].sort((a, b) => b.id - a.id);
+  const games = [...getGames()].sort((a, b) => b.id - a.id).map(resolveGamePrices);
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), settings: getSiteSettings() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), settings: getSiteSettings(), priceCategories: getPriceCategories() });
 });
 
 // Upcoming CRUD
@@ -453,9 +477,11 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account } = req.body;
+    genre, description, trophy_account, price_category_id, price_mode } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const useCategory = price_mode === 'category' && price_category_id;
+  const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').push({
     id: newId(),
     title: title.trim(),
@@ -463,12 +489,13 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     cover_image,
     available_slots: parseInt(available_slots) || 1,
     renters: parseInt(renters) || 0,
-    nt_price_10d: parseInt(nt_price_10d) || 149,
-    nt_price_15d: parseInt(nt_price_15d) || 199,
-    nt_price_30d: parseInt(nt_price_30d) || 349,
-    tr_price_10d: parseInt(tr_price_10d) || 199,
-    tr_price_15d: parseInt(tr_price_15d) || 249,
-    tr_price_30d: parseInt(tr_price_30d) || 399,
+    price_category_id: cat ? parseInt(price_category_id) : null,
+    nt_price_10d: cat ? cat.nt_price_10d : (parseInt(nt_price_10d) || 149),
+    nt_price_15d: cat ? cat.nt_price_15d : (parseInt(nt_price_15d) || 199),
+    nt_price_30d: cat ? cat.nt_price_30d : (parseInt(nt_price_30d) || 349),
+    tr_price_10d: cat ? cat.tr_price_10d : (parseInt(tr_price_10d) || 199),
+    tr_price_15d: cat ? cat.tr_price_15d : (parseInt(tr_price_15d) || 249),
+    tr_price_30d: cat ? cat.tr_price_30d : (parseInt(tr_price_30d) || 399),
     genre: genre || '',
     description: description || '',
     trophy_account: trophy_account === 'on',
@@ -480,27 +507,30 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
 app.get('/admin/edit/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (!game) return res.redirect('/admin');
-  res.render('edit', { game, settings: getSiteSettings() });
+  res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories() });
 });
 
 app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account } = req.body;
+    genre, description, trophy_account, price_category_id, price_mode } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const useCategory = price_mode === 'category' && price_category_id;
+  const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, cover_image,
     available_slots: parseInt(available_slots),
     renters: parseInt(renters),
-    nt_price_10d: parseInt(nt_price_10d),
-    nt_price_15d: parseInt(nt_price_15d),
-    nt_price_30d: parseInt(nt_price_30d),
-    tr_price_10d: parseInt(tr_price_10d),
-    tr_price_15d: parseInt(tr_price_15d),
-    tr_price_30d: parseInt(tr_price_30d),
+    price_category_id: cat ? parseInt(price_category_id) : null,
+    nt_price_10d: cat ? cat.nt_price_10d : parseInt(nt_price_10d),
+    nt_price_15d: cat ? cat.nt_price_15d : parseInt(nt_price_15d),
+    nt_price_30d: cat ? cat.nt_price_30d : parseInt(nt_price_30d),
+    tr_price_10d: cat ? cat.tr_price_10d : parseInt(tr_price_10d),
+    tr_price_15d: cat ? cat.tr_price_15d : parseInt(tr_price_15d),
+    tr_price_30d: cat ? cat.tr_price_30d : parseInt(tr_price_30d),
     genre: genre || '',
     description: description || '',
     trophy_account: trophy_account === 'on'
@@ -592,6 +622,48 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings.favicon_path', favicon_path).write();
   db.set('site_settings.hero_bg', hero_bg).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+// Price category CRUD
+app.post('/admin/price-categories/add', requireAuth, (req, res) => {
+  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+  if (!name || !name.trim()) return res.redirect('/admin?msg=error');
+  db.get('price_categories').push({
+    id: newPriceCategoryId(),
+    name: name.trim(),
+    nt_price_10d: parseInt(nt_price_10d) || 149,
+    nt_price_15d: parseInt(nt_price_15d) || 199,
+    nt_price_30d: parseInt(nt_price_30d) || 349,
+    tr_price_10d: parseInt(tr_price_10d) || 199,
+    tr_price_15d: parseInt(tr_price_15d) || 249,
+    tr_price_30d: parseInt(tr_price_30d) || 399,
+  }).write();
+  res.redirect('/admin?msg=cat_added');
+});
+
+app.post('/admin/price-categories/edit/:id', requireAuth, (req, res) => {
+  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+  const cat = getPriceCategory(req.params.id);
+  if (!cat) return res.redirect('/admin?msg=error');
+  db.get('price_categories').find({ id: parseInt(req.params.id) }).assign({
+    name: (name || cat.name).trim(),
+    nt_price_10d: parseInt(nt_price_10d) || cat.nt_price_10d,
+    nt_price_15d: parseInt(nt_price_15d) || cat.nt_price_15d,
+    nt_price_30d: parseInt(nt_price_30d) || cat.nt_price_30d,
+    tr_price_10d: parseInt(tr_price_10d) || cat.tr_price_10d,
+    tr_price_15d: parseInt(tr_price_15d) || cat.tr_price_15d,
+    tr_price_30d: parseInt(tr_price_30d) || cat.tr_price_30d,
+  }).write();
+  res.redirect('/admin?msg=cat_updated');
+});
+
+app.post('/admin/price-categories/delete/:id', requireAuth, (req, res) => {
+  // Remove category link from all games that use it
+  db.get('games').filter({ price_category_id: parseInt(req.params.id) }).each(g => {
+    db.get('games').find({ id: g.id }).assign({ price_category_id: null }).write();
+  }).value();
+  db.get('price_categories').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin?msg=cat_deleted');
 });
 
 app.get('/admin/mongo-status', requireAuth, async (req, res) => {
