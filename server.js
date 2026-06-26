@@ -162,6 +162,35 @@ function newPsplusPopularId() {
   return id;
 }
 
+// MongoDB sync — saves entire db state after every write
+let _mongoSaveClient = null;
+async function _getMongoDb() {
+  if (!process.env.MONGODB_URI) return null;
+  if (!_mongoSaveClient) {
+    const { MongoClient } = require('mongodb');
+    _mongoSaveClient = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
+    await _mongoSaveClient.connect();
+  }
+  return _mongoSaveClient.db('pshub');
+}
+function syncToMongo() {
+  if (!process.env.MONGODB_URI) return;
+  _getMongoDb().then(mdb => {
+    if (!mdb) return;
+    mdb.collection('state').replaceOne(
+      { _id: 'db' },
+      { _id: 'db', data: db.getState() },
+      { upsert: true }
+    ).catch(e => console.log('[mongo sync error]', e.message));
+  }).catch(() => {});
+}
+const _origWrite = db.write.bind(db);
+db.write = function() {
+  const r = _origWrite();
+  syncToMongo();
+  return r;
+};
+
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
