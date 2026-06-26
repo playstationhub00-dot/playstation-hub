@@ -44,7 +44,7 @@
           </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="cust_days_group" <%= (customer.status === 'bought') ? 'hidden' : '' %>>
           <label>Rental Duration</label>
           <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
             <option value="10" <%= customer.days === 10 ? 'selected' : '' %>>10 Days</option>
@@ -84,9 +84,10 @@
 
         <div class="form-group">
           <label>Status</label>
-          <select name="status">
+          <select name="status" id="cust_status" onchange="toggleCustBought(this.value)">
             <option value="renting" <%= customer.status === 'renting' ? 'selected' : '' %>>🟢 Currently Renting</option>
             <option value="done" <%= customer.status === 'done' ? 'selected' : '' %>>✅ Done</option>
+            <option value="bought" <%= customer.status === 'bought' ? 'selected' : '' %>>🛒 Bought</option>
           </select>
         </div>
 
@@ -109,6 +110,11 @@ function toggleCustCustomDays(val) {
   const inp = document.getElementById('cust_custom_days');
   if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
   else inp.setAttribute('hidden', '');
+}
+function toggleCustBought(status) {
+  const daysGroup = document.getElementById('cust_days_group');
+  if (status === 'bought') daysGroup.setAttribute('hidden', '');
+  else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
 }
 function getCustDays() {
   const sel = document.getElementById('cust_days');

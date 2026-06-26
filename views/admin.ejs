@@ -709,14 +709,19 @@
 
     <%
       const activeCustomers = customers.filter(c => c.status === 'renting');
+      const boughtCustomers = customers.filter(c => c.status === 'bought');
       const doneCustomers = customers.filter(c => c.status === 'done');
     %>
 
     <!-- Summary bar -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
       <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:1rem;text-align:center;">
         <div style="font-size:1.75rem;font-weight:900;color:#22c55e;"><%= activeCustomers.length %></div>
         <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Currently Renting</div>
+      </div>
+      <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:900;color:#60a5fa;"><%= boughtCustomers.length %></div>
+        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Bought</div>
       </div>
       <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:12px;padding:1rem;text-align:center;">
         <div style="font-size:1.75rem;font-weight:900;color:#aaa;"><%= doneCustomers.length %></div>
@@ -754,7 +759,7 @@
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" id="cust_days_group">
             <label>Rental Duration</label>
             <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
               <option value="10">10 Days</option>
@@ -791,9 +796,10 @@
 
           <div class="form-group">
             <label>Status</label>
-            <select name="status">
+            <select name="status" id="cust_status" onchange="toggleCustBought(this.value)">
               <option value="renting">🟢 Currently Renting</option>
               <option value="done">✅ Done</option>
+              <option value="bought">🛒 Bought</option>
             </select>
           </div>
 
@@ -818,6 +824,16 @@
         const inp = document.getElementById('cust_custom_days');
         if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
         else inp.setAttribute('hidden', '');
+      }
+      function toggleCustBought(status) {
+        const daysGroup = document.getElementById('cust_days_group');
+        if (status === 'bought') {
+          daysGroup.setAttribute('hidden', '');
+          document.getElementById('cust_end').removeAttribute('required');
+        } else {
+          daysGroup.removeAttribute('hidden');
+          updateCustEndDate();
+        }
       }
       function updateCustPrice() {
         const sel = document.getElementById('cust_game');
@@ -876,6 +892,7 @@
           <tbody>
             <% customers.forEach(c => {
               const isRenting = c.status === 'renting';
+              const isBought = c.status === 'bought';
               const endDate = c.end_date ? new Date(c.end_date + 'T00:00:00') : null;
               const today = new Date(); today.setHours(0,0,0,0);
               const isOverdue = isRenting && endDate && endDate < today;
@@ -887,7 +904,7 @@
                 <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
               </td>
               <td style="font-size:0.85rem;"><strong><%= c.game_title %></strong></td>
-              <td style="color:#aaa;font-size:0.85rem;"><%= c.days %> days</td>
+              <td style="color:#aaa;font-size:0.85rem;"><%= isBought ? '—' : c.days + ' days' %></td>
               <td>
                 <% if (c.account_type === 'tr') { %>
                   <span style="color:#ffc400;font-size:0.78rem;font-weight:700;">🏆 Trophy</span>
@@ -914,6 +931,8 @@
                   <% if (isRenting) { %>
                     <input type="hidden" name="status" value="done">
                     <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Done">🟢 Renting</button>
+                  <% } else if (isBought) { %>
+                    <span style="background:#1e3a5f;color:#60a5fa;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🛒 Bought</span>
                   <% } else { %>
                     <input type="hidden" name="status" value="renting">
                     <button type="submit" style="background:#222;color:#aaa;border:1px solid #333;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Renting">✅ Done</button>

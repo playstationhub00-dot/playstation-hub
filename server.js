@@ -713,8 +713,9 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
     notes: notes || '',
     created_at: new Date().toISOString()
   }).write();
-  // Adjust slots if renting
-  if ((status || 'renting') === 'renting') {
+  // Adjust slots if renting or bought
+  const activeStatus = status || 'renting';
+  if (activeStatus === 'renting' || activeStatus === 'bought') {
     const slots = game.available_slots || 0;
     db.get('games').find({ id: parseInt(game_id) }).assign({
       available_slots: Math.max(0, slots - 1),
@@ -736,12 +737,12 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
-  const wasRenting = existing.status === 'renting';
-  const isRenting = status === 'renting';
+  const wasActive = existing.status === 'renting' || existing.status === 'bought';
+  const isActive = status === 'renting' || status === 'bought';
   const gameChanged = parseInt(game_id) !== existing.game_id;
 
-  // Revert old game slot change if was renting
-  if (wasRenting) {
+  // Revert old game slot change if was active
+  if (wasActive) {
     const oldGame = getGame(existing.game_id);
     if (oldGame) {
       db.get('games').find({ id: oldGame.id }).assign({
@@ -749,8 +750,8 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
       }).write();
     }
   }
-  // Apply new game slot change if now renting
-  if (isRenting) {
+  // Apply new game slot change if now active
+  if (isActive) {
     const newGame = getGame(game_id);
     if (newGame) {
       db.get('games').find({ id: newGame.id }).assign({
@@ -778,13 +779,13 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
   const { status } = req.body;
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
-  const wasRenting = existing.status === 'renting';
-  const isRenting = status === 'renting';
-  if (wasRenting !== isRenting) {
+  const wasActive = existing.status === 'renting' || existing.status === 'bought';
+  const isActive = status === 'renting' || status === 'bought';
+  if (wasActive !== isActive) {
     const game = getGame(existing.game_id);
     if (game) {
       db.get('games').find({ id: game.id }).assign({
-        available_slots: Math.max(0, (game.available_slots || 0) + (isRenting ? -1 : 1))
+        available_slots: Math.max(0, (game.available_slots || 0) + (isActive ? -1 : 1))
       }).write();
     }
   }
@@ -795,8 +796,8 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
 app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
-  // Restore slot if was renting
-  if (existing.status === 'renting') {
+  // Restore slot if was renting or bought
+  if (existing.status === 'renting' || existing.status === 'bought') {
     const game = getGame(existing.game_id);
     if (game) {
       db.get('games').find({ id: game.id }).assign({
