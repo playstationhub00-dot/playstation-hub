@@ -28,7 +28,7 @@ db.defaults({
     tr_price_10d: 399, tr_price_15d: 499, tr_price_30d: 699
   },
   announcement: { text: '📢 Monthly subscription renters can enjoy unlimited swap of games! Message us for more info.', active: true },
-  site_settings: { title: 'Playstation Hub', logo_path: '/logo.svg', hero_bg: { type: 'default', path: '' } },
+  site_settings: { title: 'Playstation Hub', logo_path: '/logo.svg', favicon_path: '/favicon.svg', hero_bg: { type: 'default', path: '' } },
   admin_password: 'admin123'
 }).write();
 
@@ -158,6 +158,10 @@ function newPsplusPopularId() {
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
+  if (!s.favicon_path) {
+    db.set('site_settings.favicon_path', '/favicon.svg').write();
+    s.favicon_path = '/favicon.svg';
+  }
   if (!s.hero_bg) {
     db.set('site_settings.hero_bg', { type: 'default', path: '', overlay: 50 }).write();
     s.hero_bg = { type: 'default', path: '', overlay: 50 };
@@ -455,11 +459,22 @@ app.post('/admin/change-password', requireAuth, (req, res) => {
   res.redirect('/admin?msg=password_changed');
 });
 
-app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_bg_file', maxCount: 1 }]), (req, res) => {
+app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'hero_bg_file', maxCount: 1 }, { name: 'favicon', maxCount: 1 }]), (req, res) => {
   const { title, hero_bg_type } = req.body;
   const existing = getSiteSettings();
   let logo_path = existing.logo_path;
+  let favicon_path = existing.favicon_path || '/favicon.svg';
   let hero_bg = existing.hero_bg || { type: 'default', path: '' };
+
+  // Handle favicon upload
+  const faviconFile = req.files && req.files['favicon'] && req.files['favicon'][0];
+  if (faviconFile) {
+    const ext = path.extname(faviconFile.originalname) || '.png';
+    const destName = 'favicon-custom' + ext;
+    const dest = path.join(__dirname, 'public', destName);
+    fs.renameSync(faviconFile.path, dest);
+    favicon_path = '/' + destName;
+  }
 
   // Handle logo upload
   const logoFile = req.files && req.files['logo'] && req.files['logo'][0];
@@ -491,6 +506,7 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings', {
     title: (title || 'Playstation Hub').trim(),
     logo_path,
+    favicon_path,
     hero_bg
   }).write();
   res.redirect('/admin?msg=settings_saved');
