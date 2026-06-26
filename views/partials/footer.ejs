@@ -1,3 +1,18 @@
+<script>
+function showGameDesc(card) {
+  if (!card.dataset.desc) return;
+  const tip = document.createElement('div');
+  tip.className = 'game-desc-tooltip';
+  tip.textContent = card.dataset.desc;
+  tip.id = 'gdt-' + Math.random().toString(36).slice(2);
+  card.dataset.tipId = tip.id;
+  card.appendChild(tip);
+}
+function hideGameDesc(card) {
+  const tip = document.getElementById(card.dataset.tipId);
+  if (tip) tip.remove();
+}
+</script>
 <footer>
   <div class="footer-inner">
     <div class="footer-brand">

@@ -1,4 +1,9 @@
-<div class="game-card">
+<div class="game-card" style="position:relative;"
+  <% if (game.description) { %>
+  onmouseenter="showGameDesc(this)" onmouseleave="hideGameDesc(this)"
+  data-desc="<%= game.description.replace(/"/g, '&quot;') %>"
+  <% } %>
+>
   <% if (game.cover_image) { %>
     <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
   <% } else { %>
