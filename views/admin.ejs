@@ -613,7 +613,49 @@
   </div>
 </div>
 
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" style="
+  display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+  flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;">
+  <div style="width:52px;height:52px;border:4px solid #222;border-top-color:var(--ps-blue);border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+  <div id="loadingText" style="color:#fff;font-weight:700;font-size:1rem;letter-spacing:0.5px;">Saving changes...</div>
+</div>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
 <script>
+// Loading overlay — show on any form submit, hide on delete confirms that are cancelled
+(function() {
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+
+  const messages = {
+    '/admin/announcement':        '📢 Saving announcement...',
+    '/admin/site-settings':       '⚙️ Saving settings...',
+    '/admin/change-password':     '🔒 Changing password...',
+    '/admin/psplus/prices':       '💰 Saving PS Plus prices...',
+    '/admin/add':                 '🎮 Adding game...',
+    '/admin/upcoming/add':        '🔜 Adding upcoming game...',
+    '/admin/psplus/add':          '⭐ Adding PS Plus entry...',
+    '/admin/psplus/popular/add':  '🔥 Adding Most Played game...',
+  };
+
+  function showLoading(action) {
+    const label = Object.keys(messages).find(k => action.includes(k));
+    loadingText.textContent = label ? messages[label] : 'Saving changes...';
+    overlay.style.display = 'flex';
+  }
+
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (form.dataset.noLoading) return;
+    // For delete forms, only show after confirm passes (already confirmed by onsubmit)
+    showLoading(form.action || '');
+  });
+})();
+
 const params = new URLSearchParams(window.location.search);
 const msg = params.get('msg');
 if (msg) {
