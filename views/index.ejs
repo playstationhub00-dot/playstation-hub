@@ -31,8 +31,11 @@
     <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
   <% } %>
   <div class="hero-content">
-    <h1>Rent the Latest<br><span>PS5 & PS4</span> Games</h1>
-    <p>Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.</p>
+    <% const ht = settings.hero_text; %>
+    <h1 style="font-size:<%= ht.title_size %>px;">
+      <%= ht.line1 %><% if (ht.line1 && ht.line2) { %><br><% } %><span style="color:<%= ht.highlight_color %>;"><%= ht.highlight %></span><% if (ht.line2) { %> <%= ht.line2 %><% } %>
+    </h1>
+    <p style="color:<%= ht.subtitle_color %>;"><%= ht.subtitle %></p>
     <div class="hero-actions">
       <a href="/browse" class="btn btn-primary">Browse All Games</a>
       <a href="#how" class="btn btn-outline">How It Works</a>
@@ -49,6 +52,11 @@
     <% const allPrices = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
     <div class="stat-num">₱<%= lowestPrice %></div>
     <div class="stat-label">Starting Price</div>
+  </div>
+  <div class="stat">
+    <% const totalRenters = games.reduce((sum, g) => sum + (g.renters || 0), 0); %>
+    <div class="stat-num"><%= totalRenters %>+</div>
+    <div class="stat-label">Active Renters</div>
   </div>
   <div class="stat">
     <div class="stat-num">3</div>
