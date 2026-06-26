@@ -437,7 +437,13 @@ app.get('/', (req, res) => {
 app.get('/browse', (req, res) => {
   const { search, platform, genre } = req.query;
   let games = getGames().map(resolveGamePrices);
-  if (search) games = games.filter(g => g.title.toLowerCase().includes(search.toLowerCase()));
+  if (search) {
+    const q = search.toLowerCase();
+    games = games.filter(g =>
+      g.title.toLowerCase().includes(q) ||
+      (g.description && g.description.toLowerCase().includes(q))
+    );
+  }
   if (platform) games = games.filter(g => g.platform === platform);
   if (genre) games = games.filter(g => g.genre === genre);
   games.sort((a, b) => a.title.localeCompare(b.title));
