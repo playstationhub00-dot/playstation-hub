@@ -9,10 +9,15 @@ const session = require('express-session');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const uploadsDir = path.join(__dirname, 'public', 'uploads');
+// DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
+// Falls back to local project folder for development
+const dataDir = process.env.DATA_DIR || __dirname;
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-const adapter = new FileSync(path.join(__dirname, 'games.json'));
+const adapter = new FileSync(path.join(dataDir, 'games.json'));
 const db = low(adapter);
 db.defaults({
   games: [],
@@ -86,6 +91,8 @@ const upload = multer({
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
+// Serve uploads from persistent data directory
+app.use('/uploads', express.static(uploadsDir));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session({
@@ -234,7 +241,7 @@ app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, (r
 app.post('/admin/psplus/delete/:id', requireAuth, (req, res) => {
   const entry = getPsplusEntry(req.params.id);
   if (entry?.cover_image) {
-    const fp = path.join(__dirname, 'public', entry.cover_image);
+    const fp = path.join(uploadsDir, path.basename(entry.cover_image));
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
   db.get('psplus').remove({ id: parseInt(req.params.id) }).write();
@@ -280,7 +287,7 @@ app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), require
 app.post('/admin/psplus/popular/delete/:id', requireAuth, (req, res) => {
   const entry = getPsplusPopularEntry(req.params.id);
   if (entry?.cover_image) {
-    const fp = path.join(__dirname, 'public', entry.cover_image);
+    const fp = path.join(uploadsDir, path.basename(entry.cover_image));
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
   db.get('psplus_popular').remove({ id: parseInt(req.params.id) }).write();
@@ -367,7 +374,7 @@ app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, 
 app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
   const game = getUpcomingGame(req.params.id);
   if (game?.cover_image) {
-    const fp = path.join(__dirname, 'public', game.cover_image);
+    const fp = path.join(uploadsDir, path.basename(game.cover_image));
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
   db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
@@ -442,7 +449,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
 app.post('/admin/delete/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (game?.cover_image) {
-    const filePath = path.join(__dirname, 'public', game.cover_image);
+    const filePath = path.join(uploadsDir, path.basename(game.cover_image));
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
   db.get('games').remove({ id: parseInt(req.params.id) }).write();
@@ -471,9 +478,9 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   if (faviconFile) {
     const ext = path.extname(faviconFile.originalname) || '.png';
     const destName = 'favicon-custom' + ext;
-    const dest = path.join(__dirname, 'public', destName);
+    const dest = path.join(uploadsDir, destName);
     fs.renameSync(faviconFile.path, dest);
-    favicon_path = '/' + destName;
+    favicon_path = '/uploads/' + destName;
   }
 
   // Handle logo upload
@@ -481,9 +488,9 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   if (logoFile) {
     const ext = path.extname(logoFile.originalname) || '.png';
     const destName = 'logo-custom' + ext;
-    const dest = path.join(__dirname, 'public', destName);
+    const dest = path.join(uploadsDir, destName);
     fs.renameSync(logoFile.path, dest);
-    logo_path = '/' + destName;
+    logo_path = '/uploads/' + destName;
   }
 
   // Handle hero background
@@ -494,9 +501,9 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
     const ext = path.extname(heroBgFile.originalname) || '.jpg';
     const isVideo = /\.(mp4|webm|ogg)$/i.test(ext);
     const destName = (isVideo ? 'hero-bg-video' : 'hero-bg-image') + ext;
-    const dest = path.join(__dirname, 'public', destName);
+    const dest = path.join(uploadsDir, destName);
     fs.renameSync(heroBgFile.path, dest);
-    hero_bg = { type: isVideo ? 'video' : 'image', path: '/' + destName };
+    hero_bg = { type: isVideo ? 'video' : 'image', path: '/uploads/' + destName };
   } else {
     // No new file uploaded — just update type, keep existing path
     hero_bg = { type: hero_bg_type || existing.hero_bg.type, path: existing.hero_bg.path };
@@ -516,4 +523,5 @@ app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
   console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
 });
+
 
