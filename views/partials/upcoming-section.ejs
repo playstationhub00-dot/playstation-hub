@@ -1,0 +1,45 @@
+<% if (upcoming.length > 0) { %>
+<div class="section" style="<%= typeof noBorderTop !== 'undefined' && noBorderTop ? '' : 'border-top:1px solid #1a1a1a;' %>padding-bottom:0;">
+  <h2 class="section-title" style="color:#fff;">
+    <span style="display:inline-flex;align-items:center;gap:0.5rem;">
+      <span style="background:linear-gradient(135deg,#7b2ff7,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1em;">🔜</span>
+      Coming Soon
+    </span>
+    <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">Open for Reservation</span>
+  </h2>
+  <div class="games-grid">
+    <% upcoming.forEach(game => { %>
+    <div class="game-card upcoming-card">
+      <div style="position:relative;">
+        <% if (game.cover_image) { %>
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="filter:brightness(0.75);">
+        <% } else { %>
+          <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0d0015,#1a0030);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            <span>No Image</span>
+          </div>
+        <% } %>
+        <div class="upcoming-overlay-badge">COMING SOON</div>
+      </div>
+      <div class="game-info">
+        <div class="game-platform"><%= game.platform %></div>
+        <div class="game-title"><%= game.title %></div>
+        <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
+        <% if (game.release_date) { %>
+          <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">📅 Expected: <strong style="color:#aaa;"><%= game.release_date %></strong></div>
+        <% } %>
+        <% if (game.description) { %>
+          <div style="font-size:0.78rem;color:#666;margin-top:0.4rem;line-height:1.5;"><%= game.description %></div>
+        <% } %>
+        <button class="rent-btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);margin-top:0.75rem;"
+          onclick="openReserveModal('<%= game.title.replace(/'/g, "\\'") %>')">
+          🔔 Reserve Slot
+        </button>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>

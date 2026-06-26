@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Upcoming Game — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="edit-container">
+  <a href="/admin" class="back-link">← Back to Admin</a>
+  <h1>Edit Upcoming Game</h1>
+  <div style="display:inline-flex;align-items:center;gap:0.4rem;background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:8px;padding:0.35rem 0.75rem;font-size:0.78rem;color:#a855f7;font-weight:600;margin-bottom:1.5rem;">🔜 COMING SOON — Open for Reservation</div>
+
+  <div class="form-card" style="border-color:#2a1a3a;">
+    <form method="POST" action="/admin/upcoming/edit/<%= game.id %>" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" value="<%= game.title %>" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5" <%= game.platform === 'PS5' ? 'selected' : '' %>>PS5</option>
+            <option value="PS4" <%= game.platform === 'PS4' ? 'selected' : '' %>>PS4</option>
+            <option value="PS4/PS5" <%= game.platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" value="<%= game.genre || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Expected Release Date</label>
+          <input type="text" name="release_date" value="<%= game.release_date || '' %>" placeholder="e.g. Q3 2026 or July 2026">
+        </div>
+        <div class="form-group">
+          <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
+          <% if (game.cover_image) { %>
+            <img src="<%= game.cover_image %>" style="width:60px;border-radius:6px;margin-bottom:0.5rem;filter:brightness(0.8);">
+          <% } %>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Description</label>
+          <textarea name="description"><%= game.description || '' %></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Save Changes</button>
+        <a href="/admin" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>
+
+
+

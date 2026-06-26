@@ -1,0 +1,58 @@
+<div class="game-card">
+  <% if (game.cover_image) { %>
+    <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+  <% } else { %>
+    <div class="game-cover-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+      <span>No Image</span>
+    </div>
+  <% } %>
+  <div class="game-info">
+    <div class="game-platform"><%= game.platform %></div>
+    <div class="game-title"><%= game.title %></div>
+    <div class="game-badges">
+      <% if (game.available_slots > 0) { %>
+        <span class="badge badge-available">● Slot: <%= game.available_slots %></span>
+      <% } else { %>
+        <span class="badge badge-unavailable">● No Slots</span>
+      <% } %>
+      <span class="badge badge-renters">👤 <%= game.renters %></span>
+    </div>
+
+    <!-- Non-Trophy Prices -->
+    <div class="price-block">
+      <div class="price-block-label">🎮 Non-Trophy</div>
+      <div class="price-tiers">
+        <div class="price-row"><span class="price-label">10 Days</span><span class="price-val">₱<%= game.nt_price_10d %></span></div>
+        <div class="price-row"><span class="price-label">15 Days</span><span class="price-val">₱<%= game.nt_price_15d %></span></div>
+        <div class="price-row"><span class="price-label">30 Days</span><span class="price-val">₱<%= game.nt_price_30d %></span></div>
+      </div>
+    </div>
+
+    <!-- Trophy Prices (only if trophy account available) -->
+    <% if (game.trophy_account) { %>
+    <div class="price-block price-block-trophy">
+      <div class="price-block-label" style="color:#ffc400;">🏆 Trophy Account</div>
+      <div class="price-tiers">
+        <div class="price-row"><span class="price-label">10 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_10d %></span></div>
+        <div class="price-row"><span class="price-label">15 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_15d %></span></div>
+        <div class="price-row"><span class="price-label">30 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_30d %></span></div>
+      </div>
+      <div class="trophy-deposit-note">+₱100 refundable deposit</div>
+    </div>
+    <% } %>
+
+    <button class="rent-btn"
+      <%= game.available_slots <= 0 ? 'disabled' : '' %>
+      onclick="openRentModal('<%= game.title.replace(/'/g, "\\'") %>',
+        <%= game.nt_price_10d %>, <%= game.nt_price_15d %>, <%= game.nt_price_30d %>,
+        <%= game.trophy_account ? game.tr_price_10d : 0 %>,
+        <%= game.trophy_account ? game.tr_price_15d : 0 %>,
+        <%= game.trophy_account ? game.tr_price_30d : 0 %>,
+        <%= game.trophy_account %>)">
+      <%= game.available_slots > 0 ? 'Rent Now' : 'Unavailable' %>
+    </button>
+  </div>
+</div>

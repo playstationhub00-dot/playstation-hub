@@ -1,0 +1,15 @@
+<% if (announcement && announcement.active && announcement.text) { %>
+<div class="announcement-bar" id="announcementBar">
+  <%= announcement.text %>
+  <button class="announcement-close" onclick="dismissAnnouncement()" title="Dismiss">✕</button>
+</div>
+<script>
+function dismissAnnouncement() {
+  document.getElementById('announcementBar').style.display = 'none';
+  sessionStorage.setItem('announcementDismissed', '1');
+}
+if (sessionStorage.getItem('announcementDismissed') === '1') {
+  document.getElementById('announcementBar').style.display = 'none';
+}
+</script>
+<% } %>

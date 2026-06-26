@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Game — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="edit-container">
+  <a href="/admin" class="back-link">← Back to Admin</a>
+  <h1>Edit Game</h1>
+
+  <div class="form-card">
+    <form method="POST" action="/admin/edit/<%= game.id %>" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" value="<%= game.title %>" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5" <%= game.platform === 'PS5' ? 'selected' : '' %>>PS5</option>
+            <option value="PS4" <%= game.platform === 'PS4' ? 'selected' : '' %>>PS4</option>
+            <option value="PS4/PS5" <%= game.platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" value="<%= game.genre || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Available Slots</label>
+          <input type="number" name="available_slots" value="<%= game.available_slots %>" min="0">
+        </div>
+        <div class="form-group">
+          <label>Current Renters</label>
+          <input type="number" name="renters" value="<%= game.renters %>" min="0">
+        </div>
+
+        <!-- Non-Trophy prices -->
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="nt_price_10d" value="<%= game.nt_price_10d || 149 %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="nt_price_15d" value="<%= game.nt_price_15d || 199 %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="nt_price_30d" value="<%= game.nt_price_30d || 349 %>" min="1">
+        </div>
+        <!-- Trophy prices -->
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="tr_price_10d" value="<%= game.tr_price_10d || 199 %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="tr_price_15d" value="<%= game.tr_price_15d || 249 %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="tr_price_30d" value="<%= game.tr_price_30d || 399 %>" min="1">
+        </div>
+
+        <div class="form-group">
+          <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
+          <% if (game.cover_image) { %>
+            <img src="<%= game.cover_image %>" style="width:60px;border-radius:6px;margin-bottom:0.5rem;">
+          <% } %>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+
+        <!-- Trophy account toggle -->
+        <div class="form-group" style="justify-content:center;">
+          <label>Trophy Account Available</label>
+          <label class="toggle-switch">
+            <input type="checkbox" name="trophy_account" <%= game.trophy_account ? 'checked' : '' %>>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group full">
+          <label>Description</label>
+          <textarea name="description"><%= game.description || '' %></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/admin" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
+
+
+

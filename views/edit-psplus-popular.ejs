@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Most Played Game — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="edit-container">
+  <a href="/admin" class="back-link">← Back to Admin</a>
+  <h1>Edit Most Played Game</h1>
+  <div style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);border-radius:8px;padding:0.35rem 0.75rem;font-size:0.78rem;color:#FFD700;font-weight:600;margin-bottom:1.5rem;">🔥 PS Plus Most Played</div>
+
+  <div class="form-card" style="border-color:rgba(255,215,0,0.25);">
+    <form method="POST" action="/admin/psplus/popular/edit/<%= entry.id %>" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" value="<%= entry.title %>" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5" <%= entry.platform === 'PS5' ? 'selected' : '' %>>PS5</option>
+            <option value="PS4" <%= entry.platform === 'PS4' ? 'selected' : '' %>>PS4</option>
+            <option value="PS4/PS5" <%= entry.platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" value="<%= entry.genre || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Rank <span style="color:#555;font-size:0.75rem;">(display order)</span></label>
+          <input type="number" name="rank" value="<%= entry.rank || 1 %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
+          <% if (entry.cover_image) { %>
+            <img src="<%= entry.cover_image %>" style="width:80px;border-radius:6px;margin-bottom:0.5rem;">
+          <% } %>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Description</label>
+          <textarea name="description"><%= entry.description || '' %></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Save Changes</button>
+        <a href="/admin" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
+
+
+

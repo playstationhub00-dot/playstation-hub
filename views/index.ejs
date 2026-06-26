@@ -1,0 +1,158 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playstation Hub — PS5/PS4 Game Rentals</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<section class="hero<%= settings.hero_bg.type !== 'default' ? ' hero-custom-bg' : '' %>">
+  <% if (settings.hero_bg.type === 'image' && settings.hero_bg.path) { %>
+    <div class="hero-bg-media" style="background-image:url('<%= settings.hero_bg.path %>');background-size:cover;background-position:center;"></div>
+    <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
+  <% } else if (settings.hero_bg.type === 'video' && settings.hero_bg.path) { %>
+    <video class="hero-bg-media" autoplay muted loop playsinline>
+      <source src="<%= settings.hero_bg.path %>">
+    </video>
+    <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
+  <% } %>
+  <div class="hero-content">
+    <h1>Rent the Latest<br><span>PS5 & PS4</span> Games</h1>
+    <p>Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.</p>
+    <div class="hero-actions">
+      <a href="/browse" class="btn btn-primary">Browse All Games</a>
+      <a href="#how" class="btn btn-outline">How It Works</a>
+    </div>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num"><%= games.length %>+</div>
+    <div class="stat-label">Games Available</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">₱99</div>
+    <div class="stat-label">Starting Price</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">3</div>
+    <div class="stat-label">Rental Durations</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Digital Games</div>
+  </div>
+</div>
+
+<div class="section">
+  <h2 class="section-title">Most Popular</h2>
+  <div class="games-grid">
+    <% featured.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+  </div>
+</div>
+
+<!-- UPCOMING GAMES -->
+<%- include('partials/upcoming-section', { upcoming, noBorderTop: false }) %>
+
+<div class="section">
+  <h2 class="section-title">All Games <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
+  <div class="games-grid">
+    <% games.slice(0, 10).forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+  </div>
+</div>
+
+<section class="how-section" id="how">
+  <div class="how-inner">
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Browse & Pick</h3>
+        <p>Choose from our PS5 and PS4 digital game library.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Choose Duration</h3>
+        <p>Pick 10, 15, or 30 days — flexible pricing to fit your schedule.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Get Access</h3>
+        <p>We'll set up your digital access within 24 hours.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h3>Play & Return</h3>
+        <p>Enjoy the game and the slot is released when your rental ends.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
+
+<!-- RESERVE MODAL -->
+<div class="modal-overlay" id="reserveModal">
+  <div class="modal">
+    <div style="font-size:1.5rem;margin-bottom:0.5rem;">🔔</div>
+    <h2>Reserve a Slot</h2>
+    <div id="reserveGameTitle" style="font-weight:700;font-size:1rem;color:#a855f7;margin:0.5rem 0 1rem;"></div>
+    <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;margin-bottom:1.25rem;text-align:left;">
+      <div style="font-size:0.82rem;color:#bbb;line-height:1.7;margin-bottom:0.75rem;">
+        This game is not yet available but you can <strong style="color:#fff;">reserve your slot now</strong>. Message us on Facebook to lock in your reservation!
+      </div>
+      <div style="font-size:0.78rem;color:var(--ps-blue);font-weight:700;margin-bottom:0.25rem;">📘 Message us on Facebook:</div>
+      <div style="font-size:0.8rem;color:#888;">Include the game name and your preferred rental duration.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeReserveModal()" style="flex:1;">Cancel</button>
+      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+        class="btn" style="flex:1;text-align:center;background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;border-radius:50px;padding:0.75rem 1.75rem;text-decoration:none;"
+        onclick="closeReserveModal()">📘 Message Us</a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/rent-modal') %>
+
+<script>
+function openReserveModal(title) {
+  document.getElementById('reserveGameTitle').textContent = title;
+  document.getElementById('reserveModal').classList.add('active');
+}
+function closeReserveModal() { document.getElementById('reserveModal').classList.remove('active'); }
+document.getElementById('reserveModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReserveModal(); });
+
+function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy) {
+  document.getElementById('modalGameTitle').textContent = title;
+  document.getElementById('modalNtP10').textContent = '₱' + nt10;
+  document.getElementById('modalNtP15').textContent = '₱' + nt15;
+  document.getElementById('modalNtP30').textContent = '₱' + nt30;
+  document.getElementById('modalTrP10').textContent = '₱' + tr10;
+  document.getElementById('modalTrP15').textContent = '₱' + tr15;
+  document.getElementById('modalTrP30').textContent = '₱' + tr30;
+  document.getElementById('modalTrophySection').style.display = hasTrophy ? 'block' : 'none';
+  document.getElementById('rentModal').classList.add('active');
+}
+function closeRentModal() { document.getElementById('rentModal').classList.remove('active'); }
+document.getElementById('rentModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRentModal(); });
+</script>
+</body>
+</html>
+
+
+

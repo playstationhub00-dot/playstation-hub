@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PS Plus Deluxe — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus" class="active">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<!-- HERO BANNER -->
+<section class="psplus-hero">
+  <div class="psplus-hero-bg"></div>
+  <div class="psplus-hero-content">
+    <div class="psplus-logo-row">
+      <div class="psplus-ps-icon">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M50 15 L70 35 L50 35 Z" fill="#FFD700"/>
+          <path d="M50 15 L30 35 L50 35 Z" fill="#FFD700" opacity="0.6"/>
+          <path d="M35 40 L50 85 L65 40 Z" fill="#FFD700"/>
+        </svg>
+      </div>
+      <div>
+        <div class="psplus-eyebrow">Playstation Hub</div>
+        <h1 class="psplus-title">PS PLUS <span>DELUXE</span></h1>
+        <p class="psplus-subtitle">Monthly Games — Unlimited Access</p>
+      </div>
+    </div>
+    <p class="psplus-desc">Access hundreds of games through our PS Plus Deluxe accounts. Enjoy monthly free games and a massive catalog — Trophy or Non-Trophy, your choice.</p>
+    <div class="psplus-hero-actions">
+      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="btn btn-primary" style="background:#FFD700;color:#000;">📘 Message Us to Rent</a>
+      <a href="#pricing" class="btn btn-outline">View Pricing ↓</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING TABLE -->
+<section id="pricing" class="psplus-pricing-section">
+  <div class="psplus-pricing-inner">
+    <h2>Pricing</h2>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-top:0.25rem;">Unlimited game changes, subject to slot availability. Prices may vary.</p>
+    <div class="psplus-price-grid">
+      <!-- Non-Trophy -->
+      <div class="psplus-price-card">
+        <div class="psplus-price-card-label">🎮 Non-Trophy</div>
+        <div class="psplus-price-card-sub">Played on our account</div>
+        <div class="psplus-price-rows">
+          <div class="psplus-price-row">
+            <span class="psplus-price-days">10 Days</span>
+            <span class="psplus-price-amount">₱<%= prices.nt_price_10d %></span>
+          </div>
+          <div class="psplus-price-row">
+            <span class="psplus-price-days">15 Days</span>
+            <span class="psplus-price-amount">₱<%= prices.nt_price_15d %></span>
+          </div>
+          <div class="psplus-price-row psplus-price-row-highlight">
+            <span class="psplus-price-days">30 Days</span>
+            <span class="psplus-price-amount">₱<%= prices.nt_price_30d %></span>
+          </div>
+        </div>
+      </div>
+      <!-- Divider -->
+      <div class="psplus-price-divider"></div>
+      <!-- Trophy -->
+      <div class="psplus-price-card psplus-price-card-trophy">
+        <div class="psplus-price-card-label" style="color:#FFD700;">🏆 Trophy Account</div>
+        <div class="psplus-price-card-sub">Play on your own PSN account</div>
+        <div class="psplus-price-rows">
+          <div class="psplus-price-row">
+            <span class="psplus-price-days" style="color:#886600;">10 Days</span>
+            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_10d %></span>
+          </div>
+          <div class="psplus-price-row">
+            <span class="psplus-price-days" style="color:#886600;">15 Days</span>
+            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_15d %></span>
+          </div>
+          <div class="psplus-price-row psplus-price-row-highlight" style="border-color:rgba(255,215,0,0.2);">
+            <span class="psplus-price-days" style="color:#886600;">30 Days</span>
+            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_30d %></span>
+          </div>
+        </div>
+        <div class="psplus-deposit-note">+₱100 refundable security deposit</div>
+      </div>
+    </div>
+    <div class="psplus-notes">
+      <span>📩 PM us for full list of games available</span>
+      <span>🔒 ₱100 security deposit for Trophy account</span>
+      <span>🔄 Unlimited game changes, subject to slot availability</span>
+    </div>
+  </div>
+</section>
+
+<!-- MOST PLAYED GAMES -->
+<% if (popular.length > 0) { %>
+<section style="padding:3rem 2rem 2rem;max-width:1400px;margin:0 auto;">
+  <h2 class="section-title" style="color:#fff;">
+    <span style="display:inline-flex;align-items:center;gap:0.5rem;">
+      🔥 Most Played in PS Plus
+    </span>
+    <span style="font-size:0.8rem;font-weight:500;color:#555;margin-left:0.5rem;">Available in our Deluxe accounts</span>
+  </h2>
+  <div class="games-grid">
+    <% popular.forEach((game, idx) => { %>
+    <div class="game-card psplus-popular-card">
+      <div style="position:relative;">
+        <% if (game.cover_image) { %>
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+        <% } else { %>
+          <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0a0800,#1a1400);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            <span>No Image</span>
+          </div>
+        <% } %>
+        <div class="psplus-popular-rank">#<%= game.rank || idx + 1 %></div>
+      </div>
+      <div class="game-info">
+        <div class="game-platform"><%= game.platform %></div>
+        <div class="game-title"><%= game.title %></div>
+        <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
+        <% if (game.description) { %>
+          <div style="font-size:0.78rem;color:#666;margin-top:0.4rem;line-height:1.5;"><%= game.description %></div>
+        <% } %>
+        <div style="margin-top:auto;padding-top:0.75rem;">
+          <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+            class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;display:block;text-align:center;text-decoration:none;padding:0.65rem;border-radius:8px;font-size:0.875rem;">
+            📘 Rent via PS Plus
+          </a>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
+<!-- MONTHLY GAMES BY YEAR -->
+<% if (years.length === 0) { %>
+<div style="text-align:center;padding:5rem 2rem;color:var(--text-secondary);">
+  <div style="font-size:3rem;margin-bottom:1rem;">🎮</div>
+  <p>No monthly games added yet. Check back soon!</p>
+</div>
+<% } %>
+
+<% years.forEach(year => { %>
+<section class="psplus-year-section">
+  <div class="psplus-year-inner">
+    <div class="psplus-year-header">
+      <h2 class="psplus-year-title">
+        <span class="psplus-year-badge"><%= year %></span>
+        Monthly Games
+      </h2>
+    </div>
+    <div class="psplus-months-grid">
+      <% byYear[year].forEach(entry => { %>
+      <div class="psplus-month-card">
+        <div class="psplus-month-cover-wrap">
+          <% if (entry.cover_image) { %>
+            <img src="<%= entry.cover_image %>" alt="<%= entry.month_name %> <%= year %>" class="psplus-month-cover">
+          <% } else { %>
+            <div class="psplus-month-cover-placeholder">
+              <div class="psplus-month-placeholder-icon">🎮</div>
+              <div style="font-size:0.75rem;color:#555;margin-top:0.25rem;">No Image</div>
+            </div>
+          <% } %>
+          <div class="psplus-month-label"><%= entry.month_name.toUpperCase() %></div>
+        </div>
+        <div class="psplus-month-info">
+          <div class="psplus-month-name"><%= entry.month_name %> <span style="color:#555;"><%= year %></span></div>
+          <% if (entry.games_list) { %>
+            <div class="psplus-games-list">
+              <% entry.games_list.split('\n').filter(g => g.trim()).forEach(game => { %>
+                <div class="psplus-game-item">• <%= game.trim() %></div>
+              <% }) %>
+            </div>
+          <% } %>
+          <% if (entry.notes) { %>
+            <div class="psplus-month-notes"><%= entry.notes %></div>
+          <% } %>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% }) %>
+
+<%- include('partials/footer') %>
+
+</body>
+</html>
+
+
+

@@ -1,0 +1,7 @@
+node_modules/
+games.json
+public/uploads/
+public/hero-bg-image.*
+public/hero-bg-video.*
+public/logo-custom.*
+.env

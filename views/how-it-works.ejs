@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How It Works — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/announcement') %>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works" class="active">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">🎮 Simple 3-Step Process</div>
+    <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">How It <span style="color:var(--ps-blue);">Works</span></h1>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:480px;margin:0 auto;">Renting a game from Playstation Hub is quick and easy. Just follow these steps and you're ready to play.</p>
+  </div>
+</section>
+
+<!-- STEPS -->
+<div style="max-width:860px;margin:0 auto;padding:4rem 2rem;">
+
+  <!-- Step 1 -->
+  <div class="hiw-step">
+    <div class="hiw-num">1</div>
+    <div class="hiw-connector"></div>
+    <div class="hiw-card">
+      <div class="hiw-icon">🎮</div>
+      <div class="hiw-body">
+        <h2>Choose Your Game</h2>
+        <p>Browse our full game list and find the PS5 or PS4 title you want to play. Each listing shows the available slots, rental prices for 10, 15, and 30 days, and whether a Trophy Account is included.</p>
+        <a href="/browse" class="btn btn-primary" style="margin-top:1rem;display:inline-block;font-size:0.875rem;padding:0.6rem 1.4rem;">Browse Game List →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="hiw-step">
+    <div class="hiw-num">2</div>
+    <div class="hiw-connector"></div>
+    <div class="hiw-card">
+      <div class="hiw-icon">📲</div>
+      <div class="hiw-body">
+        <h2>Click Rent Now</h2>
+        <p>Hit the <strong style="color:#fff;">Rent Now</strong> button on your chosen game. It will open our <strong style="color:#fff;">Facebook page</strong> directly so you can message us right away — no sign-up, no checkout, no hassle.</p>
+        <div class="hiw-tip">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Make sure your Facebook Messenger is ready!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="hiw-step" style="--no-connector:1">
+    <div class="hiw-num">3</div>
+    <div class="hiw-card">
+      <div class="hiw-icon">💬</div>
+      <div class="hiw-body">
+        <h2>Send Us These Details</h2>
+        <p>In your message to us, just include the following:</p>
+        <div class="hiw-details">
+          <div class="hiw-detail-item">
+            <span class="hiw-detail-icon">🎮</span>
+            <div>
+              <strong>Game Name</strong>
+              <span>Which game you want to rent</span>
+            </div>
+          </div>
+          <div class="hiw-detail-item">
+            <span class="hiw-detail-icon">📅</span>
+            <div>
+              <strong>Days of Rent</strong>
+              <span>Choose 10 days, 15 days, or 30 days</span>
+            </div>
+          </div>
+          <div class="hiw-detail-item">
+            <span class="hiw-detail-icon">🏆</span>
+            <div>
+              <strong>Trophy or Non-Trophy</strong>
+              <span>Let us know if you want access to a Trophy Account</span>
+            </div>
+          </div>
+        </div>
+        <div class="hiw-example">
+          <div style="font-size:0.75rem;color:#555;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:0.6rem;">Example Message</div>
+          <div style="color:#ccc;font-size:0.9rem;line-height:1.7;">
+            Hi! I'd like to rent <strong style="color:#fff;">God of War Ragnarök</strong> for <strong style="color:#fff;">15 days</strong>, <strong style="color:#fff;">with Trophy Account</strong>. 😊
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TROPHY VS NON-TROPHY -->
+<div style="max-width:860px;margin:0 auto;padding:0 2rem 4rem;">
+  <div style="text-align:center;margin-bottom:2rem;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,196,0,0.1);border:1px solid rgba(255,196,0,0.25);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:#ffc400;font-weight:600;margin-bottom:1rem;">🏆 Account Types Explained</div>
+    <h2 style="font-size:1.5rem;font-weight:900;">Trophy vs. Non-Trophy Account</h2>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-top:0.5rem;">Not sure which one to pick? Here's the difference:</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+    <!-- Trophy -->
+    <div style="background:linear-gradient(135deg,#1a1a0a,#1a140a);border:1px solid rgba(255,196,0,0.3);border-radius:16px;padding:1.75rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+        <div style="font-size:1.75rem;">🏆</div>
+        <div>
+          <div style="font-weight:800;font-size:1.05rem;color:#ffc400;">Trophy Account</div>
+          <div style="font-size:0.75rem;color:#664d00;font-weight:600;">PREMIUM</div>
+        </div>
+      </div>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:0.65rem;">
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#2ecc71;font-size:1rem;line-height:1.4;">✓</span>
+          Play on <strong style="color:#fff;">your own PSN account</strong>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#2ecc71;font-size:1rem;line-height:1.4;">✓</span>
+          Earn trophies saved to <strong style="color:#fff;">your profile</strong>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#2ecc71;font-size:1rem;line-height:1.4;">✓</span>
+          Your game progress and saves are <strong style="color:#fff;">yours to keep</strong>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#2ecc71;font-size:1rem;line-height:1.4;">✓</span>
+          Best for players who want <strong style="color:#fff;">100% completion</strong>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Non-Trophy -->
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:1.75rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+        <div style="font-size:1.75rem;">🎮</div>
+        <div>
+          <div style="font-weight:800;font-size:1.05rem;color:#aaa;">Non-Trophy Account</div>
+          <div style="font-size:0.75rem;color:#444;font-weight:600;">STANDARD</div>
+        </div>
+      </div>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:0.65rem;">
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#0070d1;font-size:1rem;line-height:1.4;">✓</span>
+          Played on <strong style="color:#fff;">our account</strong>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#0070d1;font-size:1rem;line-height:1.4;">✓</span>
+          No need to share your own PSN details
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#0070d1;font-size:1rem;line-height:1.4;">✓</span>
+          Great for just <strong style="color:#fff;">experiencing the game</strong>
+        </li>
+        <li style="display:flex;align-items:flex-start;gap:0.6rem;font-size:0.875rem;color:#ccc;">
+          <span style="color:#555;font-size:1rem;line-height:1.4;">✗</span>
+          <span style="color:#666;">Trophies won't appear on your profile</span>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1rem;background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:1rem 1.25rem;font-size:0.82rem;color:#555;text-align:center;">
+    💡 Not sure? You can always ask us when you message — we're happy to help you choose!
+  </div>
+</div>
+
+<!-- CTA -->
+<section style="background:#111;border-top:1px solid #1a1a1a;padding:3.5rem 2rem;text-align:center;">
+  <h2 style="font-size:1.5rem;font-weight:900;margin-bottom:0.75rem;">Ready to Play?</h2>
+  <p style="color:var(--text-secondary);margin-bottom:1.75rem;font-size:0.95rem;">Browse our game list and grab your favorite title today.</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+    <a href="/browse" class="btn btn-primary">Browse Games</a>
+    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="btn btn-outline">📘 Message Us on Facebook</a>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
+
+</body>
+</html>
+
+
+

@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit PS Plus Entry — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="edit-container" style="max-width:760px;">
+  <a href="/admin" class="back-link">← Back to Admin</a>
+  <h1>Edit PS Plus Monthly Entry</h1>
+  <div class="form-card" style="border-color:rgba(255,215,0,0.25);">
+    <form method="POST" action="/admin/psplus/edit/<%= entry.id %>" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Year *</label>
+          <input type="number" name="year" value="<%= entry.year %>" min="2020" max="2040" required>
+        </div>
+        <div class="form-group">
+          <label>Month *</label>
+          <select name="month" required>
+            <% const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+               months.forEach((m, i) => { %>
+              <option value="<%= i+1 %>" <%= entry.month === i+1 ? 'selected' : '' %>><%= m %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
+          <% if (entry.cover_image) { %>
+            <img src="<%= entry.cover_image %>" style="width:120px;border-radius:8px;margin-bottom:0.5rem;">
+          <% } %>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Games List <span style="color:#555;font-size:0.75rem;">(one game per line)</span></label>
+          <textarea name="games_list" rows="8" placeholder="Suicide Squad: Kill the Justice League&#10;The Stanley Parable: Ultra Deluxe&#10;..."><%= entry.games_list %></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Notes (optional)</label>
+          <textarea name="notes" rows="2" placeholder="e.g. Available to download on PS4 and PS5"><%= entry.notes %></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" style="background:#FFD700;color:#000;font-weight:800;">Save Changes</button>
+        <a href="/admin" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
+
+
+

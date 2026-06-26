@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 56" width="230" height="56">
+  <path d="M 22,13 L 34,13 A 4,4,0,0,1,38,17 L 38,18 L 39,18 A 4,4,0,0,1,43,22 L 43,34 A 4,4,0,0,1,39,38 L 38,38 L 38,39 A 4,4,0,0,1,34,43 L 22,43 A 4,4,0,0,1,18,39 L 18,38 L 17,38 A 4,4,0,0,1,13,34 L 13,22 A 4,4,0,0,1,17,18 L 18,18 L 18,17 A 4,4,0,0,1,22,13 Z" fill="#F5B800"/>
+  <text x="60" y="26" font-family="Arial, Helvetica Neue, sans-serif" font-weight="300" font-size="15" fill="#ffffff" letter-spacing="0.5">PlayStation</text>
+  <text x="60" y="46" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="19" fill="#ffffff" letter-spacing="2">HUB</text>
+</svg>

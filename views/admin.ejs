@@ -1,0 +1,601 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="admin-container">
+  <div class="admin-header">
+    <h1>🎮 Admin Panel</h1>
+    <a href="/" class="btn btn-outline" style="font-size:0.875rem;padding:0.5rem 1rem;">← View Site</a>
+  </div>
+
+  <!-- SITE SETTINGS -->
+  <div class="form-card" style="border-color:rgba(240,165,0,0.4);background:linear-gradient(135deg,#1a1500 0%,#1a1a0a 100%);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">⚙️ Site Settings</h2>
+    <form method="POST" action="/admin/site-settings" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Website Title <span style="color:#555;font-size:0.75rem;">(shown in browser tab and nav)</span></label>
+          <input type="text" name="title" value="<%= settings.title %>" placeholder="e.g. Playstation Hub" required>
+        </div>
+        <div class="form-group full">
+          <label>Logo Image <span style="color:#555;font-size:0.75rem;">(PNG, JPG or SVG — blank keeps current)</span></label>
+          <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:0.75rem;">
+            <img src="<%= settings.logo_path %>" alt="Current logo" style="height:44px;width:auto;background:#000;border-radius:8px;padding:6px 10px;">
+            <span style="color:#555;font-size:0.8rem;">Current logo</span>
+          </div>
+          <input type="file" name="logo" accept="image/*,.svg" style="padding:0.5rem;">
+        </div>
+
+        <!-- Hero Background -->
+        <div class="form-group full" style="margin-top:0.5rem;">
+          <label>Home Page Hero Background</label>
+          <div style="display:flex;gap:0.75rem;margin:0.65rem 0 1rem;flex-wrap:wrap;" id="heroBgOptions">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;background:#1a1a1a;border:1px solid <%= (settings.hero_bg.type==='default') ? 'var(--ps-blue)' : '#333' %>;border-radius:10px;padding:0.6rem 1rem;font-size:0.875rem;font-weight:600;">
+              <input type="radio" name="hero_bg_type" value="default" <%= settings.hero_bg.type==='default' ? 'checked' : '' %> onchange="heroTypeChange(this)"> Default Gradient
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;background:#1a1a1a;border:1px solid <%= (settings.hero_bg.type==='image') ? 'var(--ps-blue)' : '#333' %>;border-radius:10px;padding:0.6rem 1rem;font-size:0.875rem;font-weight:600;">
+              <input type="radio" name="hero_bg_type" value="image" <%= settings.hero_bg.type==='image' ? 'checked' : '' %> onchange="heroTypeChange(this)"> 🖼 Image
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;background:#1a1a1a;border:1px solid <%= (settings.hero_bg.type==='video') ? 'var(--ps-blue)' : '#333' %>;border-radius:10px;padding:0.6rem 1rem;font-size:0.875rem;font-weight:600;">
+              <input type="radio" name="hero_bg_type" value="video" <%= settings.hero_bg.type==='video' ? 'checked' : '' %> onchange="heroTypeChange(this)"> 🎬 Video Loop
+            </label>
+          </div>
+
+          <div id="heroBgUpload" style="display:<%= settings.hero_bg.type!=='default' ? 'block' : 'none' %>;">
+            <% if (settings.hero_bg.path) { %>
+            <div style="margin-bottom:0.75rem;display:flex;align-items:center;gap:0.75rem;">
+              <% if (settings.hero_bg.type==='video') { %>
+                <video src="<%= settings.hero_bg.path %>" style="height:60px;border-radius:6px;" muted></video>
+              <% } else { %>
+                <img src="<%= settings.hero_bg.path %>" style="height:60px;border-radius:6px;object-fit:cover;width:100px;">
+              <% } %>
+              <span style="color:#555;font-size:0.8rem;">Current background</span>
+            </div>
+            <% } %>
+            <label style="color:#aaa;font-size:0.82rem;display:block;margin-bottom:0.4rem;">Upload new file <span style="color:#555;">(blank = keep current)</span></label>
+            <input type="file" name="hero_bg_file" accept="image/*,video/mp4,video/webm" style="padding:0.5rem;">
+            <div style="margin-top:0.5rem;font-size:0.78rem;color:#555;">Supported: JPG, PNG, WEBP for image · MP4, WEBM for video loop</div>
+
+            <!-- Overlay / Darkness slider -->
+            <div style="margin-top:1.25rem;">
+              <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <span style="color:#aaa;font-size:0.82rem;font-weight:600;">🌑 Background Darkness (overlay)</span>
+                <span id="overlayVal" style="color:var(--ps-blue);font-weight:700;font-size:0.9rem;"><%= settings.hero_bg.overlay || 50 %>%</span>
+              </label>
+              <input type="range" name="hero_bg_overlay" id="overlaySlider"
+                min="0" max="100" value="<%= settings.hero_bg.overlay || 50 %>"
+                oninput="document.getElementById('overlayVal').textContent=this.value+'%'"
+                style="width:100%;accent-color:var(--ps-blue);cursor:pointer;height:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:#555;margin-top:0.3rem;">
+                <span>0% — fully visible</span>
+                <span>100% — fully dark</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save Settings</button>
+      </div>
+    </form>
+    <script>
+    function heroTypeChange(el) {
+      document.getElementById('heroBgUpload').style.display = el.value === 'default' ? 'none' : 'block';
+      document.querySelectorAll('#heroBgOptions label').forEach(l => {
+        l.style.borderColor = l.querySelector('input').checked ? 'var(--ps-blue)' : '#333';
+      });
+    }
+    </script>
+  </div>
+
+  <!-- ANNOUNCEMENT EDITOR -->
+  <div class="form-card" style="border-color: rgba(0,112,209,0.4); background: linear-gradient(135deg, #1a1a1a 0%, #0d1a2e 100%);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">📢 Announcement Bar</h2>
+    <form method="POST" action="/admin/announcement">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Announcement Text</label>
+          <textarea name="text" rows="2" placeholder="Type your announcement here..."><%= announcement.text %></textarea>
+        </div>
+        <div class="form-group">
+          <label>Show on Website</label>
+          <label class="toggle-switch">
+            <input type="checkbox" name="active" <%= announcement.active ? 'checked' : '' %>>
+            <span class="toggle-slider" style=""></span>
+          </label>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save Announcement</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- UPCOMING GAMES SECTION -->
+  <div class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">🔜 Add Upcoming Game <span style="font-size:0.75rem;font-weight:500;color:#666;margin-left:0.25rem;">— Open for Reservation</span></h2>
+    <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" placeholder="e.g. GTA VI" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5">PS5</option>
+            <option value="PS4">PS4</option>
+            <option value="PS4/PS5">PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" placeholder="e.g. Open World, RPG">
+        </div>
+        <div class="form-group">
+          <label>Expected Release Date</label>
+          <input type="text" name="release_date" placeholder="e.g. Q3 2026 or July 2026">
+        </div>
+        <div class="form-group">
+          <label>Cover Image</label>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Description (optional)</label>
+          <textarea name="description" placeholder="Short description..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Add Upcoming Game</button>
+        <button type="reset" class="btn btn-outline">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- UPCOMING GAMES TABLE -->
+  <% if (upcoming.length > 0) { %>
+  <div class="table-card" style="margin-bottom:2rem;border-color:#2a1a3a;">
+    <h2 style="border-color:#2a1a3a;">🔜 Upcoming Games (<%= upcoming.length %>)</h2>
+    <div style="overflow-x:auto;">
+      <table class="games-table">
+        <thead>
+          <tr>
+            <th>Cover</th>
+            <th>Title</th>
+            <th>Platform</th>
+            <th>Genre</th>
+            <th>Release Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% upcoming.forEach(game => { %>
+          <tr>
+            <td>
+              <% if (game.cover_image) { %>
+                <img src="<%= game.cover_image %>" class="table-cover" alt="">
+              <% } else { %>
+                <div class="table-cover-placeholder" style="background:#1a0030;">🔜</div>
+              <% } %>
+            </td>
+            <td>
+              <strong><%= game.title %></strong>
+              <div style="font-size:0.72rem;margin-top:0.2rem;"><span style="background:linear-gradient(135deg,#4a0080,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;">COMING SOON</span></div>
+            </td>
+            <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
+            <td style="color:var(--text-secondary)"><%= game.genre || '—' %></td>
+            <td style="color:#aaa;font-size:0.85rem;"><%= game.release_date || '—' %></td>
+            <td>
+              <div class="action-btns">
+                <a href="/admin/upcoming/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
+                <form method="POST" action="/admin/upcoming/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
+                  <button type="submit" class="btn-delete">🗑 Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- ADD GAME FORM -->
+  <div class="form-card">
+    <h2>+ Add New Game</h2>
+    <form method="POST" action="/admin/add" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" placeholder="e.g. God of War Ragnarök" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5">PS5</option>
+            <option value="PS4">PS4</option>
+            <option value="PS4/PS5">PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" placeholder="e.g. Action, RPG, Horror">
+        </div>
+        <div class="form-group">
+          <label>Available Slots</label>
+          <input type="number" name="available_slots" value="1" min="0">
+        </div>
+        <div class="form-group">
+          <label>Current Renters</label>
+          <input type="number" name="renters" value="0" min="0">
+        </div>
+
+        <!-- Non-Trophy prices -->
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="nt_price_10d" value="149" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="nt_price_15d" value="199" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="nt_price_30d" value="349" min="1">
+        </div>
+        <!-- Trophy prices -->
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="tr_price_10d" value="199" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="tr_price_15d" value="249" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="tr_price_30d" value="399" min="1">
+        </div>
+
+        <div class="form-group">
+          <label>Cover Image</label>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+
+        <!-- Trophy account toggle -->
+        <div class="form-group" style="justify-content:center;">
+          <label>Trophy Account Available</label>
+          <label class="toggle-switch">
+            <input type="checkbox" name="trophy_account">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group full">
+          <label>Description (optional)</label>
+          <textarea name="description" placeholder="Short description of the game..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Add Game</button>
+        <button type="reset" class="btn btn-outline">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- GAMES TABLE -->
+  <div class="table-card">
+    <h2>All Games (<%= games.length %>)</h2>
+    <div style="overflow-x:auto;">
+      <table class="games-table">
+        <thead>
+          <tr>
+            <th>Cover</th>
+            <th>Title</th>
+            <th>Platform</th>
+            <th>Slots</th>
+            <th>Non-Trophy</th>
+            <th>Trophy</th>
+            <th>🏆</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (games.length === 0) { %>
+          <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
+          <% } %>
+          <% games.forEach(game => { %>
+          <tr>
+            <td>
+              <% if (game.cover_image) { %>
+                <img src="<%= game.cover_image %>" class="table-cover" alt="">
+              <% } else { %>
+                <div class="table-cover-placeholder">🎮</div>
+              <% } %>
+            </td>
+            <td><strong><%= game.title %></strong></td>
+            <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
+            <td>
+              <% if (game.available_slots > 0) { %>
+                <span class="badge badge-available"><%= game.available_slots %></span>
+              <% } else { %>
+                <span class="badge badge-unavailable">0</span>
+              <% } %>
+            </td>
+            <td style="font-size:0.8rem;color:#aaa;line-height:1.7;">₱<%= game.nt_price_10d %> / ₱<%= game.nt_price_15d %> / ₱<%= game.nt_price_30d %></td>
+            <td style="font-size:0.8rem;color:#ffc400;line-height:1.7;"><%= game.trophy_account ? '₱'+game.tr_price_10d+' / ₱'+game.tr_price_15d+' / ₱'+game.tr_price_30d : '—' %></td>
+            <td>
+              <% if (game.trophy_account) { %>
+                <span style="color:#ffc400;font-size:1.1rem;" title="Trophy Account Available">🏆</span>
+              <% } else { %>
+                <span style="color:#333;font-size:0.8rem;">—</span>
+              <% } %>
+            </td>
+            <td>
+              <div class="action-btns">
+                <a href="/admin/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
+                <form method="POST" action="/admin/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
+                  <button type="submit" class="btn-delete">🗑 Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PS PLUS DELUXE ===================== -->
+<div class="admin-container" style="padding-top:0;">
+
+  <!-- Most Played Games -->
+  <div class="form-card" style="border-color:rgba(255,215,0,0.2);">
+    <h2>🔥 Add Most Played PS Plus Game</h2>
+    <form method="POST" action="/admin/psplus/popular/add" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Game Title *</label>
+          <input type="text" name="title" placeholder="e.g. God of War Ragnarök" required>
+        </div>
+        <div class="form-group">
+          <label>Platform</label>
+          <select name="platform">
+            <option value="PS5">PS5</option>
+            <option value="PS4">PS4</option>
+            <option value="PS4/PS5">PS4/PS5</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Genre</label>
+          <input type="text" name="genre" placeholder="e.g. Action, RPG">
+        </div>
+        <div class="form-group">
+          <label>Rank <span style="color:#555;font-size:0.75rem;">(display order)</span></label>
+          <input type="number" name="rank" value="1" min="1">
+        </div>
+        <div class="form-group">
+          <label>Cover Image</label>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Description (optional)</label>
+          <textarea name="description" placeholder="Short description..."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">🔥 Add Game</button>
+        <button type="reset" class="btn btn-outline">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Most Played Table -->
+  <% if (psplusPopular.length > 0) { %>
+  <div class="table-card" style="border-color:rgba(255,215,0,0.2);margin-bottom:2rem;">
+    <h2 style="border-color:rgba(255,215,0,0.15);">🔥 Most Played Games (<%= psplusPopular.length %>)</h2>
+    <div style="overflow-x:auto;">
+      <table class="games-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Cover</th>
+            <th>Title</th>
+            <th>Platform</th>
+            <th>Genre</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% psplusPopular.forEach(game => { %>
+          <tr>
+            <td><span style="font-weight:800;color:#FFD700;">#<%= game.rank || '—' %></span></td>
+            <td>
+              <% if (game.cover_image) { %>
+                <img src="<%= game.cover_image %>" class="table-cover" alt="">
+              <% } else { %>
+                <div class="table-cover-placeholder" style="background:#1a1400;">🔥</div>
+              <% } %>
+            </td>
+            <td><strong><%= game.title %></strong></td>
+            <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
+            <td style="color:var(--text-secondary)"><%= game.genre || '—' %></td>
+            <td>
+              <div class="action-btns">
+                <a href="/admin/psplus/popular/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
+                <form method="POST" action="/admin/psplus/popular/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
+                  <button type="submit" class="btn-delete">🗑 Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Global Pricing -->
+  <div class="form-card" style="border-color:rgba(255,215,0,0.3);background:linear-gradient(135deg,#1a1a0a,#0d0900);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">⭐ PS Plus Deluxe — Global Pricing</h2>
+    <p style="font-size:0.82rem;color:#555;margin-bottom:1rem;">These prices apply to all PS Plus Deluxe monthly game access.</p>
+    <form method="POST" action="/admin/psplus/prices">
+      <div class="form-grid">
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="nt_price_10d" value="<%= psplusPrices.nt_price_10d %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="nt_price_15d" value="<%= psplusPrices.nt_price_15d %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="nt_price_30d" value="<%= psplusPrices.nt_price_30d %>" min="1">
+        </div>
+        <div class="form-group full" style="margin-bottom:0;">
+          <label style="color:#FFD700;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included</span></label>
+        </div>
+        <div class="form-group">
+          <label>10 Days</label>
+          <input type="number" name="tr_price_10d" value="<%= psplusPrices.tr_price_10d %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>15 Days</label>
+          <input type="number" name="tr_price_15d" value="<%= psplusPrices.tr_price_15d %>" min="1">
+        </div>
+        <div class="form-group">
+          <label>30 Days</label>
+          <input type="number" name="tr_price_30d" value="<%= psplusPrices.tr_price_30d %>" min="1">
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn" style="background:#FFD700;color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Save Prices</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Add Monthly Entry -->
+  <div class="form-card" style="border-color:rgba(255,215,0,0.2);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">+ Add Monthly Games</h2>
+    <form method="POST" action="/admin/psplus/add" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Year *</label>
+          <input type="number" name="year" value="<%= new Date().getFullYear() %>" min="2020" max="2040" required>
+        </div>
+        <div class="form-group">
+          <label>Month *</label>
+          <select name="month" required>
+            <% ['January','February','March','April','May','June','July','August','September','October','November','December'].forEach((m,i) => { %>
+              <option value="<%= i+1 %>"><%= m %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Cover Image <span style="color:#555;font-size:0.75rem;">(monthly PS Plus banner screenshot)</span></label>
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+        </div>
+        <div class="form-group full">
+          <label>Games List <span style="color:#555;font-size:0.75rem;">(one game per line)</span></label>
+          <textarea name="games_list" rows="6" placeholder="Suicide Squad: Kill the Justice League&#10;The Stanley Parable: Ultra Deluxe&#10;Hitman World of Assassination"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Notes (optional)</label>
+          <textarea name="notes" rows="2" placeholder="e.g. Available on PS4 and PS5"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn" style="background:#FFD700;color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Add Monthly Entry</button>
+        <button type="reset" class="btn btn-outline">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- PS Plus Entries Table -->
+  <div class="table-card" style="border-color:rgba(255,215,0,0.2);">
+    <h2 style="border-color:rgba(255,215,0,0.15);">⭐ PS Plus Monthly Entries (<%= psplus.length %>)</h2>
+    <% if (psplus.length === 0) { %>
+      <div style="padding:2rem;text-align:center;color:var(--text-secondary);">No entries yet. Add one above!</div>
+    <% } else { %>
+    <% let lastYear = null; %>
+    <% psplus.forEach(entry => { %>
+      <% if (entry.year !== lastYear) { lastYear = entry.year; %>
+        <div style="padding:0.5rem 1rem;background:#0d0900;font-size:0.75rem;font-weight:800;color:#FFD700;letter-spacing:1px;border-bottom:1px solid #1a1500;">── <%= entry.year %> ──</div>
+      <% } %>
+      <div class="psplus-admin-entry">
+        <% if (entry.cover_image) { %>
+          <img src="<%= entry.cover_image %>" class="psplus-admin-cover" alt="">
+        <% } else { %>
+          <div class="psplus-admin-cover-placeholder">🎮</div>
+        <% } %>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:0.9rem;"><%= entry.month_name %> <%= entry.year %></div>
+          <% if (entry.games_list) { %>
+            <div style="font-size:0.75rem;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:400px;">
+              <%= entry.games_list.split('\n').filter(g=>g.trim()).join(' · ') %>
+            </div>
+          <% } %>
+        </div>
+        <div class="action-btns" style="flex-shrink:0;">
+          <a href="/admin/psplus/edit/<%= entry.id %>" class="btn-edit">✏️ Edit</a>
+          <form method="POST" action="/admin/psplus/delete/<%= entry.id %>" style="display:inline" onsubmit="return confirm('Delete <%= entry.month_name %> <%= entry.year %>?')">
+            <button type="submit" class="btn-delete">🗑 Delete</button>
+          </form>
+        </div>
+      </div>
+    <% }) %>
+    <% } %>
+  </div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const msg = params.get('msg');
+if (msg) {
+  const messages = { added: '✅ Game added!', updated: '✅ Game updated!', deleted: '🗑 Game deleted!', announcement: '📢 Announcement saved!', upcoming_added: '🔜 Upcoming game added!', upcoming_updated: '✅ Upcoming game updated!', upcoming_deleted: '🗑 Upcoming game deleted!', psplus_added: '⭐ Monthly entry added!', psplus_updated: '✅ Monthly entry updated!', psplus_deleted: '🗑 Monthly entry deleted!', psplus_prices: '💰 PS Plus prices saved!', popular_added: '🔥 Game added to Most Played!', popular_updated: '✅ Most Played game updated!', popular_deleted: '🗑 Game removed from Most Played!' };
+  const text = messages[msg];
+  if (text) {
+    const toast = document.createElement('div');
+    toast.className = 'toast success';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 100);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+    history.replaceState({}, '', '/admin');
+  }
+}
+</script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,123 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Games — <%= settings.title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse" class="active">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="browse-header">
+  <h1>Browse Games</h1>
+  <form class="filters" method="GET" action="/browse">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input type="text" name="search" placeholder="Search games..." value="<%= search %>">
+    </div>
+    <select class="filter-select" name="platform">
+      <option value="">All Platforms</option>
+      <option value="PS5" <%= platform === 'PS5' ? 'selected' : '' %>>PS5</option>
+      <option value="PS4" <%= platform === 'PS4' ? 'selected' : '' %>>PS4</option>
+      <option value="PS4/PS5" <%= platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
+    </select>
+    <select class="filter-select" name="genre">
+      <option value="">All Genres</option>
+      <% genres.forEach(g => { %>
+        <option value="<%= g %>" <%= genre === g ? 'selected' : '' %>><%= g %></option>
+      <% }) %>
+    </select>
+    <button type="submit" class="filter-btn">Search</button>
+    <% if (search || platform || genre) { %>
+      <a href="/browse" class="btn-outline btn" style="padding:0.65rem 1rem;font-size:0.875rem;">Clear</a>
+    <% } %>
+  </form>
+  <div class="results-count"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
+</div>
+
+<!-- UPCOMING GAMES — top of list -->
+<%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
+
+<!-- AVAILABLE GAMES -->
+<div class="section" style="<%= upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;padding-top:3rem;' : 'padding-top:0' %>">
+  <% if (upcoming.length > 0) { %>
+  <h2 class="section-title">Available Now</h2>
+  <% } %>
+  <% if (games.length === 0) { %>
+    <div style="text-align:center;padding:4rem;color:var(--text-secondary);">
+      <div style="font-size:3rem;margin-bottom:1rem;">🎮</div>
+      <p>No games found. Try a different search.</p>
+    </div>
+  <% } else { %>
+  <div class="games-grid">
+    <% games.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+  </div>
+  <% } %>
+</div>
+
+<!-- RESERVE MODAL -->
+<div class="modal-overlay" id="reserveModal">
+  <div class="modal">
+    <div style="font-size:1.5rem;margin-bottom:0.5rem;">🔔</div>
+    <h2>Reserve a Slot</h2>
+    <div id="reserveGameTitle" style="font-weight:700;font-size:1rem;color:#a855f7;margin:0.5rem 0 1rem;"></div>
+    <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;margin-bottom:1.25rem;text-align:left;">
+      <div style="font-size:0.82rem;color:#bbb;line-height:1.7;margin-bottom:0.75rem;">
+        This game is not yet available but you can <strong style="color:#fff;">reserve your slot now</strong>. Message us on Facebook to lock in your reservation!
+      </div>
+      <div style="font-size:0.78rem;color:var(--ps-blue);font-weight:700;margin-bottom:0.25rem;">📘 Message us on Facebook:</div>
+      <div style="font-size:0.8rem;color:#888;">Include the game name and your preferred rental duration.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeReserveModal()" style="flex:1;">Cancel</button>
+      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+        class="btn" style="flex:1;text-align:center;background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;border-radius:50px;padding:0.75rem 1.75rem;text-decoration:none;"
+        onclick="closeReserveModal()">📘 Message Us</a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<%- include('partials/rent-modal') %>
+
+<script>
+function openReserveModal(title) {
+  document.getElementById('reserveGameTitle').textContent = title;
+  document.getElementById('reserveModal').classList.add('active');
+}
+function closeReserveModal() { document.getElementById('reserveModal').classList.remove('active'); }
+document.getElementById('reserveModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReserveModal(); });
+
+function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy) {
+  document.getElementById('modalGameTitle').textContent = title;
+  document.getElementById('modalNtP10').textContent = '₱' + nt10;
+  document.getElementById('modalNtP15').textContent = '₱' + nt15;
+  document.getElementById('modalNtP30').textContent = '₱' + nt30;
+  document.getElementById('modalTrP10').textContent = '₱' + tr10;
+  document.getElementById('modalTrP15').textContent = '₱' + tr15;
+  document.getElementById('modalTrP30').textContent = '₱' + tr30;
+  document.getElementById('modalTrophySection').style.display = hasTrophy ? 'block' : 'none';
+  document.getElementById('rentModal').classList.add('active');
+}
+function closeRentModal() { document.getElementById('rentModal').classList.remove('active'); }
+document.getElementById('rentModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeRentModal(); });
+</script>
+</body>
+</html>
+
+
+
