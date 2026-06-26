@@ -52,7 +52,9 @@ db.defaults({
   },
   admin_password: 'admin123',
   price_categories: [],
-  nextPriceCategoryId: 1
+  nextPriceCategoryId: 1,
+  customers: [],
+  nextCustomerId: 1
 }).write();
 
 // Migrate existing games to new fields if missing
@@ -219,6 +221,14 @@ db.write = function() {
   syncToMongo();
   return r;
 };
+
+function getCustomers() { return db.get('customers').value() || []; }
+function getCustomer(id) { return db.get('customers').find({ id: parseInt(id) }).value(); }
+function newCustomerId() {
+  const id = db.get('nextCustomerId').value();
+  db.set('nextCustomerId', id + 1).write();
+  return id;
+}
 
 function getPriceCategories() { return db.get('price_categories').value() || []; }
 function getPriceCategory(id) { return db.get('price_categories').find({ id: parseInt(id) }).value(); }
@@ -441,7 +451,8 @@ app.get('/admin', requireAuth, (req, res) => {
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories() });
+  const customers = [...getCustomers()].sort((a, b) => (b.id - a.id));
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers });
 });
 
 // Upcoming CRUD
@@ -668,6 +679,125 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings.favicon_path', favicon_path).write();
   db.set('site_settings.hero_bg', hero_bg).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+// Customer CRUD
+app.post('/admin/customers/add', requireAuth, (req, res) => {
+  const { customer_name, game_id, days, account_type, start_date, end_date, price, status, notes } = req.body;
+  if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
+  const game = getGame(game_id);
+  if (!game) return res.redirect('/admin?tab=customers&msg=error');
+  const resolved = resolveGamePrices(game);
+  const priceVal = parseInt(price) || (account_type === 'tr'
+    ? (resolved['tr_price_'+days+'d'] || 0)
+    : (resolved['nt_price_'+days+'d'] || 0));
+  const id = newCustomerId();
+  db.get('customers').push({
+    id,
+    customer_name: customer_name.trim(),
+    game_id: parseInt(game_id),
+    game_title: game.title,
+    days: parseInt(days) || 10,
+    account_type: account_type || 'nt',
+    start_date: start_date || '',
+    end_date: end_date || '',
+    price: priceVal,
+    status: status || 'renting',
+    notes: notes || '',
+    created_at: new Date().toISOString()
+  }).write();
+  // Adjust slots if renting
+  if ((status || 'renting') === 'renting') {
+    const slots = game.available_slots || 0;
+    db.get('games').find({ id: parseInt(game_id) }).assign({
+      available_slots: Math.max(0, slots - 1),
+      renters: (game.renters || 0) + 1
+    }).write();
+  }
+  res.redirect('/admin?tab=customers&msg=customer_added');
+});
+
+app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
+  const customer = getCustomer(req.params.id);
+  if (!customer) return res.redirect('/admin?tab=customers');
+  const games = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
+  res.render('edit-customer', { customer, games, settings: getSiteSettings() });
+});
+
+app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
+  const { customer_name, game_id, days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  const wasRenting = existing.status === 'renting';
+  const isRenting = status === 'renting';
+  const gameChanged = parseInt(game_id) !== existing.game_id;
+
+  // Revert old game slot change if was renting
+  if (wasRenting) {
+    const oldGame = getGame(existing.game_id);
+    if (oldGame) {
+      db.get('games').find({ id: oldGame.id }).assign({
+        available_slots: (oldGame.available_slots || 0) + 1
+      }).write();
+    }
+  }
+  // Apply new game slot change if now renting
+  if (isRenting) {
+    const newGame = getGame(game_id);
+    if (newGame) {
+      db.get('games').find({ id: newGame.id }).assign({
+        available_slots: Math.max(0, (newGame.available_slots || 0) - 1)
+      }).write();
+    }
+  }
+  const newGame = getGame(game_id) || getGame(existing.game_id);
+  db.get('customers').find({ id: parseInt(req.params.id) }).assign({
+    customer_name: (customer_name || existing.customer_name).trim(),
+    game_id: parseInt(game_id) || existing.game_id,
+    game_title: newGame ? newGame.title : existing.game_title,
+    days: parseInt(days) || existing.days,
+    account_type: account_type || existing.account_type,
+    start_date: start_date || existing.start_date,
+    end_date: end_date || existing.end_date,
+    price: parseInt(price) || existing.price,
+    status: status || existing.status,
+    notes: notes || ''
+  }).write();
+  res.redirect('/admin?tab=customers&msg=customer_updated');
+});
+
+app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
+  const { status } = req.body;
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  const wasRenting = existing.status === 'renting';
+  const isRenting = status === 'renting';
+  if (wasRenting !== isRenting) {
+    const game = getGame(existing.game_id);
+    if (game) {
+      db.get('games').find({ id: game.id }).assign({
+        available_slots: Math.max(0, (game.available_slots || 0) + (isRenting ? -1 : 1))
+      }).write();
+    }
+  }
+  db.get('customers').find({ id: parseInt(req.params.id) }).assign({ status }).write();
+  res.redirect('/admin?tab=customers&msg=customer_updated');
+});
+
+app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  // Restore slot if was renting
+  if (existing.status === 'renting') {
+    const game = getGame(existing.game_id);
+    if (game) {
+      db.get('games').find({ id: game.id }).assign({
+        available_slots: (game.available_slots || 0) + 1
+      }).write();
+    }
+  }
+  db.get('customers').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin?tab=customers&msg=customer_deleted');
 });
 
 // Price category CRUD

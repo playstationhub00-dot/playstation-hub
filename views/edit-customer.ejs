@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Customer — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<div class="edit-container">
+  <a href="/admin?tab=customers" class="back-link">← Back to Customers</a>
+  <h1>Edit Customer</h1>
+
+  <div class="form-card" style="border-color:rgba(34,197,94,0.3);">
+    <form method="POST" action="/admin/customers/edit/<%= customer.id %>">
+      <div class="form-grid">
+
+        <div class="form-group full">
+          <label>Customer Name *</label>
+          <input type="text" name="customer_name" value="<%= customer.customer_name %>" required>
+        </div>
+
+        <div class="form-group full">
+          <label>Game Rented *</label>
+          <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
+            <option value="">— Select a game —</option>
+            <% games.forEach(g => { %>
+            <option value="<%= g.id %>"
+              data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
+              data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+              <%= g.id === customer.game_id ? 'selected' : '' %>>
+              <%= g.title %> (<%= g.platform %>)
+            </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Rental Duration</label>
+          <select name="days" id="cust_days" onchange="updateCustPrice()">
+            <option value="10" <%= customer.days === 10 ? 'selected' : '' %>>10 Days</option>
+            <option value="15" <%= customer.days === 15 ? 'selected' : '' %>>15 Days</option>
+            <option value="30" <%= customer.days === 30 ? 'selected' : '' %>>30 Days</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Account Type</label>
+          <select name="account_type" id="cust_type" onchange="updateCustPrice()">
+            <option value="nt" <%= customer.account_type === 'nt' ? 'selected' : '' %>>🎮 Non-Trophy</option>
+            <option value="tr" <%= customer.account_type === 'tr' ? 'selected' : '' %>>🏆 Trophy Account</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" name="start_date" id="cust_start" value="<%= customer.start_date || '' %>" onchange="updateCustEndDate()">
+        </div>
+
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" name="end_date" id="cust_end" value="<%= customer.end_date || '' %>">
+        </div>
+
+        <div class="form-group">
+          <label>Price (₱)</label>
+          <input type="number" name="price" id="cust_price" value="<%= customer.price || 0 %>" min="0">
+        </div>
+
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            <option value="renting" <%= customer.status === 'renting' ? 'selected' : '' %>>🟢 Currently Renting</option>
+            <option value="done" <%= customer.status === 'done' ? 'selected' : '' %>>✅ Done</option>
+          </select>
+        </div>
+
+        <div class="form-group full">
+          <label>Notes</label>
+          <input type="text" name="notes" value="<%= customer.notes || '' %>" placeholder="Optional notes...">
+        </div>
+
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" style="background:#166534;">Save Changes</button>
+        <a href="/admin?tab=customers" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function updateCustPrice() {
+  const sel = document.getElementById('cust_game');
+  const opt = sel.options[sel.selectedIndex];
+  const days = document.getElementById('cust_days').value;
+  const type = document.getElementById('cust_type').value;
+  if (!opt || !opt.value) return;
+  const price = opt.dataset[type + days];
+  if (price) document.getElementById('cust_price').value = price;
+  updateCustEndDate();
+}
+function updateCustEndDate() {
+  const start = document.getElementById('cust_start').value;
+  const days = parseInt(document.getElementById('cust_days').value);
+  if (!start || !days) return;
+  const d = new Date(start + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  document.getElementById('cust_end').value = d.toISOString().slice(0, 10);
+}
+</script>
+
+<%- include('partials/footer') %>
+</body>
+</html>

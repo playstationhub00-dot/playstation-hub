@@ -63,6 +63,7 @@
     <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="admin-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Announcements</button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
+    <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
     <button class="admin-tab" data-tab="security" onclick="switchTab('security')">🔒 Security</button>
   </div>
@@ -703,6 +704,239 @@
 
   </div><!-- /tab-psplus -->
 
+  <!-- ═══════════════ CUSTOMERS TAB ═══════════════ -->
+  <div class="tab-panel" id="tab-customers">
+
+    <%
+      const activeCustomers = customers.filter(c => c.status === 'renting');
+      const doneCustomers = customers.filter(c => c.status === 'done');
+    %>
+
+    <!-- Summary bar -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;">
+      <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:900;color:#22c55e;"><%= activeCustomers.length %></div>
+        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Currently Renting</div>
+      </div>
+      <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:12px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:900;color:#aaa;"><%= doneCustomers.length %></div>
+        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Completed Rentals</div>
+      </div>
+      <div style="background:#1a1000;border:1px solid #3a2a00;border-radius:12px;padding:1rem;text-align:center;">
+        <div style="font-size:1.75rem;font-weight:900;color:var(--ps-blue);"><%= customers.length %></div>
+        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Total Customers</div>
+      </div>
+    </div>
+
+    <!-- Add Customer Form -->
+    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
+      <h2 style="display:flex;align-items:center;gap:0.5rem;">👤 Add New Customer</h2>
+      <form method="POST" action="/admin/customers/add">
+        <div class="form-grid">
+
+          <div class="form-group full">
+            <label>Customer Name *</label>
+            <input type="text" name="customer_name" placeholder="e.g. Juan dela Cruz" required>
+          </div>
+
+          <div class="form-group full">
+            <label>Game Rented *</label>
+            <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
+              <option value="">— Select a game —</option>
+              <% games.forEach(g => { %>
+              <option value="<%= g.id %>"
+                data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
+                data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                data-slots="<%= g.available_slots %>">
+                <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
+              </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Rental Duration</label>
+            <select name="days" id="cust_days" onchange="updateCustPrice()">
+              <option value="10">10 Days</option>
+              <option value="15">15 Days</option>
+              <option value="30">30 Days</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Account Type</label>
+            <select name="account_type" id="cust_type" onchange="updateCustPrice()">
+              <option value="nt">🎮 Non-Trophy</option>
+              <option value="tr">🏆 Trophy Account</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" name="start_date" id="cust_start" onchange="updateCustEndDate()">
+          </div>
+
+          <div class="form-group">
+            <label>End Date <span style="color:#555;font-size:0.72rem;">(auto-calculated)</span></label>
+            <input type="date" name="end_date" id="cust_end">
+          </div>
+
+          <div class="form-group">
+            <label>Price (₱) <span style="color:#555;font-size:0.72rem;">(auto-filled)</span></label>
+            <input type="number" name="price" id="cust_price" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+              <option value="renting">🟢 Currently Renting</option>
+              <option value="done">✅ Done</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label>Notes <span style="color:#555;font-size:0.72rem;">(optional)</span></label>
+            <input type="text" name="notes" placeholder="e.g. Paid via GCash, needs follow-up...">
+          </div>
+
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" style="background:#166534;">Add Customer</button>
+          <button type="reset" class="btn btn-outline">Clear</button>
+        </div>
+      </form>
+      <script>
+      function updateCustPrice() {
+        const sel = document.getElementById('cust_game');
+        const opt = sel.options[sel.selectedIndex];
+        const days = document.getElementById('cust_days').value;
+        const type = document.getElementById('cust_type').value;
+        if (!opt.value) return;
+        const price = opt.dataset[type + days] || '';
+        document.getElementById('cust_price').value = price;
+        updateCustEndDate();
+      }
+      function updateCustEndDate() {
+        const start = document.getElementById('cust_start').value;
+        const days = parseInt(document.getElementById('cust_days').value);
+        if (!start || !days) return;
+        const d = new Date(start + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        document.getElementById('cust_end').value = d.toISOString().slice(0,10);
+      }
+      // Set today as default start date
+      document.getElementById('cust_start').value = new Date().toISOString().slice(0,10);
+      updateCustEndDate();
+      </script>
+    </div>
+
+    <!-- Customers Table -->
+    <div class="table-card" style="margin-top:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
+        <div style="display:flex;gap:0.5rem;">
+          <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
+          <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">Renting</button>
+          <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">Done</button>
+        </div>
+      </div>
+
+      <% if (customers.length === 0) { %>
+        <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
+      <% } else { %>
+      <div style="overflow-x:auto;">
+        <table class="games-table" id="customersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Game</th>
+              <th>Duration</th>
+              <th>Type</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% customers.forEach(c => {
+              const isRenting = c.status === 'renting';
+              const endDate = c.end_date ? new Date(c.end_date + 'T00:00:00') : null;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const isOverdue = isRenting && endDate && endDate < today;
+              const daysLeft = endDate ? Math.ceil((endDate - today) / 86400000) : null;
+            %>
+            <tr class="cust-row" data-status="<%= c.status %>" style="<%= isOverdue ? 'background:rgba(239,68,68,0.06);' : '' %>">
+              <td>
+                <div style="font-weight:700;"><%= c.customer_name %></div>
+                <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
+              </td>
+              <td style="font-size:0.85rem;"><strong><%= c.game_title %></strong></td>
+              <td style="color:#aaa;font-size:0.85rem;"><%= c.days %> days</td>
+              <td>
+                <% if (c.account_type === 'tr') { %>
+                  <span style="color:#ffc400;font-size:0.78rem;font-weight:700;">🏆 Trophy</span>
+                <% } else { %>
+                  <span style="color:#aaa;font-size:0.78rem;">🎮 Non-Trophy</span>
+                <% } %>
+              </td>
+              <td style="font-size:0.82rem;color:#aaa;"><%= c.start_date ? new Date(c.start_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—' %></td>
+              <td style="font-size:0.82rem;">
+                <% if (c.end_date) { %>
+                  <span style="color:<%= isOverdue ? '#ef4444' : (daysLeft !== null && daysLeft <= 2 && isRenting ? '#f59e0b' : '#aaa') %>;">
+                    <%= new Date(c.end_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) %>
+                  </span>
+                  <% if (isRenting && daysLeft !== null) { %>
+                    <div style="font-size:0.68rem;color:<%= isOverdue ? '#ef4444' : (daysLeft <= 2 ? '#f59e0b' : '#555') %>;">
+                      <%= isOverdue ? 'Overdue by '+Math.abs(daysLeft)+'d' : daysLeft === 0 ? 'Due today' : daysLeft+'d left' %>
+                    </div>
+                  <% } %>
+                <% } else { %>—<% } %>
+              </td>
+              <td style="font-weight:700;color:var(--ps-blue);">₱<%= c.price || 0 %></td>
+              <td>
+                <form method="POST" action="/admin/customers/status/<%= c.id %>" style="display:inline;">
+                  <% if (isRenting) { %>
+                    <input type="hidden" name="status" value="done">
+                    <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Done">🟢 Renting</button>
+                  <% } else { %>
+                    <input type="hidden" name="status" value="renting">
+                    <button type="submit" style="background:#222;color:#aaa;border:1px solid #333;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Renting">✅ Done</button>
+                  <% } %>
+                </form>
+              </td>
+              <td>
+                <div class="action-btns">
+                  <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
+                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
+                    <button type="submit" class="btn-delete">🗑</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+
+    <script>
+    function filterCustomers(status) {
+      document.querySelectorAll('.cust-row').forEach(r => {
+        r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
+      });
+      ['all','renting','done'].forEach(s => {
+        const btn = document.getElementById('cf-'+s);
+        btn.style.background = s === status ? 'var(--ps-blue)' : '';
+        btn.style.color = s === status ? '#000' : '';
+      });
+    }
+    </script>
+
+  </div><!-- /tab-customers -->
+
   <!-- ═══════════════ SECURITY TAB ═══════════════ -->
   <div class="tab-panel" id="tab-security">
     <div class="form-card" style="border-color:rgba(255,50,50,0.2);background:linear-gradient(135deg,#1a0a0a,#1a1a1a);">
@@ -732,7 +966,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['settings','announcements','games','psplus','security'];
+const tabs = ['settings','announcements','games','customers','psplus','security'];
 
 function switchTab(name) {
   tabs.forEach(t => {
@@ -757,6 +991,7 @@ function switchTab(name) {
     announcement:'announcements',
     psplus_added:'psplus', psplus_updated:'psplus', psplus_deleted:'psplus',
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
+    customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
     settings_saved:'settings', password_changed:'security',
     wrong_password:'security', password_mismatch:'security', password_too_short:'security'
   };
@@ -766,7 +1001,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');
