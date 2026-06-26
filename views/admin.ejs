@@ -711,25 +711,149 @@
       const activeCustomers = customers.filter(c => c.status === 'renting');
       const boughtCustomers = customers.filter(c => c.status === 'bought');
       const doneCustomers = customers.filter(c => c.status === 'done');
+
+      // Sales calculations
+      const totalRevenue = customers.reduce((s, c) => s + (c.price || 0), 0);
+      const rentRevenue  = customers.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
+      const buyRevenue   = boughtCustomers.reduce((s, c) => s + (c.price || 0), 0);
+
+      // This month
+      const now = new Date();
+      const thisMonth = now.getMonth(), thisYear = now.getFullYear();
+      const monthCustomers = customers.filter(c => {
+        if (!c.created_at) return false;
+        const d = new Date(c.created_at);
+        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+      });
+      const monthRevenue = monthCustomers.reduce((s, c) => s + (c.price || 0), 0);
+
+      // Overdue
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const overdueCustomers = activeCustomers.filter(c => {
+        if (!c.end_date) return false;
+        return new Date(c.end_date + 'T00:00:00') < today0;
+      });
+
+      // Top games by rental count
+      const gameCount = {};
+      customers.forEach(c => { gameCount[c.game_title] = (gameCount[c.game_title] || 0) + 1; });
+      const topGames = Object.entries(gameCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+      // Monthly revenue for last 6 months
+      const monthLabels = [], monthRevs = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(thisYear, thisMonth - i, 1);
+        const lbl = d.toLocaleDateString('en-US', {month:'short', year:'2-digit'});
+        monthLabels.push(lbl);
+        const rev = customers.filter(c => {
+          if (!c.created_at) return false;
+          const cd = new Date(c.created_at);
+          return cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear();
+        }).reduce((s, c) => s + (c.price || 0), 0);
+        monthRevs.push(rev);
+      }
+      const maxMonthRev = Math.max(...monthRevs, 1);
     %>
 
-    <!-- Summary bar -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;">
-      <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:1rem;text-align:center;">
-        <div style="font-size:1.75rem;font-weight:900;color:#22c55e;"><%= activeCustomers.length %></div>
-        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Currently Renting</div>
+    <!-- ── DASHBOARD ── -->
+    <div style="margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
+        <span style="font-size:1.1rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
+        <span style="font-size:0.72rem;color:#444;margin-left:auto;">as of <%= now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
       </div>
-      <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:1rem;text-align:center;">
-        <div style="font-size:1.75rem;font-weight:900;color:#60a5fa;"><%= boughtCustomers.length %></div>
-        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Bought</div>
+
+      <!-- KPI row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:0.75rem;">
+        <div style="background:linear-gradient(135deg,#0a1a0a,#061006);border:1px solid #1a3a1a;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Revenue</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#22c55e;">₱<%= totalRevenue.toLocaleString() %></div>
+          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= customers.length %> transactions</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#100a00,#0a0800);border:1px solid #3a2a00;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">This Month</div>
+          <div style="font-size:1.6rem;font-weight:900;color:var(--ps-blue);">₱<%= monthRevenue.toLocaleString() %></div>
+          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= monthCustomers.length %> customer<%= monthCustomers.length !== 1 ? 's' : '' %></div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0a0f1a,#060a10);border:1px solid #1a2a3a;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Sales</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#a78bfa;">₱<%= rentRevenue.toLocaleString() %></div>
+          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= customers.length - boughtCustomers.length %> rentals</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0f0a1a,#080610);border:1px solid #2a1a3a;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
+          <div style="font-size:1.6rem;font-weight:900;color:#60a5fa;">₱<%= buyRevenue.toLocaleString() %></div>
+          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= boughtCustomers.length %> game<%= boughtCustomers.length !== 1 ? 's' : '' %> sold</div>
+        </div>
       </div>
-      <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:12px;padding:1rem;text-align:center;">
-        <div style="font-size:1.75rem;font-weight:900;color:#aaa;"><%= doneCustomers.length %></div>
-        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Completed Rentals</div>
+
+      <!-- Status + overdue row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:0.75rem;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">🟢</div>
+          <div><div style="font-size:1.4rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Currently Renting</div></div>
+        </div>
+        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">🛒</div>
+          <div><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Bought Games</div></div>
+        </div>
+        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">✅</div>
+          <div><div style="font-size:1.4rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Completed</div></div>
+        </div>
+        <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1a1a1a' %>;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">⚠️</div>
+          <div><div style="font-size:1.4rem;font-weight:900;color:<%= overdueCustomers.length > 0 ? '#ef4444' : '#555' %>;line-height:1;"><%= overdueCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Overdue</div></div>
+        </div>
       </div>
-      <div style="background:#1a1000;border:1px solid #3a2a00;border-radius:12px;padding:1rem;text-align:center;">
-        <div style="font-size:1.75rem;font-weight:900;color:var(--ps-blue);"><%= customers.length %></div>
-        <div style="font-size:0.78rem;color:#555;margin-top:0.2rem;">Total Customers</div>
+
+      <!-- Charts row: monthly bar + top games -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+
+        <!-- Monthly Revenue Bar Chart -->
+        <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue (Last 6 Months)</div>
+          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:90px;">
+            <% monthLabels.forEach((lbl, i) => {
+              const pct = Math.round((monthRevs[i] / maxMonthRev) * 100);
+              const isLast = i === monthLabels.length - 1;
+            %>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem;height:100%;">
+              <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
+                <div style="width:100%;height:<%= Math.max(pct,3) %>%;background:<%= isLast ? 'var(--ps-blue)' : '#2a2a2a' %>;border-radius:4px 4px 0 0;min-height:3px;transition:height 0.3s;"
+                  title="₱<%= monthRevs[i].toLocaleString() %>"></div>
+              </div>
+              <div style="font-size:0.6rem;color:#444;white-space:nowrap;"><%= lbl %></div>
+              <% if (monthRevs[i] > 0) { %>
+              <div style="font-size:0.6rem;color:<%= isLast ? 'var(--ps-blue)' : '#555' %>;font-weight:700;">₱<%= monthRevs[i] >= 1000 ? (monthRevs[i]/1000).toFixed(1)+'k' : monthRevs[i] %></div>
+              <% } %>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- Top Games -->
+        <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
+          <% if (topGames.length === 0) { %>
+            <div style="color:#333;font-size:0.8rem;text-align:center;padding:1.5rem 0;">No data yet</div>
+          <% } else { %>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <% const maxCount = topGames[0][1]; %>
+            <% topGames.forEach(([title, count], i) => { %>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">
+                <div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;"><%= i+1 %>. <%= title %></div>
+                <div style="font-size:0.72rem;font-weight:700;color:var(--ps-blue);"><%= count %>x</div>
+              </div>
+              <div style="background:#1a1a1a;border-radius:3px;height:5px;">
+                <div style="width:<%= Math.round((count/maxCount)*100) %>%;height:100%;background:var(--ps-blue);border-radius:3px;"></div>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+
       </div>
     </div>
 
@@ -864,10 +988,11 @@
     <div class="table-card" style="margin-top:1.5rem;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
-        <div style="display:flex;gap:0.5rem;">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
           <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
-          <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">Renting</button>
-          <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">Done</button>
+          <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
+          <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
+          <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
         </div>
       </div>
 
@@ -960,10 +1085,12 @@
       document.querySelectorAll('.cust-row').forEach(r => {
         r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
       });
-      ['all','renting','done'].forEach(s => {
+      ['all','renting','bought','done'].forEach(s => {
         const btn = document.getElementById('cf-'+s);
+        if (!btn) return;
         btn.style.background = s === status ? 'var(--ps-blue)' : '';
         btn.style.color = s === status ? '#000' : '';
+        btn.style.borderColor = s === status ? 'var(--ps-blue)' : '';
       });
     }
     </script>
