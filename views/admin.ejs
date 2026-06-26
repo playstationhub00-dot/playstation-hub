@@ -13,6 +13,16 @@
     .admin-tab.active { background:var(--ps-blue); color:#000; box-shadow:0 2px 12px rgba(240,165,0,0.3); }
     .tab-panel { display:none; }
     .tab-panel.active { display:block; }
+    .add-choice-overlay { display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center; }
+    .add-choice-overlay.open { display:flex; }
+    .add-choice-box { background:#111;border:1px solid #222;border-radius:20px;padding:2rem;width:min(480px,92vw);animation:popIn 0.18s ease; }
+    @keyframes popIn { from{transform:scale(0.93);opacity:0} to{transform:scale(1);opacity:1} }
+    .add-choice-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-top:1.25rem; }
+    .add-choice-card { background:#0a0a0a;border:1px solid #222;border-radius:14px;padding:1.25rem 0.75rem;text-align:center;cursor:pointer;transition:all 0.15s;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:0.5rem; }
+    .add-choice-card:hover { border-color:var(--ps-blue);background:#1a1500;transform:translateY(-2px); }
+    .add-choice-card .icon { font-size:2rem;line-height:1; }
+    .add-choice-card .label { font-weight:700;font-size:0.82rem;color:#fff; }
+    .add-choice-card .desc { font-size:0.7rem;color:#555;line-height:1.4; }
   </style>
 </head>
 <body>
@@ -284,8 +294,43 @@
   <!-- ═══════════════ GAMES TAB ═══════════════ -->
   <div class="tab-panel" id="tab-games">
 
+    <!-- Add New button -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:1.25rem;">
+      <button onclick="document.getElementById('addChoiceModal').classList.add('open')"
+        class="btn btn-primary" style="background:var(--ps-blue);color:#000;font-weight:800;font-size:0.9rem;padding:0.65rem 1.5rem;border-radius:50px;display:flex;align-items:center;gap:0.5rem;">
+        + Add New
+      </button>
+    </div>
+
+    <!-- Choice Modal -->
+    <div class="add-choice-overlay" id="addChoiceModal" onclick="if(event.target===this)this.classList.remove('open')">
+      <div class="add-choice-box">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-weight:800;font-size:1.1rem;color:#fff;">What do you want to add?</span>
+          <button onclick="document.getElementById('addChoiceModal').classList.remove('open')" style="background:none;border:none;color:#555;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
+        </div>
+        <div class="add-choice-grid">
+          <a class="add-choice-card" href="#add-game-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-game-form').scrollIntoView({behavior:'smooth'}),50)">
+            <span class="icon">🎮</span>
+            <span class="label">New Game</span>
+            <span class="desc">Add a rentable PS5 or PS4 game to your library</span>
+          </a>
+          <a class="add-choice-card" href="#add-upcoming-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-upcoming-form').scrollIntoView({behavior:'smooth'}),50)">
+            <span class="icon">🔜</span>
+            <span class="label">Upcoming Game</span>
+            <span class="desc">Add a coming soon title open for reservation</span>
+          </a>
+          <a class="add-choice-card" href="#add-category-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-category-form').scrollIntoView({behavior:'smooth'}),50)">
+            <span class="icon">🏷️</span>
+            <span class="label">Price Category</span>
+            <span class="desc">Create a pricing tier shared by multiple games</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- PRICE CATEGORIES -->
-    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
+    <div id="add-category-form" class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
       <h2 style="display:flex;align-items:center;gap:0.5rem;">🏷️ Price Categories</h2>
       <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
       <% if (priceCategories.length > 0) { %>
@@ -348,7 +393,7 @@
     </div>
 
     <!-- ADD GAME FORM -->
-    <div class="form-card">
+    <div id="add-game-form" class="form-card">
       <h2>+ Add New Game</h2>
       <form method="POST" action="/admin/add" enctype="multipart/form-data">
         <div class="form-grid">
@@ -460,7 +505,7 @@
     </div>
 
     <!-- UPCOMING GAMES -->
-    <div class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);margin-top:1.5rem;">
+    <div id="add-upcoming-form" class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);margin-top:1.5rem;">
       <h2 style="display:flex;align-items:center;gap:0.5rem;">🔜 Add Upcoming Game <span style="font-size:0.75rem;font-weight:500;color:#666;margin-left:0.25rem;">— Open for Reservation</span></h2>
       <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
         <div class="form-grid">
