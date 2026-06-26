@@ -46,11 +46,17 @@
 
         <div class="form-group">
           <label>Rental Duration</label>
-          <select name="days" id="cust_days" onchange="updateCustPrice()">
+          <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
             <option value="10" <%= customer.days === 10 ? 'selected' : '' %>>10 Days</option>
             <option value="15" <%= customer.days === 15 ? 'selected' : '' %>>15 Days</option>
             <option value="30" <%= customer.days === 30 ? 'selected' : '' %>>30 Days</option>
+            <option value="custom" <%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? 'selected' : '' %>>✏️ Custom...</option>
           </select>
+          <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365"
+            placeholder="Enter number of days"
+            value="<%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? customer.days : '' %>"
+            style="display:<%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? 'block' : 'none' %>;margin-top:0.5rem;width:100%;"
+            oninput="updateCustEndDate()">
         </div>
 
         <div class="form-group">
@@ -99,19 +105,29 @@
 </div>
 
 <script>
+function toggleCustCustomDays(val) {
+  const inp = document.getElementById('cust_custom_days');
+  inp.style.display = val === 'custom' ? 'block' : 'none';
+  if (val === 'custom') inp.focus();
+}
+function getCustDays() {
+  const sel = document.getElementById('cust_days');
+  if (sel.value === 'custom') return parseInt(document.getElementById('cust_custom_days').value) || 0;
+  return parseInt(sel.value) || 0;
+}
 function updateCustPrice() {
   const sel = document.getElementById('cust_game');
   const opt = sel.options[sel.selectedIndex];
   const days = document.getElementById('cust_days').value;
   const type = document.getElementById('cust_type').value;
-  if (!opt || !opt.value) return;
+  if (!opt || !opt.value || days === 'custom') { updateCustEndDate(); return; }
   const price = opt.dataset[type + days];
   if (price) document.getElementById('cust_price').value = price;
   updateCustEndDate();
 }
 function updateCustEndDate() {
   const start = document.getElementById('cust_start').value;
-  const days = parseInt(document.getElementById('cust_days').value);
+  const days = getCustDays();
   if (!start || !days) return;
   const d = new Date(start + 'T00:00:00');
   d.setDate(d.getDate() + days);

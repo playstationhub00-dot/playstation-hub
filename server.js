@@ -689,21 +689,22 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
 
 // Customer CRUD
 app.post('/admin/customers/add', requireAuth, (req, res) => {
-  const { customer_name, game_id, days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
   const game = getGame(game_id);
   if (!game) return res.redirect('/admin?tab=customers&msg=error');
   const resolved = resolveGamePrices(game);
-  const priceVal = parseInt(price) || (account_type === 'tr'
+  const priceVal = parseInt(price) || (days === 'custom' ? 0 : (account_type === 'tr'
     ? (resolved['tr_price_'+days+'d'] || 0)
-    : (resolved['nt_price_'+days+'d'] || 0));
+    : (resolved['nt_price_'+days+'d'] || 0)));
   const id = newCustomerId();
   db.get('customers').push({
     id,
     customer_name: customer_name.trim(),
     game_id: parseInt(game_id),
     game_title: game.title,
-    days: parseInt(days) || 10,
+    days: actualDays,
     account_type: account_type || 'nt',
     start_date: start_date || '',
     end_date: end_date || '',
@@ -731,7 +732,8 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
-  const { customer_name, game_id, days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
   const wasRenting = existing.status === 'renting';
@@ -761,7 +763,7 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     customer_name: (customer_name || existing.customer_name).trim(),
     game_id: parseInt(game_id) || existing.game_id,
     game_title: newGame ? newGame.title : existing.game_title,
-    days: parseInt(days) || existing.days,
+    days: actualDays,
     account_type: account_type || existing.account_type,
     start_date: start_date || existing.start_date,
     end_date: end_date || existing.end_date,
