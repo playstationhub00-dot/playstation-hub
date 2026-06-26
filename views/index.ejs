@@ -46,7 +46,8 @@
     <div class="stat-label">Games Available</div>
   </div>
   <div class="stat">
-    <div class="stat-num">₱99</div>
+    <% const allPrices = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
+    <div class="stat-num">₱<%= lowestPrice %></div>
     <div class="stat-label">Starting Price</div>
   </div>
   <div class="stat">
