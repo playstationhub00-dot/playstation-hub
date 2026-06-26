@@ -114,6 +114,102 @@
     </script>
   </div>
 
+  <!-- HERO TEXT EDITOR -->
+  <div class="form-card" style="border-color:rgba(240,165,0,0.3);background:linear-gradient(135deg,#111000,#1a1a0a);">
+    <h2 style="display:flex;align-items:center;gap:0.5rem;">✏️ Home Page Hero Text</h2>
+    <form method="POST" action="/admin/hero-text">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Line 1 <span style="color:#555;font-size:0.75rem;">("Rent the Latest")</span></label>
+          <input type="text" name="line1" value="<%= settings.hero_text.line1 %>" placeholder="e.g. Rent the Latest">
+        </div>
+        <div class="form-group">
+          <label>Line 2 <span style="color:#555;font-size:0.75rem;">("Games")</span></label>
+          <input type="text" name="line2" value="<%= settings.hero_text.line2 %>" placeholder="e.g. Games">
+        </div>
+        <div class="form-group">
+          <label>Highlighted Text <span style="color:#555;font-size:0.75rem;">("PS5 & PS4")</span></label>
+          <input type="text" name="highlight" value="<%= settings.hero_text.highlight %>" placeholder="e.g. PS5 & PS4">
+        </div>
+        <div class="form-group">
+          <label>Highlight Color</label>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <input type="color" name="highlight_color" value="<%= settings.hero_text.highlight_color %>" style="width:48px;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;">
+            <span id="hlColorVal" style="color:#aaa;font-size:0.85rem;font-family:monospace;"><%= settings.hero_text.highlight_color %></span>
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label>Subtitle Text</label>
+          <textarea name="subtitle" rows="2" placeholder="e.g. Play more, pay less..."><%= settings.hero_text.subtitle %></textarea>
+        </div>
+        <div class="form-group">
+          <label>Subtitle Color</label>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <input type="color" name="subtitle_color" value="<%= settings.hero_text.subtitle_color %>" style="width:48px;height:40px;border:none;border-radius:8px;cursor:pointer;background:none;">
+            <span id="subColorVal" style="color:#aaa;font-size:0.85rem;font-family:monospace;"><%= settings.hero_text.subtitle_color %></span>
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label style="display:flex;justify-content:space-between;">
+            <span>Title Font Size</span>
+            <span id="titleSizeVal" style="color:var(--ps-blue);font-weight:700;"><%= settings.hero_text.title_size %>px</span>
+          </label>
+          <input type="range" name="title_size" min="20" max="120" value="<%= settings.hero_text.title_size %>"
+            oninput="document.getElementById('titleSizeVal').textContent=this.value+'px'"
+            style="width:100%;accent-color:var(--ps-blue);cursor:pointer;height:6px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:#555;margin-top:0.3rem;">
+            <span>20px — small</span><span>120px — huge</span>
+          </div>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="form-group full">
+          <label style="color:#555;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;">Preview</label>
+          <div id="heroPreview" style="background:linear-gradient(135deg,#000,#1a1000,#000);border-radius:12px;padding:2rem;text-align:center;border:1px solid #222;">
+            <div id="prevTitle" style="font-weight:900;line-height:1.15;margin-bottom:0.75rem;color:#fff;"></div>
+            <div id="prevSubtitle" style="font-size:0.9rem;max-width:480px;margin:0 auto;"></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save Hero Text</button>
+      </div>
+    </form>
+    <script>
+    (function() {
+      const fields = {
+        line1: document.querySelector('[name=line1]'),
+        line2: document.querySelector('[name=line2]'),
+        highlight: document.querySelector('[name=highlight]'),
+        highlight_color: document.querySelector('[name=highlight_color]'),
+        subtitle: document.querySelector('[name=subtitle]'),
+        subtitle_color: document.querySelector('[name=subtitle_color]'),
+        title_size: document.querySelector('[name=title_size]')
+      };
+      function updatePreview() {
+        const l1 = fields.line1.value, l2 = fields.line2.value, hl = fields.highlight.value;
+        const hlColor = fields.highlight_color.value, subColor = fields.subtitle_color.value;
+        const size = fields.title_size.value;
+        document.getElementById('prevTitle').style.fontSize = size + 'px';
+        document.getElementById('prevTitle').innerHTML =
+          (l1 ? l1 + '<br>' : '') +
+          '<span style="color:' + hlColor + '">' + (hl || '') + '</span>' +
+          (l2 ? ' ' + l2 : '');
+        document.getElementById('prevSubtitle').style.color = subColor;
+        document.getElementById('prevSubtitle').textContent = fields.subtitle.value;
+        document.getElementById('hlColorVal').textContent = hlColor;
+        document.getElementById('subColorVal').textContent = subColor;
+      }
+      Object.values(fields).forEach(f => { if(f) f.addEventListener('input', updatePreview); });
+      updatePreview();
+    })();
+    </script>
+  </div>
+
   <!-- ANNOUNCEMENT EDITOR -->
   <div class="form-card" style="border-color: rgba(0,112,209,0.4); background: linear-gradient(135deg, #1a1a1a 0%, #0d1a2e 100%);">
     <h2 style="display:flex;align-items:center;gap:0.5rem;">📢 Announcement Bar</h2>
