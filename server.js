@@ -409,10 +409,17 @@ app.post('/admin/psplus/prices', requireAuth, (req, res) => {
   res.redirect('/admin?msg=psplus_prices');
 });
 
+function sortUpcoming(list) {
+  return [...list].sort((a, b) => {
+    const da = a.release_date || 'ZZZZ', db = b.release_date || 'ZZZZ';
+    return da.localeCompare(db);
+  });
+}
+
 app.get('/', (req, res) => {
-  const all = getGames().map(resolveGamePrices);
+  const all = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
   const featured = [...all].sort((a, b) => b.renters - a.renters).slice(0, 5);
-  const upcoming = getUpcoming().sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
+  const upcoming = sortUpcoming(getUpcoming());
   res.render('index', { featured, games: all, upcoming, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
@@ -424,7 +431,7 @@ app.get('/browse', (req, res) => {
   if (genre) games = games.filter(g => g.genre === genre);
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
-  const upcoming = getUpcoming().sort((a, b) => (a.release_date || '').localeCompare(b.release_date || ''));
+  const upcoming = sortUpcoming(getUpcoming());
   res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
