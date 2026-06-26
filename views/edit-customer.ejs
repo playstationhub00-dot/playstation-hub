@@ -55,7 +55,7 @@
           <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365"
             placeholder="Enter number of days"
             value="<%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? customer.days : '' %>"
-            style="display:<%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? 'block' : 'none' %>;margin-top:0.5rem;width:100%;"
+            <%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? '' : 'hidden' %>
             oninput="updateCustEndDate()">
         </div>
 
@@ -107,8 +107,8 @@
 <script>
 function toggleCustCustomDays(val) {
   const inp = document.getElementById('cust_custom_days');
-  inp.style.display = val === 'custom' ? 'block' : 'none';
-  if (val === 'custom') inp.focus();
+  if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
+  else inp.setAttribute('hidden', '');
 }
 function getCustDays() {
   const sel = document.getElementById('cust_days');
