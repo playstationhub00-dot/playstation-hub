@@ -49,8 +49,10 @@
   <div class="results-count"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
 </div>
 
-<!-- UPCOMING GAMES — top of list -->
+<!-- UPCOMING GAMES — hidden when searching/filtering -->
+<% if (!search && !platform && !genre) { %>
 <%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
+<% } %>
 
 <!-- AVAILABLE GAMES -->
 <div class="section" style="<%= upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;padding-top:3rem;' : 'padding-top:0' %>">
