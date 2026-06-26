@@ -27,9 +27,16 @@
         <div class="game-platform"><%= game.platform %></div>
         <div class="game-title"><%= game.title %></div>
         <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <% if (game.release_date) { %>
-          <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">📅 Expected: <strong style="color:#aaa;"><%= game.release_date %></strong></div>
-        <% } %>
+        <%
+          let displayDate = 'TBA';
+          if (game.release_date && game.release_date !== 'TBA') {
+            const d = new Date(game.release_date + 'T00:00:00');
+            displayDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+          }
+        %>
+        <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">
+          📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong>
+        </div>
         <% if (game.description) { %>
           <div style="font-size:0.78rem;color:#666;margin-top:0.4rem;line-height:1.5;"><%= game.description %></div>
         <% } %>

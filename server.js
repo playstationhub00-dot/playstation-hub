@@ -411,8 +411,9 @@ app.post('/admin/psplus/prices', requireAuth, (req, res) => {
 
 function sortUpcoming(list) {
   return [...list].sort((a, b) => {
-    const da = a.release_date || 'ZZZZ', db = b.release_date || 'ZZZZ';
-    return da.localeCompare(db);
+    const da = (!a.release_date || a.release_date === 'TBA') ? 'ZZZZ' : a.release_date;
+    const db2 = (!b.release_date || b.release_date === 'TBA') ? 'ZZZZ' : b.release_date;
+    return da.localeCompare(db2);
   });
 }
 
@@ -445,15 +446,16 @@ app.get('/admin', requireAuth, (req, res) => {
 
 // Upcoming CRUD
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { title, platform, genre, release_date, description } = req.body;
+  const { title, platform, genre, release_date, release_date_tba_val, description } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').push({
     id: newUpcomingId(),
     title: title.trim(),
     platform: platform || 'PS5',
     genre: genre || '',
-    release_date: release_date || '',
+    release_date: finalDate,
     description: description || '',
     cover_image,
     created_at: new Date().toISOString()
@@ -468,13 +470,14 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { title, platform, genre, release_date, description } = req.body;
+  const { title, platform, genre, release_date, release_date_tba_val, description } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
-    release_date: release_date || '', description: description || '', cover_image
+    release_date: finalDate, description: description || '', cover_image
   }).write();
   res.redirect('/admin?msg=upcoming_updated');
 });

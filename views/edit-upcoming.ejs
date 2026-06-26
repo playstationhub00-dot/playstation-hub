@@ -44,8 +44,28 @@
         </div>
         <div class="form-group">
           <label>Expected Release Date</label>
-          <input type="text" name="release_date" value="<%= game.release_date || '' %>" placeholder="e.g. Q3 2026 or July 2026">
+          <% const isTba = game.release_date === 'TBA' || !game.release_date; %>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.85rem;font-weight:600;">
+              <input type="checkbox" id="edit_tba" name="release_date_tba" onchange="toggleEditTba(this.checked)" <%= isTba ? 'checked' : '' %>>
+              Mark as TBA (date unknown)
+            </label>
+            <input type="date" name="release_date" id="edit_date_input"
+              value="<%= (!isTba && game.release_date) ? game.release_date : '' %>"
+              style="width:100%;opacity:<%= isTba ? '0.3' : '1' %>;"
+              <%= isTba ? 'disabled' : '' %>>
+            <input type="hidden" name="release_date_tba_val" id="edit_tba_hidden" value="<%= isTba ? 'TBA' : '' %>">
+          </div>
         </div>
+        <script>
+        function toggleEditTba(checked) {
+          const inp = document.getElementById('edit_date_input');
+          const hid = document.getElementById('edit_tba_hidden');
+          inp.disabled = checked;
+          inp.style.opacity = checked ? '0.3' : '1';
+          hid.value = checked ? 'TBA' : '';
+        }
+        </script>
         <div class="form-group">
           <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
           <% if (game.cover_image) { %>

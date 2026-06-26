@@ -328,8 +328,24 @@
         </div>
         <div class="form-group">
           <label>Expected Release Date</label>
-          <input type="text" name="release_date" placeholder="e.g. Q3 2026 or July 2026">
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.85rem;font-weight:600;">
+              <input type="checkbox" id="add_tba" name="release_date_tba" onchange="toggleAddTba(this.checked)">
+              Mark as TBA (date unknown)
+            </label>
+            <input type="date" name="release_date" id="add_date_input" style="width:100%;">
+            <input type="hidden" name="release_date_tba_val" id="add_tba_hidden" value="">
+          </div>
         </div>
+        <script>
+        function toggleAddTba(checked) {
+          const inp = document.getElementById('add_date_input');
+          const hid = document.getElementById('add_tba_hidden');
+          inp.disabled = checked;
+          inp.style.opacity = checked ? '0.3' : '1';
+          hid.value = checked ? 'TBA' : '';
+        }
+        </script>
         <div class="form-group">
           <label>Cover Image</label>
           <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
