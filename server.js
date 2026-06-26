@@ -33,7 +33,21 @@ db.defaults({
     tr_price_10d: 399, tr_price_15d: 499, tr_price_30d: 699
   },
   announcement: { text: '📢 Monthly subscription renters can enjoy unlimited swap of games! Message us for more info.', active: true },
-  site_settings: { title: 'Playstation Hub', logo_path: '/logo.svg', favicon_path: '/favicon.svg', hero_bg: { type: 'default', path: '' } },
+  site_settings: {
+    title: 'Playstation Hub',
+    logo_path: '/logo.svg',
+    favicon_path: '/favicon.svg',
+    hero_bg: { type: 'default', path: '' },
+    hero_text: {
+      line1: 'Rent the Latest',
+      highlight: 'PS5 & PS4',
+      line2: 'Games',
+      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.',
+      title_size: 55,
+      highlight_color: '#F0A500',
+      subtitle_color: '#aaaaaa'
+    }
+  },
   admin_password: 'admin123'
 }).write();
 
@@ -166,10 +180,16 @@ function newPsplusPopularId() {
 let _mongoSaveClient = null;
 async function _getMongoDb() {
   if (!process.env.MONGODB_URI) return null;
+  const { MongoClient } = require('mongodb');
+  // Reconnect if client is gone or connection dropped
+  if (_mongoSaveClient) {
+    try { await _mongoSaveClient.db('admin').command({ ping: 1 }); }
+    catch { try { await _mongoSaveClient.close(); } catch {} _mongoSaveClient = null; }
+  }
   if (!_mongoSaveClient) {
-    const { MongoClient } = require('mongodb');
     _mongoSaveClient = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
     await _mongoSaveClient.connect();
+    console.log('[mongo] Connected to MongoDB Atlas');
   }
   return _mongoSaveClient.db('pshub');
 }
@@ -177,12 +197,17 @@ function syncToMongo() {
   if (!process.env.MONGODB_URI) return;
   _getMongoDb().then(mdb => {
     if (!mdb) return;
-    mdb.collection('state').replaceOne(
+    return mdb.collection('state').replaceOne(
       { _id: 'db' },
       { _id: 'db', data: db.getState() },
       { upsert: true }
-    ).catch(e => console.log('[mongo sync error]', e.message));
-  }).catch(() => {});
+    );
+  }).then(r => {
+    if (r) console.log('[mongo] Synced to MongoDB ✅');
+  }).catch(e => {
+    console.log('[mongo sync error]', e.message);
+    _mongoSaveClient = null; // force reconnect next time
+  });
 }
 const _origWrite = db.write.bind(db);
 db.write = function() {
@@ -194,6 +219,14 @@ db.write = function() {
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
+  if (!s.hero_text) {
+    db.set('site_settings.hero_text', {
+      line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games',
+      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.',
+      title_size: 55, highlight_color: '#F0A500', subtitle_color: '#aaaaaa'
+    }).write();
+    s.hero_text = db.get('site_settings.hero_text').value();
+  }
   if (!s.favicon_path) {
     db.set('site_settings.favicon_path', '/favicon.svg').write();
     s.favicon_path = '/favicon.svg';
@@ -485,6 +518,20 @@ app.post('/admin/delete/:id', requireAuth, (req, res) => {
   res.redirect('/admin?msg=deleted');
 });
 
+app.post('/admin/hero-text', requireAuth, (req, res) => {
+  const { line1, highlight, line2, subtitle, title_size, highlight_color, subtitle_color } = req.body;
+  db.set('site_settings.hero_text', {
+    line1: line1 || 'Rent the Latest',
+    highlight: highlight || 'PS5 & PS4',
+    line2: line2 || 'Games',
+    subtitle: subtitle || '',
+    title_size: Math.min(120, Math.max(20, parseInt(title_size) || 55)),
+    highlight_color: highlight_color || '#F0A500',
+    subtitle_color: subtitle_color || '#aaaaaa'
+  }).write();
+  res.redirect('/admin?msg=settings_saved');
+});
+
 app.post('/admin/change-password', requireAuth, (req, res) => {
   const { current_password, new_password, confirm_password } = req.body;
   const correct = db.get('admin_password').value();
@@ -539,13 +586,23 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   }
   hero_bg.overlay = Math.min(100, Math.max(0, parseInt(req.body.hero_bg_overlay) || 50));
 
-  db.set('site_settings', {
-    title: (title || 'Playstation Hub').trim(),
-    logo_path,
-    favicon_path,
-    hero_bg
-  }).write();
+  // Preserve hero_text — only update the fields this form controls
+  db.set('site_settings.title', (title || 'Playstation Hub').trim()).write();
+  db.set('site_settings.logo_path', logo_path).write();
+  db.set('site_settings.favicon_path', favicon_path).write();
+  db.set('site_settings.hero_bg', hero_bg).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+app.get('/admin/mongo-status', requireAuth, async (req, res) => {
+  if (!process.env.MONGODB_URI) return res.json({ status: 'no MONGODB_URI env var set' });
+  try {
+    const mdb = await _getMongoDb();
+    const doc = await mdb.collection('state').findOne({ _id: 'db' }, { projection: { _id: 1 } });
+    res.json({ status: 'connected ✅', savedDoc: doc ? 'yes' : 'no saved doc yet' });
+  } catch (e) {
+    res.json({ status: 'error ❌', message: e.message });
+  }
 });
 
 app.listen(PORT, () => {
