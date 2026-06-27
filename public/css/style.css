@@ -738,7 +738,7 @@ footer {
 .psplus-price-grid {
   display: flex;
   gap: 0;
-  margin: 2rem 0 1.5rem;
+  margin: 0 0 1.5rem;
   background: #111;
   border: 1px solid #2a2000;
   border-radius: 16px;
