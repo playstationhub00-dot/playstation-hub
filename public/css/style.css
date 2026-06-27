@@ -448,6 +448,17 @@ nav {
   margin-bottom: 1.5rem;
 }
 
+/* VISITOR STAT CARDS */
+.stat-card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+}
+.stat-card-label { font-size: 0.72rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+.stat-card-num { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 0.2rem; }
+.stat-card-sub { font-size: 0.72rem; color: #555; }
+
 /* ADMIN */
 .admin-container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
 .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }

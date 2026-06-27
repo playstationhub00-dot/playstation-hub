@@ -97,6 +97,7 @@
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
+    <button class="admin-tab" data-tab="visitors" onclick="switchTab('visitors')">👁️ Visitors</button>
     <button class="admin-tab" data-tab="security" onclick="switchTab('security')">🔒 Security</button>
   </div>
 
@@ -1276,6 +1277,131 @@
     </script>
 
   </div><!-- /tab-customers -->
+
+  <!-- ═══════════════ VISITORS TAB ═══════════════ -->
+  <div class="tab-panel" id="tab-visitors">
+    <%
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0, 10);
+      const weekAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);
+      const monthAgo = new Date(now - 30 * 86400000).toISOString().slice(0, 10);
+
+      const visToday = visitors.filter(v => v.date === todayStr);
+      const visWeek  = visitors.filter(v => v.date >= weekAgo);
+      const visMonth = visitors.filter(v => v.date >= monthAgo);
+
+      // Unique IPs per period
+      const uniqueToday = new Set(visToday.map(v => v.ip)).size;
+      const uniqueWeek  = new Set(visWeek.map(v => v.ip)).size;
+      const uniqueMonth = new Set(visMonth.map(v => v.ip)).size;
+
+      // Page breakdown (all time)
+      const pageCounts = {};
+      visitors.forEach(v => { pageCounts[v.page] = (pageCounts[v.page] || 0) + 1; });
+      const topPages = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
+
+      // Last 7 days chart
+      const last7 = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now - i * 86400000);
+        const ds = d.toISOString().slice(0, 10);
+        const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        last7.push({ date: ds, label, count: visitors.filter(v => v.date === ds).length });
+      }
+      const maxBar = Math.max(...last7.map(d => d.count), 1);
+
+      // Recent visitors (last 30)
+      const recentVisitors = [...visitors].reverse().slice(0, 30);
+    %>
+
+    <!-- KPI Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;">
+      <div class="stat-card">
+        <div class="stat-card-label">Today's Visits</div>
+        <div class="stat-card-num" style="color:#22c55e;"><%= visToday.length %></div>
+        <div class="stat-card-sub"><%= uniqueToday %> unique visitor<%= uniqueToday!==1?'s':'' %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Last 7 Days</div>
+        <div class="stat-card-num" style="color:#60a5fa;"><%= visWeek.length %></div>
+        <div class="stat-card-sub"><%= uniqueWeek %> unique visitor<%= uniqueWeek!==1?'s':'' %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Last 30 Days</div>
+        <div class="stat-card-num" style="color:#a78bfa;"><%= visMonth.length %></div>
+        <div class="stat-card-sub"><%= uniqueMonth %> unique visitor<%= uniqueMonth!==1?'s':'' %></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">All-Time Visits</div>
+        <div class="stat-card-num" style="color:#ffc400;"><%= visitors.length %></div>
+        <div class="stat-card-sub"><%= new Set(visitors.map(v=>v.ip)).size %> unique visitor<%= new Set(visitors.map(v=>v.ip)).size!==1?'s':'' %></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
+
+      <!-- Last 7 Days Bar Chart -->
+      <div class="table-card" style="border-color:rgba(96,165,250,0.2);">
+        <h2 style="border-color:rgba(96,165,250,0.1);margin-bottom:1.25rem;">📈 Visits — Last 7 Days</h2>
+        <div style="display:flex;align-items:flex-end;gap:0.4rem;height:120px;">
+          <% last7.forEach(day => { %>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;height:100%;">
+            <div style="font-size:0.65rem;color:#555;"><%= day.count %></div>
+            <div style="width:100%;background:rgba(96,165,250,0.15);border-radius:4px 4px 0 0;border-top:2px solid #60a5fa;height:<%= day.count > 0 ? Math.round((day.count/maxBar)*85) : 2 %>px;min-height:2px;"></div>
+            <div style="font-size:0.6rem;color:#555;text-align:center;line-height:1.2;"><%= day.label %></div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Top Pages -->
+      <div class="table-card" style="border-color:rgba(167,139,250,0.2);">
+        <h2 style="border-color:rgba(167,139,250,0.1);margin-bottom:1rem;">🔗 Most Visited Pages</h2>
+        <% if (topPages.length === 0) { %>
+          <div style="color:#555;font-size:0.85rem;">No visits recorded yet.</div>
+        <% } else { %>
+          <% topPages.forEach(([page, count]) => { %>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
+            <div style="flex:1;font-size:0.82rem;color:#ccc;"><%= page %></div>
+            <div style="font-size:0.75rem;color:#a78bfa;font-weight:700;"><%= count %></div>
+            <div style="width:60px;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
+              <div style="height:100%;background:#a78bfa;border-radius:3px;width:<%= Math.round((count/topPages[0][1])*100) %>%;"></div>
+            </div>
+          </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Recent Visits Table -->
+    <div class="table-card" style="border-color:rgba(34,197,94,0.15);">
+      <h2 style="border-color:rgba(34,197,94,0.1);">🕐 Recent Visits (<%= recentVisitors.length %>)</h2>
+      <% if (recentVisitors.length === 0) { %>
+        <div style="padding:2rem;text-align:center;color:#555;">No visits recorded yet. Share your website link to get visitors!</div>
+      <% } else { %>
+      <table class="games-table" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Page</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% recentVisitors.forEach(v => { %>
+          <tr>
+            <td><span style="color:#22c55e;font-weight:600;"><%= v.page || v.path %></span></td>
+            <td style="color:#aaa;font-size:0.8rem;"><%= v.date %></td>
+            <td style="color:#aaa;font-size:0.8rem;"><%= v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : '' %></td>
+            <td style="color:#555;font-size:0.75rem;font-family:monospace;"><%= v.ip ? v.ip.replace(/^::ffff:/, '').slice(0,15) : '—' %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% } %>
+    </div>
+  </div><!-- /tab-visitors -->
 
   <!-- ═══════════════ SECURITY TAB ═══════════════ -->
   <div class="tab-panel" id="tab-security">

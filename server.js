@@ -56,7 +56,8 @@ db.defaults({
   price_categories: [],
   nextPriceCategoryId: 1,
   customers: [],
-  nextCustomerId: 1
+  nextCustomerId: 1,
+  visitors: []
 }).write();
 
 // Migrate existing games to new fields if missing
@@ -123,6 +124,23 @@ app.use(session({
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 60 * 8 } // 8 hours
 }));
+
+// ── Visitor tracking middleware ───────────────────────────────────────────────
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
+app.use((req, res, next) => {
+  const path = req.path;
+  // Only track public pages, not admin/assets/uploads
+  if (path.startsWith('/admin') || path.startsWith('/uploads') || path.startsWith('/css') || path.startsWith('/js') || path.includes('.')) return next();
+  const pageLabel = PAGE_LABELS[path] || path;
+  const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date().toISOString();
+  db.get('visitors').push({ date: today, time: now, path, page: pageLabel, ip }).write();
+  // Keep only last 5000 entries to avoid bloat
+  const all = db.get('visitors').value();
+  if (all.length > 5000) db.set('visitors', all.slice(all.length - 5000)).write();
+  next();
+});
 
 // Auth middleware — protects all /admin routes
 function requireAuth(req, res, next) {
@@ -510,7 +528,8 @@ app.get('/admin', requireAuth, (req, res) => {
     if (!b.end_date) return -1;
     return a.end_date.localeCompare(b.end_date); // soonest first
   });
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, msg: req.query.msg || null });
+  const visitors = db.get('visitors').value();
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null });
 });
 
 // Upcoming CRUD
