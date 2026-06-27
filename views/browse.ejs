@@ -27,15 +27,15 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
       </svg>
-      <input type="text" name="search" placeholder="Search games..." value="<%= search %>">
+      <input type="text" id="liveSearch" name="search" placeholder="Search games..." value="<%= search %>" autocomplete="off" oninput="liveFilterGames(this.value)">
     </div>
-    <select class="filter-select" name="platform">
+    <select class="filter-select" name="platform" onchange="this.form.submit()">
       <option value="">All Platforms</option>
       <option value="PS5" <%= platform === 'PS5' ? 'selected' : '' %>>PS5</option>
       <option value="PS4" <%= platform === 'PS4' ? 'selected' : '' %>>PS4</option>
       <option value="PS4/PS5" <%= platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
     </select>
-    <select class="filter-select" name="genre">
+    <select class="filter-select" name="genre" onchange="this.form.submit()">
       <option value="">All Genres</option>
       <% genres.forEach(g => { %>
         <option value="<%= g %>" <%= genre === g ? 'selected' : '' %>><%= g %></option>
@@ -46,7 +46,7 @@
       <a href="/browse" class="btn-outline btn" style="padding:0.65rem 1rem;font-size:0.875rem;">Clear</a>
     <% } %>
   </form>
-  <div class="results-count"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
+  <div class="results-count" id="resultsCount"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
 </div>
 
 <!-- UPCOMING GAMES — hidden when searching/filtering -->
@@ -98,6 +98,24 @@
 <%- include('partials/rent-modal') %>
 
 <script>
+function liveFilterGames(query) {
+  const q = query.trim().toLowerCase();
+  const cards = document.querySelectorAll('.games-grid .game-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const title = (card.querySelector('.game-title') || {}).textContent || '';
+    const platform = (card.querySelector('.game-platform') || {}).textContent || '';
+    const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  const counter = document.getElementById('resultsCount');
+  if (counter) counter.textContent = visible + ' game' + (visible !== 1 ? 's' : '') + ' found';
+}
+
+// Run on page load in case the field has a pre-filled value
+(function(){ const s = document.getElementById('liveSearch'); if (s && s.value) liveFilterGames(s.value); })();
+
 function openReserveModal(title) {
   document.getElementById('reserveGameTitle').textContent = title;
   document.getElementById('reserveModal').classList.add('active');
