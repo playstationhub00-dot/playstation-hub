@@ -261,8 +261,6 @@
       <button onclick="closePsplusModal()" style="position:absolute;top:0.75rem;right:0.9rem;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
     <div style="padding:1.25rem 1.5rem 1.5rem;">
-      <!-- Slot status -->
-      <div id="psplusModalSlots" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
       <!-- Games list -->
       <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Included Games</div>
       <div id="psplusModalGames" style="display:flex;flex-direction:column;gap:0.3rem;max-height:220px;overflow-y:auto;margin-bottom:1.25rem;"></div>
@@ -298,18 +296,6 @@ function openPsplusModal(dataStr) {
 
   document.getElementById('psplusModalTitle').textContent = d.month + ' ' + d.year;
 
-  // Slots
-  const slotsEl = document.getElementById('psplusModalSlots');
-  slotsEl.innerHTML = '';
-  const ntStyle = d.ntSlots > 0
-    ? 'background:rgba(34,197,94,0.12);border:1px solid #22c55e;color:#22c55e;'
-    : 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;';
-  const trStyle = d.trSlots > 0
-    ? 'background:rgba(255,196,0,0.12);border:1px solid #ffc400;color:#ffc400;'
-    : 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;';
-  slotsEl.innerHTML =
-    `<span style="${ntStyle}border-radius:20px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:700;">🎮 Non-Trophy: ${d.ntSlots > 0 ? d.ntSlots + ' slot' + (d.ntSlots!==1?'s':'') + ' open' : 'Full'}</span>` +
-    `<span style="${trStyle}border-radius:20px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:700;">🏆 Trophy: ${d.trSlots > 0 ? d.trSlots + ' slot' + (d.trSlots!==1?'s':'') + ' open' : 'Full'}</span>`;
 
   // Games list
   const gamesEl = document.getElementById('psplusModalGames');
