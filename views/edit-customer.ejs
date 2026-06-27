@@ -30,21 +30,31 @@
         </div>
 
         <div class="form-group full">
-          <label>Game Rented *</label>
+          <label id="cust_game_label"><%= customer.status === 'reservation' ? 'Upcoming Game Reserved *' : 'Game Rented *' %></label>
           <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
             <option value="">— Select a game —</option>
-            <% games.forEach(g => { %>
-            <option value="<%= g.id %>"
-              data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
-              data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
-              <%= g.id === customer.game_id ? 'selected' : '' %>>
-              <%= g.title %> (<%= g.platform %>)
-            </option>
-            <% }) %>
+            <optgroup label="Available Games" id="cust_optgroup_regular" style="<%= customer.status === 'reservation' ? 'display:none' : '' %>">
+              <% games.forEach(g => { %>
+              <option value="<%= g.id %>"
+                data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
+                data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                <%= g.id === customer.game_id ? 'selected' : '' %>>
+                <%= g.title %> (<%= g.platform %>)
+              </option>
+              <% }) %>
+            </optgroup>
+            <optgroup label="Upcoming Games" id="cust_optgroup_upcoming" style="<%= customer.status !== 'reservation' ? 'display:none' : '' %>">
+              <% upcoming.forEach(g => { %>
+              <option value="upcoming_<%= g.id %>"
+                <%= String(customer.game_id) === 'upcoming_'+g.id ? 'selected' : '' %>>
+                <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
+              </option>
+              <% }) %>
+            </optgroup>
           </select>
         </div>
 
-        <div class="form-group" id="cust_days_group" <%= (customer.status === 'bought') ? 'hidden' : '' %>>
+        <div class="form-group" id="cust_days_group" <%= (customer.status === 'bought' || customer.status === 'reservation') ? 'hidden' : '' %>>
           <label>Rental Duration</label>
           <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
             <option value="10" <%= customer.days === 10 ? 'selected' : '' %>>10 Days</option>
@@ -84,8 +94,9 @@
 
         <div class="form-group">
           <label>Status</label>
-          <select name="status" id="cust_status" onchange="toggleCustBought(this.value)">
+          <select name="status" id="cust_status" onchange="toggleCustStatus(this.value)">
             <option value="renting" <%= customer.status === 'renting' ? 'selected' : '' %>>🟢 Currently Renting</option>
+            <option value="reservation" <%= customer.status === 'reservation' ? 'selected' : '' %>>🔖 Reservation</option>
             <option value="done" <%= customer.status === 'done' ? 'selected' : '' %>>✅ Done</option>
             <option value="bought" <%= customer.status === 'bought' ? 'selected' : '' %>>🛒 Bought</option>
           </select>
@@ -111,10 +122,26 @@ function toggleCustCustomDays(val) {
   if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
   else inp.setAttribute('hidden', '');
 }
-function toggleCustBought(status) {
+function toggleCustStatus(status) {
   const daysGroup = document.getElementById('cust_days_group');
-  if (status === 'bought') daysGroup.setAttribute('hidden', '');
-  else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
+  const gameLabel = document.getElementById('cust_game_label');
+  const grpRegular = document.getElementById('cust_optgroup_regular');
+  const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
+  const gameSel = document.getElementById('cust_game');
+  if (status === 'reservation') {
+    daysGroup.setAttribute('hidden', '');
+    grpRegular.style.display = 'none';
+    grpUpcoming.style.display = '';
+    gameLabel.textContent = 'Upcoming Game Reserved *';
+    gameSel.value = '';
+  } else {
+    grpRegular.style.display = '';
+    grpUpcoming.style.display = 'none';
+    gameLabel.textContent = 'Game Rented *';
+    gameSel.value = '';
+    if (status === 'bought') daysGroup.setAttribute('hidden', '');
+    else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
+  }
 }
 function getCustDays() {
   const sel = document.getElementById('cust_days');

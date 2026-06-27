@@ -728,6 +728,7 @@
       const activeCustomers = customers.filter(c => c.status === 'renting');
       const boughtCustomers = customers.filter(c => c.status === 'bought');
       const doneCustomers = customers.filter(c => c.status === 'done');
+      const reservationCustomers = customers.filter(c => c.status === 'reservation');
 
       // Sales calculations
       const totalRevenue = customers.reduce((s, c) => s + (c.price || 0), 0);
@@ -821,10 +822,14 @@
       </div>
 
       <!-- Status + overdue row -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.75rem;margin-bottom:0.75rem;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;margin-bottom:0.75rem;">
         <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
           <div style="font-size:1.5rem;">🟢</div>
           <div><div style="font-size:1.4rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Currently Renting</div></div>
+        </div>
+        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">🔖</div>
+          <div><div style="font-size:1.4rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Reservations</div></div>
         </div>
         <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
           <div style="font-size:1.5rem;">🛒</div>
@@ -903,17 +908,28 @@
           </div>
 
           <div class="form-group full">
-            <label>Game Rented *</label>
+            <label id="cust_game_label">Game Rented *</label>
             <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
               <option value="">— Select a game —</option>
-              <% games.forEach(g => { %>
-              <option value="<%= g.id %>"
-                data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
-                data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
-                data-slots="<%= g.available_slots %>">
-                <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
-              </option>
-              <% }) %>
+              <!-- Regular games (shown for renting/done/bought) -->
+              <optgroup label="Available Games" id="cust_optgroup_regular">
+                <% games.forEach(g => { %>
+                <option value="<%= g.id %>" data-type="regular"
+                  data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
+                  data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                  data-slots="<%= g.available_slots %>">
+                  <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
+                </option>
+                <% }) %>
+              </optgroup>
+              <!-- Upcoming games (shown for reservation) -->
+              <optgroup label="Upcoming Games" id="cust_optgroup_upcoming" style="display:none;">
+                <% upcoming.forEach(g => { %>
+                <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>">
+                  <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
+                </option>
+                <% }) %>
+              </optgroup>
             </select>
           </div>
 
@@ -954,8 +970,9 @@
 
           <div class="form-group">
             <label>Status</label>
-            <select name="status" id="cust_status" onchange="toggleCustBought(this.value)">
+            <select name="status" id="cust_status" onchange="toggleCustStatus(this.value)">
               <option value="renting">🟢 Currently Renting</option>
+              <option value="reservation">🔖 Reservation</option>
               <option value="done">✅ Done</option>
               <option value="bought">🛒 Bought</option>
             </select>
@@ -983,14 +1000,33 @@
         if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
         else inp.setAttribute('hidden', '');
       }
-      function toggleCustBought(status) {
+      function toggleCustStatus(status) {
         const daysGroup = document.getElementById('cust_days_group');
-        if (status === 'bought') {
+        const gameLabel = document.getElementById('cust_game_label');
+        const grpRegular = document.getElementById('cust_optgroup_regular');
+        const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
+        const gameSel = document.getElementById('cust_game');
+
+        if (status === 'reservation') {
+          // Show only upcoming games
           daysGroup.setAttribute('hidden', '');
-          document.getElementById('cust_end').removeAttribute('required');
+          grpRegular.style.display = 'none';
+          grpUpcoming.style.display = '';
+          gameLabel.textContent = 'Upcoming Game Reserved *';
+          // Reset selection to avoid carrying over a regular game
+          gameSel.value = '';
         } else {
-          daysGroup.removeAttribute('hidden');
-          updateCustEndDate();
+          // Show only regular games
+          grpRegular.style.display = '';
+          grpUpcoming.style.display = 'none';
+          gameLabel.textContent = 'Game Rented *';
+          gameSel.value = '';
+          if (status === 'bought') {
+            daysGroup.setAttribute('hidden', '');
+          } else {
+            daysGroup.removeAttribute('hidden');
+            updateCustEndDate();
+          }
         }
       }
       function updateCustPrice() {
@@ -1025,6 +1061,7 @@
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
           <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
           <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
+          <button onclick="filterCustomers('reservation')" id="cf-reservation" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#4a1a6a;color:#c084fc;">🔖 Reservation</button>
           <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
           <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
         </div>
@@ -1052,6 +1089,7 @@
             <% customers.forEach(c => {
               const isRenting = c.status === 'renting';
               const isBought = c.status === 'bought';
+              const isReservation = c.status === 'reservation';
               const endDate = c.end_date ? new Date(c.end_date + 'T00:00:00') : null;
               const today = new Date(); today.setHours(0,0,0,0);
               const isOverdue = isRenting && endDate && endDate < today;
@@ -1063,7 +1101,7 @@
                 <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
               </td>
               <td style="font-size:0.85rem;"><strong><%= c.game_title %></strong></td>
-              <td style="color:#aaa;font-size:0.85rem;"><%= isBought ? '—' : c.days + ' days' %></td>
+              <td style="color:#aaa;font-size:0.85rem;"><%= (isBought || isReservation) ? '—' : c.days + ' days' %></td>
               <td>
                 <% if (c.account_type === 'tr') { %>
                   <span style="color:#ffc400;font-size:0.78rem;font-weight:700;">🏆 Trophy</span>
@@ -1090,6 +1128,8 @@
                   <% if (isRenting) { %>
                     <input type="hidden" name="status" value="done">
                     <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Done">🟢 Renting</button>
+                  <% } else if (isReservation) { %>
+                    <span style="background:#2d1a4a;color:#c084fc;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🔖 Reserved</span>
                   <% } else if (isBought) { %>
                     <span style="background:#1e3a5f;color:#60a5fa;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🛒 Bought</span>
                   <% } else { %>
@@ -1119,7 +1159,7 @@
       document.querySelectorAll('.cust-row').forEach(r => {
         r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
       });
-      ['all','renting','bought','done'].forEach(s => {
+      ['all','renting','reservation','bought','done'].forEach(s => {
         const btn = document.getElementById('cf-'+s);
         if (!btn) return;
         btn.style.background = s === status ? 'var(--ps-blue)' : '';

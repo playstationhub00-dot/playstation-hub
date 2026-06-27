@@ -700,19 +700,30 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes } = req.body;
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
-  const game = getGame(game_id);
+  // Reservation uses upcoming game (prefixed id), others use regular game
+  const isReservation = (status || 'renting') === 'reservation';
+  const isUpcomingGame = String(game_id).startsWith('upcoming_');
+  let game = null, gameTitle = '';
+  if (isUpcomingGame) {
+    const upId = parseInt(String(game_id).replace('upcoming_', ''));
+    game = getUpcomingGame(upId);
+    gameTitle = game ? game.title : '';
+  } else {
+    game = getGame(game_id);
+    gameTitle = game ? game.title : '';
+  }
   if (!game) return res.redirect('/admin?tab=customers&msg=error');
-  const resolved = resolveGamePrices(game);
-  const priceVal = parseInt(price) || (days === 'custom' ? 0 : (account_type === 'tr'
+  const resolved = isUpcomingGame ? {} : resolveGamePrices(game);
+  const priceVal = parseInt(price) || (days === 'custom' || isUpcomingGame ? 0 : (account_type === 'tr'
     ? (resolved['tr_price_'+days+'d'] || 0)
     : (resolved['nt_price_'+days+'d'] || 0)));
   const id = newCustomerId();
   db.get('customers').push({
     id,
     customer_name: customer_name.trim(),
-    game_id: parseInt(game_id),
-    game_title: game.title,
-    days: actualDays,
+    game_id: isUpcomingGame ? String(game_id) : parseInt(game_id),
+    game_title: gameTitle,
+    days: isReservation ? 0 : actualDays,
     account_type: account_type || 'nt',
     start_date: start_date || '',
     end_date: end_date || '',
@@ -721,9 +732,9 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
     notes: notes || '',
     created_at: new Date().toISOString()
   }).write();
-  // Adjust slots if renting or bought
+  // Adjust slots only for renting or bought (not reservation)
   const activeStatus = status || 'renting';
-  if (activeStatus === 'renting' || activeStatus === 'bought') {
+  if ((activeStatus === 'renting' || activeStatus === 'bought') && !isUpcomingGame) {
     const slots = game.available_slots || 0;
     db.get('games').find({ id: parseInt(game_id) }).assign({
       available_slots: Math.max(0, slots - 1),
@@ -737,7 +748,7 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const customer = getCustomer(req.params.id);
   if (!customer) return res.redirect('/admin?tab=customers');
   const games = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('edit-customer', { customer, games, settings: getSiteSettings() });
+  res.render('edit-customer', { customer, games, upcoming: getUpcoming(), settings: getSiteSettings() });
 });
 
 app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
@@ -804,8 +815,8 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
 app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
-  // Restore slot if was renting or bought
-  if (existing.status === 'renting' || existing.status === 'bought') {
+  // Restore slot if was renting or bought (not reservation)
+  if ((existing.status === 'renting' || existing.status === 'bought') && !String(existing.game_id).startsWith('upcoming_')) {
     const game = getGame(existing.game_id);
     if (game) {
       db.get('games').find({ id: game.id }).assign({
