@@ -128,14 +128,14 @@ app.use(session({
 // ── Visitor tracking middleware ───────────────────────────────────────────────
 const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
 app.use((req, res, next) => {
-  const path = req.path;
+  const reqPath = req.path;
   // Only track public pages, not admin/assets/uploads
-  if (path.startsWith('/admin') || path.startsWith('/uploads') || path.startsWith('/css') || path.startsWith('/js') || path.includes('.')) return next();
-  const pageLabel = PAGE_LABELS[path] || path;
+  if (reqPath.startsWith('/admin') || reqPath.startsWith('/uploads') || reqPath.startsWith('/css') || reqPath.startsWith('/js') || reqPath.includes('.')) return next();
+  const pageLabel = PAGE_LABELS[reqPath] || reqPath;
   const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
-  db.get('visitors').push({ date: today, time: now, path, page: pageLabel, ip }).write();
+  db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip }).write();
   // Keep only last 5000 entries to avoid bloat
   const all = db.get('visitors').value();
   if (all.length > 5000) db.set('visitors', all.slice(all.length - 5000)).write();
