@@ -309,7 +309,12 @@ app.get('/ps-plus', (req, res) => {
   Object.keys(byYear).forEach(y => byYear[y].sort((a, b) => a.month - b.month));
   const years = Object.keys(byYear).sort((a, b) => b - a); // newest year first
   const popular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  // Pull slots from the "PS Plus Deluxe" game entry so they stay in sync
+  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus deluxe') || g.title.toLowerCase().includes('playstation plus deluxe'));
+  const slots = psplusGame
+    ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
+    : getPsplusSlots();
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // PS Plus admin CRUD
