@@ -41,12 +41,20 @@
           <input type="text" name="genre" value="<%= game.genre || '' %>">
         </div>
         <div class="form-group">
-          <label>Available Slots</label>
+          <label>🎮 Non-Trophy Slots</label>
+          <input type="number" name="non_trophy_slots" value="<%= game.non_trophy_slots || 0 %>" min="0">
+        </div>
+        <div class="form-group">
+          <label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label>
           <input type="number" name="available_slots" value="<%= game.available_slots %>" min="0">
         </div>
         <div class="form-group">
           <label>Current Renters</label>
           <input type="number" name="renters" value="<%= game.renters %>" min="0">
+        </div>
+        <div class="form-group">
+          <label>🕹️ PS4 Primary Slots</label>
+          <input type="number" name="ps4_primary_slots" value="<%= game.ps4_primary_slots || 0 %>" min="0">
         </div>
         <div class="form-group">
           <label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label>

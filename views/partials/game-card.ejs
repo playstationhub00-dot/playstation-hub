@@ -12,12 +12,46 @@
   <div class="game-info">
     <div class="game-platform"><%= game.platform %></div>
     <div class="game-title"><%= game.title %></div>
-    <div class="game-badges">
-      <% if (game.available_slots > 0) { %>
-        <span class="badge badge-available">● Slot: <%= game.available_slots %></span>
-      <% } else { %>
-        <span class="badge badge-unavailable">● No Slots</span>
+
+    <!-- Per-type slot availability -->
+    <div class="slot-availability">
+      <%
+        const ntSlots  = game.non_trophy_slots || 0;
+        const trSlots  = game.trophy_slots || 0;
+        const ps4Slots = game.ps4_primary_slots || 0;
+        const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
+      %>
+      <div class="slot-row">
+        <span class="slot-label">🎮 Non-Trophy</span>
+        <% if (ntSlots > 0) { %>
+          <span class="slot-avail">● Available (<%= ntSlots %>)</span>
+        <% } else { %>
+          <span class="slot-unavail">● Not Available</span>
+        <% } %>
+      </div>
+      <% if (game.trophy_account || trSlots > 0) { %>
+      <div class="slot-row">
+        <span class="slot-label">🏆 Trophy Account</span>
+        <% if (trSlots > 0) { %>
+          <span class="slot-avail" style="color:#ffc400;">● Available (<%= trSlots %>)</span>
+        <% } else { %>
+          <span class="slot-unavail">● Not Available</span>
+        <% } %>
+      </div>
       <% } %>
+      <% if (showPs4) { %>
+      <div class="slot-row">
+        <span class="slot-label">🕹️ PS4 Primary</span>
+        <% if (ps4Slots > 0) { %>
+          <span class="slot-avail" style="color:#60a5fa;">● Available (<%= ps4Slots %>)</span>
+        <% } else { %>
+          <span class="slot-unavail">● Not Available</span>
+        <% } %>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="game-badges">
       <span class="badge badge-renters">👤 <%= game.renters %></span>
     </div>
 
@@ -35,8 +69,8 @@
       </div>
     </div>
 
-    <!-- Trophy Prices (only if trophy account available) -->
-    <% if (game.trophy_account) { %>
+    <!-- Trophy Prices (only if trophy account available or had slots) -->
+    <% if (game.trophy_account || trSlots > 0) { %>
     <div class="price-block price-block-trophy">
       <div class="price-block-label" style="color:#ffc400;">🏆 Trophy Account</div>
       <div class="price-tiers">
@@ -49,14 +83,14 @@
     <% } %>
 
     <button class="rent-btn"
-      <%= game.available_slots <= 0 ? 'disabled' : '' %>
+      <%= (ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0)) ? 'disabled' : '' %>
       onclick="openRentModal('<%= game.title.replace(/'/g, "\\'") %>',
         <%= game.nt_price_10d %>, <%= game.nt_price_15d %>, <%= game.nt_price_30d %>,
         <%= game.trophy_account ? game.tr_price_10d : 0 %>,
         <%= game.trophy_account ? game.tr_price_15d : 0 %>,
         <%= game.trophy_account ? game.tr_price_30d : 0 %>,
         <%= game.trophy_account %>)">
-      <%= game.available_slots > 0 ? 'Rent Now' : 'Unavailable' %>
+      <%= (ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0)) ? 'Unavailable' : 'Rent Now' %>
     </button>
   </div>
 </div>

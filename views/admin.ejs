@@ -436,8 +436,10 @@
             <select name="platform"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
           </div>
           <div class="form-group"><label>Genre</label><input type="text" name="genre" placeholder="e.g. Action, RPG, Horror"></div>
-          <div class="form-group"><label>Available Slots</label><input type="number" name="available_slots" value="1" min="0"></div>
+          <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
+          <div class="form-group"><label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label><input type="number" name="available_slots" value="1" min="0"></div>
           <div class="form-group"><label>Current Renters</label><input type="number" name="renters" value="0" min="0"></div>
+          <div class="form-group"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_primary_slots" value="0" min="0"></div>
           <div class="form-group"><label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label><input type="number" name="cost" value="0" min="0" placeholder="e.g. 2500"></div>
 
           <!-- Pricing mode -->
@@ -503,11 +505,11 @@
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
-            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>Slots</th><th style="color:#ffc400;">🏆 Trophy Slots</th><th>Non-Trophy</th><th>Trophy</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
+            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <% if (games.length === 0) { %>
-            <tr><td colspan="11" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
+            <tr><td colspan="12" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
             <% } %>
             <% games.forEach(game => {
               const gameTotalEarned = customers.filter(c => c.game_id === game.id).reduce((s,c) => s+(c.price||0), 0);
@@ -527,13 +529,22 @@
               </td>
               <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
               <td>
-                <% if (game.available_slots > 0) { %><span class="badge badge-available"><%= game.available_slots %></span><% } else { %><span class="badge badge-unavailable">0</span><% } %>
+                <% const ntS = game.non_trophy_slots || 0; %>
+                <% if (ntS > 0) { %><span class="badge badge-available"><%= ntS %></span><% } else { %><span class="badge badge-unavailable">0</span><% } %>
               </td>
               <td>
                 <% if (game.trophy_account) { %>
-                  <span style="color:#ffc400;font-weight:700;font-size:0.88rem;">🏆 <%= game.trophy_slots || 0 %> slot<%= (game.trophy_slots || 0) !== 1 ? 's' : '' %></span>
+                  <span style="color:#ffc400;font-weight:700;font-size:0.88rem;">🏆 <%= game.trophy_slots || 0 %></span>
                 <% } else if ((game.trophy_slots || 0) > 0) { %>
-                  <span style="color:#555;font-size:0.8rem;">🏆 <%= game.trophy_slots %> (off)</span>
+                  <span style="color:#555;font-size:0.8rem;"><%= game.trophy_slots %> (off)</span>
+                <% } else { %>
+                  <span style="color:#333;font-size:0.8rem;">—</span>
+                <% } %>
+              </td>
+              <td>
+                <% const ps4S = game.ps4_primary_slots || 0; %>
+                <% if (game.platform === 'PS4' || game.platform === 'PS4/PS5') { %>
+                  <% if (ps4S > 0) { %><span style="color:#60a5fa;font-weight:700;">🕹️ <%= ps4S %></span><% } else { %><span style="color:#333;font-size:0.8rem;">0</span><% } %>
                 <% } else { %>
                   <span style="color:#333;font-size:0.8rem;">—</span>
                 <% } %>
@@ -994,6 +1005,7 @@
             <select name="account_type" id="cust_type" onchange="updateCustPrice()">
               <option value="nt">🎮 Non-Trophy</option>
               <option value="tr">🏆 Trophy Account</option>
+              <option value="ps4">🕹️ PS4 Primary</option>
             </select>
           </div>
 
@@ -1149,6 +1161,8 @@
               <td>
                 <% if (c.account_type === 'tr') { %>
                   <span style="color:#ffc400;font-size:0.78rem;font-weight:700;">🏆 Trophy</span>
+                <% } else if (c.account_type === 'ps4') { %>
+                  <span style="color:#60a5fa;font-size:0.78rem;font-weight:700;">🕹️ PS4 Primary</span>
                 <% } else { %>
                   <span style="color:#aaa;font-size:0.78rem;">🎮 Non-Trophy</span>
                 <% } %>

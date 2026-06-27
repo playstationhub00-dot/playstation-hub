@@ -293,6 +293,11 @@ nav {
   letter-spacing: 0.5px;
 }
 
+.slot-availability { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.6rem; }
+.slot-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; }
+.slot-label { color: var(--text-secondary); font-weight: 600; }
+.slot-avail { color: #22c55e; font-weight: 700; }
+.slot-unavail { color: #ef4444; font-weight: 600; opacity: 0.8; }
 .game-badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .badge {
   font-size: 0.72rem;

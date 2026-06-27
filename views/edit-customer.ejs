@@ -74,6 +74,7 @@
           <select name="account_type" id="cust_type" onchange="updateCustPrice()">
             <option value="nt" <%= customer.account_type === 'nt' ? 'selected' : '' %>>🎮 Non-Trophy</option>
             <option value="tr" <%= customer.account_type === 'tr' ? 'selected' : '' %>>🏆 Trophy Account</option>
+            <option value="ps4" <%= customer.account_type === 'ps4' ? 'selected' : '' %>>🕹️ PS4 Primary</option>
           </select>
         </div>
 
