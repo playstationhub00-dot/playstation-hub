@@ -48,6 +48,10 @@
           <label>Current Renters</label>
           <input type="number" name="renters" value="<%= game.renters %>" min="0">
         </div>
+        <div class="form-group">
+          <label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label>
+          <input type="number" name="cost" value="<%= game.cost || 0 %>" min="0">
+        </div>
 
         <!-- Pricing mode -->
         <% const isCategory = !!game.price_category_id; %>

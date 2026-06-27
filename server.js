@@ -540,7 +540,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account, price_category_id, price_mode } = req.body;
+    genre, description, trophy_account, price_category_id, price_mode, cost } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
   const useCategory = price_mode === 'category' && price_category_id;
@@ -562,6 +562,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     genre: genre || '',
     description: description || '',
     trophy_account: trophy_account === 'on',
+    cost: parseInt(cost) || 0,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=added');
@@ -577,7 +578,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account, price_category_id, price_mode } = req.body;
+    genre, description, trophy_account, price_category_id, price_mode, cost } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
@@ -596,7 +597,8 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
     tr_price_30d: cat ? cat.tr_price_30d : parseInt(tr_price_30d),
     genre: genre || '',
     description: description || '',
-    trophy_account: trophy_account === 'on'
+    trophy_account: trophy_account === 'on',
+    cost: parseInt(cost) || 0
   }).write();
   res.redirect('/admin?msg=updated');
 });
