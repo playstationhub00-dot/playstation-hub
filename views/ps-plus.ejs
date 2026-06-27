@@ -166,7 +166,14 @@
     </div>
     <div class="psplus-months-grid">
       <% byYear[year].forEach(entry => { %>
-      <div class="psplus-month-card">
+      <%
+        const ntSlots = entry.nt_slots || 0;
+        const trSlots = entry.tr_slots || 0;
+        const hasSlots = ntSlots > 0 || trSlots > 0;
+        const gamesList = (entry.games_list || '').split('\n').map(g=>g.trim()).filter(Boolean);
+        const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots }).replace(/'/g,"&#39;");
+      %>
+      <div class="psplus-month-card" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
         <div class="psplus-month-cover-wrap">
           <% if (entry.cover_image) { %>
             <img src="<%= entry.cover_image %>" alt="<%= entry.month_name %> <%= year %>" class="psplus-month-cover">
@@ -180,11 +187,27 @@
         </div>
         <div class="psplus-month-info">
           <div class="psplus-month-name"><%= entry.month_name %> <span style="color:#555;"><%= year %></span></div>
-          <% if (entry.games_list) { %>
+          <!-- Slot availability badges -->
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin:0.4rem 0;">
+            <% if (ntSlots > 0) { %>
+              <span style="background:rgba(34,197,94,0.12);border:1px solid #22c55e;color:#22c55e;border-radius:20px;padding:0.1rem 0.55rem;font-size:0.7rem;font-weight:700;">🎮 NT: <%= ntSlots %> slot<%= ntSlots!==1?'s':'' %> open</span>
+            <% } else { %>
+              <span style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:0.1rem 0.55rem;font-size:0.7rem;font-weight:600;">🎮 NT: Full</span>
+            <% } %>
+            <% if (trSlots > 0) { %>
+              <span style="background:rgba(255,196,0,0.12);border:1px solid #ffc400;color:#ffc400;border-radius:20px;padding:0.1rem 0.55rem;font-size:0.7rem;font-weight:700;">🏆 TR: <%= trSlots %> slot<%= trSlots!==1?'s':'' %> open</span>
+            <% } else { %>
+              <span style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:0.1rem 0.55rem;font-size:0.7rem;font-weight:600;">🏆 TR: Full</span>
+            <% } %>
+          </div>
+          <% if (gamesList.length > 0) { %>
             <div class="psplus-games-list">
-              <% entry.games_list.split('\n').filter(g => g.trim()).forEach(game => { %>
-                <div class="psplus-game-item">• <%= game.trim() %></div>
+              <% gamesList.slice(0,3).forEach(game => { %>
+                <div class="psplus-game-item">• <%= game %></div>
               <% }) %>
+              <% if (gamesList.length > 3) { %>
+                <div class="psplus-game-item" style="color:#555;">+<%= gamesList.length - 3 %> more — tap to see all</div>
+              <% } %>
             </div>
           <% } %>
           <% if (entry.notes) { %>
@@ -200,6 +223,82 @@
 
 <%- include('partials/footer') %>
 
+<!-- PS PLUS MONTHLY DETAIL MODAL -->
+<div class="modal-overlay" id="psplusModal" onclick="if(event.target===this)closePsplusModal()">
+  <div class="modal" style="max-width:520px;padding:0;overflow:hidden;border-radius:18px;">
+    <div id="psplusModalCoverWrap" style="position:relative;width:100%;background:#0a0a0a;">
+      <img id="psplusModalCover" src="" alt="" style="width:100%;max-height:220px;object-fit:cover;display:block;">
+      <div id="psplusModalCoverPlaceholder" style="display:none;height:140px;background:linear-gradient(135deg,#1a1a00,#111);display:flex;align-items:center;justify-content:center;font-size:3rem;">★</div>
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 60%);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:1rem;left:1.25rem;">
+        <div id="psplusModalTitle" style="font-size:1.2rem;font-weight:800;color:#FFD700;"></div>
+        <div id="psplusModalSub" style="font-size:0.8rem;color:#aaa;margin-top:0.1rem;">PS Plus Deluxe — Monthly Games</div>
+      </div>
+      <button onclick="closePsplusModal()" style="position:absolute;top:0.75rem;right:0.9rem;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="padding:1.25rem 1.5rem 1.5rem;">
+      <!-- Slot status -->
+      <div id="psplusModalSlots" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
+      <!-- Games list -->
+      <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Included Games</div>
+      <div id="psplusModalGames" style="display:flex;flex-direction:column;gap:0.3rem;max-height:220px;overflow-y:auto;margin-bottom:1.25rem;"></div>
+      <!-- Notes -->
+      <div id="psplusModalNotes" style="font-size:0.8rem;color:#666;margin-bottom:1.25rem;display:none;"></div>
+      <!-- Actions -->
+      <div style="display:flex;gap:0.75rem;">
+        <button onclick="closePsplusModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+          class="btn" style="flex:1;text-align:center;background:#FFD700;color:#000;font-weight:800;border-radius:50px;padding:0.75rem 1.5rem;text-decoration:none;">📘 Message Us</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openPsplusModal(dataStr) {
+  const d = JSON.parse(dataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+  const modal = document.getElementById('psplusModal');
+  const cover = document.getElementById('psplusModalCover');
+  const placeholder = document.getElementById('psplusModalCoverPlaceholder');
+
+  if (d.cover) {
+    cover.src = d.cover; cover.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    cover.style.display = 'none';
+    placeholder.style.display = 'flex';
+  }
+
+  document.getElementById('psplusModalTitle').textContent = d.month + ' ' + d.year;
+
+  // Slots
+  const slotsEl = document.getElementById('psplusModalSlots');
+  slotsEl.innerHTML = '';
+  const ntStyle = d.ntSlots > 0
+    ? 'background:rgba(34,197,94,0.12);border:1px solid #22c55e;color:#22c55e;'
+    : 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;';
+  const trStyle = d.trSlots > 0
+    ? 'background:rgba(255,196,0,0.12);border:1px solid #ffc400;color:#ffc400;'
+    : 'background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);color:#ef4444;';
+  slotsEl.innerHTML =
+    `<span style="${ntStyle}border-radius:20px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:700;">🎮 Non-Trophy: ${d.ntSlots > 0 ? d.ntSlots + ' slot' + (d.ntSlots!==1?'s':'') + ' open' : 'Full'}</span>` +
+    `<span style="${trStyle}border-radius:20px;padding:0.2rem 0.7rem;font-size:0.78rem;font-weight:700;">🏆 Trophy: ${d.trSlots > 0 ? d.trSlots + ' slot' + (d.trSlots!==1?'s':'') + ' open' : 'Full'}</span>`;
+
+  // Games list
+  const gamesEl = document.getElementById('psplusModalGames');
+  gamesEl.innerHTML = d.games.length
+    ? d.games.map(g => `<div style="font-size:0.85rem;color:#ddd;padding:0.3rem 0;border-bottom:1px solid #1a1a1a;">• ${g}</div>`).join('')
+    : '<div style="color:#555;font-size:0.82rem;">No games listed.</div>';
+
+  // Notes
+  const notesEl = document.getElementById('psplusModalNotes');
+  if (d.notes) { notesEl.textContent = '📝 ' + d.notes; notesEl.style.display = ''; }
+  else notesEl.style.display = 'none';
+
+  modal.classList.add('active');
+}
+function closePsplusModal() { document.getElementById('psplusModal').classList.remove('active'); }
+</script>
 </body>
 </html>
 

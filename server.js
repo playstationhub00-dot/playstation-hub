@@ -312,7 +312,7 @@ app.get('/ps-plus', (req, res) => {
 
 // PS Plus admin CRUD
 app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { year, month, games_list, notes } = req.body;
+  const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   if (!year || !month) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
   db.get('psplus').push({
@@ -323,6 +323,8 @@ app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, (req, r
     cover_image,
     games_list: games_list || '',
     notes: notes || '',
+    nt_slots: parseInt(nt_slots) || 0,
+    tr_slots: parseInt(tr_slots) || 0,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=psplus_added');
@@ -335,7 +337,7 @@ app.get('/admin/psplus/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { year, month, games_list, notes } = req.body;
+  const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   const existing = getPsplusEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
@@ -345,7 +347,9 @@ app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, (r
     month_name: new Date(year, month - 1).toLocaleString('en', { month: 'long' }),
     cover_image,
     games_list: games_list || '',
-    notes: notes || ''
+    notes: notes || '',
+    nt_slots: parseInt(nt_slots) || 0,
+    tr_slots: parseInt(tr_slots) || 0
   }).write();
   res.redirect('/admin?msg=psplus_updated');
 });
