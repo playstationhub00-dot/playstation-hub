@@ -466,13 +466,16 @@
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
-            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>Slots</th><th>Non-Trophy</th><th>Trophy</th><th>🏆</th><th>Actions</th></tr>
+            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>Slots</th><th>Non-Trophy</th><th>Trophy</th><th>🏆</th><th style="color:#22c55e;">Total Earned</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <% if (games.length === 0) { %>
             <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
             <% } %>
-            <% games.forEach(game => { %>
+            <% games.forEach(game => {
+              const gameTotalEarned = customers.filter(c => c.game_id === game.id).reduce((s,c) => s+(c.price||0), 0);
+              const gameRentalCount = customers.filter(c => c.game_id === game.id).length;
+            %>
             <tr>
               <td>
                 <% if (game.cover_image) { %><img src="<%= game.cover_image %>" class="table-cover" alt=""><% } else { %><div class="table-cover-placeholder">🎮</div><% } %>
@@ -490,6 +493,10 @@
               <td style="font-size:0.8rem;color:#aaa;line-height:1.7;">₱<%= game.nt_price_10d %> / ₱<%= game.nt_price_15d %> / ₱<%= game.nt_price_30d %></td>
               <td style="font-size:0.8rem;color:#ffc400;line-height:1.7;"><%= game.trophy_account ? '₱'+game.tr_price_10d+' / ₱'+game.tr_price_15d+' / ₱'+game.tr_price_30d : '—' %></td>
               <td><% if (game.trophy_account) { %><span style="color:#ffc400;font-size:1.1rem;">🏆</span><% } else { %><span style="color:#333;font-size:0.8rem;">—</span><% } %></td>
+              <td>
+                <div style="font-weight:800;color:#22c55e;font-size:0.9rem;">₱<%= gameTotalEarned.toLocaleString() %></div>
+                <div style="font-size:0.68rem;color:#555;margin-top:0.1rem;"><%= gameRentalCount %> transaction<%= gameRentalCount !== 1 ? 's' : '' %></div>
+              </td>
               <td>
                 <div class="action-btns">
                   <a href="/admin/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
@@ -717,12 +724,13 @@
       const rentRevenue  = customers.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
       const buyRevenue   = boughtCustomers.reduce((s, c) => s + (c.price || 0), 0);
 
-      // This month
+      // This month — based on start_date (when they actually started renting/buying)
       const now = new Date();
       const thisMonth = now.getMonth(), thisYear = now.getFullYear();
       const monthCustomers = customers.filter(c => {
-        if (!c.created_at) return false;
-        const d = new Date(c.created_at);
+        const dateStr = c.start_date || c.created_at;
+        if (!dateStr) return false;
+        const d = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
         return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
       });
       const monthRevenue = monthCustomers.reduce((s, c) => s + (c.price || 0), 0);
@@ -746,8 +754,9 @@
         const lbl = d.toLocaleDateString('en-US', {month:'short', year:'2-digit'});
         monthLabels.push(lbl);
         const rev = customers.filter(c => {
-          if (!c.created_at) return false;
-          const cd = new Date(c.created_at);
+          const dateStr = c.start_date || c.created_at;
+          if (!dateStr) return false;
+          const cd = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
           return cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear();
         }).reduce((s, c) => s + (c.price || 0), 0);
         monthRevs.push(rev);
