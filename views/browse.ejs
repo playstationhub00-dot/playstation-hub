@@ -155,6 +155,10 @@ function liveFilterGames(query) {
     return;
   }
 
+  // Hide/show upcoming section while searching
+  const upcomingSection = document.querySelector('.section[data-upcoming]');
+  if (upcomingSection) upcomingSection.style.display = q ? 'none' : '';
+
   // Filter rental game cards
   const cards = document.querySelectorAll('#rentals-grid .game-card');
   let visible = 0;
