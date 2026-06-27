@@ -155,23 +155,34 @@ function liveFilterGames(query) {
     return;
   }
 
-  // Hide/show upcoming section while searching
-  const upcomingSection = document.querySelector('.section[data-upcoming]');
-  if (upcomingSection) upcomingSection.style.display = q ? 'none' : '';
-
-  // Filter rental game cards
-  const cards = document.querySelectorAll('#rentals-grid .game-card');
-  let visible = 0;
-  cards.forEach(card => {
+  // ── Rental games ──
+  let rentalVisible = 0;
+  document.querySelectorAll('#rentals-grid .game-card').forEach(card => {
     const title = (card.querySelector('.game-title') || {}).textContent || '';
     const platform = (card.querySelector('.game-platform') || {}).textContent || '';
     const desc = (card.querySelector('.game-desc-inline') || {}).textContent || '';
     const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
     card.style.display = match ? '' : 'none';
-    if (match) visible++;
+    if (match) rentalVisible++;
   });
+  const rentalSection = document.getElementById('section-rentals');
+  if (rentalSection) rentalSection.style.display = (q && rentalVisible === 0) ? 'none' : '';
 
-  // Filter PS Plus monthly entries
+  // ── Upcoming / Coming Soon ──
+  let upcomingVisible = 0;
+  document.querySelectorAll('.section[data-upcoming] .game-card').forEach(card => {
+    const title = card.dataset.title || '';
+    const genre = card.dataset.genre || '';
+    const nameEl = card.querySelector('.game-title');
+    const nameText = nameEl ? nameEl.textContent.toLowerCase() : '';
+    const match = !q || title.includes(q) || genre.includes(q) || nameText.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) upcomingVisible++;
+  });
+  const upcomingSection = document.querySelector('.section[data-upcoming]');
+  if (upcomingSection) upcomingSection.style.display = (q && upcomingVisible === 0) ? 'none' : '';
+
+  // ── PS Plus monthly ──
   let psplusVisible = 0;
   document.querySelectorAll('.psplus-browse-entry').forEach(entry => {
     const games = entry.dataset.games || '';
@@ -180,14 +191,17 @@ function liveFilterGames(query) {
     entry.style.display = match ? '' : 'none';
     if (match) psplusVisible++;
   });
-  const noPsplus = document.getElementById('no-psplus-msg');
   const psplusSection = document.getElementById('section-psplus');
+  if (psplusSection) psplusSection.style.display = (q && psplusVisible === 0) ? 'none' : '';
+  const noPsplus = document.getElementById('no-psplus-msg');
   if (noPsplus) noPsplus.style.display = (q && psplusVisible === 0) ? '' : 'none';
 
   const counter = document.getElementById('resultsCount');
   if (counter) {
-    const total = visible + psplusVisible;
-    counter.textContent = total + ' result' + (total !== 1 ? 's' : '') + ' found';
+    const total = rentalVisible + upcomingVisible + psplusVisible;
+    counter.textContent = q
+      ? total + ' result' + (total !== 1 ? 's' : '') + ' found'
+      : '<%= games.length %> game' + (<%= games.length %> !== 1 ? 's' : '') + ' found';
   }
 }
 

@@ -9,7 +9,7 @@
   </h2>
   <div class="games-grid">
     <% upcoming.forEach(game => { %>
-    <div class="game-card upcoming-card">
+    <div class="game-card upcoming-card" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="filter:brightness(0.75);">
