@@ -638,6 +638,56 @@ footer {
 .toast.success { border-color: rgba(46,204,113,0.4); color: #2ecc71; }
 .toast.error { border-color: rgba(231,76,60,0.4); color: #e74c3c; }
 
+/* PS PLUS BROWSE ENTRIES */
+.psplus-browse-entry {
+  background: linear-gradient(135deg,#0d0d00,#111);
+  border: 1px solid rgba(255,215,0,0.15);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s;
+}
+.psplus-browse-entry:hover { border-color: rgba(255,215,0,0.35); }
+.psplus-browse-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.psplus-browse-cover {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.psplus-browse-cover-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  background: linear-gradient(135deg,#1a1a00,#2a2000);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFD700;
+  flex-shrink: 0;
+}
+.psplus-browse-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.psplus-browse-game-tag {
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.2);
+  color: #ccc;
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 /* PS PLUS DELUXE */
 .psplus-hero {
   position: relative;
