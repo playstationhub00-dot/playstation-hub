@@ -706,10 +706,6 @@
       <p style="font-size:0.82rem;color:#555;margin-bottom:1rem;">These prices apply to all PS Plus Deluxe monthly game access.</p>
       <form method="POST" action="/admin/psplus/prices">
         <div class="form-grid">
-          <div class="form-group full" style="margin-bottom:0;"><label style="color:#555;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;">Available Slots</label></div>
-          <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="nt_slots" value="<%= (psplusSlots||{}).nt_slots||0 %>" min="0"></div>
-          <div class="form-group"><label>🏆 Trophy Slots</label><input type="number" name="tr_slots" value="<%= (psplusSlots||{}).tr_slots||0 %>" min="0"></div>
-          <div class="form-group"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_slots" value="<%= (psplusSlots||{}).ps4_slots||0 %>" min="0"></div>
           <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
           <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="<%= psplusPrices.nt_price_10d %>" min="1"></div>
           <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="<%= psplusPrices.nt_price_15d %>" min="1"></div>
@@ -720,7 +716,7 @@
           <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= psplusPrices.tr_price_30d %>" min="1"></div>
         </div>
         <div class="form-actions" style="margin-top:0.75rem;">
-          <button type="submit" class="btn" style="background:#FFD700;color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Save Prices & Slots</button>
+          <button type="submit" class="btn" style="background:#FFD700;color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Save Prices</button>
         </div>
       </form>
     </div>
