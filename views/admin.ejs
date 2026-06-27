@@ -951,6 +951,52 @@
       </div>
     </div>
 
+    <!-- Import Customers from Excel -->
+    <div class="form-card" style="border-color:rgba(99,102,241,0.35);background:linear-gradient(135deg,#0d0d1f,#0a0a0a);">
+      <h2 style="display:flex;align-items:center;gap:0.6rem;">📥 Import Customers from Excel</h2>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 1rem;">
+        Upload an Excel file (.xlsx) to bulk-import customer records. Existing customers are kept — only new rows are added.
+      </p>
+      <% if (locals.msg) { %>
+        <% if (String(msg).startsWith('imported_')) { %>
+          <%
+            const parts = String(msg).split('_');
+            const importedN = parts[1] || '?';
+            const skippedN = parts[3] || '0';
+          %>
+          <div style="background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;color:#22c55e;font-weight:600;">
+            ✅ Successfully imported <%= importedN %> customer(s)<% if (parseInt(skippedN) > 0) { %>, <%= skippedN %> row(s) skipped (blank name)<% } %>.
+          </div>
+        <% } else if (String(msg).includes('import_error') || String(msg) === 'error') { %>
+          <div style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;color:#ef4444;font-weight:600;">
+            ❌ Import failed. Make sure the file is a valid .xlsx using the sample format.
+          </div>
+        <% } %>
+      <% } %>
+      <form method="POST" action="/admin/customers/import" enctype="multipart/form-data">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <label style="flex:1;min-width:240px;">
+            <span style="color:var(--text-secondary);font-size:0.8rem;display:block;margin-bottom:0.35rem;">Select Excel File (.xlsx)</span>
+            <input type="file" name="import_file" accept=".xlsx,.xls" required
+              style="width:100%;padding:0.5rem 0.75rem;background:#111;border:1px solid #333;border-radius:8px;color:#eee;font-size:0.85rem;cursor:pointer;">
+          </label>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;padding-top:0.4rem;">
+            <button type="submit" class="btn btn-primary" style="background:#4f46e5;min-width:130px;">📤 Import</button>
+            <a href="/admin/customers/sample" class="btn btn-outline" style="text-align:center;font-size:0.8rem;min-width:130px;">⬇️ Sample File</a>
+          </div>
+        </div>
+      </form>
+      <div style="margin-top:1rem;padding:0.85rem 1rem;background:#0d0d0d;border-radius:8px;border:1px solid #222;">
+        <p style="font-size:0.78rem;color:var(--text-secondary);margin:0 0 0.4rem;font-weight:700;">Required columns in your Excel file:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
+          <% ['customer_name','game_title','days','account_type','start_date','end_date','price','status','notes'].forEach(col => { %>
+            <code style="background:#1a1a1a;border:1px solid #333;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.75rem;color:#a78bfa;"><%= col %></code>
+          <% }) %>
+        </div>
+        <p style="font-size:0.75rem;color:#666;margin:0.5rem 0 0;">account_type: <b style="color:#ccc">nt</b> / <b style="color:#ffc400">tr</b> / <b style="color:#60a5fa">ps4</b> &nbsp;|&nbsp; status: <b style="color:#ccc">renting</b> / <b style="color:#ccc">done</b> / <b style="color:#ccc">bought</b> / <b style="color:#ccc">reservation</b> &nbsp;|&nbsp; dates: YYYY-MM-DD</p>
+      </div>
+    </div>
+
     <!-- Add Customer Form -->
     <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
       <h2 style="display:flex;align-items:center;gap:0.5rem;">👤 Add New Customer</h2>

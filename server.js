@@ -4,6 +4,7 @@ const FileSync = require('lowdb/adapters/FileSync');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const XLSX = require('xlsx');
 const session = require('express-session');
 
 const app = express();
@@ -489,7 +490,7 @@ app.get('/admin', requireAuth, (req, res) => {
     if (!b.end_date) return -1;
     return a.end_date.localeCompare(b.end_date); // soonest first
   });
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, msg: req.query.msg || null });
 });
 
 // Upcoming CRUD
@@ -881,6 +882,152 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
   }
   db.get('customers').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?tab=customers&msg=customer_deleted');
+});
+
+// ── Customer Import / Sample ──────────────────────────────────────────────────
+
+// Download sample Excel template
+app.get('/admin/customers/sample', requireAuth, (req, res) => {
+  const wb = XLSX.utils.book_new();
+  const sampleRows = [
+    ['customer_name','game_title','days','account_type','start_date','end_date','price','status','notes'],
+    ['Juan dela Cruz','God of War Ragnarök','30','nt','2025-06-01','2025-07-01','349','done','Paid via GCash'],
+    ['Maria Santos','Spider-Man 2','15','tr','2025-06-10','2025-06-25','249','renting','With ₱100 deposit'],
+    ['Pedro Reyes','Resident Evil 4','10','ps4','2025-06-15','2025-06-25','149','done',''],
+    ['Ana Lim','Elden Ring','30','nt','2025-06-20','','0','reservation','Upcoming reservation'],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(sampleRows);
+  // Column widths
+  ws['!cols'] = [20,30,8,14,14,14,10,14,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+
+  // Notes sheet
+  const notesRows = [
+    ['FIELD','ACCEPTED VALUES','NOTES'],
+    ['customer_name','Any text','Required'],
+    ['game_title','Exact game title from your library (or upcoming game title)','Required — matched by title'],
+    ['days','10, 15, 30, or any number','Use 0 for reservation/bought'],
+    ['account_type','nt, tr, ps4','nt=Non-Trophy  tr=Trophy  ps4=PS4 Primary'],
+    ['start_date','YYYY-MM-DD  e.g. 2025-06-01','Leave blank if unknown'],
+    ['end_date','YYYY-MM-DD  e.g. 2025-07-01','Leave blank for reservation/bought'],
+    ['price','Number only, no ₱ sign','e.g. 349'],
+    ['status','renting, done, bought, reservation',''],
+    ['notes','Any text','Optional'],
+  ];
+  const wsNotes = XLSX.utils.aoa_to_sheet(notesRows);
+  wsNotes['!cols'] = [18,52,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsNotes, 'Instructions');
+
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="customers_import_sample.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+// Import customers from Excel
+const importUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+app.post('/admin/customers/import', requireAuth, importUpload.single('import_file'), (req, res) => {
+  if (!req.file) return res.redirect('/admin?tab=customers&msg=error');
+  try {
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (rows.length < 2) return res.redirect('/admin?tab=customers&msg=error');
+
+    // Detect header row (first row)
+    const headers = rows[0].map(h => String(h).trim().toLowerCase().replace(/\s+/g,'_'));
+    const col = h => headers.indexOf(h);
+
+    const games = getGames();
+    const upcomingGames = getUpcoming();
+    let imported = 0, skipped = 0;
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const get = (field) => {
+        const idx = col(field);
+        return idx >= 0 ? String(row[idx] || '').trim() : '';
+      };
+
+      const customer_name = get('customer_name');
+      if (!customer_name) { skipped++; continue; }
+
+      const game_title_raw = get('game_title');
+      const status = get('status') || 'done';
+
+      // Match game by title (case-insensitive)
+      let game_id = null, game_title = game_title_raw;
+      const regularMatch = games.find(g => g.title.toLowerCase() === game_title_raw.toLowerCase());
+      if (regularMatch) {
+        game_id = regularMatch.id;
+        game_title = regularMatch.title;
+      } else {
+        // Try upcoming games
+        const upMatch = upcomingGames.find(g => g.title.toLowerCase() === game_title_raw.toLowerCase());
+        if (upMatch) {
+          game_id = 'upcoming_' + upMatch.id;
+          game_title = upMatch.title;
+        } else {
+          // Store title as-is with null id — import anyway
+          game_id = null;
+          game_title = game_title_raw;
+        }
+      }
+
+      // Parse date — handle both string and JS Date from xlsx
+      const parseDate = (val) => {
+        if (!val) return '';
+        if (val instanceof Date) return val.toISOString().slice(0, 10);
+        const s = String(val).trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+        const d = new Date(s);
+        return isNaN(d) ? '' : d.toISOString().slice(0, 10);
+      };
+
+      const days = parseInt(get('days')) || 0;
+      const account_type = get('account_type') || 'nt';
+      const start_date = parseDate(row[col('start_date')]);
+      const end_date = parseDate(row[col('end_date')]);
+      const price = parseInt(get('price')) || 0;
+      const notes = get('notes');
+
+      const id = newCustomerId();
+      db.get('customers').push({
+        id,
+        customer_name,
+        game_id,
+        game_title,
+        days,
+        account_type,
+        start_date,
+        end_date,
+        price,
+        status,
+        notes,
+        created_at: new Date().toISOString()
+      }).write();
+
+      // Adjust slots for active statuses on regular games
+      if ((status === 'renting' || status === 'bought') && regularMatch) {
+        const g = getGame(regularMatch.id);
+        if (g) {
+          db.get('games').find({ id: g.id }).assign({
+            available_slots: Math.max(0, (g.available_slots || 0) - 1),
+            renters: (g.renters || 0) + 1
+          }).write();
+          if (account_type === 'tr') adjustTrophySlots(g.id, -1);
+          else if (account_type === 'ps4') adjustPs4Slots(g.id, -1);
+          else adjustNtSlots(g.id, -1);
+        }
+      }
+      imported++;
+    }
+
+    res.redirect('/admin?tab=customers&msg=imported_' + imported + '_skipped_' + skipped);
+  } catch (e) {
+    console.error('Import error:', e);
+    res.redirect('/admin?tab=customers&msg=import_error');
+  }
 });
 
 // Price category CRUD
