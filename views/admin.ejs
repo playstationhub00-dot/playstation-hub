@@ -450,7 +450,11 @@
           <div class="form-group"><label>Cover Image</label><input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;"></div>
           <div class="form-group" style="justify-content:center;">
             <label>Trophy Account Available</label>
-            <label class="toggle-switch"><input type="checkbox" name="trophy_account"><span class="toggle-slider"></span></label>
+            <label class="toggle-switch"><input type="checkbox" name="trophy_account" id="add_trophy_chk" onchange="document.getElementById('add_trophy_slots').style.display=this.checked?'block':'none'"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group" id="add_trophy_slots" style="display:none;">
+            <label>Trophy Account Slots <span style="color:#ffc400;font-size:0.72rem;">🏆 how many accounts</span></label>
+            <input type="number" name="trophy_slots" value="1" min="1" max="20">
           </div>
           <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description of the game..."></textarea></div>
         </div>
@@ -467,11 +471,11 @@
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
-            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>Slots</th><th>Non-Trophy</th><th>Trophy</th><th>🏆</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
+            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>Slots</th><th style="color:#ffc400;">🏆 Trophy Slots</th><th>Non-Trophy</th><th>Trophy</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <% if (games.length === 0) { %>
-            <tr><td colspan="9" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
+            <tr><td colspan="11" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
             <% } %>
             <% games.forEach(game => {
               const gameTotalEarned = customers.filter(c => c.game_id === game.id).reduce((s,c) => s+(c.price||0), 0);
@@ -493,9 +497,17 @@
               <td>
                 <% if (game.available_slots > 0) { %><span class="badge badge-available"><%= game.available_slots %></span><% } else { %><span class="badge badge-unavailable">0</span><% } %>
               </td>
+              <td>
+                <% if (game.trophy_account) { %>
+                  <span style="color:#ffc400;font-weight:700;font-size:0.88rem;">🏆 <%= game.trophy_slots || 0 %> slot<%= (game.trophy_slots || 0) !== 1 ? 's' : '' %></span>
+                <% } else if ((game.trophy_slots || 0) > 0) { %>
+                  <span style="color:#555;font-size:0.8rem;">🏆 <%= game.trophy_slots %> (off)</span>
+                <% } else { %>
+                  <span style="color:#333;font-size:0.8rem;">—</span>
+                <% } %>
+              </td>
               <td style="font-size:0.8rem;color:#aaa;line-height:1.7;">₱<%= game.nt_price_10d %> / ₱<%= game.nt_price_15d %> / ₱<%= game.nt_price_30d %></td>
               <td style="font-size:0.8rem;color:#ffc400;line-height:1.7;"><%= game.trophy_account ? '₱'+game.tr_price_10d+' / ₱'+game.tr_price_15d+' / ₱'+game.tr_price_30d : '—' %></td>
-              <td><% if (game.trophy_account) { %><span style="color:#ffc400;font-size:1.1rem;">🏆</span><% } else { %><span style="color:#333;font-size:0.8rem;">—</span><% } %></td>
               <td>
                 <div style="font-weight:700;color:#f59e0b;font-size:0.9rem;">₱<%= gameCost.toLocaleString() %></div>
               </td>

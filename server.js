@@ -419,6 +419,17 @@ app.post('/admin/psplus/prices', requireAuth, (req, res) => {
   res.redirect('/admin?msg=psplus_prices');
 });
 
+// Adjust trophy_slots on a game by delta (+1 or -1), and sync trophy_account flag
+function adjustTrophySlots(gameId, delta) {
+  const game = getGame(gameId);
+  if (!game) return;
+  const newSlots = Math.max(0, (game.trophy_slots || 0) + delta);
+  db.get('games').find({ id: game.id }).assign({
+    trophy_slots: newSlots,
+    trophy_account: newSlots > 0
+  }).write();
+}
+
 function sortUpcoming(list) {
   return [...list].sort((a, b) => {
     const da = (!a.release_date || a.release_date === 'TBA') ? 'ZZZZ' : a.release_date;
@@ -546,7 +557,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account, price_category_id, price_mode, cost } = req.body;
+    genre, description, trophy_account, trophy_slots, price_category_id, price_mode, cost } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
   const useCategory = price_mode === 'category' && price_category_id;
@@ -567,6 +578,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     tr_price_30d: cat ? cat.tr_price_30d : (parseInt(tr_price_30d) || 399),
     genre: genre || '',
     description: description || '',
+    trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 1) : 0,
     trophy_account: trophy_account === 'on',
     cost: parseInt(cost) || 0,
     created_at: new Date().toISOString()
@@ -584,7 +596,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
-    genre, description, trophy_account, price_category_id, price_mode, cost } = req.body;
+    genre, description, trophy_account, trophy_slots, price_category_id, price_mode, cost } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
@@ -603,7 +615,8 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
     tr_price_30d: cat ? cat.tr_price_30d : parseInt(tr_price_30d),
     genre: genre || '',
     description: description || '',
-    trophy_account: trophy_account === 'on',
+    trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 0) : 0,
+    trophy_account: trophy_account === 'on' && (parseInt(trophy_slots) || 0) > 0,
     cost: parseInt(cost) || 0
   }).write();
   res.redirect('/admin?msg=updated');
@@ -740,6 +753,7 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
       available_slots: Math.max(0, slots - 1),
       renters: (game.renters || 0) + 1
     }).write();
+    if ((account_type || 'nt') === 'tr') adjustTrophySlots(parseInt(game_id), -1);
   }
   res.redirect('/admin?tab=customers&msg=customer_added');
 });
@@ -758,24 +772,27 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
   const wasActive = existing.status === 'renting' || existing.status === 'bought';
   const isActive = status === 'renting' || status === 'bought';
-  const gameChanged = parseInt(game_id) !== existing.game_id;
+  const wasUpcoming = String(existing.game_id).startsWith('upcoming_');
+  const isUpcomingNew = String(game_id || existing.game_id).startsWith('upcoming_');
 
-  // Revert old game slot change if was active
-  if (wasActive) {
+  // Revert old game slot/trophy changes if was active
+  if (wasActive && !wasUpcoming) {
     const oldGame = getGame(existing.game_id);
     if (oldGame) {
       db.get('games').find({ id: oldGame.id }).assign({
         available_slots: (oldGame.available_slots || 0) + 1
       }).write();
+      if (existing.account_type === 'tr') adjustTrophySlots(oldGame.id, +1);
     }
   }
-  // Apply new game slot change if now active
-  if (isActive) {
+  // Apply new game slot/trophy changes if now active
+  if (isActive && !isUpcomingNew) {
     const newGame = getGame(game_id);
     if (newGame) {
       db.get('games').find({ id: newGame.id }).assign({
         available_slots: Math.max(0, (newGame.available_slots || 0) - 1)
       }).write();
+      if ((account_type || existing.account_type) === 'tr') adjustTrophySlots(newGame.id, -1);
     }
   }
   const newGame = getGame(game_id) || getGame(existing.game_id);
@@ -800,12 +817,15 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
   const wasActive = existing.status === 'renting' || existing.status === 'bought';
   const isActive = status === 'renting' || status === 'bought';
-  if (wasActive !== isActive) {
+  const isUpcoming = String(existing.game_id).startsWith('upcoming_');
+  if (wasActive !== isActive && !isUpcoming) {
     const game = getGame(existing.game_id);
     if (game) {
+      const delta = isActive ? -1 : 1;
       db.get('games').find({ id: game.id }).assign({
-        available_slots: Math.max(0, (game.available_slots || 0) + (isActive ? -1 : 1))
+        available_slots: Math.max(0, (game.available_slots || 0) + delta)
       }).write();
+      if (existing.account_type === 'tr') adjustTrophySlots(game.id, delta);
     }
   }
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({ status }).write();
@@ -822,6 +842,7 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
       db.get('games').find({ id: game.id }).assign({
         available_slots: (game.available_slots || 0) + 1
       }).write();
+      if (existing.account_type === 'tr') adjustTrophySlots(game.id, +1);
     }
   }
   db.get('customers').remove({ id: parseInt(req.params.id) }).write();

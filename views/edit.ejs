@@ -110,9 +110,14 @@
         <div class="form-group" style="justify-content:center;">
           <label>Trophy Account Available</label>
           <label class="toggle-switch">
-            <input type="checkbox" name="trophy_account" <%= game.trophy_account ? 'checked' : '' %>>
+            <input type="checkbox" name="trophy_account" id="edit_trophy_chk" <%= game.trophy_account ? 'checked' : '' %>
+              onchange="document.getElementById('edit_trophy_slots').style.display=this.checked?'block':'none'">
             <span class="toggle-slider"></span>
           </label>
+        </div>
+        <div class="form-group" id="edit_trophy_slots" style="display:<%= game.trophy_account ? 'block' : 'none' %>;">
+          <label>Trophy Account Slots <span style="color:#ffc400;font-size:0.72rem;">🏆 available accounts</span></label>
+          <input type="number" name="trophy_slots" value="<%= game.trophy_slots || 0 %>" min="0" max="20">
         </div>
 
         <div class="form-group full">
