@@ -51,6 +51,43 @@
   <div class="psplus-pricing-inner">
     <h2>Pricing</h2>
     <p style="color:var(--text-secondary);font-size:0.9rem;margin-top:0.25rem;">Unlimited game changes, subject to slot availability. Prices may vary.</p>
+
+    <!-- Slot availability card -->
+    <%
+      const ntS = (slots||{}).nt_slots || 0;
+      const trS = (slots||{}).tr_slots || 0;
+      const ps4S = (slots||{}).ps4_slots || 0;
+    %>
+    <div style="background:#111;border:1px solid #222;border-radius:14px;padding:1rem 1.25rem;margin-bottom:1.75rem;display:inline-block;min-width:260px;">
+      <div style="font-size:0.7rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.6rem;">PS4/PS5 &nbsp;·&nbsp; PS Plus Deluxe</div>
+      <div style="font-size:1rem;font-weight:800;color:#FFD700;margin-bottom:0.75rem;">PS Plus Deluxe</div>
+      <div style="display:flex;flex-direction:column;gap:0.35rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.8rem;">
+          <span style="color:#aaa;font-weight:600;">🎮 Non-Trophy</span>
+          <% if (ntS > 0) { %>
+            <span style="color:#22c55e;font-weight:700;">● Available (<%= ntS %>)</span>
+          <% } else { %>
+            <span style="color:#ef4444;font-weight:600;">● Not Available</span>
+          <% } %>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.8rem;">
+          <span style="color:#aaa;font-weight:600;">🏆 Trophy Account</span>
+          <% if (trS > 0) { %>
+            <span style="color:#ffc400;font-weight:700;">● Available (<%= trS %>)</span>
+          <% } else { %>
+            <span style="color:#ef4444;font-weight:600;">● Not Available</span>
+          <% } %>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;font-size:0.8rem;">
+          <span style="color:#aaa;font-weight:600;">🕹️ PS4 Primary</span>
+          <% if (ps4S > 0) { %>
+            <span style="color:#60a5fa;font-weight:700;">● Available (<%= ps4S %>)</span>
+          <% } else { %>
+            <span style="color:#ef4444;font-weight:600;">● Not Available</span>
+          <% } %>
+        </div>
+      </div>
+    </div>
     <div class="psplus-price-grid">
       <!-- Non-Trophy -->
       <div class="psplus-price-card">
@@ -171,7 +208,7 @@
         const trSlots = entry.tr_slots || 0;
         const hasSlots = ntSlots > 0 || trSlots > 0;
         const gamesList = (entry.games_list || '').split('\n').map(g=>g.trim()).filter(Boolean);
-        const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots }).replace(/'/g,"&#39;");
+        const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots, prices: { nt10: prices.nt_price_10d, nt15: prices.nt_price_15d, nt30: prices.nt_price_30d, tr10: prices.tr_price_10d, tr15: prices.tr_price_15d, tr30: prices.tr_price_30d } }).replace(/'/g,"&#39;");
       %>
       <div class="psplus-month-card" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
         <div class="psplus-month-cover-wrap">
@@ -242,6 +279,9 @@
       <!-- Games list -->
       <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Included Games</div>
       <div id="psplusModalGames" style="display:flex;flex-direction:column;gap:0.3rem;max-height:220px;overflow-y:auto;margin-bottom:1.25rem;"></div>
+      <!-- Pricing -->
+      <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Rental Pricing</div>
+      <div id="psplusModalPrices" style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;"></div>
       <!-- Notes -->
       <div id="psplusModalNotes" style="font-size:0.8rem;color:#666;margin-bottom:1.25rem;display:none;"></div>
       <!-- Actions -->
@@ -289,6 +329,23 @@ function openPsplusModal(dataStr) {
   gamesEl.innerHTML = d.games.length
     ? d.games.map(g => `<div style="font-size:0.85rem;color:#ddd;padding:0.3rem 0;border-bottom:1px solid #1a1a1a;">• ${g}</div>`).join('')
     : '<div style="color:#555;font-size:0.82rem;">No games listed.</div>';
+
+  // Prices
+  const p = d.prices || {};
+  document.getElementById('psplusModalPrices').innerHTML =
+    `<div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
+       <div style="font-size:0.7rem;color:#aaa;font-weight:700;margin-bottom:0.4rem;">🎮 Non-Trophy</div>
+       <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#22c55e;">₱${p.nt10||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#22c55e;">₱${p.nt15||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#22c55e;">₱${p.nt30||0}</b></div>
+     </div>
+     <div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
+       <div style="font-size:0.7rem;color:#ffc400;font-weight:700;margin-bottom:0.4rem;">🏆 Trophy Account</div>
+       <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#ffc400;">₱${p.tr10||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#ffc400;">₱${p.tr15||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#ffc400;">₱${p.tr30||0}</b></div>
+       <div style="font-size:0.72rem;color:#664d00;margin-top:0.3rem;">+₱100 refundable deposit</div>
+     </div>`;
 
   // Notes
   const notesEl = document.getElementById('psplusModalNotes');

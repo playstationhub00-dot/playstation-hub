@@ -33,6 +33,7 @@ db.defaults({
     nt_price_10d: 349, nt_price_15d: 449, nt_price_30d: 599,
     tr_price_10d: 399, tr_price_15d: 499, tr_price_30d: 699
   },
+  psplus_slots: { nt_slots: 0, tr_slots: 0, ps4_slots: 0 },
   announcement: { text: '📢 Monthly subscription renters can enjoy unlimited swap of games! Message us for more info.', active: true },
   announcements: [],
   nextAnnouncementId: 1,
@@ -174,6 +175,7 @@ function newPsplusId() {
   return id;
 }
 function getPsplusPrices() { return db.get('psplus_prices').value(); }
+function getPsplusSlots() { return db.get('psplus_slots').value() || { nt_slots: 0, tr_slots: 0, ps4_slots: 0 }; }
 
 function getPsplusPopular() { return db.get('psplus_popular').value(); }
 function getPsplusPopularEntry(id) { return db.get('psplus_popular').find({ id: parseInt(id) }).value(); }
@@ -307,7 +309,7 @@ app.get('/ps-plus', (req, res) => {
   Object.keys(byYear).forEach(y => byYear[y].sort((a, b) => a.month - b.month));
   const years = Object.keys(byYear).sort((a, b) => b - a); // newest year first
   const popular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // PS Plus admin CRUD
@@ -410,9 +412,14 @@ app.post('/admin/psplus/popular/delete/:id', requireAuth, (req, res) => {
   res.redirect('/admin?msg=popular_deleted');
 });
 
-// Update PS Plus global prices
+// Update PS Plus global prices + slots
 app.post('/admin/psplus/prices', requireAuth, (req, res) => {
-  const { nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+  const { nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d, nt_slots, tr_slots, ps4_slots } = req.body;
+  db.set('psplus_slots', {
+    nt_slots: parseInt(nt_slots) || 0,
+    tr_slots: parseInt(tr_slots) || 0,
+    ps4_slots: parseInt(ps4_slots) || 0
+  }).write();
   db.set('psplus_prices', {
     nt_price_10d: parseInt(nt_price_10d) || 349,
     nt_price_15d: parseInt(nt_price_15d) || 449,
@@ -496,7 +503,7 @@ app.get('/admin', requireAuth, (req, res) => {
     if (!b.end_date) return -1;
     return a.end_date.localeCompare(b.end_date); // soonest first
   });
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, msg: req.query.msg || null });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, msg: req.query.msg || null });
 });
 
 // Upcoming CRUD
