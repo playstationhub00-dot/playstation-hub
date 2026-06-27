@@ -14,6 +14,49 @@
   --border: #222222;
 }
 
+/* ── LIGHT MODE ── */
+body.light-mode {
+  --bg-dark: #f0f2f5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8f9fa;
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --border: #dddddd;
+}
+body.light-mode nav { background: #fff; border-bottom: 1px solid #ddd; }
+body.light-mode .admin-container { background: #f0f2f5; }
+body.light-mode .admin-header { background: #fff; border-color: #ddd; }
+body.light-mode .admin-tabs { background: #fff; border-color: #ddd; }
+body.light-mode .admin-tab { color: #555; }
+body.light-mode .admin-tab:hover { background: #f0f2f5; color: #111; }
+body.light-mode .admin-tab.active { background: #f0f2f5; color: #111; border-color: var(--ps-blue); }
+body.light-mode .tab-panel { background: #f0f2f5; }
+body.light-mode .form-card { background: #fff; border-color: #ddd; }
+body.light-mode .form-card h2 { color: #111; border-color: #ddd; }
+body.light-mode .form-group label { color: #444; }
+body.light-mode .form-group input,
+body.light-mode .form-group select,
+body.light-mode .form-group textarea { background: #f8f9fa; border-color: #ccc; color: #111; }
+body.light-mode .form-group input:focus,
+body.light-mode .form-group select:focus,
+body.light-mode .form-group textarea:focus { border-color: var(--ps-blue); background: #fff; }
+body.light-mode .table-card { background: #fff; border-color: #ddd; }
+body.light-mode .table-card h2 { color: #111; border-color: #eee; }
+body.light-mode .games-table th { background: #f0f2f5; color: #444; border-color: #eee; }
+body.light-mode .games-table td { border-color: #f0f0f0; color: #222; }
+body.light-mode .games-table tr:hover td { background: #fafafa; }
+body.light-mode .btn-outline { border-color: #ccc; color: #444; }
+body.light-mode .btn-outline:hover { background: #f0f2f5; }
+body.light-mode #mongoIndicator { background: #f8f9fa; border-color: #ddd; }
+body.light-mode .add-choice-grid .add-choice-card { background: #f8f9fa; border-color: #ddd; }
+body.light-mode .add-choice-card:hover { background: #fff; border-color: var(--ps-blue); }
+body.light-mode .add-choice-card .label { color: #111; }
+body.light-mode .add-choice-card .desc { color: #666; }
+body.light-mode .cust-row td { color: #222; }
+body.light-mode .badge-available { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+body.light-mode .badge-unavailable { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+body.light-mode .game-desc-inline { background: #f8f8f8; color: #333; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {

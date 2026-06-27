@@ -46,10 +46,42 @@
         <span id="mongoDot" style="width:8px;height:8px;border-radius:50%;background:#333;display:inline-block;"></span>
         <span id="mongoLabel">Checking DB…</span>
       </div>
+      <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode"
+        style="background:#111;border:1px solid #222;border-radius:20px;padding:0.35rem 0.85rem;font-size:0.82rem;font-weight:600;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+        <span id="themeIcon">☀️</span><span id="themeLabel">Light</span>
+      </button>
       <a href="/" class="btn btn-outline" style="font-size:0.875rem;padding:0.5rem 1rem;">← View Site</a>
     </div>
   </div>
   <script>
+  // Theme toggle
+  (function() {
+    const saved = localStorage.getItem('adminTheme');
+    if (saved === 'light') applyLight();
+  })();
+  function applyLight() {
+    document.body.classList.add('light-mode');
+    const btn = document.getElementById('themeToggle');
+    if (btn) { btn.style.background='#f0f2f5'; btn.style.borderColor='#ddd'; btn.style.color='#333'; }
+    const icon = document.getElementById('themeIcon'), lbl = document.getElementById('themeLabel');
+    if (icon) icon.textContent = '🌙';
+    if (lbl) lbl.textContent = 'Dark';
+  }
+  function applyDark() {
+    document.body.classList.remove('light-mode');
+    const btn = document.getElementById('themeToggle');
+    if (btn) { btn.style.background='#111'; btn.style.borderColor='#222'; btn.style.color='#aaa'; }
+    const icon = document.getElementById('themeIcon'), lbl = document.getElementById('themeLabel');
+    if (icon) icon.textContent = '☀️';
+    if (lbl) lbl.textContent = 'Light';
+  }
+  function toggleTheme() {
+    if (document.body.classList.contains('light-mode')) {
+      applyDark(); localStorage.setItem('adminTheme', 'dark');
+    } else {
+      applyLight(); localStorage.setItem('adminTheme', 'light');
+    }
+  }
   fetch('/admin/mongo-status').then(r=>r.json()).then(d=>{
     const dot=document.getElementById('mongoDot'),label=document.getElementById('mongoLabel'),wrap=document.getElementById('mongoIndicator');
     if(d.status&&d.status.includes('✅')){dot.style.background='#22c55e';dot.style.boxShadow='0 0 6px #22c55e';label.textContent='MongoDB Connected';label.style.color='#22c55e';wrap.style.borderColor='#14532d';}
