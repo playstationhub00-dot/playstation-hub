@@ -76,12 +76,12 @@
 </div>
 
 <!-- UPCOMING GAMES -->
-<%- include('partials/upcoming-section', { upcoming, noBorderTop: false }) %>
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 5), noBorderTop: false }) %>
 
 <div class="section">
   <h2 class="section-title">All Games <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
   <div class="games-grid">
-    <% games.slice(0, 10).forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+    <% games.slice(0, 5).forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
   </div>
 </div>
 
