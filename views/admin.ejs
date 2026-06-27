@@ -1281,36 +1281,33 @@
   <!-- ═══════════════ VISITORS TAB ═══════════════ -->
   <div class="tab-panel" id="tab-visitors">
     <%
-      const now = new Date();
-      const todayStr = now.toISOString().slice(0, 10);
-      const weekAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);
-      const monthAgo = new Date(now - 30 * 86400000).toISOString().slice(0, 10);
+      const vNow = new Date();
+      const vTodayStr = vNow.toISOString().slice(0, 10);
+      const vWeekAgo  = new Date(vNow - 7 * 86400000).toISOString().slice(0, 10);
+      const vMonthAgo = new Date(vNow - 30 * 86400000).toISOString().slice(0, 10);
 
-      const visToday = visitors.filter(v => v.date === todayStr);
-      const visWeek  = visitors.filter(v => v.date >= weekAgo);
-      const visMonth = visitors.filter(v => v.date >= monthAgo);
+      const visToday = visitors.filter(v => v.date === vTodayStr);
+      const visWeek  = visitors.filter(v => v.date >= vWeekAgo);
+      const visMonth = visitors.filter(v => v.date >= vMonthAgo);
 
-      // Unique IPs per period
       const uniqueToday = new Set(visToday.map(v => v.ip)).size;
       const uniqueWeek  = new Set(visWeek.map(v => v.ip)).size;
       const uniqueMonth = new Set(visMonth.map(v => v.ip)).size;
+      const uniqueAll   = new Set(visitors.map(v => v.ip)).size;
 
-      // Page breakdown (all time)
-      const pageCounts = {};
-      visitors.forEach(v => { pageCounts[v.page] = (pageCounts[v.page] || 0) + 1; });
-      const topPages = Object.entries(pageCounts).sort((a,b) => b[1]-a[1]);
+      const vPageCounts = {};
+      visitors.forEach(v => { vPageCounts[v.page] = (vPageCounts[v.page] || 0) + 1; });
+      const topPages = Object.entries(vPageCounts).sort((a,b) => b[1]-a[1]);
 
-      // Last 7 days chart
-      const last7 = [];
+      const vLast7 = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(now - i * 86400000);
-        const ds = d.toISOString().slice(0, 10);
-        const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        last7.push({ date: ds, label, count: visitors.filter(v => v.date === ds).length });
+        const vd = new Date(vNow - i * 86400000);
+        const vds = vd.toISOString().slice(0, 10);
+        const vlabel = vd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        vLast7.push({ date: vds, label: vlabel, count: visitors.filter(v => v.date === vds).length });
       }
-      const maxBar = Math.max(...last7.map(d => d.count), 1);
+      const vMaxBar = Math.max(...vLast7.map(d => d.count), 1);
 
-      // Recent visitors (last 30)
       const recentVisitors = [...visitors].reverse().slice(0, 30);
     %>
 
@@ -1334,7 +1331,7 @@
       <div class="stat-card">
         <div class="stat-card-label">All-Time Visits</div>
         <div class="stat-card-num" style="color:#ffc400;"><%= visitors.length %></div>
-        <div class="stat-card-sub"><%= new Set(visitors.map(v=>v.ip)).size %> unique visitor<%= new Set(visitors.map(v=>v.ip)).size!==1?'s':'' %></div>
+        <div class="stat-card-sub"><%= uniqueAll %> unique visitor<%= uniqueAll!==1?'s':'' %></div>
       </div>
     </div>
 
