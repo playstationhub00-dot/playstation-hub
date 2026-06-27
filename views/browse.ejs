@@ -27,7 +27,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
       </svg>
-      <input type="text" id="liveSearch" name="search" placeholder="Search games..." value="<%= search %>" autocomplete="off" oninput="liveFilterGames(this.value)">
+      <input type="text" id="liveSearch" name="search" placeholder="Search games..." value="<%= search %>" autocomplete="off"
+        oninput="liveFilterGames(this.value)"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();liveFilterGames(this.value);}">
     </div>
     <select class="filter-select" name="platform" onchange="this.form.submit()">
       <option value="">All Platforms</option>
@@ -100,12 +102,21 @@
 <script>
 function liveFilterGames(query) {
   const q = query.trim().toLowerCase();
+  // If the page was server-filtered and user clears box, reload to show all
+  const wasServerFiltered = '<%= search ? "1" : "" %>' === '1';
+  if (wasServerFiltered && !q) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('search');
+    window.location.href = url.toString();
+    return;
+  }
   const cards = document.querySelectorAll('.games-grid .game-card');
   let visible = 0;
   cards.forEach(card => {
     const title = (card.querySelector('.game-title') || {}).textContent || '';
     const platform = (card.querySelector('.game-platform') || {}).textContent || '';
-    const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q);
+    const desc = (card.querySelector('.game-desc-inline') || {}).textContent || '';
+    const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
     card.style.display = match ? '' : 'none';
     if (match) visible++;
   });
