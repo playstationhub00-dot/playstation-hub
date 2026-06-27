@@ -473,7 +473,9 @@ app.get('/', (req, res) => {
   const all = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
   const featured = [...all].sort((a, b) => b.renters - a.renters).slice(0, 5);
   const upcoming = sortUpcoming(getUpcoming());
-  res.render('index', { featured, games: all, upcoming, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 5);
+  const psplusPrices = getPsplusPrices();
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/browse', (req, res) => {
