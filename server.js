@@ -457,7 +457,13 @@ app.get('/admin', requireAuth, (req, res) => {
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  const customers = [...getCustomers()].sort((a, b) => (b.id - a.id));
+  const customers = [...getCustomers()].sort((a, b) => {
+    // No end_date (bought/missing) → bottom
+    if (!a.end_date && !b.end_date) return 0;
+    if (!a.end_date) return 1;
+    if (!b.end_date) return -1;
+    return a.end_date.localeCompare(b.end_date); // soonest first
+  });
   res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers });
 });
 
