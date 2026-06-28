@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PS Hub Admin</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#f0a500">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PS Hub">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
+
+    /* TOP BAR */
+    .topbar { background: #0a0a0a; border-bottom: 1px solid #1a1a1a; padding: 1rem 1.25rem 0.75rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; padding-top: calc(1rem + env(safe-area-inset-top)); }
+    .topbar-title { font-size: 1.1rem; font-weight: 800; color: #f0a500; }
+    .topbar-sub { font-size: 0.7rem; color: #555; margin-top: 0.1rem; }
+    .topbar-link { background: #111; border: 1px solid #222; color: #aaa; font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 20px; text-decoration: none; font-weight: 600; }
+
+    /* NAV TABS */
+    .nav-tabs { display: flex; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; overflow-x: auto; scrollbar-width: none; }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tab { flex: 1; min-width: 70px; text-align: center; padding: 0.65rem 0.5rem; font-size: 0.72rem; font-weight: 700; color: #444; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; }
+    .nav-tab.active { color: #f0a500; border-bottom-color: #f0a500; }
+
+    /* CONTENT */
+    .tab-content { display: none; padding: 1rem 1rem 2rem; }
+    .tab-content.active { display: block; }
+
+    /* KPI GRID */
+    .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .kpi { background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 14px; padding: 1rem; }
+    .kpi-label { font-size: 0.68rem; color: #555; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+    .kpi-val { font-size: 1.8rem; font-weight: 900; line-height: 1; }
+    .kpi-sub { font-size: 0.68rem; color: #444; margin-top: 0.25rem; }
+
+    /* ALERT CARDS */
+    .alert { border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.75rem; }
+    .alert-red { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); }
+    .alert-yellow { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.3); }
+    .alert-blue { background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3); }
+    .alert-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .alert-title { font-size: 0.82rem; font-weight: 700; }
+    .alert-sub { font-size: 0.72rem; color: #666; margin-top: 0.1rem; }
+
+    /* CUSTOMER LIST */
+    .cust-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .cust-card { background: #0f0f0f; border: 1px solid #1a1a1a; border-radius: 12px; padding: 0.85rem 1rem; }
+    .cust-name { font-size: 0.9rem; font-weight: 700; color: #fff; }
+    .cust-game { font-size: 0.78rem; color: #f0a500; margin-top: 0.1rem; }
+    .cust-meta { font-size: 0.72rem; color: #555; margin-top: 0.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 20px; }
+    .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+    .badge-yellow { background: rgba(234,179,8,0.15); color: #eab308; border: 1px solid rgba(234,179,8,0.3); }
+    .badge-green { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .badge-blue { background: rgba(96,165,250,0.15); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+    .badge-purple { background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+
+    /* SLOT BARS */
+    .slot-item { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.6rem; }
+    .slot-item-label { font-size: 0.78rem; color: #aaa; min-width: 90px; }
+    .slot-bar-wrap { flex: 1; background: #1a1a1a; border-radius: 4px; height: 8px; overflow: hidden; }
+    .slot-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .slot-item-val { font-size: 0.78rem; font-weight: 700; min-width: 24px; text-align: right; }
+
+    /* SECTION HEADER */
+    .sec-head { font-size: 0.72rem; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.06em; margin: 1.25rem 0 0.6rem; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 2rem; color: #333; font-size: 0.85rem; }
+
+    /* REVENUE ROW */
+    .rev-row { display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0; border-bottom: 1px solid #111; }
+    .rev-label { font-size: 0.82rem; color: #888; }
+    .rev-val { font-size: 0.9rem; font-weight: 800; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">🎮 PS Hub Admin</div>
+    <div class="topbar-sub"><%= new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'}) %></div>
+  </div>
+  <a href="/admin" class="topbar-link">Full Panel →</a>
+</div>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+  <button class="nav-tab" onclick="switchTab('renters')">👥 Renters</button>
+  <button class="nav-tab" onclick="switchTab('alerts')">🔔 Alerts</button>
+  <button class="nav-tab" onclick="switchTab('slots')">🎮 Slots</button>
+  <button class="nav-tab" onclick="switchTab('revenue')">💰 Revenue</button>
+</div>
+
+<!-- DASHBOARD TAB -->
+<div class="tab-content active" id="tab-dashboard">
+  <div class="kpi-grid" style="margin-top:0.25rem;">
+    <div class="kpi">
+      <div class="kpi-label">Active Renters</div>
+      <div class="kpi-val" style="color:#22c55e;"><%= active.length %></div>
+      <div class="kpi-sub">Currently renting</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Overdue</div>
+      <div class="kpi-val" style="color:<%= overdue.length > 0 ? '#ef4444' : '#333' %>;"><%= overdue.length %></div>
+      <div class="kpi-sub">Past due date</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Due in 3 Days</div>
+      <div class="kpi-val" style="color:<%= dueSoon.length > 0 ? '#eab308' : '#333' %>;"><%= dueSoon.length %></div>
+      <div class="kpi-sub">Expiring soon</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Reservations</div>
+      <div class="kpi-val" style="color:#a855f7;"><%= reservations.length %></div>
+      <div class="kpi-sub">Waiting</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">This Month</div>
+      <div class="kpi-val" style="color:#f0a500;font-size:1.3rem;">₱<%= monthRevenue.toLocaleString() %></div>
+      <div class="kpi-sub">Revenue</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Today's Visitors</div>
+      <div class="kpi-val" style="color:#60a5fa;"><%= todayVisitors %></div>
+      <div class="kpi-sub">Website visits</div>
+    </div>
+  </div>
+
+  <% if (overdue.length > 0) { %>
+  <div class="alert alert-red">
+    <div class="alert-icon">🚨</div>
+    <div>
+      <div class="alert-title" style="color:#ef4444;"><%= overdue.length %> overdue rental<%= overdue.length !== 1 ? 's' : '' %></div>
+      <div class="alert-sub"><%= overdue.map(c => c.customer_name).join(', ') %></div>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (dueSoon.length > 0) { %>
+  <div class="alert alert-yellow">
+    <div class="alert-icon">⏰</div>
+    <div>
+      <div class="alert-title" style="color:#eab308;"><%= dueSoon.length %> expiring within 3 days</div>
+      <div class="alert-sub"><%= dueSoon.map(c => c.customer_name).join(', ') %></div>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (reservations.length > 0) { %>
+  <div class="alert alert-blue">
+    <div class="alert-icon">📋</div>
+    <div>
+      <div class="alert-title" style="color:#60a5fa;"><%= reservations.length %> pending reservation<%= reservations.length !== 1 ? 's' : '' %></div>
+      <div class="alert-sub"><%= reservations.map(c => c.customer_name).join(', ') %></div>
+    </div>
+  </div>
+  <% } %>
+
+  <div class="sec-head">Total Slots Available</div>
+  <div style="background:#0f0f0f;border:1px solid #1a1a1a;border-radius:14px;padding:1rem;">
+    <div class="slot-item">
+      <div class="slot-item-label">🎮 Non-Trophy</div>
+      <div class="slot-bar-wrap"><div class="slot-bar" style="background:#22c55e;width:<%= Math.min(100, slots.nt * 10) %>%;"></div></div>
+      <div class="slot-item-val" style="color:#22c55e;"><%= slots.nt %></div>
+    </div>
+    <div class="slot-item">
+      <div class="slot-item-label">🏆 Trophy</div>
+      <div class="slot-bar-wrap"><div class="slot-bar" style="background:#f0a500;width:<%= Math.min(100, slots.tr * 10) %>%;"></div></div>
+      <div class="slot-item-val" style="color:#f0a500;"><%= slots.tr %></div>
+    </div>
+    <div class="slot-item">
+      <div class="slot-item-label">🕹️ PS4 Primary</div>
+      <div class="slot-bar-wrap"><div class="slot-bar" style="background:#60a5fa;width:<%= Math.min(100, slots.ps4 * 10) %>%;"></div></div>
+      <div class="slot-item-val" style="color:#60a5fa;"><%= slots.ps4 %></div>
+    </div>
+  </div>
+</div>
+
+<!-- RENTERS TAB -->
+<div class="tab-content" id="tab-renters">
+  <div class="sec-head">Active Renters (<%= active.length %>)</div>
+  <% if (active.length === 0) { %>
+    <div class="empty">No active renters</div>
+  <% } else { %>
+  <div class="cust-list">
+    <% active.forEach(c => {
+      const endDate = c.end_date ? new Date(c.end_date + 'T00:00:00') : null;
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const daysLeft = endDate ? Math.ceil((endDate - today0) / 86400000) : null;
+      const isOverdue = daysLeft !== null && daysLeft < 0;
+    %>
+    <div class="cust-card" style="<%= isOverdue ? 'border-color:rgba(239,68,68,0.4);' : daysLeft !== null && daysLeft <= 3 ? 'border-color:rgba(234,179,8,0.3);' : '' %>">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div class="cust-name"><%= c.customer_name %></div>
+        <% if (isOverdue) { %><span class="badge badge-red">OVERDUE</span>
+        <% } else if (daysLeft !== null && daysLeft <= 3) { %><span class="badge badge-yellow"><%= daysLeft %>d left</span>
+        <% } else if (daysLeft !== null) { %><span class="badge badge-green"><%= daysLeft %>d left</span><% } %>
+      </div>
+      <div class="cust-game"><%= c.game_title %></div>
+      <div class="cust-meta">
+        <span><%= c.account_type === 'tr' ? '🏆 Trophy' : c.account_type === 'ps4' ? '🕹️ PS4' : '🎮 Non-Trophy' %></span>
+        <% if (c.end_date) { %><span>Until <%= c.end_date %></span><% } %>
+        <% if (c.price) { %><span style="color:#f0a500;">₱<%= c.price %></span><% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (reservations.length > 0) { %>
+  <div class="sec-head">Reservations (<%= reservations.length %>)</div>
+  <div class="cust-list">
+    <% reservations.forEach(c => { %>
+    <div class="cust-card" style="border-color:rgba(168,85,247,0.3);">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="cust-name"><%= c.customer_name %></div>
+        <span class="badge badge-purple">RESERVED</span>
+      </div>
+      <div class="cust-game"><%= c.game_title %></div>
+      <div class="cust-meta">
+        <% if (c.price) { %><span style="color:#f0a500;">₱<%= c.price %></span><% } %>
+        <% if (c.notes) { %><span><%= c.notes %></span><% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+</div>
+
+<!-- ALERTS TAB -->
+<div class="tab-content" id="tab-alerts">
+  <% if (overdue.length === 0 && dueSoon.length === 0 && reservations.length === 0) { %>
+    <div class="empty" style="padding-top:4rem;">
+      <div style="font-size:3rem;margin-bottom:0.75rem;">✅</div>
+      All clear! No urgent alerts.
+    </div>
+  <% } %>
+
+  <% if (overdue.length > 0) { %>
+  <div class="sec-head">🚨 Overdue (<%= overdue.length %>)</div>
+  <div class="cust-list">
+    <% overdue.forEach(c => {
+      const d = new Date(c.end_date + 'T00:00:00');
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const daysLate = Math.ceil((today0 - d) / 86400000);
+    %>
+    <div class="cust-card" style="border-color:rgba(239,68,68,0.4);">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="cust-name"><%= c.customer_name %></div>
+        <span class="badge badge-red"><%= daysLate %>d late</span>
+      </div>
+      <div class="cust-game"><%= c.game_title %></div>
+      <div class="cust-meta"><span>Was due: <%= c.end_date %></span><% if (c.price) { %><span style="color:#f0a500;">₱<%= c.price %></span><% } %></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (dueSoon.length > 0) { %>
+  <div class="sec-head">⏰ Expiring Soon</div>
+  <div class="cust-list">
+    <% dueSoon.forEach(c => {
+      const d = new Date(c.end_date + 'T00:00:00');
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const daysLeft = Math.ceil((d - today0) / 86400000);
+    %>
+    <div class="cust-card" style="border-color:rgba(234,179,8,0.3);">
+      <div style="display:flex;justify-content:space-between;">
+        <div class="cust-name"><%= c.customer_name %></div>
+        <span class="badge badge-yellow"><%= daysLeft === 0 ? 'Today' : daysLeft + 'd left' %></span>
+      </div>
+      <div class="cust-game"><%= c.game_title %></div>
+      <div class="cust-meta"><span>Due: <%= c.end_date %></span></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (reservations.length > 0) { %>
+  <div class="sec-head">📋 Pending Reservations</div>
+  <div class="cust-list">
+    <% reservations.forEach(c => { %>
+    <div class="cust-card" style="border-color:rgba(168,85,247,0.3);">
+      <div class="cust-name"><%= c.customer_name %></div>
+      <div class="cust-game"><%= c.game_title %></div>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+</div>
+
+<!-- SLOTS TAB -->
+<div class="tab-content" id="tab-slots">
+  <div class="sec-head">Total Available Slots</div>
+  <div style="background:#0f0f0f;border:1px solid #1a1a1a;border-radius:14px;padding:1.25rem;margin-bottom:1rem;">
+    <div class="rev-row">
+      <span class="rev-label">🎮 Non-Trophy</span>
+      <span class="rev-val" style="color:#22c55e;"><%= slots.nt %> slots</span>
+    </div>
+    <div class="rev-row">
+      <span class="rev-label">🏆 Trophy</span>
+      <span class="rev-val" style="color:#f0a500;"><%= slots.tr %> slots</span>
+    </div>
+    <div class="rev-row" style="border:none;">
+      <span class="rev-label">🕹️ PS4 Primary</span>
+      <span class="rev-val" style="color:#60a5fa;"><%= slots.ps4 %> slots</span>
+    </div>
+  </div>
+
+  <div class="sec-head">Per-Game Slots</div>
+  <div class="cust-list">
+    <% games.filter(g => (g.non_trophy_slots||0) + (g.trophy_slots||0) + (g.ps4_primary_slots||0) > 0).forEach(g => { %>
+    <div class="cust-card">
+      <div class="cust-name" style="font-size:0.82rem;"><%= g.title %></div>
+      <div class="cust-meta" style="margin-top:0.35rem;">
+        <% if (g.non_trophy_slots > 0) { %><span style="color:#22c55e;">🎮 <%= g.non_trophy_slots %></span><% } %>
+        <% if (g.trophy_slots > 0) { %><span style="color:#f0a500;">🏆 <%= g.trophy_slots %></span><% } %>
+        <% if (g.ps4_primary_slots > 0) { %><span style="color:#60a5fa;">🕹️ <%= g.ps4_primary_slots %></span><% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- REVENUE TAB -->
+<div class="tab-content" id="tab-revenue">
+  <div class="sec-head">Summary</div>
+  <div style="background:#0f0f0f;border:1px solid #1a1a1a;border-radius:14px;padding:1.25rem;margin-bottom:1rem;">
+    <div class="rev-row">
+      <span class="rev-label">This Month</span>
+      <span class="rev-val" style="color:#f0a500;">₱<%= monthRevenue.toLocaleString() %></span>
+    </div>
+    <div class="rev-row">
+      <span class="rev-label">All-Time Revenue</span>
+      <span class="rev-val" style="color:#22c55e;">₱<%= totalRevenue.toLocaleString() %></span>
+    </div>
+    <div class="rev-row">
+      <span class="rev-label">Active Renters</span>
+      <span class="rev-val"><%= active.length %></span>
+    </div>
+    <div class="rev-row">
+      <span class="rev-label">Total Bought</span>
+      <span class="rev-val"><%= bought.length %></span>
+    </div>
+    <div class="rev-row" style="border:none;">
+      <span class="rev-label">Total Customers</span>
+      <span class="rev-val"><%= customers.length %></span>
+    </div>
+  </div>
+
+  <div class="sec-head">Recent Transactions</div>
+  <div class="cust-list">
+    <% [...customers].reverse().slice(0, 20).forEach(c => { %>
+    <div class="cust-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="cust-name" style="font-size:0.82rem;"><%= c.customer_name %></div>
+        <% if (c.price) { %><span style="font-weight:800;color:#f0a500;font-size:0.9rem;">₱<%= c.price %></span><% } %>
+      </div>
+      <div class="cust-game"><%= c.game_title %></div>
+      <div class="cust-meta">
+        <% if (c.status === 'renting') { %><span class="badge badge-green">Renting</span>
+        <% } else if (c.status === 'bought') { %><span class="badge badge-blue">Bought</span>
+        <% } else if (c.status === 'done') { %><span class="badge" style="background:#1a1a1a;color:#555;border:1px solid #222;">Done</span>
+        <% } else { %><span class="badge badge-purple"><%= c.status %></span><% } %>
+        <% if (c.start_date) { %><span><%= c.start_date %></span><% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('[onclick="switchTab(\''+name+'\')"]').classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// PWA install prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+// Auto-refresh every 2 minutes
+setTimeout(() => location.reload(), 120000);
+</script>
+</body>
+</html>

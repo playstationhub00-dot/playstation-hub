@@ -1,0 +1,13 @@
+{
+  "name": "PlayStation Hub Admin",
+  "short_name": "PS Hub",
+  "description": "PlayStation Hub business dashboard",
+  "start_url": "/admin/app",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#f0a500",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -517,6 +517,52 @@ app.get('/browse', (req, res) => {
   res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+// ── Mobile Admin App ──────────────────────────────────────────────────────────
+app.get('/admin/app', requireAuth, (req, res) => {
+  const customers = getCustomers();
+  const games = getGames().map(resolveGamePrices);
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const active = customers.filter(c => c.status === 'renting');
+  const reservations = customers.filter(c => c.status === 'reservation');
+  const bought = customers.filter(c => c.status === 'bought');
+
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  const overdue = active.filter(c => c.end_date && new Date(c.end_date + 'T00:00:00') < today0);
+  const dueSoon = active.filter(c => {
+    if (!c.end_date) return false;
+    const d = new Date(c.end_date + 'T00:00:00');
+    const diff = Math.ceil((d - today0) / 86400000);
+    return diff >= 0 && diff <= 3;
+  });
+
+  const totalRevenue = customers.reduce((s, c) => s + (c.price || 0), 0);
+  const thisMonth = now.getMonth(), thisYear = now.getFullYear();
+  const monthRevenue = customers.filter(c => {
+    const ds = c.start_date || c.created_at;
+    if (!ds) return false;
+    const d = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  }).reduce((s, c) => s + (c.price || 0), 0);
+
+  const todayVisitors = (db.get('visitors').value() || []).filter(v => v.date === todayStr).length;
+
+  const slots = {
+    nt: games.reduce((s, g) => s + (g.non_trophy_slots || 0), 0),
+    tr: games.reduce((s, g) => s + (g.trophy_slots || 0), 0),
+    ps4: games.reduce((s, g) => s + (g.ps4_primary_slots || 0), 0),
+  };
+
+  res.render('admin-app', {
+    active, overdue, dueSoon, reservations, bought,
+    totalRevenue, monthRevenue, todayVisitors,
+    slots, games, customers,
+    settings: getSiteSettings()
+  });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('/admin', requireAuth, (req, res) => {
   const games = [...getGames()].sort((a, b) => b.id - a.id).map(resolveGamePrices);
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
