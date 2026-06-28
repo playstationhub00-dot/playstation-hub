@@ -461,7 +461,7 @@ function adjustTrophySlots(gameId, delta) {
   const newSlots = Math.max(0, (game.trophy_slots || 0) + delta);
   db.get('games').find({ id: game.id }).assign({
     trophy_slots: newSlots,
-    trophy_account: newSlots > 0
+    trophy_account: game.trophy_account || newSlots > 0
   }).write();
 }
 function adjustNtSlots(gameId, delta) {
@@ -678,7 +678,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
     description: description || '',
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 0) : 0,
-    trophy_account: trophy_account === 'on' && (parseInt(trophy_slots) || 0) > 0,
+    trophy_account: trophy_account === 'on',
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
     cost: parseInt(cost) || 0
   }).write();
