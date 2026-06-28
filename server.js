@@ -1122,6 +1122,36 @@ app.get('/admin/mongo-status', requireAuth, async (req, res) => {
   }
 });
 
+// ── Meta / Facebook Product Catalog Feed ──────────────────────────────────────
+// Give Meta this URL: https://your-railway-domain.up.railway.app/feed/meta.csv
+app.get('/feed/meta.csv', (req, res) => {
+  const siteUrl = process.env.SITE_URL || 'https://your-domain.up.railway.app';
+  const games = getGames().filter(g => !g.upcoming);
+  const rows = [
+    ['id','title','description','availability','condition','price','link','image_link','brand','google_product_category']
+  ];
+  games.forEach(g => {
+    const price = g.price_7 || g.price_14 || g.price_30 || 0;
+    rows.push([
+      g.id,
+      g.title,
+      (g.description || g.title).replace(/"/g, '""'),
+      (g.non_trophy_slots > 0 || g.trophy_slots > 0 || g.ps4_primary_slots > 0) ? 'in stock' : 'out of stock',
+      'new',
+      price + ' PHP',
+      siteUrl + '/browse',
+      g.cover_image ? (g.cover_image.startsWith('http') ? g.cover_image : siteUrl + g.cover_image) : '',
+      'PlayStation Hub',
+      '1249'  // Video Games category
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v === null || v === undefined ? '' : v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(csv);
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
   console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
