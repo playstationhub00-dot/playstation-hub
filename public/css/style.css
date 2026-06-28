@@ -196,21 +196,23 @@ nav {
 .hero-slideshow {
   position: relative;
   width: 100%;
+  height: 420px;
   overflow: hidden;
   background: #000;
 }
-.hero-slides-track { position: relative; width: 100%; }
+.hero-slides-track { position: relative; width: 100%; height: 100%; }
 .hero-slide {
   display: none;
   position: relative;
   width: 100%;
+  height: 100%;
 }
 .hero-slide.active { display: block; }
 .hero-slide img {
   width: 100%;
-  height: auto;
-  max-height: 90vh;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
   display: block;
   animation: slideIn 0.5s ease;
 }
@@ -273,7 +275,7 @@ nav {
 }
 .hero-dot.active { background: var(--ps-blue); border-color: var(--ps-blue); }
 @media (max-width: 600px) {
-  .hero-slide img { max-height: 60vh; }
+  .hero-slideshow { height: 220px; }
   .hero-slide-arrow { width: 36px; height: 36px; font-size: 1.8rem; }
 }
 
