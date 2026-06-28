@@ -59,7 +59,8 @@
     <div class="game-desc-inline"><%= game.description %></div>
     <% } %>
 
-    <!-- Non-Trophy Prices -->
+    <!-- Non-Trophy Prices — only show if slots available -->
+    <% if (ntSlots > 0) { %>
     <div class="price-block">
       <div class="price-block-label">🎮 Non-Trophy</div>
       <div class="price-tiers">
@@ -68,9 +69,10 @@
         <div class="price-row"><span class="price-label">30 Days</span><span class="price-val">₱<%= game.nt_price_30d %></span></div>
       </div>
     </div>
+    <% } %>
 
-    <!-- Trophy Prices (only if trophy account available or had slots) -->
-    <% if (game.trophy_account || trSlots > 0) { %>
+    <!-- Trophy Prices — only show if trophy account and slots available -->
+    <% if ((game.trophy_account || trSlots > 0) && trSlots > 0) { %>
     <div class="price-block price-block-trophy">
       <div class="price-block-label" style="color:#ffc400;">🏆 Trophy Account</div>
       <div class="price-tiers">
@@ -89,7 +91,8 @@
         <%= game.trophy_account ? game.tr_price_10d : 0 %>,
         <%= game.trophy_account ? game.tr_price_15d : 0 %>,
         <%= game.trophy_account ? game.tr_price_30d : 0 %>,
-        <%= game.trophy_account %>)">
+        <%= game.trophy_account && trSlots > 0 %>,
+        <%= ntSlots > 0 %>)">
       <%= (ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0)) ? 'Unavailable' : 'Rent Now' %>
     </button>
   </div>
