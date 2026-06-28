@@ -1199,15 +1199,20 @@
 
     <!-- Customers Table -->
     <div class="table-card" style="margin-top:1.5rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
-        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
-          <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
-          <button onclick="filterCustomers('reservation')" id="cf-reservation" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#4a1a6a;color:#c084fc;">🔖 Reservation</button>
-          <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
-          <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
+        <div style="position:relative;flex:0 0 260px;">
+          <input type="text" id="custSearch" placeholder="Search name or game..." oninput="searchCustomers(this.value)"
+            style="width:100%;padding:0.45rem 0.9rem 0.45rem 2.2rem;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;font-size:0.85rem;box-sizing:border-box;">
+          <span style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:#555;font-size:0.9rem;pointer-events:none;">🔍</span>
         </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
+        <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
+        <button onclick="filterCustomers('reservation')" id="cf-reservation" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#4a1a6a;color:#c084fc;">🔖 Reservation</button>
+        <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
+        <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
       </div>
 
       <% if (customers.length === 0) { %>
@@ -1238,7 +1243,7 @@
               const isOverdue = isRenting && endDate && endDate < today;
               const daysLeft = endDate ? Math.ceil((endDate - today) / 86400000) : null;
             %>
-            <tr class="cust-row" data-status="<%= c.status %>" style="<%= isOverdue ? 'background:rgba(239,68,68,0.06);' : '' %>">
+            <tr class="cust-row" data-status="<%= c.status %>" data-name="<%= c.customer_name.toLowerCase() %>" data-game="<%= c.game_title.toLowerCase() %>" style="<%= isOverdue ? 'background:rgba(239,68,68,0.06);' : '' %>">
               <td>
                 <div style="font-weight:700;"><%= c.customer_name %></div>
                 <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
@@ -1300,16 +1305,25 @@
     </div>
 
     <script>
+    let _custStatus = 'all';
     function filterCustomers(status) {
-      document.querySelectorAll('.cust-row').forEach(r => {
-        r.style.display = (status === 'all' || r.dataset.status === status) ? '' : 'none';
-      });
+      _custStatus = status;
+      applyCustomerFilter();
       ['all','renting','reservation','bought','done'].forEach(s => {
         const btn = document.getElementById('cf-'+s);
         if (!btn) return;
         btn.style.background = s === status ? 'var(--ps-blue)' : '';
         btn.style.color = s === status ? '#000' : '';
         btn.style.borderColor = s === status ? 'var(--ps-blue)' : '';
+      });
+    }
+    function searchCustomers(q) { applyCustomerFilter(); }
+    function applyCustomerFilter() {
+      const q = (document.getElementById('custSearch')?.value || '').toLowerCase().trim();
+      document.querySelectorAll('.cust-row').forEach(r => {
+        const statusOk = _custStatus === 'all' || r.dataset.status === _custStatus;
+        const searchOk = !q || r.dataset.name.includes(q) || r.dataset.game.includes(q);
+        r.style.display = (statusOk && searchOk) ? '' : 'none';
       });
     }
     </script>
