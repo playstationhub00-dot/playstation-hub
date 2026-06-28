@@ -57,20 +57,56 @@
 <%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
 <% } %>
 
-<!-- AVAILABLE GAMES -->
-<div class="section" id="section-rentals" style="<%= upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;padding-top:3rem;' : 'padding-top:0' %>">
-  <% if (upcoming.length > 0) { %>
-  <h2 class="section-title">Available Now</h2>
-  <% } %>
+<!-- AVAILABLE GAMES grouped by price category -->
+<div id="section-rentals" style="<%= upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;' : '' %>">
   <% if (games.length === 0) { %>
     <div id="no-rentals-msg" style="text-align:center;padding:4rem;color:var(--text-secondary);">
       <div style="font-size:3rem;margin-bottom:1rem;">🎮</div>
       <p>No games found. Try a different search.</p>
     </div>
   <% } else { %>
-  <div class="games-grid" id="rentals-grid">
-    <% games.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
-  </div>
+    <%
+      // Group games by price category
+      const catMap = {};
+      const uncategorized = [];
+      games.forEach(g => {
+        if (g.price_category_id) {
+          const cat = priceCategories.find(c => c.id === g.price_category_id);
+          if (cat) {
+            if (!catMap[cat.id]) catMap[cat.id] = { cat, games: [] };
+            catMap[cat.id].games.push(g);
+          } else {
+            uncategorized.push(g);
+          }
+        } else {
+          uncategorized.push(g);
+        }
+      });
+      // Order categories as defined in admin
+      const orderedCats = priceCategories.filter(c => catMap[c.id]);
+    %>
+    <% orderedCats.forEach((cat, ci) => { %>
+    <div class="section cat-section" id="cat-section-<%= cat.id %>" style="<%= ci > 0 || upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;padding-top:3rem;' : 'padding-top:2rem;' %>">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+        <h2 class="section-title" style="margin:0;"><%= cat.name %></h2>
+        <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= catMap[cat.id].games.length %> game<%= catMap[cat.id].games.length !== 1 ? 's' : '' %></span>
+      </div>
+      <div class="games-grid rentals-grid">
+        <% catMap[cat.id].games.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+      </div>
+    </div>
+    <% }) %>
+    <% if (uncategorized.length > 0) { %>
+    <div class="section cat-section" id="cat-section-uncategorized" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+        <h2 class="section-title" style="margin:0;">Other Games</h2>
+        <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= uncategorized.length %> game<%= uncategorized.length !== 1 ? 's' : '' %></span>
+      </div>
+      <div class="games-grid rentals-grid">
+        <% uncategorized.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+      </div>
+    </div>
+    <% } %>
   <% } %>
 </div>
 
@@ -156,15 +192,19 @@ function liveFilterGames(query) {
     return;
   }
 
-  // ── Rental games ──
+  // ── Rental games (grouped by category) ──
   let rentalVisible = 0;
-  document.querySelectorAll('#rentals-grid .game-card').forEach(card => {
-    const title = (card.querySelector('.game-title') || {}).textContent || '';
-    const platform = (card.querySelector('.game-platform') || {}).textContent || '';
-    const desc = (card.querySelector('.game-desc-inline') || {}).textContent || '';
-    const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
-    card.style.display = match ? '' : 'none';
-    if (match) rentalVisible++;
+  document.querySelectorAll('.cat-section').forEach(section => {
+    let sectionVisible = 0;
+    section.querySelectorAll('.game-card').forEach(card => {
+      const title = (card.querySelector('.game-title') || {}).textContent || '';
+      const platform = (card.querySelector('.game-platform') || {}).textContent || '';
+      const desc = (card.querySelector('.game-desc-inline') || {}).textContent || '';
+      const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) { sectionVisible++; rentalVisible++; }
+    });
+    section.style.display = (q && sectionVisible === 0) ? 'none' : '';
   });
   const rentalSection = document.getElementById('section-rentals');
   if (rentalSection) rentalSection.style.display = (q && rentalVisible === 0) ? 'none' : '';

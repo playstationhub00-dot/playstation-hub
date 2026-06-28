@@ -513,7 +513,8 @@ app.get('/browse', (req, res) => {
   const upcoming = sortUpcoming(getUpcoming());
   // PS Plus monthly entries sorted newest first
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const priceCategories = getPriceCategories();
+  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/admin', requireAuth, (req, res) => {
