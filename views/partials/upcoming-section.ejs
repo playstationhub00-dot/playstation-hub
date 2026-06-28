@@ -7,7 +7,9 @@
     </span>
     <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">Open for Reservation</span>
   </h2>
-  <div class="games-grid">
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="upcomingSlider">
     <% upcoming.forEach(game => { %>
     <div class="game-card upcoming-card" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
       <div style="position:relative;">
@@ -47,6 +49,17 @@
       </div>
     </div>
     <% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideUpcoming(1)" aria-label="Next">&#8250;</button>
   </div>
 </div>
+<script>
+function slideUpcoming(dir) {
+  const slider = document.getElementById('upcomingSlider');
+  if (!slider) return;
+  const card = slider.querySelector('.game-card');
+  const cardW = card ? card.offsetWidth + 20 : 280;
+  slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
+}
+</script>
 <% } %>
