@@ -506,7 +506,7 @@ app.get('/browse', (req, res) => {
       (g.description && g.description.toLowerCase().includes(q))
     );
   }
-  if (platform) games = games.filter(g => g.platform === platform);
+  if (platform) games = games.filter(g => g.platform === platform || g.platform === 'PS4/PS5');
   if (genre) games = games.filter(g => g.genre === genre);
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
