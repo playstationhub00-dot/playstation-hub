@@ -52,6 +52,7 @@ db.defaults({
       subtitle_color: '#aaaaaa'
     }
   },
+  hero_slides: [],
   admin_password: 'admin123',
   price_categories: [],
   nextPriceCategoryId: 1,
@@ -307,6 +308,10 @@ function getSiteSettings() {
   } else if (s.hero_bg.overlay === undefined) {
     db.set('site_settings.hero_bg.overlay', 50).write();
     s.hero_bg.overlay = 50;
+  }
+  if (!s.hero_slides) {
+    db.set('site_settings.hero_slides', []).write();
+    s.hero_slides = [];
   }
   return s;
 }
@@ -815,6 +820,32 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings.favicon_path', favicon_path).write();
   db.set('site_settings.hero_bg', hero_bg).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+// Hero Slides
+app.post('/admin/hero-slides/upload', requireAuth, upload.single('slide_image'), (req, res) => {
+  if (!req.file) return res.redirect('/admin?msg=no_file');
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const destName = 'slide_' + Date.now() + ext;
+  const destPath = path.join(uploadsDir, destName);
+  fs.renameSync(req.file.path, destPath);
+  const slides = db.get('site_settings.hero_slides').value() || [];
+  slides.push({ path: '/uploads/' + destName, caption: (req.body.caption || '').trim(), link: (req.body.link || '').trim() });
+  db.set('site_settings.hero_slides', slides).write();
+  res.redirect('/admin?msg=slide_added');
+});
+
+app.post('/admin/hero-slides/delete', requireAuth, (req, res) => {
+  const idx = parseInt(req.body.index);
+  const slides = db.get('site_settings.hero_slides').value() || [];
+  if (idx >= 0 && idx < slides.length) {
+    const sl = slides[idx];
+    const filePath = path.join(uploadsDir, path.basename(sl.path));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    slides.splice(idx, 1);
+    db.set('site_settings.hero_slides', slides).write();
+  }
+  res.redirect('/admin?msg=slide_deleted');
 });
 
 // Customer CRUD

@@ -21,6 +21,50 @@
   </div>
 </nav>
 
+<% const heroSlides = settings.hero_slides && settings.hero_slides.length > 0 ? settings.hero_slides : null; %>
+<% if (heroSlides) { %>
+<section class="hero-slideshow" id="heroSlideshow">
+  <div class="hero-slides-track" id="heroTrack">
+    <% heroSlides.forEach((sl, i) => { %>
+    <div class="hero-slide <%= i === 0 ? 'active' : '' %>">
+      <img src="<%= sl.path %>" alt="<%= sl.caption || 'Promo' %>">
+      <% if (sl.caption) { %>
+      <div class="hero-slide-caption"><%= sl.caption %></div>
+      <% } %>
+      <% if (sl.link) { %>
+      <a href="<%= sl.link %>" class="hero-slide-link"></a>
+      <% } %>
+    </div>
+    <% }) %>
+  </div>
+  <% if (heroSlides.length > 1) { %>
+  <button class="hero-slide-arrow hero-slide-prev" onclick="heroSlide(-1)" aria-label="Previous">&#8249;</button>
+  <button class="hero-slide-arrow hero-slide-next" onclick="heroSlide(1)" aria-label="Next">&#8250;</button>
+  <div class="hero-slide-dots" id="heroDots">
+    <% heroSlides.forEach((sl, i) => { %>
+    <button class="hero-dot <%= i === 0 ? 'active' : '' %>" onclick="heroGoTo(<%= i %>)" aria-label="Slide <%= i+1 %>"></button>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+<script>
+(function(){
+  let cur = 0;
+  const slides = document.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('.hero-dot');
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    if (dots[cur]) dots[cur].classList.remove('active');
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    if (dots[cur]) dots[cur].classList.add('active');
+  }
+  window.heroSlide = d => goTo(cur + d);
+  window.heroGoTo = goTo;
+  if (slides.length > 1) setInterval(() => goTo(cur + 1), 5000);
+})();
+</script>
+<% } else { %>
 <section class="hero<%= settings.hero_bg.type !== 'default' ? ' hero-custom-bg' : '' %>">
   <% if (settings.hero_bg.type === 'image' && settings.hero_bg.path) { %>
     <div class="hero-bg-media" style="background-image:url('<%= settings.hero_bg.path %>');background-size:cover;background-position:center;"></div>
@@ -43,6 +87,7 @@
     </div>
   </div>
 </section>
+<% } %>
 
 <div class="stats-bar">
   <div class="stat">

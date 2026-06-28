@@ -191,6 +191,93 @@ nav {
   margin: 0 auto 2rem;
 }
 .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+/* ── Hero Slideshow ───────────────────────────────────────── */
+.hero-slideshow {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+  max-height: 520px;
+}
+.hero-slides-track { position: relative; width: 100%; }
+.hero-slide {
+  display: none;
+  position: relative;
+  width: 100%;
+}
+.hero-slide.active { display: block; }
+.hero-slide img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  display: block;
+  animation: slideIn 0.5s ease;
+}
+@keyframes slideIn { from { opacity: 0; transform: scale(1.02); } to { opacity: 1; transform: scale(1); } }
+.hero-slide-caption {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.75));
+  color: #fff;
+  padding: 2rem 1.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+.hero-slide-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.hero-slide-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.55);
+  border: none;
+  color: #fff;
+  font-size: 2.5rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.hero-slide-arrow:hover { background: var(--ps-blue); }
+.hero-slide-prev { left: 12px; }
+.hero-slide-next { right: 12px; }
+.hero-slide-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+.hero-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.7);
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+.hero-dot.active { background: var(--ps-blue); border-color: var(--ps-blue); }
+@media (max-width: 600px) {
+  .hero-slideshow { max-height: 280px; }
+  .hero-slide img { max-height: 280px; }
+  .hero-slide-arrow { width: 36px; height: 36px; font-size: 1.8rem; }
+}
+
 .btn {
   display: inline-block;
   padding: 0.75rem 1.75rem;
