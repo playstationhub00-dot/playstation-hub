@@ -69,14 +69,19 @@
   </div>
 </div>
 
+<!-- MOST POPULAR SLIDER -->
 <div class="section">
   <h2 class="section-title">Most Popular</h2>
-  <div class="games-grid">
-    <% featured.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="popularSlider">
+      <% featured.forEach(game => { %><div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
   </div>
 </div>
 
-<!-- MOST PLAYED IN PS PLUS -->
+<!-- MOST PLAYED IN PS PLUS SLIDER -->
 <% if (psplusPopular.length > 0) { %>
 <div class="section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
   <h2 class="section-title">
@@ -84,7 +89,9 @@
     Most Played in PS Plus
     <a href="/ps-plus" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a>
   </h2>
-  <div class="games-grid">
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('psplusSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="psplusSlider">
     <% psplusPopular.forEach((game, idx) => { %>
     <%
       const popData = JSON.stringify({
@@ -96,6 +103,7 @@
         rank: game.rank || idx + 1
       }).replace(/'/g,"&#39;");
     %>
+    <div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;">
     <div class="game-card psplus-popular-card" onclick="openPopularModal('<%= popData.replace(/"/g,'&quot;') %>')" style="cursor:pointer;">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
@@ -120,18 +128,26 @@
         </div>
       </div>
     </div>
+    </div>
     <% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('psplusSlider',1)" aria-label="Next">&#8250;</button>
   </div>
 </div>
 <% } %>
 
 <!-- UPCOMING GAMES -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 5), noBorderTop: false }) %>
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: false }) %>
 
-<div class="section">
+<!-- ALL GAMES SLIDER -->
+<div class="section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
   <h2 class="section-title">All Games <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
-  <div class="games-grid">
-    <% games.slice(0, 5).forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('allGamesSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="allGamesSlider">
+      <% games.slice(0, 10).forEach(game => { %><div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('allGamesSlider',1)" aria-label="Next">&#8250;</button>
   </div>
 </div>
 
@@ -230,6 +246,14 @@
 <%- include('partials/rent-modal') %>
 
 <script>
+function slideSection(id, dir) {
+  const slider = document.getElementById(id);
+  if (!slider) return;
+  const card = slider.querySelector('[style*="min-width"]') || slider.querySelector('.game-card');
+  const cardW = card ? card.offsetWidth + 20 : 260;
+  slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
+}
+
 function openPopularModal(dataStr) {
   const d = JSON.parse(dataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
   const cover = document.getElementById('popularModalCover');
