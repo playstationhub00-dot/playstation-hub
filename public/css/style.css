@@ -389,6 +389,8 @@ nav {
 }
 
 /* ── New Game Card Layout ─────────────────────────────────── */
+.game-card-link { text-decoration: none; color: inherit; cursor: pointer; }
+.rent-btn-unavail { background: #1a1a1a !important; color: #444 !important; cursor: not-allowed !important; }
 .gc-cover-wrap { position: relative; }
 .gc-platform-badge {
   position: absolute;

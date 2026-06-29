@@ -9,7 +9,7 @@
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
 %>
-<div class="game-card">
+<a href="/game/<%= game.id %>" class="game-card game-card-link">
 
   <!-- Cover + platform badge -->
   <div class="gc-cover-wrap">
@@ -34,7 +34,6 @@
   <div class="game-info">
     <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
     <div class="game-title"><%= game.title %></div>
-    <% if (game.description) { %><div class="game-desc-inline"><%= game.description %></div><% } %>
 
     <!-- Pricing columns side by side -->
     <div class="gc-price-table">
@@ -116,9 +115,9 @@
     </div>
 
     <% if (allUnavail) { %>
-    <button class="rent-btn" disabled>Unavailable</button>
+    <span class="rent-btn rent-btn-unavail">Unavailable</span>
     <% } else { %>
-    <a href="/game/<%= game.id %>" class="rent-btn" style="text-align:center;text-decoration:none;display:block;">Rent Now</a>
+    <span class="rent-btn">Rent Now</span>
     <% } %>
   </div>
-</div>
+</a>
