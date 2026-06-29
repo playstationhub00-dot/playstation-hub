@@ -144,7 +144,7 @@
       <div class="gd-reserve-options">
 
         <!-- Priority Reservation -->
-        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
+        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event, 'reserve')">
           <div class="gd-reserve-badge">PRIORITY</div>
           <div class="gd-reserve-icon">⭐</div>
           <div class="gd-reserve-name">Reservation</div>
@@ -154,7 +154,7 @@
         </a>
 
         <!-- Fall in Line -->
-        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
+        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event, 'queue')">
           <div class="gd-reserve-icon">🎮</div>
           <div class="gd-reserve-name">Fall in Line</div>
           <div class="gd-reserve-fee">FREE</div>
@@ -163,6 +163,7 @@
         </a>
 
       </div>
+      <div id="reserveValidationMsg1" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
 
       <% } else { %>
 
@@ -247,7 +248,7 @@
         </div>
         <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
         <div class="gd-reserve-options">
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event, 'reserve')">
             <div class="gd-reserve-badge">PRIORITY</div>
             <div class="gd-reserve-icon">⭐</div>
             <div class="gd-reserve-name">Reservation</div>
@@ -255,7 +256,7 @@
             <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
             <div class="gd-reserve-cta">📘 Reserve Now →</div>
           </a>
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event, 'queue')">
             <div class="gd-reserve-icon">🎮</div>
             <div class="gd-reserve-name">Fall in Line</div>
             <div class="gd-reserve-fee">FREE</div>
@@ -263,6 +264,7 @@
             <div class="gd-reserve-cta">📘 Join Waitlist →</div>
           </a>
         </div>
+        <div id="reserveValidationMsg2" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
       </div>
 
       <% } %>
@@ -398,6 +400,25 @@ function updateReserveLinks() {
     ].filter(Boolean).join('\n');
     qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(queueMsg);
   }
+}
+
+function handleReserveClick(e, type) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const msg = '⚠️ Please select a rental duration (10, 15, or 30 days) before continuing.';
+    // show whichever validation el is visible
+    ['reserveValidationMsg1','reserveValidationMsg2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.offsetParent !== null) {
+        el.textContent = msg;
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+      }
+    });
+    highlightDurationGrid();
+    return false;
+  }
+  return true;
 }
 
 function handleMessageUs(e) {
