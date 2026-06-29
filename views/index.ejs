@@ -138,18 +138,8 @@
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('psplusSlider',-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="psplusSlider">
     <% psplusPopular.forEach((game, idx) => { %>
-    <%
-      const popData = JSON.stringify({
-        cover: game.cover_image||'',
-        title: game.title,
-        platform: game.platform||'',
-        genre: game.genre||'',
-        description: game.description||'',
-        rank: game.rank || idx + 1
-      }).replace(/'/g,"&#39;");
-    %>
     <div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;">
-    <div class="game-card psplus-popular-card" onclick="openPopularModal('<%= popData.replace(/"/g,'&quot;') %>')" style="cursor:pointer;">
+    <a href="/game/17" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
@@ -165,14 +155,11 @@
         <div class="game-platform"><%= game.platform %></div>
         <div class="game-title"><%= game.title %></div>
         <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <% if (game.description) { %><div class="game-desc-inline"><%= game.description %></div><% } %>
-        <div style="margin-top:auto;padding-top:0.75rem;">
-          <button class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;border:none;cursor:pointer;">
-            📘 Rent via PS Plus
-          </button>
-        </div>
+        <span class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;text-align:center;">
+          📘 Rent via PS Plus
+        </span>
       </div>
-    </div>
+    </a>
     </div>
     <% }) %>
     </div>
@@ -226,46 +213,6 @@
 
 <%- include('partials/footer') %>
 
-<!-- POPULAR GAME MODAL -->
-<div class="modal-overlay" id="popularModal" onclick="if(event.target===this)closePopularModal()">
-  <div class="modal" style="max-width:560px;padding:0;overflow:hidden;border-radius:18px;">
-    <div style="position:relative;width:100%;background:#0a0a0a;">
-      <img id="popularModalCover" src="" alt="" style="width:100%;max-height:320px;object-fit:cover;display:block;">
-      <div id="popularModalCoverPlaceholder" style="display:none;height:120px;background:linear-gradient(135deg,#1a1400,#111);align-items:center;justify-content:center;font-size:2.5rem;">🎮</div>
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.85) 0%,transparent 55%);pointer-events:none;"></div>
-      <div style="position:absolute;bottom:1rem;left:1.25rem;right:2.5rem;">
-        <div id="popularModalPlatform" style="font-size:0.7rem;font-weight:700;color:#FFD700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.2rem;"></div>
-        <div id="popularModalTitle" style="font-size:1.15rem;font-weight:800;color:#fff;line-height:1.2;"></div>
-      </div>
-      <button onclick="closePopularModal()" style="position:absolute;top:0.75rem;right:0.9rem;background:rgba(0,0,0,0.5);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
-    </div>
-    <div style="padding:1.25rem 1.5rem 1.5rem;">
-      <div id="popularModalDesc" style="font-size:0.83rem;color:#888;line-height:1.6;margin-bottom:1.25rem;display:none;"></div>
-      <div style="font-size:0.75rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.5rem;">Rental Pricing</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;">
-        <div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
-          <div style="font-size:0.7rem;color:#aaa;font-weight:700;margin-bottom:0.4rem;">🎮 Non-Trophy</div>
-          <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#22c55e;">₱<%= psplusPrices.nt_price_10d %></b></div>
-          <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#22c55e;">₱<%= psplusPrices.nt_price_15d %></b></div>
-          <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#22c55e;">₱<%= psplusPrices.nt_price_30d %></b></div>
-        </div>
-        <div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
-          <div style="font-size:0.7rem;color:#ffc400;font-weight:700;margin-bottom:0.4rem;">🏆 Trophy Account</div>
-          <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#ffc400;">₱<%= psplusPrices.tr_price_10d %></b></div>
-          <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#ffc400;">₱<%= psplusPrices.tr_price_15d %></b></div>
-          <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#ffc400;">₱<%= psplusPrices.tr_price_30d %></b></div>
-          <div style="font-size:0.72rem;color:#664d00;margin-top:0.3rem;">+₱100 refundable deposit</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:0.75rem;">
-        <button onclick="closePopularModal()" class="btn btn-outline" style="flex:1;">Cancel</button>
-        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-          class="btn" style="flex:1;text-align:center;background:#FFD700;color:#000;font-weight:800;border-radius:50px;padding:0.75rem 1.5rem;text-decoration:none;">📘 Message Us</a>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- RESERVE MODAL -->
 <div class="modal-overlay" id="reserveModal">
   <div class="modal">
@@ -298,21 +245,6 @@ function slideSection(id, dir) {
   const cardW = card ? card.offsetWidth + 20 : 260;
   slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
 }
-
-function openPopularModal(dataStr) {
-  const d = JSON.parse(dataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
-  const cover = document.getElementById('popularModalCover');
-  const placeholder = document.getElementById('popularModalCoverPlaceholder');
-  if (d.cover) { cover.src = d.cover; cover.style.display = 'block'; placeholder.style.display = 'none'; }
-  else { cover.style.display = 'none'; placeholder.style.display = 'flex'; }
-  document.getElementById('popularModalPlatform').textContent = d.platform + (d.genre ? '  ·  ' + d.genre : '');
-  document.getElementById('popularModalTitle').textContent = d.title;
-  const descEl = document.getElementById('popularModalDesc');
-  if (d.description) { descEl.textContent = d.description; descEl.style.display = ''; }
-  else descEl.style.display = 'none';
-  document.getElementById('popularModal').classList.add('active');
-}
-function closePopularModal() { document.getElementById('popularModal').classList.remove('active'); }
 
 function openReserveModal(title) {
   document.getElementById('reserveGameTitle').textContent = title;
