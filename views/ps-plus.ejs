@@ -152,7 +152,7 @@
   </h2>
   <div class="games-grid">
     <% popular.forEach((game, idx) => { %>
-    <% const rentTarget = '/game/17'; %>
+    <% const rentTarget = psplusSlug ? '/game/' + psplusSlug : '/game/17'; %>
     <a href="<%= rentTarget %>" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>

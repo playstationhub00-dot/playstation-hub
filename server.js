@@ -353,7 +353,8 @@ app.get('/ps-plus', (req, res) => {
   const slots = psplusGame
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : getPsplusSlots();
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const psplusSlug = psplusGame ? gameSlug(psplusGame.title) : null;
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/ps-plus/rent', (req, res) => {
@@ -526,7 +527,9 @@ app.get('/', (req, res) => {
   const upcoming = sortUpcoming(getUpcoming());
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 10);
   const psplusPrices = getPsplusPrices();
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const homePsplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
+  const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.get('/browse', (req, res) => {
@@ -551,9 +554,19 @@ app.get('/browse', (req, res) => {
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────
-app.get('/game/:id', (req, res) => {
-  const game = getGame(parseInt(req.params.id));
+function gameSlug(title) {
+  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+app.get('/game/:slug', (req, res) => {
+  const param = req.params.slug;
+  // Support both numeric ID (old links) and slug
+  let game = /^\d+$/.test(param)
+    ? getGame(parseInt(param))
+    : getGames().find(g => gameSlug(g.title) === param);
   if (!game) return res.redirect('/browse');
+  // Redirect numeric URLs to slug URL
+  if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
   const resolved = resolveGamePrices(resolveSlotDays(game));
   res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });

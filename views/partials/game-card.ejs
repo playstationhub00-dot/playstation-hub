@@ -9,7 +9,7 @@
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
 %>
-<a href="/game/<%= game.id %>" class="game-card game-card-link">
+<a href="/game/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>" class="game-card game-card-link">
 
   <!-- Cover + platform badge -->
   <div class="gc-cover-wrap">
