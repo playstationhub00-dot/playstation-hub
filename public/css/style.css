@@ -430,7 +430,7 @@ nav {
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 580px;
+  height: 570px;
 }
 .game-card:hover {
   transform: translateY(-4px);
