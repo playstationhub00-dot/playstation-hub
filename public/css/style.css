@@ -555,7 +555,8 @@ nav {
   font-size: 0.875rem;
   cursor: pointer;
   transition: background 0.2s;
-  margin-top: 0.5rem;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 .rent-btn:hover { background: #F0A500; color: #000; }
 .rent-btn:disabled { background: #1a1a1a; color: #444; cursor: not-allowed; }
