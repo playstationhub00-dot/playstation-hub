@@ -350,6 +350,24 @@ nav {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255,255,255,0.15);
 }
+.gc-slot-banner {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 0.35rem 0;
+  text-transform: uppercase;
+}
+.gc-slot-banner-last {
+  background: rgba(220, 38, 38, 0.92);
+  color: #fff;
+}
+.gc-slot-banner-none {
+  background: rgba(30, 30, 30, 0.88);
+  color: #555;
+}
 .gc-genre {
   font-size: 0.62rem;
   font-weight: 700;

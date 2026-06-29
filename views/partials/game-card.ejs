@@ -5,6 +5,9 @@
   const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
   const hasTrophy = !!(game.trophy_account || trSlots > 0);
   const allUnavail = ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0);
+  const totalSlots = ntSlots + trSlots + (showPs4 ? ps4Slots : 0);
+  const isLastSlot = totalSlots === 1;
+  const noSlot = totalSlots === 0;
 %>
 <div class="game-card">
 
@@ -21,6 +24,11 @@
       </div>
     <% } %>
     <span class="gc-platform-badge"><%= game.platform %></span>
+    <% if (isLastSlot) { %>
+      <div class="gc-slot-banner gc-slot-banner-last">LAST SLOT!</div>
+    <% } else if (noSlot) { %>
+      <div class="gc-slot-banner gc-slot-banner-none">NO SLOT</div>
+    <% } %>
   </div>
 
   <div class="game-info">
