@@ -1,97 +1,112 @@
+<%
+  const ntSlots  = game.non_trophy_slots || 0;
+  const trSlots  = game.trophy_slots || 0;
+  const ps4Slots = game.ps4_primary_slots || 0;
+  const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
+  const hasTrophy = !!(game.trophy_account || trSlots > 0);
+  const allUnavail = ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0);
+%>
 <div class="game-card">
-  <% if (game.cover_image) { %>
-    <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
-  <% } else { %>
-    <div class="game-cover-placeholder">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-      </svg>
-      <span>No Image</span>
-    </div>
-  <% } %>
+
+  <!-- Cover + platform badge -->
+  <div class="gc-cover-wrap">
+    <% if (game.cover_image) { %>
+      <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+    <% } else { %>
+      <div class="game-cover-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        <span>No Image</span>
+      </div>
+    <% } %>
+    <span class="gc-platform-badge"><%= game.platform %></span>
+  </div>
+
   <div class="game-info">
-    <div class="game-platform"><%= game.platform %></div>
+    <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
     <div class="game-title"><%= game.title %></div>
+    <% if (game.description) { %><div class="game-desc-inline"><%= game.description %></div><% } %>
 
-    <!-- Per-type slot availability -->
-    <div class="slot-availability">
-      <%
-        const ntSlots  = game.non_trophy_slots || 0;
-        const trSlots  = game.trophy_slots || 0;
-        const ps4Slots = game.ps4_primary_slots || 0;
-        const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
-      %>
-      <div class="slot-row">
-        <span class="slot-label">🎮 Non-Trophy</span>
-        <% if (ntSlots > 0) { %>
-          <span class="slot-avail">● Available (<%= ntSlots %>)</span>
-        <% } else { %>
-          <span class="slot-unavail">● Not Available</span>
-        <% } %>
+    <!-- Pricing columns side by side -->
+    <div class="gc-price-table">
+
+      <!-- Non-Trophy column -->
+      <div class="gc-col gc-col-nt">
+        <div class="gc-col-head">
+          <span class="gc-col-icon">🎮</span>
+          <span class="gc-col-label">NON-TROPHY</span>
+        </div>
+        <div class="gc-avail-row">
+          <% if (ntSlots > 0) { %>
+            <span class="gc-avail gc-avail-yes">Available (<%= ntSlots %>)</span>
+          <% } else { %>
+            <span class="gc-avail gc-avail-no">RENTED</span>
+          <% } %>
+        </div>
+        <div class="gc-price-rows">
+          <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price">₱<%= game.nt_price_10d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price">₱<%= game.nt_price_15d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price">₱<%= game.nt_price_30d %></span></div>
+        </div>
       </div>
-      <% if (game.trophy_account || trSlots > 0) { %>
-      <div class="slot-row">
-        <span class="slot-label">🏆 Trophy Account</span>
-        <% if (trSlots > 0) { %>
-          <span class="slot-avail" style="color:#ffc400;">● Available (<%= trSlots %>)</span>
-        <% } else { %>
-          <span class="slot-unavail">● Not Available</span>
-        <% } %>
+
+      <!-- Trophy column -->
+      <% if (hasTrophy) { %>
+      <div class="gc-col gc-col-tr">
+        <div class="gc-col-head">
+          <span class="gc-col-icon">🏆</span>
+          <span class="gc-col-label">TROPHY</span>
+        </div>
+        <div class="gc-avail-row">
+          <% if (trSlots > 0) { %>
+            <span class="gc-avail gc-avail-tr">Available (<%= trSlots %>)</span>
+          <% } else { %>
+            <span class="gc-avail gc-avail-no">RENTED</span>
+          <% } %>
+        </div>
+        <div class="gc-price-rows">
+          <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_10d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_15d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_30d %></span></div>
+        </div>
       </div>
       <% } %>
+
+      <!-- PS4 Primary column -->
       <% if (showPs4) { %>
-      <div class="slot-row">
-        <span class="slot-label">🕹️ PS4 Primary</span>
-        <% if (ps4Slots > 0) { %>
-          <span class="slot-avail" style="color:#60a5fa;">● Available (<%= ps4Slots %>)</span>
-        <% } else { %>
-          <span class="slot-unavail">● Not Available</span>
-        <% } %>
+      <div class="gc-col gc-col-ps4">
+        <div class="gc-col-head">
+          <span class="gc-col-icon">🕹️</span>
+          <span class="gc-col-label">PS4 PRI</span>
+        </div>
+        <div class="gc-avail-row">
+          <% if (ps4Slots > 0) { %>
+            <span class="gc-avail gc-avail-ps4">Available (<%= ps4Slots %>)</span>
+          <% } else { %>
+            <span class="gc-avail gc-avail-no">RENTED</span>
+          <% } %>
+        </div>
+        <div class="gc-price-rows">
+          <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_10d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_15d %></span></div>
+          <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_30d %></span></div>
+        </div>
       </div>
       <% } %>
-    </div>
 
-    <div class="game-badges">
-      <span class="badge badge-renters">👤 <%= game.renters %></span>
     </div>
-
-    <% if (game.description) { %>
-    <div class="game-desc-inline"><%= game.description %></div>
-    <% } %>
-
-    <!-- Non-Trophy Prices -->
-    <div class="price-block">
-      <div class="price-block-label">🎮 Non-Trophy</div>
-      <div class="price-tiers">
-        <div class="price-row"><span class="price-label">10 Days</span><span class="price-val">₱<%= game.nt_price_10d %></span></div>
-        <div class="price-row"><span class="price-label">15 Days</span><span class="price-val">₱<%= game.nt_price_15d %></span></div>
-        <div class="price-row"><span class="price-label">30 Days</span><span class="price-val">₱<%= game.nt_price_30d %></span></div>
-      </div>
-    </div>
-
-    <!-- Trophy Prices -->
-    <% if (game.trophy_account || trSlots > 0) { %>
-    <div class="price-block price-block-trophy">
-      <div class="price-block-label" style="color:#ffc400;">🏆 Trophy Account</div>
-      <div class="price-tiers">
-        <div class="price-row"><span class="price-label">10 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_10d %></span></div>
-        <div class="price-row"><span class="price-label">15 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_15d %></span></div>
-        <div class="price-row"><span class="price-label">30 Days</span><span class="price-val" style="color:#ffc400;">₱<%= game.tr_price_30d %></span></div>
-      </div>
-      <div class="trophy-deposit-note">+₱100 refundable deposit</div>
-    </div>
-    <% } %>
 
     <button class="rent-btn"
-      <%= (ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0)) ? 'disabled' : '' %>
+      <%= allUnavail ? 'disabled' : '' %>
       onclick="openRentModal('<%= game.title.replace(/'/g, "\\'") %>',
         <%= game.nt_price_10d %>, <%= game.nt_price_15d %>, <%= game.nt_price_30d %>,
-        <%= game.trophy_account ? game.tr_price_10d : 0 %>,
-        <%= game.trophy_account ? game.tr_price_15d : 0 %>,
-        <%= game.trophy_account ? game.tr_price_30d : 0 %>,
-        <%= !!(game.trophy_account || trSlots > 0) %>,
+        <%= hasTrophy ? game.tr_price_10d : 0 %>,
+        <%= hasTrophy ? game.tr_price_15d : 0 %>,
+        <%= hasTrophy ? game.tr_price_30d : 0 %>,
+        <%= hasTrophy %>,
         true)">
-      <%= (ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0)) ? 'Unavailable' : 'Rent Now' %>
+      <%= allUnavail ? 'Unavailable' : 'Rent Now' %>
     </button>
   </div>
 </div>

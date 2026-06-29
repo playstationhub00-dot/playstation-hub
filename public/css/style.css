@@ -334,6 +334,83 @@ nav {
   gap: 1.5rem;
 }
 
+/* ── New Game Card Layout ─────────────────────────────────── */
+.gc-cover-wrap { position: relative; }
+.gc-platform-badge {
+  position: absolute;
+  top: 8px; right: 8px;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.2rem 0.45rem;
+  border-radius: 5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.gc-genre {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #555;
+  letter-spacing: 0.8px;
+  margin-bottom: -0.2rem;
+}
+.gc-price-table {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.gc-col {
+  flex: 1;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 0.45rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.gc-col-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
+.gc-col-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
+.gc-col-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.1rem;
+}
+.gc-col-icon { font-size: 0.65rem; }
+.gc-col-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  color: #666;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gc-avail-row { margin-bottom: 0.15rem; }
+.gc-avail {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+.gc-avail-yes  { background: rgba(34,197,94,0.15); color: #22c55e; }
+.gc-avail-tr   { background: rgba(255,196,0,0.15); color: #ffc400; }
+.gc-avail-ps4  { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.gc-avail-no   { background: rgba(239,68,68,0.12); color: #ef4444; }
+.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; }
+.gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
+.gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
+.gc-price      { font-size: 0.72rem; font-weight: 800; color: #fff; }
+.gc-price-tr   { color: #ffc400; }
+.gc-price-ps4  { color: #60a5fa; }
+
 .game-card {
   background: var(--bg-card);
   border-radius: 14px;
