@@ -342,13 +342,61 @@ function updateTotal() {
 
 function updateReserveLinks() {
   const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
-  const typeLabel = selectedType === 'tr' ? 'Trophy' : selectedType === 'nt' ? 'Non-Trophy' : '';
+  const typeLabel = selectedType === 'tr' ? 'Trophy Account' : selectedType === 'nt' ? 'Non-Trophy Account' : '';
   const daysLabel = selectedDays ? selectedDays + ' Days' : '';
-  const detail = [gameTitle, typeLabel, daysLabel].filter(Boolean).join(' · ');
+
+  // Compute total for the message
+  let totalLine = '';
+  if (selectedType && selectedDays) {
+    const base = PRICES[selectedType][selectedDays];
+    const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
+    const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+    const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+    const total    = base - discount + deposit;
+    totalLine = 'Total: ₱' + total;
+    if (discount > 0) totalLine += ' (incl. ' + PROMO.discount_pct + '% promo discount)';
+    if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
+  }
+
+  // Message Us button (available slot)
+  const ctaBtn = document.getElementById('ctaBtn');
+  if (ctaBtn) {
+    const rentMsg = [
+      'Hi! I want to RENT a game 🎮',
+      'Game: ' + gameTitle,
+      typeLabel ? 'Account Type: ' + typeLabel : '',
+      daysLabel ? 'Duration: ' + daysLabel : '',
+      totalLine
+    ].filter(Boolean).join('\n');
+    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(rentMsg);
+  }
+
+  // Priority Reservation button
   const rLink = document.getElementById('reserveLink');
+  if (rLink) {
+    const reserveMsg = [
+      'Hi! I want to PRIORITY RESERVE a slot ⭐',
+      'Game: ' + gameTitle,
+      typeLabel ? 'Account Type: ' + typeLabel : '',
+      daysLabel ? 'Duration: ' + daysLabel : '',
+      totalLine,
+      'Note: I am paying the ₱100 priority reservation fee.'
+    ].filter(Boolean).join('\n');
+    rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(reserveMsg);
+  }
+
+  // Fall in Line button
   const qLink = document.getElementById('queueLink');
-  if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('PRIORITY RESERVATION - ' + detail);
-  if (qLink) qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('FALL IN LINE - ' + detail);
+  if (qLink) {
+    const queueMsg = [
+      'Hi! I want to JOIN THE WAITLIST (Fall in Line) 🎮',
+      'Game: ' + gameTitle,
+      typeLabel ? 'Account Type: ' + typeLabel : '',
+      daysLabel ? 'Duration: ' + daysLabel : '',
+      'Please notify me when a slot becomes available.'
+    ].filter(Boolean).join('\n');
+    qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(queueMsg);
+  }
 }
 
 // Auto-select first available type (prefer available slot, fallback to first)
