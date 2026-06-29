@@ -1355,3 +1355,8 @@ footer {
   .games-table th:nth-child(4),
   .games-table td:nth-child(4) { display: none; }
 }
+
+/* Visitor / filter buttons */
+.vis-filter-btn { background:#1a1a1a; color:#777; border:1px solid #333; border-radius:20px; cursor:pointer; font-weight:600; transition:all 0.15s; }
+.vis-filter-btn:hover { border-color:#555; color:#ccc; }
+.vis-filter-btn.vis-filter-active { background:rgba(0,112,209,0.15); border-color:var(--ps-blue); color:var(--ps-blue); }

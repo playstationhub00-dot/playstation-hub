@@ -1251,7 +1251,7 @@
       <% if (customers.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
       <% } else { %>
-      <div style="overflow-x:auto;">
+      <div style="max-height:520px;overflow-y:auto;overflow-x:auto;border-radius:8px;">
         <table class="games-table" id="customersTable">
           <thead>
             <tr>
@@ -1380,9 +1380,7 @@
       const uniqueMonth = new Set(visMonth.map(v => v.ip)).size;
       const uniqueAll   = new Set(visitors.map(v => v.ip)).size;
 
-      const vPageCounts = {};
-      visitors.forEach(v => { vPageCounts[v.page] = (vPageCounts[v.page] || 0) + 1; });
-      const topPages = Object.entries(vPageCounts).sort((a,b) => b[1]-a[1]);
+      // topPages removed — per-period top pages computed below
 
       const vLast7 = [];
       for (let i = 6; i >= 0; i--) {
@@ -1393,7 +1391,17 @@
       }
       const vMaxBar = Math.max(...vLast7.map(d => d.count), 1);
 
-      const recentVisitors = [...visitors].reverse().slice(0, 30);
+      const recentVisitors = [...visitors].reverse().slice(0, 100);
+
+      // Page counts per period (computed here, filtered in JS)
+      const vPageToday = {}; visToday.forEach(v => { vPageToday[v.page||v.path] = (vPageToday[v.page||v.path]||0)+1; });
+      const vPageWeek  = {}; visWeek.forEach(v  => { vPageWeek[v.page||v.path]  = (vPageWeek[v.page||v.path] ||0)+1; });
+      const vPageMonth = {}; visMonth.forEach(v => { vPageMonth[v.page||v.path] = (vPageMonth[v.page||v.path]||0)+1; });
+      const vPageAll   = {}; visitors.forEach(v => { vPageAll[v.page||v.path]   = (vPageAll[v.page||v.path]  ||0)+1; });
+      const topPagesToday = Object.entries(vPageToday).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topPagesWeek  = Object.entries(vPageWeek).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topPagesMonth = Object.entries(vPageMonth).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topPagesAll   = Object.entries(vPageAll).sort((a,b)=>b[1]-a[1]).slice(0,5);
     %>
 
     <!-- KPI Cards -->
@@ -1438,29 +1446,34 @@
 
       <!-- Top Pages -->
       <div class="table-card" style="border-color:rgba(167,139,250,0.2);">
-        <h2 style="border-color:rgba(167,139,250,0.1);margin-bottom:1rem;">🔗 Most Visited Pages</h2>
-        <% if (topPages.length === 0) { %>
-          <div style="color:#555;font-size:0.85rem;">No visits recorded yet.</div>
-        <% } else { %>
-          <% topPages.forEach(([page, count]) => { %>
-          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
-            <div style="flex:1;font-size:0.82rem;color:#ccc;"><%= page %></div>
-            <div style="font-size:0.75rem;color:#a78bfa;font-weight:700;"><%= count %></div>
-            <div style="width:60px;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
-              <div style="height:100%;background:#a78bfa;border-radius:3px;width:<%= Math.round((count/topPages[0][1])*100) %>%;"></div>
-            </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+          <h2 style="border:none;margin:0;padding:0;">🔗 Most Visited Pages <span style="font-size:0.7rem;color:#555;">(Top 5)</span></h2>
+          <div style="display:flex;gap:0.35rem;">
+            <button onclick="setTopFilter('today')" id="tpBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
+            <button onclick="setTopFilter('week')"  id="tpBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
+            <button onclick="setTopFilter('month')" id="tpBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
+            <button onclick="setTopFilter('all')"   id="tpBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
           </div>
-          <% }) %>
-        <% } %>
+        </div>
+        <div id="topPagesBody"><!-- filled by JS --></div>
       </div>
     </div>
 
     <!-- Recent Visits Table -->
     <div class="table-card" style="border-color:rgba(34,197,94,0.15);">
-      <h2 style="border-color:rgba(34,197,94,0.1);">🕐 Recent Visits (<%= recentVisitors.length %>)</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="border:none;margin:0;padding:0;">🕐 Recent Visits</h2>
+        <div style="display:flex;gap:0.35rem;">
+          <button onclick="setVisFilter('today')" id="rvBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
+          <button onclick="setVisFilter('week')"  id="rvBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
+          <button onclick="setVisFilter('month')" id="rvBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
+          <button onclick="setVisFilter('all')"   id="rvBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
+        </div>
+      </div>
       <% if (recentVisitors.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#555;">No visits recorded yet. Share your website link to get visitors!</div>
       <% } else { %>
+      <div style="max-height:420px;overflow-y:auto;border-radius:8px;">
       <table class="games-table" style="width:100%;">
         <thead>
           <tr>
@@ -1470,9 +1483,9 @@
             <th>IP</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="recentVisitsBody">
           <% recentVisitors.forEach(v => { %>
-          <tr>
+          <tr data-date="<%= v.date %>">
             <td><span style="color:#22c55e;font-weight:600;"><%= v.page || v.path %></span></td>
             <td style="color:#aaa;font-size:0.8rem;"><%= v.date %></td>
             <td style="color:#aaa;font-size:0.8rem;"><%= v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : '' %></td>
@@ -1481,8 +1494,70 @@
           <% }) %>
         </tbody>
       </table>
+      </div>
       <% } %>
     </div>
+
+    <script>
+    // Top pages data from server
+    const TP_DATA = {
+      today: <%- JSON.stringify(topPagesToday) %>,
+      week:  <%- JSON.stringify(topPagesWeek) %>,
+      month: <%- JSON.stringify(topPagesMonth) %>,
+      all:   <%- JSON.stringify(topPagesAll) %>
+    };
+
+    function renderTopPages(pages) {
+      const body = document.getElementById('topPagesBody');
+      if (!pages || pages.length === 0) {
+        body.innerHTML = '<div style="color:#555;font-size:0.85rem;">No visits for this period.</div>';
+        return;
+      }
+      const maxCount = pages[0][1];
+      body.innerHTML = pages.map(([page, count]) =>
+        `<div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
+          <div style="flex:1;font-size:0.82rem;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${page}</div>
+          <div style="font-size:0.75rem;color:#a78bfa;font-weight:700;">${count}</div>
+          <div style="width:60px;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
+            <div style="height:100%;background:#a78bfa;border-radius:3px;width:${Math.round((count/maxCount)*100)}%;"></div>
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    let tpFilter = 'today';
+    function setTopFilter(f) {
+      tpFilter = f;
+      ['today','week','month','all'].forEach(k => {
+        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
+      });
+      renderTopPages(TP_DATA[f]);
+    }
+    renderTopPages(TP_DATA['today']);
+
+    // Recent Visits filter
+    const vTodayStr = '<%= new Date().toISOString().slice(0,10) %>';
+    const vWeekAgo  = '<%= new Date(Date.now()-7*86400000).toISOString().slice(0,10) %>';
+    const vMonthAgo = '<%= new Date(Date.now()-30*86400000).toISOString().slice(0,10) %>';
+
+    let rvFilter = 'today';
+    function setVisFilter(f) {
+      rvFilter = f;
+      ['today','week','month','all'].forEach(k => {
+        document.getElementById('rvBtn-'+k).classList.toggle('vis-filter-active', k === f);
+      });
+      const rows = document.querySelectorAll('#recentVisitsBody tr');
+      rows.forEach(row => {
+        const d = row.dataset.date || '';
+        let show = true;
+        if (f === 'today') show = d === vTodayStr;
+        else if (f === 'week')  show = d >= vWeekAgo;
+        else if (f === 'month') show = d >= vMonthAgo;
+        row.style.display = show ? '' : 'none';
+      });
+    }
+    setVisFilter('today');
+    </script>
   </div><!-- /tab-visitors -->
 
   <!-- ═══════════════ SECURITY TAB ═══════════════ -->
