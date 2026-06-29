@@ -249,6 +249,18 @@ nav {
 .gd-cta-hint { text-align: center; font-size: 0.75rem; color: #444; margin-top: 0.5rem; }
 
 /* No-slot reservation options */
+.gd-avail-soon {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  color: #f59e0b;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  display: inline-block;
+}
+.gd-avail-soon strong { color: #fbbf24; }
+
 .gd-noslot-banner {
   display: flex; align-items: flex-start; gap: 0.75rem;
   background: #1a0f00; border: 1px solid #3a2200; border-radius: 12px;

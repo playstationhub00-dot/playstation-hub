@@ -89,6 +89,9 @@
               <span class="gd-type-status gd-status-rented">Reserved</span>
             </div>
             <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+            <% if (game.tr_days_left != null && game.tr_days_left > 0) { %>
+            <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
+            <% } %>
           </div>
         </label>
         <% } %>
@@ -102,6 +105,9 @@
               <span class="gd-type-status gd-status-rented">Reserved</span>
             </div>
             <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+            <% if (game.nt_days_left != null && game.nt_days_left > 0) { %>
+            <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
+            <% } %>
           </div>
         </label>
 
@@ -181,6 +187,9 @@
               <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Reserved' %></span>
             </div>
             <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+            <% if (!trAvail && game.tr_days_left != null && game.tr_days_left > 0) { %>
+            <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
+            <% } %>
           </div>
         </label>
         <% } %>
@@ -194,6 +203,9 @@
               <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Reserved' %></span>
             </div>
             <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+            <% if (!ntAvail && game.nt_days_left != null && game.nt_days_left > 0) { %>
+            <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
+            <% } %>
           </div>
         </label>
 
