@@ -274,6 +274,18 @@ function resolveGamePrices(game) {
   return { ...game, _category_name: null };
 }
 
+function resolveSlotDays(game) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const renters = getCustomers().filter(c => c.game_title === game.title && c.status === 'renting' && c.end_date);
+  function soonest(type) {
+    const ends = renters.filter(c => c.account_type === type).map(c => new Date(c.end_date + 'T00:00:00'));
+    if (!ends.length) return null;
+    const min = new Date(Math.min(...ends));
+    return Math.ceil((min - today) / 86400000);
+  }
+  return { ...game, nt_days_left: soonest('nt'), tr_days_left: soonest('tr'), ps4_days_left: soonest('ps4') };
+}
+
 function getAnnouncements() {
   // Migrate legacy single announcement to list on first access
   let list = db.get('announcements').value();
@@ -493,7 +505,7 @@ function sortUpcoming(list) {
 }
 
 app.get('/', (req, res) => {
-  const all = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
+  const all = getGames().map(resolveGamePrices).map(resolveSlotDays).sort((a, b) => a.title.localeCompare(b.title));
   const featured = [...all].sort((a, b) => b.renters - a.renters).slice(0, 10);
   const upcoming = sortUpcoming(getUpcoming());
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 10);
@@ -503,7 +515,7 @@ app.get('/', (req, res) => {
 
 app.get('/browse', (req, res) => {
   const { search, platform, genre } = req.query;
-  let games = getGames().map(resolveGamePrices);
+  let games = getGames().map(resolveGamePrices).map(resolveSlotDays);
   if (search) {
     const q = search.toLowerCase();
     games = games.filter(g =>

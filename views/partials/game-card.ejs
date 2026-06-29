@@ -44,6 +44,9 @@
             <span class="gc-avail gc-avail-no">Not Available</span>
           <% } %>
         </div>
+        <% if (ntSlots <= 0 && game.nt_days_left != null && game.nt_days_left > 0) { %>
+        <div class="gc-days-left">Available in <%= game.nt_days_left %>d</div>
+        <% } %>
         <div class="gc-price-rows">
           <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price">₱<%= game.nt_price_10d %></span></div>
           <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price">₱<%= game.nt_price_15d %></span></div>
@@ -80,6 +83,12 @@
         </div>
         <% } %>
         <% if (hasTrophy) { %>
+        <% if (trSlots <= 0 && game.tr_days_left != null && game.tr_days_left > 0) { %>
+        <div class="gc-days-left gc-days-left-tr">Available in <%= game.tr_days_left %>d</div>
+        <% } %>
+        <% if (showPs4 && ps4Slots <= 0 && game.ps4_days_left != null && game.ps4_days_left > 0) { %>
+        <div class="gc-days-left gc-days-left-ps4">PS4 available in <%= game.ps4_days_left %>d</div>
+        <% } %>
         <div class="gc-price-rows">
           <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_10d %></span></div>
           <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_15d %></span></div>
