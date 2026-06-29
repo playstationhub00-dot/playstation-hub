@@ -1,3 +1,17 @@
+<!-- Game title auto-fit -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.game-title').forEach(function(el) {
+    var maxSize = 0.95, minSize = 0.45, step = 0.02;
+    el.style.whiteSpace = 'nowrap';
+    el.style.fontSize = maxSize + 'rem';
+    while (el.scrollWidth > el.clientWidth && parseFloat(el.style.fontSize) > minSize) {
+      el.style.fontSize = (parseFloat(el.style.fontSize) - step).toFixed(2) + 'rem';
+    }
+  });
+});
+</script>
+
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
