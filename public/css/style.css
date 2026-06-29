@@ -410,7 +410,8 @@ nav {
 .gc-slot-type-label { font-size: 0.58rem; font-weight: 700; color: #60a5fa; background: rgba(96,165,250,0.1); border-radius: 3px; padding: 0.1rem 0.3rem; }
 .gc-col-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; align-items: stretch; }
 .gc-col-wrap .gc-col { flex: 1; }
-.gc-days-left { font-size: 0.58rem; font-weight: 700; color: #f59e0b; margin-bottom: 0.25rem; white-space: nowrap; }
+.gc-days-left-spacer { height: 1.1rem; display: flex; align-items: center; margin-bottom: 0.25rem; }
+.gc-days-left { font-size: 0.58rem; font-weight: 700; color: #f59e0b; white-space: nowrap; }
 .gc-days-left-tr { color: #ffc400; }
 .gc-days-left-ps4 { color: #60a5fa; }
 .gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; }

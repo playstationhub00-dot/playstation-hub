@@ -33,9 +33,11 @@
 
       <!-- Non-Trophy column wrapper -->
       <div class="gc-col-wrap">
-        <% if (ntSlots <= 0 && game.nt_days_left != null && game.nt_days_left > 0) { %>
-        <div class="gc-days-left">🎮 Available in <%= game.nt_days_left %>d</div>
-        <% } %>
+        <div class="gc-days-left-spacer">
+          <% if (ntSlots <= 0 && game.nt_days_left != null && game.nt_days_left > 0) { %>
+          <span class="gc-days-left">🎮 Available in <%= game.nt_days_left %>d</span>
+          <% } %>
+        </div>
         <div class="gc-col gc-col-nt">
           <div class="gc-col-head">
             <span class="gc-col-icon">🎮</span>
@@ -59,11 +61,13 @@
       <!-- Trophy / PS4 Primary column wrapper -->
       <% if (hasTrophy || showPs4) { %>
       <div class="gc-col-wrap">
-        <% if (hasTrophy && trSlots <= 0 && game.tr_days_left != null && game.tr_days_left > 0) { %>
-        <div class="gc-days-left gc-days-left-tr">🏆 Available in <%= game.tr_days_left %>d</div>
-        <% } else if (showPs4 && ps4Slots <= 0 && game.ps4_days_left != null && game.ps4_days_left > 0) { %>
-        <div class="gc-days-left gc-days-left-ps4">🕹️ PS4 in <%= game.ps4_days_left %>d</div>
-        <% } %>
+        <div class="gc-days-left-spacer">
+          <% if (hasTrophy && trSlots <= 0 && game.tr_days_left != null && game.tr_days_left > 0) { %>
+          <span class="gc-days-left gc-days-left-tr">🏆 Available in <%= game.tr_days_left %>d</span>
+          <% } else if (showPs4 && ps4Slots <= 0 && game.ps4_days_left != null && game.ps4_days_left > 0) { %>
+          <span class="gc-days-left gc-days-left-ps4">🕹️ PS4 in <%= game.ps4_days_left %>d</span>
+          <% } %>
+        </div>
         <div class="gc-col gc-col-tr">
           <div class="gc-col-head">
             <span class="gc-col-icon">🏆</span>
