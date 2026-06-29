@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rent PS Plus Deluxe — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
+</head>
+<body>
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus" class="active">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<%
+  const ntSlots  = slots.nt_slots || 0;
+  const trSlots  = slots.tr_slots || 0;
+  const trAvail  = trSlots > 0;
+  const ntAvail  = ntSlots > 0;
+  const allUnavail = !trAvail && !ntAvail;
+%>
+
+<div class="gd-page">
+  <div class="gd-back"><a href="/ps-plus">← Back to PS Plus</a></div>
+
+  <div class="gd-layout">
+
+    <!-- LEFT: PS Plus cover -->
+    <div class="gd-cover-col">
+      <img src="/images/psplus-deluxe-cover.jpg" alt="PS Plus Deluxe"
+        class="gd-cover"
+        onerror="this.style.display='none';document.getElementById('psCoverFallback').style.display='flex'">
+      <div id="psCoverFallback" class="gd-cover gd-cover-placeholder" style="display:none;background:linear-gradient(135deg,#1a1000,#2a1f00);align-items:center;justify-content:center;">
+        <div style="text-align:center;">
+          <div style="font-size:3rem;">🏆</div>
+          <div style="font-size:1rem;font-weight:900;color:#FFD700;margin-top:0.5rem;">PS PLUS</div>
+          <div style="font-size:0.8rem;color:#886600;">DELUXE</div>
+        </div>
+      </div>
+      <div class="gd-platform-badge">PS4/PS5</div>
+    </div>
+
+    <!-- RIGHT: Detail + Rental Form -->
+    <div class="gd-detail-col">
+
+      <div class="gd-genres">
+        <span class="gd-genre-tag">SUBSCRIPTION</span>
+        <span class="gd-genre-tag" style="background:rgba(255,215,0,0.1);border-color:#856200;color:#FFD700;">DELUXE</span>
+      </div>
+      <h1 class="gd-title">PS Plus Deluxe</h1>
+      <p class="gd-desc" style="font-size:0.85rem;color:#666;margin-bottom:0.5rem;">Access hundreds of games including monthly titles. Trophy or Non-Trophy — your choice.</p>
+
+      <% if (allUnavail) { %>
+
+      <!-- NO SLOT -->
+      <div class="gd-noslot-banner">
+        <span class="gd-noslot-icon">⏳</span>
+        <div>
+          <div class="gd-noslot-title">No Slots Available Right Now</div>
+          <div class="gd-noslot-sub">All PS Plus Deluxe slots are currently taken. Pick your preferred type and duration, then get in line.</div>
+        </div>
+      </div>
+
+      <!-- SELECT RENTAL TYPE -->
+      <div class="gd-section-label" style="margin-top:1.25rem;">SELECT RENTAL TYPE</div>
+      <div class="gd-type-options" id="typeOptions">
+        <label class="gd-type-card" id="label-tr">
+          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy / PS4 Primary</span>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            </div>
+            <div class="gd-type-desc">Play on your own PSN account and earn trophies. Includes PS4 Primary access.</div>
+          </div>
+        </label>
+        <label class="gd-type-card" id="label-nt">
+          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            </div>
+            <div class="gd-type-desc">Play on our account. Ideal for enjoying the PS Plus catalog without account requirements.</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- SELECT DURATION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+      <div class="gd-duration-grid" id="durationGrid">
+        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
+          <span class="gd-dur-days">10</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-10">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
+          <span class="gd-dur-days">15</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-15">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
+          <span class="gd-dur-days">30</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-30">—</span>
+          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
+        </button>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="gd-total-box" id="totalBox" style="display:none;">
+        <div class="gd-total-label">ORDER SUMMARY</div>
+        <div class="gd-total-rows" id="totalRows"></div>
+        <div class="gd-total-final">
+          <span>Total</span>
+          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+        </div>
+      </div>
+
+      <!-- CHOOSE OPTION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
+      <div class="gd-reserve-options">
+        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event)">
+          <div class="gd-reserve-badge">PRIORITY</div>
+          <div class="gd-reserve-icon">⭐</div>
+          <div class="gd-reserve-name">Reservation</div>
+          <div class="gd-reserve-fee">₱100 fee</div>
+          <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+          <div class="gd-reserve-cta">📘 Reserve Now →</div>
+        </a>
+        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
+          <div class="gd-reserve-icon">🎮</div>
+          <div class="gd-reserve-name">Fall in Line</div>
+          <div class="gd-reserve-fee">FREE</div>
+          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+        </a>
+      </div>
+      <div id="reserveValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+
+      <% } else { %>
+
+      <!-- SELECT RENTAL TYPE -->
+      <div class="gd-section-label">SELECT RENTAL TYPE</div>
+      <div class="gd-type-options" id="typeOptions">
+        <label class="gd-type-card" id="label-tr">
+          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy / PS4 Primary</span>
+              <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Reserved' %></span>
+            </div>
+            <div class="gd-type-desc">Play on your own PSN account and earn trophies. Includes PS4 Primary access.</div>
+          </div>
+        </label>
+        <label class="gd-type-card" id="label-nt">
+          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Reserved' %></span>
+            </div>
+            <div class="gd-type-desc">Play on our account. Ideal for enjoying the PS Plus catalog without account requirements.</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- SELECT DURATION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+      <div class="gd-duration-grid" id="durationGrid">
+        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
+          <span class="gd-dur-days">10</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-10">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
+          <span class="gd-dur-days">15</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-15">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
+          <span class="gd-dur-days">30</span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-30">—</span>
+          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
+        </button>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="gd-total-box" id="totalBox" style="display:none;">
+        <div class="gd-total-label">ORDER SUMMARY</div>
+        <div class="gd-total-rows" id="totalRows"></div>
+        <div class="gd-total-final">
+          <span>Total</span>
+          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+        </div>
+      </div>
+
+      <!-- CTA: Message Us -->
+      <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
+        📘 Message Us on Facebook
+      </a>
+      <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>PS Plus Deluxe · Days · Trophy or Non-Trophy</strong></div>
+      <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+
+      <!-- CTA: Reserve options (shown when selected type has no slot) -->
+      <div id="reserveSection" style="display:none;">
+        <div class="gd-noslot-banner" style="margin-top:0.5rem;">
+          <span class="gd-noslot-icon">⏳</span>
+          <div>
+            <div class="gd-noslot-title">This type has no slot right now</div>
+            <div class="gd-noslot-sub">Choose how you'd like to get in line.</div>
+          </div>
+        </div>
+        <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
+        <div class="gd-reserve-options">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event)">
+            <div class="gd-reserve-badge">PRIORITY</div>
+            <div class="gd-reserve-icon">⭐</div>
+            <div class="gd-reserve-name">Reservation</div>
+            <div class="gd-reserve-fee">₱100 fee</div>
+            <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Reserve Now →</div>
+          </a>
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
+            <div class="gd-reserve-icon">🎮</div>
+            <div class="gd-reserve-name">Fall in Line</div>
+            <div class="gd-reserve-fee">FREE</div>
+            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+          </a>
+        </div>
+        <div id="reserveValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+      </div>
+
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+const PRICES = {
+  nt: { 10: <%= prices.nt_price_10d %>, 15: <%= prices.nt_price_15d %>, 30: <%= prices.nt_price_30d %> },
+  tr: { 10: <%= prices.tr_price_10d %>, 15: <%= prices.tr_price_15d %>, 30: <%= prices.tr_price_30d %> }
+};
+const PROMO = {
+  enabled: <%= promo.enabled ? 'true' : 'false' %>,
+  discount_pct: <%= promo.discount_pct %>,
+  apply_on_days: <%= promo.apply_on_days %>,
+  deposit: <%= promo.deposit %>
+};
+const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %> };
+
+let selectedType = null;
+let selectedDays = null;
+
+function onTypeChange(radio) {
+  selectedType = radio.value;
+  document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
+  document.getElementById('label-' + selectedType)?.classList.add('gd-type-selected');
+  updatePrices();
+  updateTotal();
+  updateLinks();
+  const hasSlot = AVAIL[selectedType] !== false;
+  const ctaBtn = document.getElementById('ctaBtn');
+  const ctaHint = document.getElementById('ctaHint');
+  const reserveSection = document.getElementById('reserveSection');
+  if (ctaBtn) ctaBtn.style.display = hasSlot ? '' : 'none';
+  if (ctaHint) ctaHint.style.display = hasSlot ? '' : 'none';
+  if (reserveSection) reserveSection.style.display = hasSlot ? 'none' : '';
+}
+
+function onDurChange(btn) {
+  selectedDays = parseInt(btn.dataset.days);
+  document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateTotal();
+  updateLinks();
+}
+
+function updatePrices() {
+  if (!selectedType) return;
+  [10, 15, 30].forEach(d => {
+    const el = document.getElementById('price-' + d);
+    if (el) el.textContent = '₱' + PRICES[selectedType][d];
+  });
+}
+
+function updateTotal() {
+  const box = document.getElementById('totalBox');
+  if (!selectedType || !selectedDays) { if(box) box.style.display = 'none'; return; }
+  const base = PRICES[selectedType][selectedDays];
+  const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
+  const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+  const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+  const total    = base - discount + deposit;
+  let rows = `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
+  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${PROMO.discount_pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
+  if (deposit  > 0) rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
+  document.getElementById('totalRows').innerHTML = rows;
+  document.getElementById('totalFinal').textContent = '₱' + total;
+  if(box) box.style.display = 'block';
+}
+
+function updateLinks() {
+  const typeLabel = selectedType === 'tr' ? 'Trophy / PS4 Primary' : selectedType === 'nt' ? 'Non-Trophy' : '';
+  const daysLabel = selectedDays ? selectedDays + ' Days' : '';
+  let totalLine = '';
+  if (selectedType && selectedDays) {
+    const base = PRICES[selectedType][selectedDays];
+    const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
+    const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+    const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+    const total    = base - discount + deposit;
+    totalLine = 'Total: ₱' + total;
+    if (discount > 0) totalLine += ' (incl. ' + PROMO.discount_pct + '% promo discount)';
+    if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
+  }
+  const ctaBtn = document.getElementById('ctaBtn');
+  if (ctaBtn) {
+    const msg = ['Hi! I want to RENT PS Plus Deluxe 🏆', typeLabel ? 'Account Type: ' + typeLabel : '', daysLabel ? 'Duration: ' + daysLabel : '', totalLine].filter(Boolean).join('\n');
+    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+  }
+  const rLink = document.getElementById('reserveLink');
+  if (rLink) {
+    const msg = ['Hi! I want to PRIORITY RESERVE a PS Plus Deluxe slot ⭐', typeLabel ? 'Account Type: ' + typeLabel : '', daysLabel ? 'Duration: ' + daysLabel : '', totalLine, 'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n');
+    rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+  }
+  const qLink = document.getElementById('queueLink');
+  if (qLink) {
+    const msg = ['Hi! I want to JOIN THE WAITLIST for PS Plus Deluxe 🎮', typeLabel ? 'Account Type: ' + typeLabel : '', daysLabel ? 'Duration: ' + daysLabel : '', 'Please notify me when a slot becomes available.'].filter(Boolean).join('\n');
+    qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+  }
+}
+
+function handleReserveClick(e) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const el = document.getElementById('reserveValidationMsg');
+    if (el) { el.textContent = '⚠️ Please select a rental duration first.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+    highlightDurationGrid();
+    return false;
+  }
+  return true;
+}
+
+function handleMessageUs(e) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const el = document.getElementById('ctaValidationMsg');
+    if (el) { el.textContent = '⚠️ Please select a rental duration (10, 15, or 30 days) to continue.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+    highlightDurationGrid();
+    return false;
+  }
+  return true;
+}
+
+function highlightDurationGrid() {
+  const grid = document.getElementById('durationGrid');
+  if (!grid) return;
+  grid.classList.add('gd-dur-grid-shake');
+  setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const first = AVAIL.tr
+    ? document.querySelector('input[name="rentalType"][value="tr"]')
+    : AVAIL.nt ? document.querySelector('input[name="rentalType"][value="nt"]')
+    : document.querySelector('input[name="rentalType"]');
+  if (first) { first.checked = true; onTypeChange(first); }
+  updateLinks();
+});
+</script>
+</body>
+</html>

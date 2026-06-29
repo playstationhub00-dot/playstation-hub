@@ -356,6 +356,18 @@ app.get('/ps-plus', (req, res) => {
   res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+app.get('/ps-plus/rent', (req, res) => {
+  const prices = getPsplusPrices();
+  const rawSlots = getPsplusSlots();
+  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
+  const slots = psplusGame
+    ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
+    : rawSlots;
+  const settings = getSiteSettings();
+  const promo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
+  res.render('psplus-rent', { prices, slots, promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings });
+});
+
 // PS Plus admin CRUD
 app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
