@@ -9,7 +9,7 @@
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
 %>
-<% if (allUnavail) { %><div class="game-card"><% } else { %><a href="/game/<%= game.id %>" class="game-card game-card-link"><% } %>
+<a href="/game/<%= game.id %>" class="game-card game-card-link">
 
   <!-- Cover + platform badge -->
   <div class="gc-cover-wrap">
@@ -115,9 +115,9 @@
     </div>
 
     <% if (allUnavail) { %>
-    <span class="rent-btn rent-btn-unavail">Unavailable</span>
+    <span class="rent-btn rent-btn-reserve">Reserve a Slot →</span>
     <% } else { %>
     <span class="rent-btn">Rent Now</span>
     <% } %>
   </div>
-<% if (allUnavail) { %></div><% } else { %></a><% } %>
+</a>

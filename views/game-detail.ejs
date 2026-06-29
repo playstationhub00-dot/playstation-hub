@@ -29,6 +29,7 @@
   const hasTrophy = !!(game.trophy_account || trSlots > 0);
   const trAvail = trSlots > 0;
   const ntAvail = ntSlots > 0;
+  const allUnavail = ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0);
 %>
 
 <div class="gd-page">
@@ -62,6 +63,44 @@
       <% } %>
       <h1 class="gd-title"><%= game.title %></h1>
       <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
+
+      <% if (allUnavail) { %>
+
+      <!-- NO SLOT — Reservation options -->
+      <div class="gd-noslot-banner">
+        <span class="gd-noslot-icon">⏳</span>
+        <div>
+          <div class="gd-noslot-title">No Slots Available Right Now</div>
+          <div class="gd-noslot-sub">All slots for this game are currently rented. Choose an option below to get in line.</div>
+        </div>
+      </div>
+
+      <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
+
+      <div class="gd-reserve-options">
+
+        <!-- Priority Reservation -->
+        <a href="http://m.me/PlaystationHub00?text=PRIORITY+RESERVATION+-+<%= encodeURIComponent(game.title) %>" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
+          <div class="gd-reserve-badge">PRIORITY</div>
+          <div class="gd-reserve-icon">⭐</div>
+          <div class="gd-reserve-name">Reservation</div>
+          <div class="gd-reserve-fee">₱100 fee</div>
+          <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+          <div class="gd-reserve-cta">📘 Reserve Now →</div>
+        </a>
+
+        <!-- Fall in Line -->
+        <a href="http://m.me/PlaystationHub00?text=FALL+IN+LINE+-+<%= encodeURIComponent(game.title) %>" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
+          <div class="gd-reserve-icon">🎮</div>
+          <div class="gd-reserve-name">Fall in Line</div>
+          <div class="gd-reserve-fee">FREE</div>
+          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot is available.</div>
+          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+        </a>
+
+      </div>
+
+      <% } else { %>
 
       <!-- SELECT RENTAL TYPE -->
       <div class="gd-section-label">SELECT RENTAL TYPE</div>
@@ -131,6 +170,8 @@
         📘 Message Us on Facebook
       </a>
       <div class="gd-cta-hint">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+
+      <% } %>
     </div>
   </div>
 </div>
