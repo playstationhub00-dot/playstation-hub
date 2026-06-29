@@ -180,14 +180,9 @@
         <div class="game-platform"><%= game.platform %></div>
         <div class="game-title"><%= game.title %></div>
         <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <% if (game.description) { %>
-          <div style="font-size:0.78rem;color:#666;margin-top:0.4rem;line-height:1.5;"><%= game.description %></div>
-        <% } %>
-        <div style="margin-top:auto;padding-top:0.75rem;">
-          <button class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;border:none;cursor:pointer;">
-            📘 Rent via PS Plus
-          </button>
-        </div>
+        <button class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;border:none;cursor:pointer;">
+          📘 Rent via PS Plus
+        </button>
       </div>
     </div>
     <% }) %>

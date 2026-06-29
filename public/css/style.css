@@ -1090,9 +1090,16 @@ footer {
 .psplus-game-item { font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4; }
 .psplus-month-notes { font-size: 0.7rem; color: #444; margin-top: 0.5rem; font-style: italic; }
 
-/* PS Plus Most Played */
-.psplus-popular-card { border-color: #2a2000; }
+/* PS Plus Most Played — compact card */
+.psplus-popular-card {
+  border-color: #2a2000;
+  height: 380px !important;
+}
 .psplus-popular-card:hover { box-shadow: 0 12px 40px rgba(255,215,0,0.18); border-color: rgba(255,215,0,0.4); }
+.psplus-popular-card .game-cover,
+.psplus-popular-card .game-cover-placeholder { height: 200px !important; }
+.psplus-popular-card .game-info { gap: 0.25rem; padding: 0.75rem; }
+.psplus-popular-card .rent-btn { margin-top: auto; flex-shrink: 0; }
 .psplus-popular-rank {
   position: absolute;
   top: 8px; left: 8px;
@@ -1121,9 +1128,16 @@ footer {
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
 .slider-arrow:hover { background: #7b2ff7; border-color: #7b2ff7; }
 
-/* UPCOMING GAMES */
-.upcoming-card { border-color: #2a1a3a; }
+/* UPCOMING GAMES — compact card */
+.upcoming-card {
+  border-color: #2a1a3a;
+  height: 380px !important;
+}
 .upcoming-card:hover { box-shadow: 0 12px 40px rgba(123,47,247,0.25); border-color: #5a2a8a; }
+.upcoming-card .game-cover,
+.upcoming-card .game-cover-placeholder { height: 200px !important; }
+.upcoming-card .game-info { gap: 0.25rem; padding: 0.75rem; }
+.upcoming-card .rent-btn { margin-top: auto; flex-shrink: 0; }
 .upcoming-overlay-badge {
   position: absolute;
   top: 10px; left: 10px;

@@ -39,9 +39,6 @@
         <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">
           📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong>
         </div>
-        <% if (game.description) { %>
-          <div style="font-size:0.78rem;color:#666;margin-top:0.4rem;line-height:1.5;"><%= game.description %></div>
-        <% } %>
         <button class="rent-btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);margin-top:0.75rem;"
           onclick="openReserveModal('<%= game.title.replace(/'/g, "\\'") %>')">
           🔔 Reserve Slot
