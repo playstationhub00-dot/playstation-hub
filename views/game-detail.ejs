@@ -71,16 +71,80 @@
         <span class="gd-noslot-icon">⏳</span>
         <div>
           <div class="gd-noslot-title">No Slots Available Right Now</div>
-          <div class="gd-noslot-sub">All slots for this game are currently rented. Choose an option below to get in line.</div>
+          <div class="gd-noslot-sub">All slots for this game are currently rented. Pick your preferred type and duration, then choose how you'd like to get in line.</div>
         </div>
       </div>
 
+      <!-- SELECT RENTAL TYPE -->
+      <div class="gd-section-label" style="margin-top:1.25rem;">SELECT RENTAL TYPE</div>
+      <div class="gd-type-options" id="typeOptions">
+
+        <% if (hasTrophy) { %>
+        <label class="gd-type-card" id="label-tr">
+          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            </div>
+            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+          </div>
+        </label>
+        <% } %>
+
+        <label class="gd-type-card" id="label-nt">
+          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            </div>
+            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- SELECT DURATION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+      <div class="gd-duration-grid" id="durationGrid">
+        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
+          <span class="gd-dur-days">10</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-10">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
+          <span class="gd-dur-days">15</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-15">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
+          <span class="gd-dur-days">30</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-30">—</span>
+          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
+        </button>
+      </div>
+
+      <!-- TOTAL BREAKDOWN -->
+      <div class="gd-total-box" id="totalBox" style="display:none;">
+        <div class="gd-total-label">ORDER SUMMARY</div>
+        <div class="gd-total-rows" id="totalRows"></div>
+        <div class="gd-total-final">
+          <span>Total</span>
+          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+        </div>
+      </div>
+
+      <!-- CHOOSE OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
 
       <div class="gd-reserve-options">
 
         <!-- Priority Reservation -->
-        <a href="http://m.me/PlaystationHub00?text=PRIORITY+RESERVATION+-+<%= encodeURIComponent(game.title) %>" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
+        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
           <div class="gd-reserve-badge">PRIORITY</div>
           <div class="gd-reserve-icon">⭐</div>
           <div class="gd-reserve-name">Reservation</div>
@@ -90,7 +154,7 @@
         </a>
 
         <!-- Fall in Line -->
-        <a href="http://m.me/PlaystationHub00?text=FALL+IN+LINE+-+<%= encodeURIComponent(game.title) %>" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
+        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
           <div class="gd-reserve-icon">🎮</div>
           <div class="gd-reserve-name">Fall in Line</div>
           <div class="gd-reserve-fee">FREE</div>
@@ -199,6 +263,7 @@ function onTypeChange(radio) {
   document.getElementById('label-' + selectedType)?.classList.add('gd-type-selected');
   updatePrices();
   updateTotal();
+  updateReserveLinks();
 }
 
 function onDurChange(btn) {
@@ -206,6 +271,7 @@ function onDurChange(btn) {
   document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   updateTotal();
+  updateReserveLinks();
 }
 
 function updatePrices() {
@@ -236,10 +302,22 @@ function updateTotal() {
   box.style.display = 'block';
 }
 
+function updateReserveLinks() {
+  const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
+  const typeLabel = selectedType === 'tr' ? 'Trophy' : selectedType === 'nt' ? 'Non-Trophy' : '';
+  const daysLabel = selectedDays ? selectedDays + ' Days' : '';
+  const detail = [gameTitle, typeLabel, daysLabel].filter(Boolean).join(' · ');
+  const rLink = document.getElementById('reserveLink');
+  const qLink = document.getElementById('queueLink');
+  if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('PRIORITY RESERVATION - ' + detail);
+  if (qLink) qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('FALL IN LINE - ' + detail);
+}
+
 // Auto-select first available type
 window.addEventListener('DOMContentLoaded', () => {
   const first = document.querySelector('input[name="rentalType"]:not([disabled])');
   if (first) { first.checked = true; onTypeChange(first); }
+  updateReserveLinks();
 });
 </script>
 </body>
