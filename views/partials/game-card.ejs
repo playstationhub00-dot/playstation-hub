@@ -61,7 +61,6 @@
         <!-- Trophy slots -->
         <% if (hasTrophy) { %>
         <div class="gc-slot-count">
-          <span style="font-size:0.58rem;color:#555;font-weight:700;">🏆 Trophy:</span>
           <% if (trSlots > 0) { %>
             <span class="gc-avail gc-avail-tr"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %></span>
           <% } else { %>
@@ -72,7 +71,6 @@
         <!-- PS4 Primary slots -->
         <% if (showPs4) { %>
         <div class="gc-slot-count">
-          <span style="font-size:0.58rem;color:#555;font-weight:700;">🕹️ PS4:</span>
           <% if (ps4Slots > 0) { %>
             <span class="gc-avail gc-avail-ps4"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %></span>
           <% } else { %>
