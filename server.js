@@ -353,7 +353,7 @@ app.get('/ps-plus', (req, res) => {
   const slots = psplusGame
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : getPsplusSlots();
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // PS Plus admin CRUD

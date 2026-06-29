@@ -162,7 +162,8 @@
         rank: game.rank || idx + 1
       }).replace(/'/g,"&#39;");
     %>
-    <div class="game-card psplus-popular-card" onclick="openPopularModal('<%= popData.replace(/"/g,'&quot;') %>')" style="cursor:pointer;">
+    <% const rentTarget = psplusGameId ? '/game/' + psplusGameId : '/ps-plus#pricing'; %>
+    <a href="<%= rentTarget %>" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
@@ -180,11 +181,11 @@
         <div class="game-platform"><%= game.platform %></div>
         <div class="game-title"><%= game.title %></div>
         <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <button class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;border:none;cursor:pointer;">
+        <span class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;border:none;cursor:pointer;text-align:center;">
           📘 Rent via PS Plus
-        </button>
+        </span>
       </div>
-    </div>
+    </a>
     <% }) %>
   </div>
 </section>
