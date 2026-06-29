@@ -408,7 +408,7 @@ nav {
 .gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; }
 .gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
 .gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
-.gc-price      { font-size: 0.72rem; font-weight: 800; color: #fff; }
+.gc-price      { font-size: 0.72rem; font-weight: 400; color: #fff; }
 .gc-price-tr   { color: #ffc400; }
 .gc-price-ps4  { color: #60a5fa; }
 
