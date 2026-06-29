@@ -37,11 +37,11 @@
           <span class="gc-col-icon">🎮</span>
           <span class="gc-col-label">NON-TROPHY</span>
         </div>
-        <div class="gc-avail-row">
+        <div class="gc-slot-count">
           <% if (ntSlots > 0) { %>
-            <span class="gc-avail gc-avail-yes">Available (<%= ntSlots %>)</span>
+            <span class="gc-avail gc-avail-yes"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span>
           <% } else { %>
-            <span class="gc-avail gc-avail-no">RENTED</span>
+            <span class="gc-avail gc-avail-no">Not Available</span>
           <% } %>
         </div>
         <div class="gc-price-rows">
@@ -52,24 +52,41 @@
       </div>
 
       <!-- Trophy / PS4 Primary column -->
-      <% if (hasTrophy) { %>
+      <% if (hasTrophy || showPs4) { %>
       <div class="gc-col gc-col-tr">
         <div class="gc-col-head">
           <span class="gc-col-icon">🏆</span>
           <span class="gc-col-label">TROPHY<% if (showPs4) { %> / PS4 PRI<% } %></span>
         </div>
-        <div class="gc-avail-row">
+        <!-- Trophy slots -->
+        <% if (hasTrophy) { %>
+        <div class="gc-slot-count">
+          <span style="font-size:0.58rem;color:#555;font-weight:700;">🏆 Trophy:</span>
           <% if (trSlots > 0) { %>
-            <span class="gc-avail gc-avail-tr">Available (<%= trSlots %>)</span>
+            <span class="gc-avail gc-avail-tr"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %></span>
           <% } else { %>
-            <span class="gc-avail gc-avail-no">RENTED</span>
+            <span class="gc-avail gc-avail-no">Not Available</span>
           <% } %>
         </div>
+        <% } %>
+        <!-- PS4 Primary slots -->
+        <% if (showPs4) { %>
+        <div class="gc-slot-count">
+          <span style="font-size:0.58rem;color:#555;font-weight:700;">🕹️ PS4:</span>
+          <% if (ps4Slots > 0) { %>
+            <span class="gc-avail gc-avail-ps4"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %></span>
+          <% } else { %>
+            <span class="gc-avail gc-avail-no">Not Available</span>
+          <% } %>
+        </div>
+        <% } %>
+        <% if (hasTrophy) { %>
         <div class="gc-price-rows">
           <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_10d %></span></div>
           <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_15d %></span></div>
           <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_30d %></span></div>
         </div>
+        <% } %>
       </div>
       <% } %>
 
