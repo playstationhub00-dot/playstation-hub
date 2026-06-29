@@ -374,6 +374,7 @@ nav {
   flex-direction: column;
   gap: 0.3rem;
   min-width: 0;
+  box-sizing: border-box;
 }
 .gc-col-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
 .gc-col-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
@@ -414,7 +415,7 @@ nav {
 .gc-days-left { font-size: 0.58rem; font-weight: 700; color: #f59e0b; white-space: nowrap; }
 .gc-days-left-tr { color: #ffc400; }
 .gc-days-left-ps4 { color: #60a5fa; }
-.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; }
+.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; margin-top: auto; padding-top: 0.3rem; }
 .gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
 .gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
 .gc-price      { font-size: 0.72rem; font-weight: 400; color: #fff; }
