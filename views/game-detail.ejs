@@ -171,8 +171,8 @@
       <div class="gd-type-options" id="typeOptions">
 
         <% if (hasTrophy) { %>
-        <label class="gd-type-card <%= !trAvail ? 'gd-type-disabled' : '' %>" id="label-tr">
-          <input type="radio" name="rentalType" value="tr" <%= !trAvail ? 'disabled' : '' %> onchange="onTypeChange(this)">
+        <label class="gd-type-card" id="label-tr">
+          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
           <div class="gd-type-body">
             <div class="gd-type-header">
               <span class="gd-type-icon">🏆</span>
@@ -184,8 +184,8 @@
         </label>
         <% } %>
 
-        <label class="gd-type-card <%= !ntAvail ? 'gd-type-disabled' : '' %>" id="label-nt">
-          <input type="radio" name="rentalType" value="nt" <%= !ntAvail ? 'disabled' : '' %> onchange="onTypeChange(this)">
+        <label class="gd-type-card" id="label-nt">
+          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
           <div class="gd-type-body">
             <div class="gd-type-header">
               <span class="gd-type-icon">🎮</span>
@@ -229,11 +229,40 @@
         </div>
       </div>
 
-      <!-- CTA -->
-      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-btn" id="ctaBtn">
+      <!-- CTA: Message Us (shown when selected type has a slot) -->
+      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-btn" id="ctaBtn" style="display:none;">
         📘 Message Us on Facebook
       </a>
-      <div class="gd-cta-hint">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+      <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+
+      <!-- CTA: Reserve options (shown when selected type has no slot) -->
+      <div id="reserveSection" style="display:none;">
+        <div class="gd-noslot-banner" style="margin-top:0.5rem;">
+          <span class="gd-noslot-icon">⏳</span>
+          <div>
+            <div class="gd-noslot-title">This type has no slot right now</div>
+            <div class="gd-noslot-sub">Choose how you'd like to get in line for this account type.</div>
+          </div>
+        </div>
+        <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
+        <div class="gd-reserve-options">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority">
+            <div class="gd-reserve-badge">PRIORITY</div>
+            <div class="gd-reserve-icon">⭐</div>
+            <div class="gd-reserve-name">Reservation</div>
+            <div class="gd-reserve-fee">₱100 fee</div>
+            <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Reserve Now →</div>
+          </a>
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue">
+            <div class="gd-reserve-icon">🎮</div>
+            <div class="gd-reserve-name">Fall in Line</div>
+            <div class="gd-reserve-fee">FREE</div>
+            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot is available.</div>
+            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+          </a>
+        </div>
+      </div>
 
       <% } %>
     </div>
@@ -253,6 +282,7 @@ const PROMO = {
   apply_on_days: <%= promo.apply_on_days %>,
   deposit: <%= promo.deposit %>
 };
+const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %> };
 
 let selectedType = null;
 let selectedDays = null;
@@ -264,6 +294,14 @@ function onTypeChange(radio) {
   updatePrices();
   updateTotal();
   updateReserveLinks();
+  // Swap CTA based on whether selected type has a slot
+  const hasSlot = AVAIL[selectedType] !== false;
+  const ctaBtn = document.getElementById('ctaBtn');
+  const ctaHint = document.getElementById('ctaHint');
+  const reserveSection = document.getElementById('reserveSection');
+  if (ctaBtn) ctaBtn.style.display = hasSlot ? '' : 'none';
+  if (ctaHint) ctaHint.style.display = hasSlot ? '' : 'none';
+  if (reserveSection) reserveSection.style.display = hasSlot ? 'none' : '';
 }
 
 function onDurChange(btn) {
@@ -313,10 +351,13 @@ function updateReserveLinks() {
   if (qLink) qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('FALL IN LINE - ' + detail);
 }
 
-// Auto-select first available type
+// Auto-select first available type (prefer available slot, fallback to first)
 window.addEventListener('DOMContentLoaded', () => {
-  const first = document.querySelector('input[name="rentalType"]:not([disabled])');
-  if (first) { first.checked = true; onTypeChange(first); }
+  const available = document.querySelector('input[name="rentalType"][value="tr"]') && AVAIL.tr
+    ? document.querySelector('input[name="rentalType"][value="tr"]')
+    : AVAIL.nt ? document.querySelector('input[name="rentalType"][value="nt"]')
+    : document.querySelector('input[name="rentalType"]');
+  if (available) { available.checked = true; onTypeChange(available); }
   updateReserveLinks();
 });
 </script>
