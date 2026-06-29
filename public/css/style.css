@@ -225,6 +225,14 @@ nav {
 .gd-dur-btn { position: relative; flex: 1; min-width: 70px; background: #111; border: 1.5px solid #222; border-radius: 10px; padding: 0.75rem 0.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; transition: border-color 0.15s, background 0.15s; color: #fff; }
 .gd-dur-btn:hover { border-color: #444; }
 .gd-dur-btn.active { border-color: var(--ps-blue); background: rgba(0,112,209,0.1); }
+.gd-dur-grid-shake { animation: durShake 0.5s ease; border-radius: 10px; outline: 2px solid #ef4444; outline-offset: 3px; }
+@keyframes durShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
 .gd-dur-days { font-size: 1.4rem; font-weight: 900; line-height: 1; }
 .gd-dur-label { font-size: 0.6rem; font-weight: 700; color: #555; letter-spacing: 0.5px; }
 .gd-dur-price { font-size: 0.82rem; font-weight: 700; color: var(--ps-blue); margin-top: 0.25rem; }

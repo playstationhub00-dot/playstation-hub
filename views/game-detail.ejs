@@ -230,10 +230,11 @@
       </div>
 
       <!-- CTA: Message Us (shown when selected type has a slot) -->
-      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-btn" id="ctaBtn" style="display:none;">
+      <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
         📘 Message Us on Facebook
       </a>
       <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+      <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
 
       <!-- CTA: Reserve options (shown when selected type has no slot) -->
       <div id="reserveSection" style="display:none;">
@@ -397,6 +398,39 @@ function updateReserveLinks() {
     ].filter(Boolean).join('\n');
     qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(queueMsg);
   }
+}
+
+function handleMessageUs(e) {
+  const validationEl = document.getElementById('ctaValidationMsg');
+  if (!selectedType && !selectedDays) {
+    e.preventDefault();
+    showValidation('Please select an account type and rental duration first.');
+    highlightDurationGrid();
+    return false;
+  }
+  if (!selectedDays) {
+    e.preventDefault();
+    showValidation('Please select a rental duration (10, 15, or 30 days) to continue.');
+    highlightDurationGrid();
+    return false;
+  }
+  if (validationEl) validationEl.style.display = 'none';
+  return true;
+}
+
+function showValidation(msg) {
+  const el = document.getElementById('ctaValidationMsg');
+  if (!el) return;
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function highlightDurationGrid() {
+  const grid = document.getElementById('durationGrid');
+  if (!grid) return;
+  grid.classList.add('gd-dur-grid-shake');
+  setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
 }
 
 // Auto-select first available type (prefer available slot, fallback to first)
