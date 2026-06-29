@@ -430,6 +430,7 @@ nav {
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  height: 500px;
 }
 .game-card:hover {
   transform: translateY(-4px);
@@ -439,15 +440,17 @@ nav {
 
 .game-cover {
   width: 100%;
-  aspect-ratio: 3/4;
+  height: 260px;
   object-fit: cover;
   display: block;
   background: #111;
+  flex-shrink: 0;
 }
 
 .game-cover-placeholder {
   width: 100%;
-  aspect-ratio: 3/4;
+  height: 260px;
+  flex-shrink: 0;
   background: linear-gradient(135deg, #111 0%, #1a1a2e 100%);
   display: flex;
   flex-direction: column;
@@ -459,7 +462,7 @@ nav {
 .game-cover-placeholder svg { width: 48px; height: 48px; opacity: 0.4; }
 .game-cover-placeholder span { font-size: 0.75rem; opacity: 0.5; }
 
-.game-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; }
+.game-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; overflow: hidden; min-height: 0; }
 .game-title { font-weight: 700; font-size: 0.95rem; line-height: 1.3; }
 .game-platform {
   font-size: 0.72rem;
