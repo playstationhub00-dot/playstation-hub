@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= game.title %> — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
+</head>
+<body>
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<%
+  const promo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
+  const ntSlots  = game.non_trophy_slots || 0;
+  const trSlots  = game.trophy_slots || 0;
+  const ps4Slots = game.ps4_primary_slots || 0;
+  const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
+  const hasTrophy = !!(game.trophy_account || trSlots > 0);
+  const trAvail = trSlots > 0;
+  const ntAvail = ntSlots > 0;
+%>
+
+<div class="gd-page">
+  <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
+
+  <div class="gd-layout">
+
+    <!-- LEFT: Cover -->
+    <div class="gd-cover-col">
+      <% if (game.cover_image) { %>
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover">
+      <% } else { %>
+        <div class="gd-cover gd-cover-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+        </div>
+      <% } %>
+      <!-- Platform badge -->
+      <div class="gd-platform-badge"><%= game.platform %></div>
+    </div>
+
+    <!-- RIGHT: Detail + Rental Form -->
+    <div class="gd-detail-col">
+
+      <!-- Genre + Title -->
+      <% if (game.genre) { %>
+      <div class="gd-genres">
+        <% game.genre.split('/').forEach(g => { %><span class="gd-genre-tag"><%= g.trim().toUpperCase() %></span><% }) %>
+      </div>
+      <% } %>
+      <h1 class="gd-title"><%= game.title %></h1>
+      <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
+
+      <!-- SELECT RENTAL TYPE -->
+      <div class="gd-section-label">SELECT RENTAL TYPE</div>
+      <div class="gd-type-options" id="typeOptions">
+
+        <% if (hasTrophy) { %>
+        <label class="gd-type-card <%= !trAvail ? 'gd-type-disabled' : '' %>" id="label-tr">
+          <input type="radio" name="rentalType" value="tr" <%= !trAvail ? 'disabled' : '' %> onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
+              <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Reserved' %></span>
+            </div>
+            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+          </div>
+        </label>
+        <% } %>
+
+        <label class="gd-type-card <%= !ntAvail ? 'gd-type-disabled' : '' %>" id="label-nt">
+          <input type="radio" name="rentalType" value="nt" <%= !ntAvail ? 'disabled' : '' %> onchange="onTypeChange(this)">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Reserved' %></span>
+            </div>
+            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+          </div>
+        </label>
+
+      </div>
+
+      <!-- SELECT DURATION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+      <div class="gd-duration-grid" id="durationGrid">
+        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
+          <span class="gd-dur-days">10</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-10">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
+          <span class="gd-dur-days">15</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-15">—</span>
+        </button>
+        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
+          <span class="gd-dur-days">30</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-30">—</span>
+          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
+        </button>
+      </div>
+
+      <!-- TOTAL BREAKDOWN -->
+      <div class="gd-total-box" id="totalBox" style="display:none;">
+        <div class="gd-total-label">ORDER SUMMARY</div>
+        <div class="gd-total-rows" id="totalRows"></div>
+        <div class="gd-total-final">
+          <span>Total</span>
+          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-btn" id="ctaBtn">
+        📘 Message Us on Facebook
+      </a>
+      <div class="gd-cta-hint">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+const PRICES = {
+  nt: { 10: <%= game.nt_price_10d %>, 15: <%= game.nt_price_15d %>, 30: <%= game.nt_price_30d %> },
+  tr: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
+};
+const PROMO = {
+  enabled: <%= promo.enabled ? 'true' : 'false' %>,
+  discount_pct: <%= promo.discount_pct %>,
+  apply_on_days: <%= promo.apply_on_days %>,
+  deposit: <%= promo.deposit %>
+};
+
+let selectedType = null;
+let selectedDays = null;
+
+function onTypeChange(radio) {
+  selectedType = radio.value;
+  document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
+  document.getElementById('label-' + selectedType)?.classList.add('gd-type-selected');
+  updatePrices();
+  updateTotal();
+}
+
+function onDurChange(btn) {
+  selectedDays = parseInt(btn.dataset.days);
+  document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateTotal();
+}
+
+function updatePrices() {
+  if (!selectedType) return;
+  [10, 15, 30].forEach(d => {
+    const el = document.getElementById('price-' + d);
+    if (el) el.textContent = '₱' + PRICES[selectedType][d];
+  });
+}
+
+function updateTotal() {
+  const box = document.getElementById('totalBox');
+  if (!selectedType || !selectedDays) { box.style.display = 'none'; return; }
+
+  const base = PRICES[selectedType][selectedDays];
+  const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
+  const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+  const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+  const total    = base - discount + deposit;
+
+  let rows = '';
+  rows += `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
+  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${PROMO.discount_pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
+  if (deposit > 0)  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
+
+  document.getElementById('totalRows').innerHTML = rows;
+  document.getElementById('totalFinal').textContent = '₱' + total;
+  box.style.display = 'block';
+}
+
+// Auto-select first available type
+window.addEventListener('DOMContentLoaded', () => {
+  const first = document.querySelector('input[name="rentalType"]:not([disabled])');
+  if (first) { first.checked = true; onTypeChange(first); }
+});
+</script>
+</body>
+</html>

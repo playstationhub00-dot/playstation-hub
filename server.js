@@ -325,6 +325,10 @@ function getSiteSettings() {
     db.set('site_settings.hero_slides', []).write();
     s.hero_slides = [];
   }
+  if (!s.promo) {
+    db.set('site_settings.promo', { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 }).write();
+    s.promo = db.get('site_settings.promo').value();
+  }
   return s;
 }
 
@@ -532,6 +536,26 @@ app.get('/browse', (req, res) => {
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
   res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+// ── Game Detail Page ──────────────────────────────────────────────────────────
+app.get('/game/:id', (req, res) => {
+  const game = getGame(parseInt(req.params.id));
+  if (!game) return res.redirect('/browse');
+  const resolved = resolveGamePrices(resolveSlotDays(game));
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+// ── Admin Promo Settings ──────────────────────────────────────────────────────
+app.post('/admin/promo', requireAuth, (req, res) => {
+  const { enabled, discount_pct, apply_on_days, deposit } = req.body;
+  db.set('site_settings.promo', {
+    enabled: enabled === 'on',
+    discount_pct: Math.min(100, Math.max(0, parseInt(discount_pct) || 10)),
+    apply_on_days: parseInt(apply_on_days) || 30,
+    deposit: Math.max(0, parseInt(deposit) || 100)
+  }).write();
+  res.redirect('/admin?msg=promo_saved');
 });
 
 // ── Mobile Admin App ──────────────────────────────────────────────────────────

@@ -192,6 +192,60 @@ nav {
 }
 .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
+/* ── Game Detail Page ─────────────────────────────────────── */
+.gd-page { max-width: 960px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.gd-back a { color: #555; text-decoration: none; font-size: 0.85rem; }
+.gd-back a:hover { color: var(--ps-blue); }
+.gd-layout { display: flex; gap: 2.5rem; margin-top: 1.5rem; align-items: flex-start; }
+.gd-cover-col { position: relative; flex-shrink: 0; width: 280px; }
+.gd-cover { width: 100%; border-radius: 14px; object-fit: cover; display: block; }
+.gd-cover-placeholder { height: 380px; background: #111; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+.gd-platform-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.25rem 0.5rem; border-radius: 5px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.15); }
+.gd-detail-col { flex: 1; min-width: 0; }
+.gd-genres { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.gd-genre-tag { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.8px; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.07); color: #aaa; border: 1px solid #222; }
+.gd-title { font-size: 1.6rem; font-weight: 900; line-height: 1.2; margin: 0 0 0.5rem; }
+.gd-desc { font-size: 0.85rem; color: #888; margin: 0 0 1rem; line-height: 1.6; }
+.gd-section-label { font-size: 0.65rem; font-weight: 800; letter-spacing: 1.2px; color: #555; text-transform: uppercase; margin-bottom: 0.75rem; }
+.gd-type-options { display: flex; flex-direction: column; gap: 0.6rem; }
+.gd-type-card { display: flex; align-items: flex-start; gap: 0.75rem; background: #111; border: 1.5px solid #222; border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; transition: border-color 0.15s; }
+.gd-type-card:hover:not(.gd-type-disabled) { border-color: #444; }
+.gd-type-card.gd-type-selected { border-color: var(--ps-blue); background: rgba(0,112,209,0.06); }
+.gd-type-card.gd-type-disabled { opacity: 0.45; cursor: not-allowed; }
+.gd-type-card input[type="radio"] { margin-top: 3px; accent-color: var(--ps-blue); flex-shrink: 0; }
+.gd-type-body { flex: 1; min-width: 0; }
+.gd-type-header { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem; flex-wrap: wrap; }
+.gd-type-icon { font-size: 0.9rem; }
+.gd-type-name { font-weight: 700; font-size: 0.95rem; }
+.gd-type-status { font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; margin-left: auto; }
+.gd-status-avail { background: rgba(34,197,94,0.15); color: #22c55e; }
+.gd-status-rented { background: rgba(239,68,68,0.15); color: #ef4444; }
+.gd-type-desc { font-size: 0.78rem; color: #666; line-height: 1.5; }
+.gd-duration-grid { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.gd-dur-btn { position: relative; flex: 1; min-width: 70px; background: #111; border: 1.5px solid #222; border-radius: 10px; padding: 0.75rem 0.5rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.15rem; transition: border-color 0.15s, background 0.15s; color: #fff; }
+.gd-dur-btn:hover { border-color: #444; }
+.gd-dur-btn.active { border-color: var(--ps-blue); background: rgba(0,112,209,0.1); }
+.gd-dur-days { font-size: 1.4rem; font-weight: 900; line-height: 1; }
+.gd-dur-label { font-size: 0.6rem; font-weight: 700; color: #555; letter-spacing: 0.5px; }
+.gd-dur-price { font-size: 0.82rem; font-weight: 700; color: var(--ps-blue); margin-top: 0.25rem; }
+.gd-dur-promo { position: absolute; top: -8px; right: -4px; background: #ef4444; color: #fff; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; border-radius: 4px; letter-spacing: 0.3px; }
+.gd-total-box { background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 1rem 1.1rem; margin-top: 1.25rem; }
+.gd-total-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; color: #444; text-transform: uppercase; margin-bottom: 0.65rem; }
+.gd-total-rows { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; border-bottom: 1px solid #1a1a1a; padding-bottom: 0.75rem; }
+.gd-total-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #888; }
+.gd-total-disc { color: #22c55e; }
+.gd-total-dep { color: #f59e0b; }
+.gd-total-final { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; color: #fff; }
+.gd-cta-btn { display: block; width: 100%; text-align: center; background: var(--ps-blue); color: #fff; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 1rem; text-decoration: none; margin-top: 1.25rem; transition: opacity 0.15s; }
+.gd-cta-btn:hover { opacity: 0.85; }
+.gd-cta-hint { text-align: center; font-size: 0.75rem; color: #444; margin-top: 0.5rem; }
+@media (max-width: 650px) {
+  .gd-layout { flex-direction: column; gap: 1.5rem; }
+  .gd-cover-col { width: 100%; }
+  .gd-cover { max-height: 320px; object-position: top; }
+  .gd-title { font-size: 1.25rem; }
+}
+
 /* ── Hero Slideshow ───────────────────────────────────────── */
 .hero-slideshow {
   position: relative;

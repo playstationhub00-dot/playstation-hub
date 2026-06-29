@@ -225,6 +225,39 @@
       </form>
     </div>
 
+    <!-- PROMO SETTINGS -->
+    <%
+      const adminPromo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
+    %>
+    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
+      <h2 style="display:flex;align-items:center;gap:0.5rem;">🎉 Promo & Pricing Rules</h2>
+      <form method="POST" action="/admin/promo">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+              <input type="checkbox" name="enabled" <%= adminPromo.enabled ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#22c55e;">
+              <span>Enable Promo Discount on Game Detail page</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Discount % <span style="color:#555;font-size:0.75rem;">(applied when promo is active)</span></label>
+            <input type="number" name="discount_pct" value="<%= adminPromo.discount_pct %>" min="0" max="100" placeholder="10">
+          </div>
+          <div class="form-group">
+            <label>Apply on Duration (days) <span style="color:#555;font-size:0.75rem;">(e.g. 30 = 30-day rentals get the discount)</span></label>
+            <input type="number" name="apply_on_days" value="<%= adminPromo.apply_on_days %>" min="1" placeholder="30">
+          </div>
+          <div class="form-group">
+            <label>Trophy Account Security Deposit (₱) <span style="color:#555;font-size:0.75rem;">(refundable, added to Trophy rentals)</span></label>
+            <input type="number" name="deposit" value="<%= adminPromo.deposit %>" min="0" placeholder="100">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:0.75rem;">
+          <button type="submit" class="btn btn-primary" style="background:#22c55e;color:#000;">Save Promo Settings</button>
+        </div>
+      </form>
+    </div>
+
     <!-- HERO TEXT EDITOR -->
     <div class="form-card" style="border-color:rgba(240,165,0,0.3);background:linear-gradient(135deg,#111000,#1a1a0a);">
       <h2 style="display:flex;align-items:center;gap:0.5rem;">✏️ Home Page Hero Text</h2>
