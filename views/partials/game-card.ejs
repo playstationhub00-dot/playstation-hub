@@ -51,12 +51,12 @@
         </div>
       </div>
 
-      <!-- Trophy column -->
+      <!-- Trophy / PS4 Primary column -->
       <% if (hasTrophy) { %>
       <div class="gc-col gc-col-tr">
         <div class="gc-col-head">
           <span class="gc-col-icon">🏆</span>
-          <span class="gc-col-label">TROPHY</span>
+          <span class="gc-col-label">TROPHY<% if (showPs4) { %> / PS4 PRI<% } %></span>
         </div>
         <div class="gc-avail-row">
           <% if (trSlots > 0) { %>
@@ -73,27 +73,6 @@
       </div>
       <% } %>
 
-      <!-- PS4 Primary column -->
-      <% if (showPs4) { %>
-      <div class="gc-col gc-col-ps4">
-        <div class="gc-col-head">
-          <span class="gc-col-icon">🕹️</span>
-          <span class="gc-col-label">PS4 PRI</span>
-        </div>
-        <div class="gc-avail-row">
-          <% if (ps4Slots > 0) { %>
-            <span class="gc-avail gc-avail-ps4">Available (<%= ps4Slots %>)</span>
-          <% } else { %>
-            <span class="gc-avail gc-avail-no">RENTED</span>
-          <% } %>
-        </div>
-        <div class="gc-price-rows">
-          <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_10d %></span></div>
-          <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_15d %></span></div>
-          <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-ps4">₱<%= game.nt_price_30d %></span></div>
-        </div>
-      </div>
-      <% } %>
 
     </div>
 
