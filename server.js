@@ -61,6 +61,22 @@ db.defaults({
   visitors: []
 }).write();
 
+// Migrate visitor paths: /game/NUMBER → /game/slug
+(function migrateVisitorPaths() {
+  const visitors = db.get('visitors').value();
+  let changed = false;
+  const updated = visitors.map(v => {
+    const m = v.path && v.path.match(/^\/game\/(\d+)$/);
+    if (!m) return v;
+    const game = db.get('games').find({ id: parseInt(m[1]) }).value();
+    if (!game) return v;
+    const slug = game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    changed = true;
+    return { ...v, path: '/game/' + slug, page: game.title };
+  });
+  if (changed) db.set('visitors', updated).write();
+})();
+
 // Migrate existing games to new fields if missing
 db.get('games').value().forEach(g => {
   const patch = {};
