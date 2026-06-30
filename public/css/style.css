@@ -450,6 +450,9 @@ nav {
   background: var(--border);
 }
 
+/* Hide from-price on desktop — full price table shows instead */
+.gc-from-price { display: none; }
+
 /* GAME GRID */
 .games-grid {
   display: grid;
@@ -1383,16 +1386,9 @@ footer {
   .slider-card-wrap .gc-genre { font-size: 0.62rem; letter-spacing: 0.5px; }
   .slider-card-wrap .game-title { font-size: 0.85rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.4rem; }
   .slider-card-wrap .gc-days-left-spacer { display: none; }
-  /* Show compact price table */
-  .slider-card-wrap .gc-price-table { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
-  .slider-card-wrap .gc-col { padding: 0.35rem 0.4rem; border-radius: 6px; }
-  .slider-card-wrap .gc-col-head { font-size: 0.55rem; margin-bottom: 0.2rem; }
-  .slider-card-wrap .gc-col-label { font-size: 0.52rem; }
-  .slider-card-wrap .gc-avail { font-size: 0.58rem; padding: 0.1rem 0.3rem; }
-  .slider-card-wrap .gc-price-rows { margin-top: 0.25rem; }
-  .slider-card-wrap .gc-price-row { font-size: 0.62rem; gap: 0.2rem; }
-  .slider-card-wrap .gc-dur { font-size: 0.58rem; }
-  .slider-card-wrap .gc-price { font-size: 0.62rem; }
+  /* Hide full price table in slider — too tall */
+  .slider-card-wrap .gc-price-table { display: none; }
+  .slider-card-wrap .gc-from-price { display: block; font-size: 0.75rem; font-weight: 700; color: #fff; margin-top: 0.3rem; }
   .slider-card-wrap .rent-btn { font-size: 0.7rem; padding: 0.4rem 0.5rem; margin-top: 0.4rem; border-radius: 8px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.6rem; padding: 0.2rem 0.45rem; }
   /* PS Plus cards */

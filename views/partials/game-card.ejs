@@ -114,6 +114,10 @@
 
     </div>
 
+    <div class="gc-from-price">
+      From ₱<%= game.nt_price_10d || game.tr_price_10d || '—' %>
+      <span style="color:#555;font-size:0.75em;"> / 10 days</span>
+    </div>
     <% if (allUnavail) { %>
     <span class="rent-btn rent-btn-reserve">Reserve a Slot →</span>
     <% } else { %>
