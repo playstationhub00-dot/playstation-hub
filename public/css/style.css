@@ -1386,6 +1386,12 @@ footer {
   .slider-card-wrap .gc-days-left-spacer { display: none; }
   .slider-card-wrap .rent-btn { font-size: 0.65rem; padding: 0.35rem 0.5rem; margin-top: 0.3rem; border-radius: 6px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
+  .slider-card-wrap .psplus-popular-card { height: auto !important; }
+  .slider-card-wrap .psplus-popular-card .game-cover { height: 120px; }
+  .slider-card-wrap .psplus-popular-card > div:first-child img { height: 120px; width: 100%; object-fit: cover; }
+  .slider-card-wrap .psplus-popular-card .game-info { padding: 0.5rem; }
+  .slider-card-wrap .psplus-popular-card .game-title { font-size: 0.72rem; line-height: 1.2; }
+  .slider-card-wrap .psplus-popular-card .rent-btn { font-size: 0.62rem; padding: 0.35rem 0.4rem; margin-top: 0.3rem; }
 }
 
 /* Visitor / filter buttons */
