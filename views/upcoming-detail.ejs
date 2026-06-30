@@ -149,7 +149,7 @@
         <div class="gd-total-rows">
           <div class="gd-total-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
           <div class="gd-total-row" id="sumDepositRow" style="display:none;"><span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span></div>
-          <div class="gd-total-row" style="color:#22c55e;font-weight:700;"><span>50% Downpayment to Reserve</span><span id="sumDownpayment">—</span></div>
+          <div class="gd-total-row" style="color:#f59e0b;font-weight:700;"><span>💬 Downpayment upon approval</span><span style="color:#555;">TBD</span></div>
         </div>
         <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
       </div>
@@ -163,8 +163,8 @@
         <div style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);border:1px solid #1a4a1a;border-radius:14px;padding:1.5rem;text-align:center;">
           <div style="font-size:1.5rem;margin-bottom:0.35rem;">⭐</div>
           <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;">Reserve a Slot</div>
-          <div style="font-size:0.82rem;color:#22c55e;font-weight:700;margin-bottom:0.5rem;">50% Downpayment Required</div>
-          <div style="font-size:0.78rem;color:#888;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when you start renting.</div>
+          <div style="font-size:0.82rem;color:#f59e0b;font-weight:700;margin-bottom:0.5rem;">Downpayment upon approval</div>
+          <div style="font-size:0.78rem;color:#888;margin-bottom:1rem;">Reserve your slot now. Downpayment details will be sent to you upon approval.</div>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              onclick="return handleReserveClick(event,'reserve')"
              style="display:inline-block;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 2rem;border-radius:50px;text-decoration:none;font-size:0.92rem;">
@@ -258,12 +258,10 @@ function updateSummary() {
   const isTrophy  = selectedType === 'tr';
   const deposit   = isTrophy ? 100 : 0;
   const total     = price + deposit;
-  const downpay   = Math.ceil(total * 0.5);
 
   document.getElementById('sumBaseLabel').textContent    = 'Base (' + selectedDays + ' days)';
   document.getElementById('sumBase').textContent         = price ? '₱' + price : '—';
   document.getElementById('sumDepositRow').style.display = isTrophy ? '' : 'none';
-  document.getElementById('sumDownpayment').textContent  = total ? '₱' + downpay : '—';
   document.getElementById('sumTotal').textContent        = total ? '₱' + total : '—';
   summary.style.display = '';
 }
@@ -281,7 +279,6 @@ function updateLinks() {
   const deposit  = selectedType === 'tr' ? 100 : 0;
   const total    = price + deposit;
   const priceStr = total ? '₱' + total : 'TBD';
-  const dp       = total ? '₱' + Math.ceil(total * 0.5) : 'TBD';
   const hasSlot  = getSlots() > 0;
 
   if (hasSlot) {
@@ -291,7 +288,7 @@ function updateLinks() {
       'Type: ' + typeName + '\n' +
       'Duration: ' + selectedDays + ' Days\n' +
       'Total: ' + priceStr + '\n' +
-      'Downpayment (50%): ' + dp
+      '(Downpayment upon approval)'
     );
     const el = document.getElementById('reserveLinkSlot');
     if (el) el.href = 'http://m.me/PlaystationHub00?text=' + msg;
