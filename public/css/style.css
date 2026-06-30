@@ -1352,7 +1352,7 @@ footer {
   nav { padding: 0 1rem; }
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
-  .games-grid { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+  .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
   .admin-container { padding: 1rem; }
   .games-table { font-size: 0.8rem; }
   .games-table th:nth-child(4),
