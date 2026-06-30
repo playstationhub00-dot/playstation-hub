@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= game.title %> — Coming Soon — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
+</head>
+<body>
+<%- include('partials/announcement') %>
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/browse">Browse Games</a>
+    <a href="/ps-plus">PS Plus Deluxe</a>
+    <a href="/how-it-works">How It Works</a>
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<%
+  const hasNt = !!(game.nt_price_10d || game.nt_price_15d || game.nt_price_30d);
+  const hasTr = !!(game.tr_price_10d || game.tr_price_15d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
+  const showTr = hasTr;
+
+  const ntPrices = { 10: game.nt_price_10d||0, 15: game.nt_price_15d||0, 30: game.nt_price_30d||0 };
+  const trPrices = { 10: game.tr_price_10d||0, 15: game.tr_price_15d||0, 30: game.tr_price_30d||0 };
+
+  let displayDate = 'TBA';
+  if (game.release_date && game.release_date !== 'TBA') {
+    const d = new Date(game.release_date + 'T00:00:00');
+    displayDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  }
+%>
+
+<div class="gd-page">
+  <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
+
+  <div class="gd-layout">
+
+    <!-- LEFT: Cover -->
+    <div class="gd-cover-col">
+      <% if (game.cover_image) { %>
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover" style="filter:brightness(0.8);">
+      <% } else { %>
+        <div class="gd-cover gd-cover-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- RIGHT: Info -->
+    <div class="gd-info-col">
+
+      <!-- Genre + Platform -->
+      <% if (game.genre) { %><div class="gd-genre-tag"><%= game.genre.toUpperCase() %></div><% } %>
+      <h1 class="gd-title"><%= game.title %></h1>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <span style="background:#1a1a2e;border:1px solid #2a2a4a;color:var(--ps-blue);font-size:0.78rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:6px;"><%= game.platform %></span>
+        <span style="background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:8px;padding:0.2rem 0.65rem;font-size:0.78rem;color:#a855f7;font-weight:700;">🔜 COMING SOON</span>
+        <span style="font-size:0.82rem;color:#888;">📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong></span>
+      </div>
+
+      <!-- Coming soon banner -->
+      <div class="gd-noslot-banner" style="margin-bottom:1.5rem;">
+        <span class="gd-noslot-icon">🔜</span>
+        <div>
+          <div class="gd-noslot-title">Not Yet Available — Open for Reservation</div>
+          <div class="gd-noslot-sub">This game is coming soon. Reserve your slot now and be first in line when it drops!</div>
+        </div>
+      </div>
+
+      <!-- SELECT RENTAL TYPE -->
+      <% if (hasNt || showTr) { %>
+      <div class="gd-section-label">SELECT RENTAL TYPE</div>
+      <div class="gd-type-grid" id="typeGrid">
+
+        <% if (showTr) { %>
+        <label class="gd-type-card" id="typeCard-tr">
+          <input type="radio" name="rental_type" value="tr" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy</span>
+              <span class="gd-type-badge" style="background:#2d1a00;color:#ffc400;border:1px solid #5a3a00;">Coming Soon</span>
+            </div>
+            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+          </div>
+        </label>
+        <% } %>
+
+        <% if (hasNt) { %>
+        <label class="gd-type-card" id="typeCard-nt">
+          <input type="radio" name="rental_type" value="nt" id="type-nt" onchange="onTypeChange()" checked>
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-type-badge" style="background:#001a0d;color:#22c55e;border:1px solid #0a3a1a;">Coming Soon</span>
+            </div>
+            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+          </div>
+        </label>
+        <% } %>
+
+      </div>
+      <% } %>
+
+      <!-- SELECT DURATION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+      <div class="gd-dur-grid" id="durGrid">
+        <button type="button" class="gd-dur-btn" data-days="10" onclick="selectDur(10)">
+          <span class="gd-dur-days">10</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="durPrice10">—</span>
+        </button>
+        <button type="button" class="gd-dur-btn" data-days="15" onclick="selectDur(15)">
+          <span class="gd-dur-days">15</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="durPrice15">—</span>
+        </button>
+        <button type="button" class="gd-dur-btn" data-days="30" onclick="selectDur(30)">
+          <span class="gd-dur-days">30</span>
+          <span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="durPrice30">—</span>
+        </button>
+      </div>
+
+      <!-- ORDER SUMMARY -->
+      <div class="gd-summary" id="orderSummary" style="display:none;">
+        <div class="gd-summary-row"><span>Rental Type</span><span id="sumType">—</span></div>
+        <div class="gd-summary-row"><span>Duration</span><span id="sumDur">—</span></div>
+        <div class="gd-summary-row gd-summary-total"><span>Total</span><span id="sumTotal">—</span></div>
+        <div style="font-size:0.72rem;color:#555;margin-top:0.35rem;">* Reservation fee of ₱100 will be deducted from total when the game releases.</div>
+      </div>
+
+      <!-- CHOOSE YOUR OPTION -->
+      <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
+      <div class="gd-reserve-options">
+        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+           class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
+          <div class="gd-reserve-badge">PRIORITY</div>
+          <div class="gd-reserve-icon">⭐</div>
+          <div class="gd-reserve-name">Reservation</div>
+          <div class="gd-reserve-fee">₱100 fee</div>
+          <div class="gd-reserve-note">Fee is deducted from your total rent when the game releases.</div>
+          <div class="gd-reserve-cta">📘 Reserve Now →</div>
+        </a>
+        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+           class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+          <div class="gd-reserve-icon">🎮</div>
+          <div class="gd-reserve-name">Fall in Line</div>
+          <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
+          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when the game is available.</div>
+          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+        </a>
+      </div>
+
+    </div><!-- /gd-info-col -->
+  </div><!-- /gd-layout -->
+</div><!-- /gd-page -->
+
+<%- include('partials/footer') %>
+
+<script>
+const GAME_TITLE = '<%= game.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") %>';
+const NT_PRICES  = { 10: <%= game.nt_price_10d||0 %>, 15: <%= game.nt_price_15d||0 %>, 30: <%= game.nt_price_30d||0 %> };
+const TR_PRICES  = { 10: <%= game.tr_price_10d||0 %>, 15: <%= game.tr_price_15d||0 %>, 30: <%= game.tr_price_30d||0 %> };
+
+let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
+let selectedDays = null;
+
+function getPrices() { return selectedType === 'tr' ? TR_PRICES : NT_PRICES; }
+
+function onTypeChange() {
+  selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
+  updatePriceLabels();
+  updateSummary();
+  updateLinks();
+}
+
+function updatePriceLabels() {
+  const p = getPrices();
+  [10, 15, 30].forEach(d => {
+    const el = document.getElementById('durPrice' + d);
+    if (el) el.textContent = p[d] ? '₱' + p[d] : '—';
+  });
+}
+
+function selectDur(days) {
+  selectedDays = days;
+  document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
+  updateSummary();
+  updateLinks();
+}
+
+function updateSummary() {
+  const summary = document.getElementById('orderSummary');
+  if (!selectedDays) { summary.style.display = 'none'; return; }
+  const price = getPrices()[selectedDays] || 0;
+  document.getElementById('sumType').textContent = selectedType === 'tr' ? '🏆 Trophy' : '🎮 Non-Trophy';
+  document.getElementById('sumDur').textContent  = selectedDays + ' Days';
+  document.getElementById('sumTotal').textContent = price ? '₱' + price : '—';
+  summary.style.display = '';
+}
+
+function updateLinks() {
+  if (!selectedDays) return;
+  const typeName = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
+  const price = getPrices()[selectedDays] || 0;
+  const priceStr = price ? '₱' + price : 'TBD';
+
+  const reserveMsg = encodeURIComponent(
+    'Hi! I want to RESERVE (Priority) a slot for:\n' +
+    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+    'Type: ' + typeName + '\n' +
+    'Duration: ' + selectedDays + ' Days\n' +
+    'Total: ' + priceStr + '\n' +
+    '(₱100 reservation fee applies)'
+  );
+  const queueMsg = encodeURIComponent(
+    'Hi! I want to JOIN THE WAITLIST for:\n' +
+    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+    'Type: ' + typeName + '\n' +
+    'Duration: ' + selectedDays + ' Days\n' +
+    'Total: ' + priceStr
+  );
+
+  document.getElementById('reserveLink').href = 'http://m.me/PlaystationHub00?text=' + reserveMsg;
+  document.getElementById('queueLink').href   = 'http://m.me/PlaystationHub00?text=' + queueMsg;
+}
+
+function handleReserveClick(e, mode) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const grid = document.getElementById('durGrid');
+    grid.classList.remove('gd-dur-grid-shake');
+    void grid.offsetWidth;
+    grid.classList.add('gd-dur-grid-shake');
+    setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
+    return false;
+  }
+  return true;
+}
+
+// Init
+updatePriceLabels();
+</script>
+</body>
+</html>

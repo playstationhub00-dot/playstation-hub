@@ -11,7 +11,7 @@
     <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="upcomingSlider">
     <% upcoming.forEach(game => { %>
-    <div class="game-card upcoming-card" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
+    <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="filter:brightness(0.75);">
@@ -39,12 +39,11 @@
         <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">
           📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong>
         </div>
-        <button class="rent-btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);margin-top:0.75rem;"
-          onclick="openReserveModal('<%= game.title.replace(/'/g, "\\'") %>')">
+        <span class="rent-btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);margin-top:0.75rem;">
           🔔 Reserve Slot
-        </button>
+        </span>
       </div>
-    </div>
+    </a>
     <% }) %>
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideUpcoming(1)" aria-label="Next">&#8250;</button>

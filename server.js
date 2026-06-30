@@ -662,6 +662,25 @@ app.get('/admin', requireAuth, (req, res) => {
 });
 
 // Upcoming CRUD
+app.get('/upcoming/:slug', (req, res) => {
+  const slug = req.params.slug;
+  // slug format: title-slug-ID (ID is at the end after last dash)
+  const idMatch = slug.match(/-(\d+)$/);
+  let game = null;
+  if (idMatch) {
+    game = getUpcomingGame(idMatch[1]);
+  }
+  if (!game) {
+    // fallback: match by title slug
+    game = getUpcoming().find(g => {
+      const s = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      return slug === s || slug.startsWith(s + '-');
+    });
+  }
+  if (!game) return res.redirect('/browse');
+  res.render('upcoming-detail', { game, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots,
