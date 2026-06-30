@@ -1371,27 +1371,36 @@ footer {
   /* Upcoming slider compact */
   .upcoming-slider .game-card { min-width: 140px; max-width: 140px; }
 
-  /* Home page sliders — shrink cards so 2-3 show at once */
+  /* Home page sliders — 2 large cards visible */
   .slider-card-wrap {
-    min-width: 145px !important;
-    max-width: 145px !important;
+    min-width: 46vw !important;
+    max-width: 46vw !important;
   }
-  .slider-card-wrap .game-card { height: auto; border-radius: 10px; }
-  .slider-card-wrap .game-cover { height: 120px; }
-  .slider-card-wrap .gc-cover-wrap .game-cover { height: 120px; }
-  .slider-card-wrap .game-info { padding: 0.5rem 0.5rem 0.6rem; }
-  .slider-card-wrap .gc-genre { font-size: 0.58rem; }
-  .slider-card-wrap .game-title { font-size: 0.72rem; line-height: 1.2; margin-bottom: 0.3rem; }
-  .slider-card-wrap .gc-price-table { display: none; }
+  .slider-card-wrap .game-card { height: auto; border-radius: 12px; }
+  .slider-card-wrap .game-cover { height: 180px; }
+  .slider-card-wrap .gc-cover-wrap .game-cover { height: 180px; }
+  .slider-card-wrap .game-info { padding: 0.6rem 0.6rem 0.7rem; }
+  .slider-card-wrap .gc-genre { font-size: 0.62rem; letter-spacing: 0.5px; }
+  .slider-card-wrap .game-title { font-size: 0.85rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.4rem; }
   .slider-card-wrap .gc-days-left-spacer { display: none; }
-  .slider-card-wrap .rent-btn { font-size: 0.65rem; padding: 0.35rem 0.5rem; margin-top: 0.3rem; border-radius: 6px; }
-  .slider-card-wrap .gc-platform-badge { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
+  /* Show compact price table */
+  .slider-card-wrap .gc-price-table { display: flex; gap: 0.4rem; margin-top: 0.3rem; }
+  .slider-card-wrap .gc-col { padding: 0.35rem 0.4rem; border-radius: 6px; }
+  .slider-card-wrap .gc-col-head { font-size: 0.55rem; margin-bottom: 0.2rem; }
+  .slider-card-wrap .gc-col-label { font-size: 0.52rem; }
+  .slider-card-wrap .gc-avail { font-size: 0.58rem; padding: 0.1rem 0.3rem; }
+  .slider-card-wrap .gc-price-rows { margin-top: 0.25rem; }
+  .slider-card-wrap .gc-price-row { font-size: 0.62rem; gap: 0.2rem; }
+  .slider-card-wrap .gc-dur { font-size: 0.58rem; }
+  .slider-card-wrap .gc-price { font-size: 0.62rem; }
+  .slider-card-wrap .rent-btn { font-size: 0.7rem; padding: 0.4rem 0.5rem; margin-top: 0.4rem; border-radius: 8px; }
+  .slider-card-wrap .gc-platform-badge { font-size: 0.6rem; padding: 0.2rem 0.45rem; }
+  /* PS Plus cards */
   .slider-card-wrap .psplus-popular-card { height: auto !important; }
-  .slider-card-wrap .psplus-popular-card .game-cover { height: 120px; }
-  .slider-card-wrap .psplus-popular-card > div:first-child img { height: 120px; width: 100%; object-fit: cover; }
-  .slider-card-wrap .psplus-popular-card .game-info { padding: 0.5rem; }
-  .slider-card-wrap .psplus-popular-card .game-title { font-size: 0.72rem; line-height: 1.2; }
-  .slider-card-wrap .psplus-popular-card .rent-btn { font-size: 0.62rem; padding: 0.35rem 0.4rem; margin-top: 0.3rem; }
+  .slider-card-wrap .psplus-popular-card > div:first-child img { height: 180px; width: 100%; object-fit: cover; border-radius: 12px 12px 0 0; }
+  .slider-card-wrap .psplus-popular-card .game-info { padding: 0.6rem; }
+  .slider-card-wrap .psplus-popular-card .game-title { font-size: 0.85rem; font-weight: 700; }
+  .slider-card-wrap .psplus-popular-card .rent-btn { font-size: 0.7rem; padding: 0.4rem; margin-top: 0.4rem; }
 }
 
 /* Visitor / filter buttons */
