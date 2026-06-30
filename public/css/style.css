@@ -1349,11 +1349,27 @@ footer {
   nav { padding: 0 1rem; }
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
-  .games-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .games-grid { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
   .admin-container { padding: 1rem; }
   .games-table { font-size: 0.8rem; }
   .games-table th:nth-child(4),
   .games-table td:nth-child(4) { display: none; }
+
+  /* Compact card for mobile 3-column */
+  .game-card { height: auto; min-height: 0; border-radius: 10px; }
+  .game-cover { height: 130px; }
+  .gc-cover-wrap .game-cover { height: 130px; }
+  .game-info { padding: 0.5rem; }
+  .game-title { font-size: 0.7rem; line-height: 1.2; margin-bottom: 0.25rem; -webkit-line-clamp: 2; }
+  .game-platform { font-size: 0.6rem; margin-bottom: 0.2rem; }
+  .rent-btn { font-size: 0.65rem; padding: 0.4rem 0.5rem; margin-top: 0.4rem; border-radius: 6px; }
+  .gc-platform-badge { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
+  .gc-slot-row { font-size: 0.65rem; }
+  .gc-price-row { font-size: 0.65rem; }
+  .game-desc-inline { display: none !important; }
+
+  /* Upcoming slider compact */
+  .upcoming-slider .game-card { min-width: 140px; max-width: 140px; }
 }
 
 /* Visitor / filter buttons */
