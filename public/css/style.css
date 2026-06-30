@@ -1371,8 +1371,8 @@ footer {
   .gc-price-row { font-size: 0.65rem; }
   .game-desc-inline { display: none !important; }
 
-  /* Upcoming slider compact */
-  .upcoming-slider .game-card { min-width: 140px; max-width: 140px; }
+  /* Upcoming/Coming Soon slider compact */
+  .upcoming-slider .game-card { min-width: calc(50vw - 1px); max-width: calc(50vw - 1px); }
 
   /* Home page sliders — tight 2-card layout */
   .upcoming-slider { gap: 1px; }
