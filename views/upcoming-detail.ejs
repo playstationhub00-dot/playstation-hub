@@ -110,54 +110,56 @@
       </div>
       <% } %>
 
-      <!-- SELECT DURATION -->
+      <!-- SELECT DURATION (rendered by JS — only shows days with a price) -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
-      <div class="gd-dur-grid" id="durGrid">
-        <button type="button" class="gd-dur-btn" data-days="10" onclick="selectDur(10)">
-          <span class="gd-dur-days">10</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="durPrice10">—</span>
-        </button>
-        <button type="button" class="gd-dur-btn" data-days="15" onclick="selectDur(15)">
-          <span class="gd-dur-days">15</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="durPrice15">—</span>
-        </button>
-        <button type="button" class="gd-dur-btn" data-days="30" onclick="selectDur(30)">
-          <span class="gd-dur-days">30</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="durPrice30">—</span>
-        </button>
-      </div>
+      <div class="gd-dur-grid" id="durGrid"></div>
 
       <!-- ORDER SUMMARY -->
       <div class="gd-summary" id="orderSummary" style="display:none;">
-        <div class="gd-summary-row"><span>Rental Type</span><span id="sumType">—</span></div>
-        <div class="gd-summary-row"><span>Duration</span><span id="sumDur">—</span></div>
-        <div class="gd-summary-row gd-summary-total"><span>Total</span><span id="sumTotal">—</span></div>
-        <div style="font-size:0.72rem;color:#555;margin-top:0.35rem;">* Reservation fee of ₱100 will be deducted from total when the game releases.</div>
+        <div class="gd-summary-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
+        <div class="gd-summary-row gd-summary-total" style="margin-top:0.5rem;"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
+        <div style="font-size:0.72rem;color:#555;margin-top:0.35rem;">* 50% downpayment required to confirm reservation.</div>
       </div>
 
       <!-- CHOOSE YOUR OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-      <div class="gd-reserve-options">
-        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-           class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
-          <div class="gd-reserve-badge">PRIORITY</div>
-          <div class="gd-reserve-icon">⭐</div>
-          <div class="gd-reserve-name">Reservation</div>
-          <div class="gd-reserve-fee">₱100 fee</div>
-          <div class="gd-reserve-note">Fee is deducted from your total rent when the game releases.</div>
-          <div class="gd-reserve-cta">📘 Reserve Now →</div>
-        </a>
-        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-           class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-          <div class="gd-reserve-icon">🎮</div>
-          <div class="gd-reserve-name">Fall in Line</div>
-          <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when the game is available.</div>
-          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-        </a>
+
+      <!-- Slots available: Reserve Now only -->
+      <div id="ctaHasSlot" style="display:none;">
+        <div style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);border:1px solid #1a4a1a;border-radius:14px;padding:1.5rem;text-align:center;">
+          <div style="font-size:1.5rem;margin-bottom:0.35rem;">⭐</div>
+          <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;">Reserve a Slot</div>
+          <div style="font-size:0.82rem;color:#22c55e;font-weight:700;margin-bottom:0.5rem;">50% Downpayment Required</div>
+          <div style="font-size:0.78rem;color:#888;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when you start renting.</div>
+          <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+             onclick="return handleReserveClick(event,'reserve')"
+             style="display:inline-block;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 2rem;border-radius:50px;text-decoration:none;font-size:0.92rem;">
+            📘 Reserve Now →
+          </a>
+        </div>
+      </div>
+
+      <!-- No slots: Request a Slot + Fall in Line -->
+      <div id="ctaNoSlot" style="display:none;">
+        <div class="gd-reserve-options">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+             class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
+            <div class="gd-reserve-badge">PRIORITY</div>
+            <div class="gd-reserve-icon">⭐</div>
+            <div class="gd-reserve-name">Request a Slot</div>
+            <div class="gd-reserve-fee">₱100 fee</div>
+            <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Request Now →</div>
+          </a>
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+             class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+            <div class="gd-reserve-icon">🎮</div>
+            <div class="gd-reserve-name">Fall in Line</div>
+            <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
+            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+          </a>
+        </div>
       </div>
 
     </div><!-- /gd-info-col -->
@@ -170,24 +172,36 @@
 const GAME_TITLE = '<%= game.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") %>';
 const NT_PRICES  = { 10: <%= game.nt_price_10d||0 %>, 15: <%= game.nt_price_15d||0 %>, 30: <%= game.nt_price_30d||0 %> };
 const TR_PRICES  = { 10: <%= game.tr_price_10d||0 %>, 15: <%= game.tr_price_15d||0 %>, 30: <%= game.tr_price_30d||0 %> };
+const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;
+const TR_SLOTS   = <%= game.trophy_slots||0 %>;
 
 let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
 let selectedDays = null;
 
 function getPrices() { return selectedType === 'tr' ? TR_PRICES : NT_PRICES; }
+function getSlots()  { return selectedType === 'tr' ? TR_SLOTS  : NT_SLOTS; }
 
 function onTypeChange() {
   selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
-  updatePriceLabels();
+  selectedDays = null;
+  renderDurButtons();
   updateSummary();
-  updateLinks();
+  updateCta();
 }
 
-function updatePriceLabels() {
+function renderDurButtons() {
   const p = getPrices();
+  const grid = document.getElementById('durGrid');
+  grid.innerHTML = '';
   [10, 15, 30].forEach(d => {
-    const el = document.getElementById('durPrice' + d);
-    if (el) el.textContent = p[d] ? '₱' + p[d] : '—';
+    if (!p[d]) return; // skip days with no price
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gd-dur-btn';
+    btn.dataset.days = d;
+    btn.onclick = () => selectDur(d);
+    btn.innerHTML = `<span class="gd-dur-days">${d}</span><span class="gd-dur-label">DAYS</span><span class="gd-dur-price">₱${p[d]}</span>`;
+    grid.appendChild(btn);
   });
 }
 
@@ -195,6 +209,7 @@ function selectDur(days) {
   selectedDays = days;
   document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
   updateSummary();
+  updateCta();
   updateLinks();
 }
 
@@ -202,36 +217,58 @@ function updateSummary() {
   const summary = document.getElementById('orderSummary');
   if (!selectedDays) { summary.style.display = 'none'; return; }
   const price = getPrices()[selectedDays] || 0;
-  document.getElementById('sumType').textContent = selectedType === 'tr' ? '🏆 Trophy' : '🎮 Non-Trophy';
-  document.getElementById('sumDur').textContent  = selectedDays + ' Days';
+  document.getElementById('sumBaseLabel').textContent = 'Base (' + selectedDays + ' days)';
+  document.getElementById('sumBase').textContent  = price ? '₱' + price : '—';
   document.getElementById('sumTotal').textContent = price ? '₱' + price : '—';
   summary.style.display = '';
+}
+
+function updateCta() {
+  const hasSlot = getSlots() > 0;
+  document.getElementById('ctaHasSlot').style.display = hasSlot ? '' : 'none';
+  document.getElementById('ctaNoSlot').style.display  = hasSlot ? 'none' : '';
 }
 
 function updateLinks() {
   if (!selectedDays) return;
   const typeName = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
-  const price = getPrices()[selectedDays] || 0;
+  const price    = getPrices()[selectedDays] || 0;
   const priceStr = price ? '₱' + price : 'TBD';
+  const dp       = price ? '₱' + Math.ceil(price * 0.5) : 'TBD';
+  const hasSlot  = getSlots() > 0;
 
-  const reserveMsg = encodeURIComponent(
-    'Hi! I want to RESERVE (Priority) a slot for:\n' +
-    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-    'Type: ' + typeName + '\n' +
-    'Duration: ' + selectedDays + ' Days\n' +
-    'Total: ' + priceStr + '\n' +
-    '(₱100 reservation fee applies)'
-  );
-  const queueMsg = encodeURIComponent(
-    'Hi! I want to JOIN THE WAITLIST for:\n' +
-    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-    'Type: ' + typeName + '\n' +
-    'Duration: ' + selectedDays + ' Days\n' +
-    'Total: ' + priceStr
-  );
-
-  document.getElementById('reserveLink').href = 'http://m.me/PlaystationHub00?text=' + reserveMsg;
-  document.getElementById('queueLink').href   = 'http://m.me/PlaystationHub00?text=' + queueMsg;
+  if (hasSlot) {
+    const msg = encodeURIComponent(
+      'Hi! I want to RESERVE a slot for:\n' +
+      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+      'Type: ' + typeName + '\n' +
+      'Duration: ' + selectedDays + ' Days\n' +
+      'Total: ' + priceStr + '\n' +
+      'Downpayment (50%): ' + dp
+    );
+    const el = document.getElementById('reserveLinkSlot');
+    if (el) el.href = 'http://m.me/PlaystationHub00?text=' + msg;
+  } else {
+    const reserveMsg = encodeURIComponent(
+      'Hi! I want to REQUEST a slot for:\n' +
+      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+      'Type: ' + typeName + '\n' +
+      'Duration: ' + selectedDays + ' Days\n' +
+      'Total: ' + priceStr + '\n' +
+      '(₱100 reservation fee applies)'
+    );
+    const queueMsg = encodeURIComponent(
+      'Hi! I want to JOIN THE WAITLIST for:\n' +
+      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+      'Type: ' + typeName + '\n' +
+      'Duration: ' + selectedDays + ' Days\n' +
+      'Total: ' + priceStr
+    );
+    const rl = document.getElementById('reserveLink');
+    const ql = document.getElementById('queueLink');
+    if (rl) rl.href = 'http://m.me/PlaystationHub00?text=' + reserveMsg;
+    if (ql) ql.href = 'http://m.me/PlaystationHub00?text=' + queueMsg;
+  }
 }
 
 function handleReserveClick(e, mode) {
@@ -248,7 +285,8 @@ function handleReserveClick(e, mode) {
 }
 
 // Init
-updatePriceLabels();
+renderDurButtons();
+updateCta();
 </script>
 </body>
 </html>
