@@ -1143,10 +1143,12 @@
                 <% }) %>
               </optgroup>
               <!-- Upcoming games (shown for reservation) -->
-              <optgroup label="Upcoming Games" id="cust_optgroup_upcoming" style="display:none;">
+              <optgroup label="Coming Soon Games" id="cust_optgroup_upcoming" style="display:none;">
                 <% upcoming.forEach(g => { %>
-                <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>">
-                  <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
+                <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>"
+                  data-nt10="<%= g.nt_price_10d||0 %>" data-nt15="<%= g.nt_price_15d||0 %>" data-nt30="<%= g.nt_price_30d||0 %>"
+                  data-tr10="<%= g.tr_price_10d||0 %>" data-tr15="<%= g.tr_price_15d||0 %>" data-tr30="<%= g.tr_price_30d||0 %>">
+                  🔜 <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
                 </option>
                 <% }) %>
               </optgroup>
@@ -1229,11 +1231,11 @@
         const gameSel = document.getElementById('cust_game');
 
         if (status === 'reservation') {
-          // Show only upcoming games
-          daysGroup.setAttribute('hidden', '');
+          // Show only coming soon games
+          daysGroup.removeAttribute('hidden');
           grpRegular.style.display = 'none';
           grpUpcoming.style.display = '';
-          gameLabel.textContent = 'Upcoming Game Reserved *';
+          gameLabel.textContent = 'Coming Soon Game *';
           // Reset selection to avoid carrying over a regular game
           gameSel.value = '';
         } else {
@@ -1326,7 +1328,12 @@
                 <div style="font-weight:700;"><%= c.customer_name %></div>
                 <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
               </td>
-              <td style="font-size:0.85rem;"><strong><%= c.game_title %></strong></td>
+              <td style="font-size:0.85rem;">
+                <strong><%= c.game_title %></strong>
+                <% if (isReservation && String(c.game_id).startsWith('upcoming_')) { %>
+                <div style="margin-top:0.2rem;"><span style="background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:6px;padding:0.1rem 0.45rem;font-size:0.65rem;color:#a855f7;font-weight:700;">🔜 Coming Soon</span></div>
+                <% } %>
+              </td>
               <td style="color:#aaa;font-size:0.85rem;"><%= (isBought || isReservation) ? '—' : c.days + ' days' %></td>
               <td>
                 <% if (c.account_type === 'tr') { %>
