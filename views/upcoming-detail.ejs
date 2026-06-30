@@ -115,10 +115,13 @@
       <div class="gd-dur-grid" id="durGrid"></div>
 
       <!-- ORDER SUMMARY -->
-      <div class="gd-summary" id="orderSummary" style="display:none;">
-        <div class="gd-summary-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
-        <div class="gd-summary-row gd-summary-total" style="margin-top:0.5rem;"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
-        <div style="font-size:0.72rem;color:#555;margin-top:0.35rem;">* 50% downpayment required to confirm reservation.</div>
+      <div class="gd-total-box" id="orderSummary" style="display:none;">
+        <div class="gd-total-label">ORDER SUMMARY</div>
+        <div class="gd-total-rows">
+          <div class="gd-total-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
+          <div class="gd-total-row"><span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span></div>
+        </div>
+        <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
       </div>
 
       <!-- CHOOSE YOUR OPTION -->
@@ -219,7 +222,7 @@ function updateSummary() {
   const price = getPrices()[selectedDays] || 0;
   document.getElementById('sumBaseLabel').textContent = 'Base (' + selectedDays + ' days)';
   document.getElementById('sumBase').textContent  = price ? '₱' + price : '—';
-  document.getElementById('sumTotal').textContent = price ? '₱' + price : '—';
+  document.getElementById('sumTotal').textContent = price ? '₱' + (price + 100) : '—';
   summary.style.display = '';
 }
 
