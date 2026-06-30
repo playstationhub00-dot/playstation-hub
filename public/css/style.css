@@ -1376,8 +1376,16 @@ footer {
     min-width: 145px !important;
     max-width: 145px !important;
   }
-  .slider-card-wrap .game-cover { height: 130px; }
-  .slider-card-wrap .game-card { height: auto; }
+  .slider-card-wrap .game-card { height: auto; border-radius: 10px; }
+  .slider-card-wrap .game-cover { height: 120px; }
+  .slider-card-wrap .gc-cover-wrap .game-cover { height: 120px; }
+  .slider-card-wrap .game-info { padding: 0.5rem 0.5rem 0.6rem; }
+  .slider-card-wrap .gc-genre { font-size: 0.58rem; }
+  .slider-card-wrap .game-title { font-size: 0.72rem; line-height: 1.2; margin-bottom: 0.3rem; }
+  .slider-card-wrap .gc-price-table { display: none; }
+  .slider-card-wrap .gc-days-left-spacer { display: none; }
+  .slider-card-wrap .rent-btn { font-size: 0.65rem; padding: 0.35rem 0.5rem; margin-top: 0.3rem; border-radius: 6px; }
+  .slider-card-wrap .gc-platform-badge { font-size: 0.55rem; padding: 0.2rem 0.4rem; }
 }
 
 /* Visitor / filter buttons */
