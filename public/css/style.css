@@ -1213,10 +1213,11 @@ footer {
 .upcoming-card {
   border-color: #2a1a3a;
   height: 380px !important;
+  overflow: visible;
 }
 .upcoming-card:hover { box-shadow: 0 12px 40px rgba(123,47,247,0.25); border-color: #5a2a8a; }
 .upcoming-card .game-cover,
-.upcoming-card .game-cover-placeholder { height: 200px !important; }
+.upcoming-card .game-cover-placeholder { height: 200px !important; border-radius: 13px 13px 0 0; }
 .upcoming-card .game-info { gap: 0.25rem; padding: 0.75rem; }
 .upcoming-card .rent-btn { margin-top: auto; flex-shrink: 0; }
 .upcoming-overlay-badge {
