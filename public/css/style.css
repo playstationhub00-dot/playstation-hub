@@ -1375,13 +1375,12 @@ footer {
   .upcoming-slider .game-card { min-width: 140px; max-width: 140px; }
 
   /* Home page sliders — tight 2-card layout */
-  .upcoming-slider { gap: 0.5px; }
-  .slider-card-wrap ~ .slider-arrow,
+  .upcoming-slider { gap: 1px; }
   .slider-arrow { display: none; }
   .upcoming-slider-wrap { gap: 0; }
   .slider-card-wrap {
-    min-width: calc(50vw - 36px) !important;
-    max-width: calc(50vw - 36px) !important;
+    min-width: calc(50vw - 1px) !important;
+    max-width: calc(50vw - 1px) !important;
   }
   .slider-card-wrap .game-card { height: auto; border-radius: 12px; }
   .slider-card-wrap .game-cover { height: 160px; }
