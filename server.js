@@ -1453,7 +1453,13 @@ function sendMessage(recipientId, messageData) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
   };
-  const req2 = https.request(options);
+  const req2 = https.request(options, (res2) => {
+    let data = '';
+    res2.on('data', chunk => { data += chunk; });
+    res2.on('end', () => {
+      if (res2.statusCode !== 200) console.error('Messenger API error:', res2.statusCode, data);
+    });
+  });
   req2.on('error', e => console.error('Messenger send error:', e));
   req2.write(payload);
   req2.end();
@@ -1574,15 +1580,30 @@ function handleMessage(senderId, text) {
     const ntSlots = g.non_trophy_slots || 0;
     const trSlots = g.trophy_slots || 0;
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    if (g.cover_image) sendImage(senderId, SITE + g.cover_image);
-    let msg = `🎮 ${g.title}\nPlatform: ${g.platform}${g.genre ? ' • ' + g.genre : ''}\n\n`;
-    msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
-    if (g.tr_price_10d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
-    msg += '\n💰 PRICING:\n';
-    msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
-    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
-    msg += `\n📄 Details: ${SITE}/game/${slug}`;
-    if (matches.length > 1) msg += `\n\n(Also found: ${matches.slice(1,3).map(x=>x.title).join(', ')})`;
+    let subtitle = '';
+    subtitle += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s)\n` : `🔴 Non-Trophy: Fully rented\n`;
+    if (g.tr_price_10d) subtitle += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s)\n` : `🔴 Trophy: Fully rented\n`;
+    subtitle += `\n🎮 NT: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d} (10/15/30d)`;
+    if (g.tr_price_10d) subtitle += `\n🏆 TR: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d} (10/15/30d)`;
+    if (matches.length > 1) subtitle += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
+
+    if (g.cover_image) {
+      return sendMessage(senderId, {
+        attachment: {
+          type: 'template',
+          payload: {
+            template_type: 'generic',
+            elements: [{
+              title: `🎮 ${g.title} (${g.platform})`,
+              subtitle: subtitle.slice(0, 80),
+              image_url: SITE + g.cover_image,
+              buttons: [{ type: 'web_url', url: `${SITE}/game/${slug}`, title: '📄 View & Rent' }]
+            }]
+          }
+        }
+      });
+    }
+    let msg = `🎮 ${g.title} (${g.platform})\n\n` + subtitle + `\n\n📄 ${SITE}/game/${slug}`;
     return sendText(senderId, msg);
   }
 
@@ -1590,12 +1611,27 @@ function handleMessage(senderId, text) {
   if (upMatches.length > 0) {
     const g = upMatches[0];
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
-    if (g.cover_image) sendImage(senderId, SITE + g.cover_image);
-    let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON — Open for Reservation!\n`;
-    msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
-    if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
-    if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
-    msg += `\n📄 Reserve: ${SITE}/upcoming/${slug}`;
+    let subtitle = `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
+    if (g.nt_price_30d) subtitle += `🎮 NT: ₱${g.nt_price_30d} (30d) `;
+    if (g.tr_price_30d) subtitle += `🏆 TR: ₱${g.tr_price_30d} (30d)`;
+
+    if (g.cover_image) {
+      return sendMessage(senderId, {
+        attachment: {
+          type: 'template',
+          payload: {
+            template_type: 'generic',
+            elements: [{
+              title: `🔜 ${g.title} (${g.platform})`,
+              subtitle: subtitle.slice(0, 80),
+              image_url: SITE + g.cover_image,
+              buttons: [{ type: 'web_url', url: `${SITE}/upcoming/${slug}`, title: '🔔 Reserve Slot' }]
+            }]
+          }
+        }
+      });
+    }
+    let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON!\n` + subtitle + `\n\n📄 ${SITE}/upcoming/${slug}`;
     return sendText(senderId, msg);
   }
 }
