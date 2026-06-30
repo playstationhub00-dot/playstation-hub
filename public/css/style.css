@@ -1203,7 +1203,7 @@ footer {
 
 /* UPCOMING GAMES SLIDER */
 .upcoming-slider-wrap { position: relative; display: flex; align-items: center; gap: 0.5rem; }
-.upcoming-slider { display: flex; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; flex: 1; }
+.upcoming-slider { display: flex; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; padding-top: 18px; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
 .upcoming-slider .game-card { min-width: 240px; max-width: 240px; scroll-snap-align: start; flex-shrink: 0; }
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
