@@ -678,7 +678,20 @@ app.get('/upcoming/:slug', (req, res) => {
     });
   }
   if (!game) return res.redirect('/browse');
-  res.render('upcoming-detail', { game, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+
+  // Subtract active reservations from slot counts
+  const gameKey = 'upcoming_' + game.id;
+  const reservations = getCustomers().filter(c =>
+    String(c.game_id) === gameKey && c.status === 'reservation'
+  );
+  const reservedNt = reservations.filter(c => c.account_type === 'nt').length;
+  const reservedTr = reservations.filter(c => c.account_type === 'tr').length;
+  const resolvedGame = Object.assign({}, game, {
+    non_trophy_slots: Math.max(0, (game.non_trophy_slots || 0) - reservedNt),
+    trophy_slots:     Math.max(0, (game.trophy_slots     || 0) - reservedTr),
+  });
+
+  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
