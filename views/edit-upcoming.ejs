@@ -79,6 +79,13 @@
         </div>
       </div>
 
+      <!-- Rank -->
+      <div style="margin:1.25rem 0 0.5rem;font-size:0.85rem;font-weight:700;color:#f59e0b;letter-spacing:0.5px;">🔥 HOT RANKING</div>
+      <div class="form-group" style="max-width:200px;">
+        <label style="font-size:0.8rem;">Rank <span style="color:#555;font-size:0.75rem;">(0 = no rank, 1 = #1 most hyped)</span></label>
+        <input type="number" name="rank" min="0" value="<%= game.rank || 0 %>">
+      </div>
+
       <!-- Slots & Pricing -->
       <div style="margin:1.25rem 0 0.5rem;font-size:0.85rem;font-weight:700;color:#a78bfa;letter-spacing:0.5px;">🎮 SLOTS & PRICING (for when released)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">

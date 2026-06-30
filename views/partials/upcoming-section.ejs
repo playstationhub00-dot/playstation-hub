@@ -24,6 +24,9 @@
           </div>
         <% } %>
         <div class="upcoming-overlay-badge">COMING SOON</div>
+        <% if (game.rank) { %>
+        <div style="position:absolute;top:8px;left:8px;background:linear-gradient(135deg,#ff4500,#ff8c00);color:#fff;font-size:0.65rem;font-weight:900;padding:0.2rem 0.5rem;border-radius:20px;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(255,69,0,0.5);">🔥 HOT #<%= game.rank %></div>
+        <% } %>
       </div>
       <div class="game-info">
         <div class="game-platform"><%= game.platform %></div>

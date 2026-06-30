@@ -531,6 +531,13 @@ function adjustPs4Slots(gameId, delta) {
 
 function sortUpcoming(list) {
   return [...list].sort((a, b) => {
+    const ra = a.rank || 0;
+    const rb = b.rank || 0;
+    // Ranked games first (lower rank number = higher priority)
+    if (ra && rb) return ra - rb;
+    if (ra) return -1;
+    if (rb) return 1;
+    // Unranked: sort by release date ascending
     const da = (!a.release_date || a.release_date === 'TBA') ? 'ZZZZ' : a.release_date;
     const db2 = (!b.release_date || b.release_date === 'TBA') ? 'ZZZZ' : b.release_date;
     return da.localeCompare(db2);
@@ -696,7 +703,7 @@ app.get('/upcoming/:slug', (req, res) => {
 
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
-          non_trophy_slots, trophy_slots,
+          non_trophy_slots, trophy_slots, rank,
           nt_price_10d, nt_price_15d, nt_price_30d,
           tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
@@ -710,6 +717,7 @@ app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req,
     release_date: finalDate,
     description: description || '',
     cover_image,
+    rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
     nt_price_10d: parseInt(nt_price_10d) || 0,
@@ -731,7 +739,7 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
 
 app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
-          non_trophy_slots, trophy_slots,
+          non_trophy_slots, trophy_slots, rank,
           nt_price_10d, nt_price_15d, nt_price_30d,
           tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   const existing = getUpcomingGame(req.params.id);
@@ -741,6 +749,7 @@ app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, 
   db.get('upcoming').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
     release_date: finalDate, description: description || '', cover_image,
+    rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
     nt_price_10d: parseInt(nt_price_10d) || 0,
