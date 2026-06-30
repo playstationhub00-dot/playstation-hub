@@ -1463,6 +1463,12 @@ function sendText(recipientId, text) {
   sendMessage(recipientId, { text });
 }
 
+function sendImage(recipientId, imageUrl) {
+  sendMessage(recipientId, {
+    attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
+  });
+}
+
 function handleMessage(senderId, text) {
   const games = getGames();
   const upcoming = getUpcoming();
@@ -1560,19 +1566,22 @@ function handleMessage(senderId, text) {
     );
   }
 
+  const SITE = process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app';
+
   // Found in available games
   if (matches.length > 0) {
     const g = matches[0];
     const ntSlots = g.non_trophy_slots || 0;
     const trSlots = g.trophy_slots || 0;
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (g.cover_image) sendImage(senderId, SITE + g.cover_image);
     let msg = `🎮 ${g.title}\nPlatform: ${g.platform}${g.genre ? ' • ' + g.genre : ''}\n\n`;
     msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
     if (g.tr_price_10d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
     msg += '\n💰 PRICING:\n';
     msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
     if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
-    msg += `\n📄 Details: https://playstation-hub-production.up.railway.app/game/${slug}`;
+    msg += `\n📄 Details: ${SITE}/game/${slug}`;
     if (matches.length > 1) msg += `\n\n(Also found: ${matches.slice(1,3).map(x=>x.title).join(', ')})`;
     return sendText(senderId, msg);
   }
@@ -1581,11 +1590,12 @@ function handleMessage(senderId, text) {
   if (upMatches.length > 0) {
     const g = upMatches[0];
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
+    if (g.cover_image) sendImage(senderId, SITE + g.cover_image);
     let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON — Open for Reservation!\n`;
     msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
-    if (g.nt_price_10d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
-    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
-    msg += `\n📄 Reserve: https://playstation-hub-production.up.railway.app/upcoming/${slug}`;
+    if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
+    if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
+    msg += `\n📄 Reserve: ${SITE}/upcoming/${slug}`;
     return sendText(senderId, msg);
   }
 }
