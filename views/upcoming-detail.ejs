@@ -74,8 +74,26 @@
         </div>
       </div>
 
+      <%
+        const ntSlots = game.non_trophy_slots || 0;
+        const trSlots = game.trophy_slots || 0;
+        const totalSlots = ntSlots + trSlots;
+        const allFull = totalSlots === 0;
+      %>
+
+      <!-- FULL banner when no slots -->
+      <% if (allFull) { %>
+      <div style="display:flex;align-items:center;gap:0.75rem;background:linear-gradient(135deg,#1a0a0a,#2a0a0a);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.5rem;">
+        <span style="font-size:1.5rem;">🚫</span>
+        <div>
+          <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">All Slots Full</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:0.15rem;">No reservation slots available right now. You can still request a slot or join the waitlist below.</div>
+        </div>
+      </div>
+      <% } %>
+
       <!-- SELECT RENTAL TYPE -->
-      <% if (hasNt || showTr) { %>
+      <% if ((hasNt || showTr) && !allFull) { %>
       <div class="gd-section-label">SELECT RENTAL TYPE</div>
       <div class="gd-type-options" id="typeOptions">
 
@@ -110,11 +128,14 @@
       </div>
       <% } %>
 
-      <!-- SELECT DURATION (rendered by JS — only shows days with a price) -->
+      <!-- SELECT DURATION (hidden when no slots) -->
+      <% if (!allFull) { %>
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durGrid"></div>
+      <% } %>
 
-      <!-- ORDER SUMMARY -->
+      <!-- ORDER SUMMARY (hidden when no slots) -->
+      <% if (!allFull) { %>
       <div class="gd-total-box" id="orderSummary" style="display:none;">
         <div class="gd-total-label">ORDER SUMMARY</div>
         <div class="gd-total-rows">
@@ -124,6 +145,7 @@
         </div>
         <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
       </div>
+      <% } %>
 
       <!-- CHOOSE YOUR OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
@@ -144,7 +166,7 @@
       </div>
 
       <!-- No slots: Request a Slot + Fall in Line -->
-      <div id="ctaNoSlot" style="display:none;">
+      <div id="ctaNoSlot" style="display:<%= allFull ? '' : 'none' %>;">
         <div class="gd-reserve-options">
           <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
@@ -288,8 +310,10 @@ function updateLinks() {
   }
 }
 
+const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
+
 function handleReserveClick(e, mode) {
-  if (!selectedDays) {
+  if (!ALL_FULL && !selectedDays) {
     e.preventDefault();
     const grid = document.getElementById('durGrid');
     grid.classList.remove('gd-dur-grid-shake');
