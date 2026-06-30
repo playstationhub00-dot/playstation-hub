@@ -1000,6 +1000,13 @@ footer {
   object-fit: cover;
   flex-shrink: 0;
 }
+.psplus-browse-cover-wide {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+  display: block;
+}
 .psplus-browse-cover-placeholder {
   width: 64px;
   height: 64px;

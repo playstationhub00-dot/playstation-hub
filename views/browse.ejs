@@ -126,28 +126,28 @@
       const mName = monthNames[entry.month] || '';
       const gamesList = (entry.games_list || '').split('\n').map(g => g.trim()).filter(Boolean);
     %>
-    <div class="psplus-browse-entry" data-games="<%= gamesList.join('|').toLowerCase() %>" data-month="<%= mName.toLowerCase() %> <%= entry.year %>">
+    <a href="/game/ps-plus-deluxe" class="psplus-browse-entry" data-games="<%= gamesList.join('|').toLowerCase() %>" data-month="<%= mName.toLowerCase() %> <%= entry.year %>" style="text-decoration:none;color:inherit;display:block;">
+      <% if (entry.cover_image) { %>
+        <img src="<%= entry.cover_image %>" alt="<%= mName %> <%= entry.year %>" class="psplus-browse-cover-wide">
+      <% } else { %>
+        <div class="psplus-browse-cover-wide psplus-browse-cover-placeholder" style="display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:2rem;">★</span>
+        </div>
+      <% } %>
       <div class="psplus-browse-header">
-        <% if (entry.cover_image) { %>
-          <img src="<%= entry.cover_image %>" alt="<%= mName %> <%= entry.year %>" class="psplus-browse-cover">
-        <% } else { %>
-          <div class="psplus-browse-cover psplus-browse-cover-placeholder">
-            <span style="font-size:1.5rem;">★</span>
-          </div>
-        <% } %>
         <div>
           <div style="font-weight:700;font-size:1rem;color:#FFD700;"><%= mName %> <span style="color:#888;"><%= entry.year %></span></div>
           <div style="font-size:0.75rem;color:#555;margin-top:0.2rem;"><%= gamesList.length %> game<%= gamesList.length !== 1 ? 's' : '' %></div>
           <% if (entry.notes) { %><div style="font-size:0.75rem;color:#666;margin-top:0.15rem;"><%= entry.notes %></div><% } %>
         </div>
-        <a href="/ps-plus" class="btn btn-outline" style="margin-left:auto;padding:0.3rem 0.85rem;font-size:0.78rem;white-space:nowrap;">Rent Access →</a>
+        <span class="btn btn-outline" style="margin-left:auto;padding:0.3rem 0.85rem;font-size:0.78rem;white-space:nowrap;">Rent Access →</span>
       </div>
       <div class="psplus-browse-games">
         <% gamesList.forEach(g => { %>
           <span class="psplus-browse-game-tag"><%= g %></span>
         <% }) %>
       </div>
-    </div>
+    </a>
   <% }) %>
   </div>
   <div id="no-psplus-msg" style="display:none;text-align:center;padding:2rem;color:var(--text-secondary);">No PS Plus monthly games match your search.</div>
