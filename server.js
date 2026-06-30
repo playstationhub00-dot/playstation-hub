@@ -1587,7 +1587,8 @@ function handleMessage(senderId, text) {
     msg += `\n💰 PRICING:\n`;
     msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
     if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
-    msg += `\n📄 ${SITE}/game/${slug}`;
+    msg += `\n📄 Game page: ${SITE}/game/${slug}`;
+    msg += `\n🌐 Browse all: ${SITE}/browse`;
     if (matches.length > 1) msg += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
     if (g.cover_image) {
       return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
@@ -1603,7 +1604,8 @@ function handleMessage(senderId, text) {
     msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
     if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
     if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
-    msg += `\n📄 ${SITE}/upcoming/${slug}`;
+    msg += `\n📄 Reserve page: ${SITE}/upcoming/${slug}`;
+    msg += `\n🌐 Browse all: ${SITE}/browse`;
     if (g.cover_image) {
       return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
     }
