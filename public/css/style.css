@@ -1376,6 +1376,9 @@ footer {
 
   /* Home page sliders — tight 2-card layout */
   .upcoming-slider { gap: 0.5px; }
+  .slider-card-wrap ~ .slider-arrow,
+  .slider-arrow { display: none; }
+  .upcoming-slider-wrap { gap: 0; }
   .slider-card-wrap {
     min-width: calc(50vw - 36px) !important;
     max-width: calc(50vw - 36px) !important;
