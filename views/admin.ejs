@@ -680,7 +680,33 @@
           <div class="form-group"><label>Cover Image</label><input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;"></div>
           <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description..."></textarea></div>
         </div>
-        <div class="form-actions">
+
+        <!-- Slots & Pricing -->
+        <div style="margin:1.25rem 0 0.5rem;font-size:0.85rem;font-weight:700;color:#a78bfa;letter-spacing:0.5px;">🎮 SLOTS & PRICING (for when released)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+          <!-- Non-Trophy -->
+          <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;">
+            <div style="font-weight:700;font-size:0.82rem;color:#ccc;margin-bottom:0.75rem;">🎮 Non-Trophy</div>
+            <div class="form-grid" style="gap:0.6rem;">
+              <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="non_trophy_slots" min="0" value="1" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 10 Days (₱)</label><input type="number" name="nt_price_10d" min="0" placeholder="e.g. 149" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 15 Days (₱)</label><input type="number" name="nt_price_15d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 30 Days (₱)</label><input type="number" name="nt_price_30d" min="0" placeholder="e.g. 299" style="width:100%;"></div>
+            </div>
+          </div>
+          <!-- Trophy -->
+          <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;">
+            <div style="font-weight:700;font-size:0.82rem;color:#ffc400;margin-bottom:0.75rem;">🏆 Trophy</div>
+            <div class="form-grid" style="gap:0.6rem;">
+              <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="trophy_slots" min="0" value="0" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 10 Days (₱)</label><input type="number" name="tr_price_10d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 15 Days (₱)</label><input type="number" name="tr_price_15d" min="0" placeholder="e.g. 249" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Price 30 Days (₱)</label><input type="number" name="tr_price_30d" min="0" placeholder="e.g. 349" style="width:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:1.25rem;">
           <button type="submit" class="btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Add Upcoming Game</button>
           <button type="reset" class="btn btn-outline">Clear</button>
         </div>
@@ -692,7 +718,7 @@
       <h2 style="border-color:#2a1a3a;">🔜 Upcoming Games (<%= upcoming.length %>)</h2>
       <div style="overflow-x:auto;">
         <table class="games-table">
-          <thead><tr><th>Cover</th><th>Title</th><th>Platform</th><th>Genre</th><th>Release Date</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Cover</th><th>Title</th><th>Platform</th><th>Release Date</th><th>🎮 NT Slots</th><th>🏆 TR Slots</th><th>Prices (10/15/30d)</th><th>Actions</th></tr></thead>
           <tbody>
             <% upcoming.forEach(game => { %>
             <tr>
@@ -702,14 +728,33 @@
                 <div style="font-size:0.72rem;margin-top:0.2rem;"><span style="background:linear-gradient(135deg,#4a0080,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;">COMING SOON</span></div>
               </td>
               <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
-              <td style="color:var(--text-secondary)"><%= game.genre || '—' %></td>
               <td style="color:#aaa;font-size:0.85rem;"><%= game.release_date === 'TBA' ? 'TBA' : (game.release_date ? new Date(game.release_date+'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) : '—') %></td>
+              <td style="text-align:center;">
+                <span style="font-weight:700;color:<%= (game.non_trophy_slots||0) > 0 ? '#22c55e' : '#555' %>"><%= game.non_trophy_slots || 0 %></span>
+              </td>
+              <td style="text-align:center;">
+                <span style="font-weight:700;color:<%= (game.trophy_slots||0) > 0 ? '#ffc400' : '#555' %>"><%= game.trophy_slots || 0 %></span>
+              </td>
+              <td style="font-size:0.75rem;line-height:1.8;">
+                <% if (game.nt_price_10d || game.nt_price_15d || game.nt_price_30d) { %>
+                <div style="color:#ccc;">🎮 ₱<%= game.nt_price_10d||'—' %> / ₱<%= game.nt_price_15d||'—' %> / ₱<%= game.nt_price_30d||'—' %></div>
+                <% } %>
+                <% if (game.tr_price_10d || game.tr_price_15d || game.tr_price_30d) { %>
+                <div style="color:#ffc400;">🏆 ₱<%= game.tr_price_10d||'—' %> / ₱<%= game.tr_price_15d||'—' %> / ₱<%= game.tr_price_30d||'—' %></div>
+                <% } %>
+                <% if (!game.nt_price_10d && !game.tr_price_10d) { %><span style="color:#444;">—</span><% } %>
+              </td>
               <td>
-                <div class="action-btns">
-                  <a href="/admin/upcoming/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
-                  <form method="POST" action="/admin/upcoming/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
-                    <button type="submit" class="btn-delete">🗑 Delete</button>
+                <div class="action-btns" style="flex-direction:column;align-items:flex-start;gap:0.4rem;">
+                  <form method="POST" action="/admin/upcoming/release/<%= game.id %>" style="display:inline" onsubmit="return confirm('Release \'<%= game.title.replace(/'/g, "\\'") %>\' to Available Games?')">
+                    <button type="submit" style="background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;border:none;border-radius:20px;padding:0.3rem 0.8rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">🚀 Release</button>
                   </form>
+                  <div style="display:flex;gap:0.4rem;">
+                    <a href="/admin/upcoming/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
+                    <form method="POST" action="/admin/upcoming/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
+                      <button type="submit" class="btn-delete">🗑</button>
+                    </form>
+                  </div>
                 </div>
               </td>
             </tr>
@@ -1624,7 +1669,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');

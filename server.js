@@ -663,7 +663,10 @@ app.get('/admin', requireAuth, (req, res) => {
 
 // Upcoming CRUD
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { title, platform, genre, release_date, release_date_tba_val, description } = req.body;
+  const { title, platform, genre, release_date, release_date_tba_val, description,
+          non_trophy_slots, trophy_slots,
+          nt_price_10d, nt_price_15d, nt_price_30d,
+          tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? '/uploads/' + req.file.filename : '';
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
@@ -675,6 +678,14 @@ app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req,
     release_date: finalDate,
     description: description || '',
     cover_image,
+    non_trophy_slots: parseInt(non_trophy_slots) || 0,
+    trophy_slots: parseInt(trophy_slots) || 0,
+    nt_price_10d: parseInt(nt_price_10d) || 0,
+    nt_price_15d: parseInt(nt_price_15d) || 0,
+    nt_price_30d: parseInt(nt_price_30d) || 0,
+    tr_price_10d: parseInt(tr_price_10d) || 0,
+    tr_price_15d: parseInt(tr_price_15d) || 0,
+    tr_price_30d: parseInt(tr_price_30d) || 0,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=upcoming_added');
@@ -687,14 +698,25 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { title, platform, genre, release_date, release_date_tba_val, description } = req.body;
+  const { title, platform, genre, release_date, release_date_tba_val, description,
+          non_trophy_slots, trophy_slots,
+          nt_price_10d, nt_price_15d, nt_price_30d,
+          tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
-    release_date: finalDate, description: description || '', cover_image
+    release_date: finalDate, description: description || '', cover_image,
+    non_trophy_slots: parseInt(non_trophy_slots) || 0,
+    trophy_slots: parseInt(trophy_slots) || 0,
+    nt_price_10d: parseInt(nt_price_10d) || 0,
+    nt_price_15d: parseInt(nt_price_15d) || 0,
+    nt_price_30d: parseInt(nt_price_30d) || 0,
+    tr_price_10d: parseInt(tr_price_10d) || 0,
+    tr_price_15d: parseInt(tr_price_15d) || 0,
+    tr_price_30d: parseInt(tr_price_30d) || 0,
   }).write();
   res.redirect('/admin?msg=upcoming_updated');
 });
@@ -707,6 +729,34 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
   }
   db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?msg=upcoming_deleted');
+});
+
+app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
+  const game = getUpcomingGame(req.params.id);
+  if (!game) return res.redirect('/admin');
+  // Add to available games
+  db.get('games').push({
+    id: newId(),
+    title: game.title,
+    platform: game.platform || 'PS5',
+    genre: game.genre || '',
+    description: game.description || '',
+    cover_image: game.cover_image || '',
+    non_trophy_slots: game.non_trophy_slots || 0,
+    trophy_slots: game.trophy_slots || 0,
+    nt_price_10d: game.nt_price_10d || 0,
+    nt_price_15d: game.nt_price_15d || 0,
+    nt_price_30d: game.nt_price_30d || 0,
+    tr_price_10d: game.tr_price_10d || 0,
+    tr_price_15d: game.tr_price_15d || 0,
+    tr_price_30d: game.tr_price_30d || 0,
+    featured: false,
+    renters: 0,
+    created_at: new Date().toISOString()
+  }).write();
+  // Remove from upcoming
+  db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin?msg=game_released');
 });
 
 app.post('/admin/announcement', requireAuth, (req, res) => {
