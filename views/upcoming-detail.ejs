@@ -158,13 +158,14 @@
       <!-- CHOOSE YOUR OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
 
-      <!-- Slots available: Reserve Now only -->
+      <!-- Has slots: Reserve a Slot with 50% downpayment -->
       <div id="ctaHasSlot" style="display:none;">
         <div style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);border:1px solid #1a4a1a;border-radius:14px;padding:1.5rem;text-align:center;">
           <div style="font-size:1.5rem;margin-bottom:0.35rem;">⭐</div>
           <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;">Reserve a Slot</div>
-          <div style="font-size:0.82rem;color:#f59e0b;font-weight:700;margin-bottom:0.5rem;">Downpayment upon approval</div>
-          <div style="font-size:0.78rem;color:#888;margin-bottom:1rem;">Reserve your slot now. Downpayment details will be sent to you upon approval.</div>
+          <div id="ctaHasSlotFee" style="font-size:0.88rem;color:#22c55e;font-weight:700;margin-bottom:0.35rem;">Select a duration to see downpayment</div>
+          <div id="ctaHasSlotDP" style="display:none;font-size:0.8rem;color:#aaa;margin-bottom:0.75rem;"></div>
+          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when you start renting.</div>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              onclick="return handleReserveClick(event,'reserve')"
              style="display:inline-block;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 2rem;border-radius:50px;text-decoration:none;font-size:0.92rem;">
@@ -181,8 +182,8 @@
             <div class="gd-reserve-badge">PRIORITY</div>
             <div class="gd-reserve-icon">⭐</div>
             <div class="gd-reserve-name">Request a Slot</div>
-            <div class="gd-reserve-fee" id="reserveSlotFee">50% Downpayment</div>
-            <div class="gd-reserve-note">Pay 50% of the total to lock in your slot when it becomes available.</div>
+            <div class="gd-reserve-fee" style="color:#f59e0b;">Downpayment upon approval</div>
+            <div class="gd-reserve-note">Request a slot and we'll reach out with downpayment details upon approval.</div>
             <div class="gd-reserve-cta">📘 Request Now →</div>
           </a>
           <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
@@ -283,10 +284,18 @@ function updateLinks() {
   const downpay2 = total ? Math.ceil(total * 0.5) : 0;
   const priceStr = total ? '₱' + total : 'TBD';
   const dpStr    = downpay2 ? '₱' + downpay2 : 'TBD';
-  // Update the fee label on the card
-  const feeEl = document.getElementById('reserveSlotFee');
-  if (feeEl) feeEl.textContent = downpay2 ? '50% Downpayment — ₱' + downpay2 : '50% Downpayment';
   const hasSlot  = getSlots() > 0;
+
+  // Update Reserve a Slot CTA fee display (has-slot section)
+  const feeLabel = document.getElementById('ctaHasSlotFee');
+  const dpDetail = document.getElementById('ctaHasSlotDP');
+  if (feeLabel && downpay2) {
+    feeLabel.textContent = '50% Downpayment — ₱' + downpay2;
+    if (dpDetail) {
+      dpDetail.textContent = 'Total: ₱' + total + '  •  Pay now: ₱' + downpay2 + '  •  Remaining: ₱' + (total - downpay2);
+      dpDetail.style.display = '';
+    }
+  }
 
   if (hasSlot) {
     const msg = encodeURIComponent(
