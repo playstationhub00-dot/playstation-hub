@@ -1387,6 +1387,189 @@ app.get('/feed/meta.csv', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=3600');
   res.send(csv);
 });
+// ═══════════════════════════════════════════════════════════════════════════
+// MESSENGER WEBHOOK
+// ═══════════════════════════════════════════════════════════════════════════
+
+const VERIFY_TOKEN    = process.env.MESSENGER_VERIFY_TOKEN || 'playstation_hub_verify';
+const PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_TOKEN || '';
+
+// Webhook verification (Meta calls this when you set up the webhook)
+app.get('/webhook', (req, res) => {
+  if (
+    req.query['hub.mode']       === 'subscribe' &&
+    req.query['hub.verify_token'] === VERIFY_TOKEN
+  ) {
+    console.log('✅ Messenger webhook verified');
+    return res.status(200).send(req.query['hub.challenge']);
+  }
+  res.sendStatus(403);
+});
+
+// Receive messages
+app.post('/webhook', express.json(), (req, res) => {
+  res.sendStatus(200); // ack immediately
+
+  const body = req.body;
+  if (body.object !== 'page') return;
+
+  body.entry?.forEach(entry => {
+    entry.messaging?.forEach(event => {
+      if (!event.message || event.message.is_echo) return;
+      const senderId = event.sender.id;
+      const text = (event.message.text || '').toLowerCase().trim();
+      handleMessage(senderId, text);
+    });
+  });
+});
+
+function sendMessage(recipientId, messageData) {
+  if (!PAGE_ACCESS_TOKEN) return;
+  const https = require('https');
+  const payload = JSON.stringify({ recipient: { id: recipientId }, message: messageData });
+  const options = {
+    hostname: 'graph.facebook.com',
+    path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+  };
+  const req2 = https.request(options);
+  req2.on('error', e => console.error('Messenger send error:', e));
+  req2.write(payload);
+  req2.end();
+}
+
+function sendText(recipientId, text) {
+  sendMessage(recipientId, { text });
+}
+
+function handleMessage(senderId, text) {
+  const games = getGames();
+  const upcoming = getUpcoming();
+
+  // ── HELP / GREETING ──────────────────────────────────────────────────────
+  if (!text || /^(hi|hello|hey|uy|oi|sup|start|help|menu|kamusta)/.test(text)) {
+    return sendText(senderId,
+      '👋 Hi! Welcome to PlayStation Hub!\n\n' +
+      'Here\'s what I can help you with:\n\n' +
+      '🎮 Type "games" — see all available games\n' +
+      '🔜 Type "coming soon" — see upcoming games\n' +
+      '🔍 Type a game name — check price & availability\n' +
+      '💰 Type "prices" — see pricing guide\n' +
+      '📞 Type "contact" — talk to a human\n\n' +
+      'Browse all games 👉 https://playstation-hub-production.up.railway.app/browse'
+    );
+  }
+
+  // ── CONTACT / HUMAN ───────────────────────────────────────────────────────
+  if (/contact|human|agent|tao|admin|owner/.test(text)) {
+    return sendText(senderId,
+      '📞 You can reach us directly on Messenger anytime!\n\n' +
+      'Just send your message here and our team will reply as soon as possible. 😊'
+    );
+  }
+
+  // ── PRICES GUIDE ─────────────────────────────────────────────────────────
+  if (/^price|magkano|how much|pricelist/.test(text)) {
+    const cats = [
+      { label: '🎮 Standard Games', nt10: 149, nt15: 199, nt30: 299, tr10: 199, tr15: 249, tr30: 349 }
+    ];
+    // sample from actual games
+    const sample = games.filter(g => g.nt_price_10d).slice(0, 3);
+    let msg = '💰 PlayStation Hub Pricing\n\n';
+    msg += '━━━━━━━━━━━━━━━━━━━\n';
+    msg += '🎮 NON-TROPHY ACCOUNT\n';
+    msg += '  10 Days | 15 Days | 30 Days\n';
+    if (sample.length) {
+      sample.forEach(g => {
+        msg += `  ${g.title.slice(0,20)}: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d}\n`;
+      });
+    }
+    msg += '\n🏆 TROPHY ACCOUNT\n';
+    msg += '  10 Days | 15 Days | 30 Days\n';
+    if (sample.length) {
+      sample.forEach(g => {
+        if (g.tr_price_10d) msg += `  ${g.title.slice(0,20)}: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d}\n`;
+      });
+    }
+    msg += '\n📖 See all prices:\nhttps://playstation-hub-production.up.railway.app/browse';
+    return sendText(senderId, msg);
+  }
+
+  // ── COMING SOON ───────────────────────────────────────────────────────────
+  if (/coming soon|upcoming|reserve|reservation/.test(text)) {
+    if (!upcoming.length) return sendText(senderId, '📭 No upcoming games right now. Check back soon!');
+    let msg = '🔜 Coming Soon Games — Open for Reservation!\n\n';
+    upcoming.slice(0, 8).forEach(g => {
+      const date = g.release_date === 'TBA' ? 'TBA' : g.release_date;
+      msg += `📌 ${g.title} (${g.platform})\n   Expected: ${date}\n`;
+      if (g.nt_price_30d) msg += `   From ₱${g.nt_price_30d} (30 days)\n`;
+      msg += '\n';
+    });
+    msg += '📩 To reserve: https://playstation-hub-production.up.railway.app/browse';
+    return sendText(senderId, msg);
+  }
+
+  // ── ALL GAMES LIST ────────────────────────────────────────────────────────
+  if (/^(games?|list|lahat|all games?|available)/.test(text)) {
+    const avail = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) > 0);
+    const full  = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) === 0);
+    let msg = `🎮 PlayStation Hub Game List\n(${games.length} games total)\n\n`;
+    if (avail.length) {
+      msg += '✅ AVAILABLE NOW:\n';
+      avail.slice(0, 10).forEach(g => { msg += `• ${g.title} (${g.platform})\n`; });
+      if (avail.length > 10) msg += `  ...and ${avail.length - 10} more\n`;
+    }
+    if (full.length) {
+      msg += `\n🔴 FULLY RENTED (${full.length} games)\n`;
+      full.slice(0, 5).forEach(g => { msg += `• ${g.title}\n`; });
+    }
+    msg += '\n🔍 Search all games:\nhttps://playstation-hub-production.up.railway.app/browse';
+    return sendText(senderId, msg);
+  }
+
+  // ── GAME SEARCH ───────────────────────────────────────────────────────────
+  const matches = games.filter(g => g.title.toLowerCase().includes(text));
+  const upMatches = upcoming.filter(g => g.title.toLowerCase().includes(text));
+
+  if (matches.length === 0 && upMatches.length === 0) {
+    return sendText(senderId,
+      `😕 I couldn't find "${text}" in our library.\n\n` +
+      'Try typing:\n• "games" — see full list\n• "coming soon" — upcoming titles\n\n' +
+      '🔍 Browse: https://playstation-hub-production.up.railway.app/browse'
+    );
+  }
+
+  // Found in available games
+  if (matches.length > 0) {
+    const g = matches[0];
+    const ntSlots = g.non_trophy_slots || 0;
+    const trSlots = g.trophy_slots || 0;
+    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    let msg = `🎮 ${g.title}\nPlatform: ${g.platform}${g.genre ? ' • ' + g.genre : ''}\n\n`;
+    msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
+    if (g.tr_price_10d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
+    msg += '\n💰 PRICING:\n';
+    msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
+    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
+    msg += `\n📄 Details: https://playstation-hub-production.up.railway.app/game/${slug}`;
+    if (matches.length > 1) msg += `\n\n(Also found: ${matches.slice(1,3).map(x=>x.title).join(', ')})`;
+    return sendText(senderId, msg);
+  }
+
+  // Found in upcoming
+  if (upMatches.length > 0) {
+    const g = upMatches[0];
+    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
+    let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON — Open for Reservation!\n`;
+    msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
+    if (g.nt_price_10d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
+    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
+    msg += `\n📄 Reserve: https://playstation-hub-production.up.railway.app/upcoming/${slug}`;
+    return sendText(senderId, msg);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
