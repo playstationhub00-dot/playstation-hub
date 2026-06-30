@@ -120,7 +120,7 @@
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="popularSlider">
-      <% featured.forEach(game => { %><div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game }) %></div><% }) %>
+      <% featured.forEach(game => { %><div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game }) %></div><% }) %>
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
   </div>
@@ -138,7 +138,7 @@
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('psplusSlider',-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="psplusSlider">
     <% psplusPopular.forEach((game, idx) => { %>
-    <div style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;">
+    <div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;">
     <a href="<%= psplusSlug ? '/game/' + psplusSlug : '/game/17' %>" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>

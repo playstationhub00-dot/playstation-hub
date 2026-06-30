@@ -1371,13 +1371,13 @@ footer {
   /* Upcoming slider compact */
   .upcoming-slider .game-card { min-width: 140px; max-width: 140px; }
 
-  /* Home page sliders — shrink inline-width cards so 2-3 show at once */
-  .upcoming-slider > div[style*="min-width:240px"] {
-    min-width: 140px !important;
-    max-width: 140px !important;
+  /* Home page sliders — shrink cards so 2-3 show at once */
+  .slider-card-wrap {
+    min-width: 145px !important;
+    max-width: 145px !important;
   }
-  .upcoming-slider > div[style*="min-width:240px"] .game-cover { height: 130px; }
-  .upcoming-slider > div[style*="min-width:240px"] .game-card { height: auto; }
+  .slider-card-wrap .game-cover { height: 130px; }
+  .slider-card-wrap .game-card { height: auto; }
 }
 
 /* Visitor / filter buttons */
