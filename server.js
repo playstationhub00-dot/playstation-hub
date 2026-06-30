@@ -1361,6 +1361,26 @@ app.get('/admin/mongo-status', requireAuth, async (req, res) => {
 
 // ── Meta / Facebook Product Catalog Feed ──────────────────────────────────────
 // Give Meta this URL: https://your-railway-domain.up.railway.app/feed/meta.csv
+app.get('/api/games-export', requireAuth, (req, res) => {
+  const cats = getPriceCategories();
+  const catMap = {};
+  cats.forEach(c => { catMap[c.id] = c; });
+  function resolve(g) {
+    if (!g.price_category_id) return g;
+    const cat = catMap[g.price_category_id];
+    if (!cat) return g;
+    return Object.assign({}, g, {
+      nt_price_10d: cat.nt_price_10d || g.nt_price_10d,
+      nt_price_15d: cat.nt_price_15d || g.nt_price_15d,
+      nt_price_30d: cat.nt_price_30d || g.nt_price_30d,
+      tr_price_10d: cat.tr_price_10d || g.tr_price_10d,
+      tr_price_15d: cat.tr_price_15d || g.tr_price_15d,
+      tr_price_30d: cat.tr_price_30d || g.tr_price_30d,
+    });
+  }
+  res.json({ games: getGames().map(resolve), upcoming: getUpcoming() });
+});
+
 app.get('/feed/meta.csv', (req, res) => {
   const siteUrl = process.env.SITE_URL || 'https://your-domain.up.railway.app';
   const games = getGames().filter(g => !g.upcoming);
