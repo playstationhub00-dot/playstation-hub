@@ -104,7 +104,11 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🏆</span>
               <span class="gd-type-name">Trophy</span>
-              <span class="gd-type-status" style="background:rgba(161,122,40,0.2);color:#ffc400;">Coming Soon</span>
+              <% if (trSlots > 0) { %>
+                <span class="gd-type-status gd-status-avail"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> available</span>
+              <% } else { %>
+                <span class="gd-type-status gd-status-rented">Reserved</span>
+              <% } %>
             </div>
             <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
           </div>
@@ -118,7 +122,11 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🎮</span>
               <span class="gd-type-name">Non-Trophy</span>
-              <span class="gd-type-status" style="background:rgba(161,122,40,0.2);color:#ffc400;">Coming Soon</span>
+              <% if (ntSlots > 0) { %>
+                <span class="gd-type-status gd-status-avail"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> available</span>
+              <% } else { %>
+                <span class="gd-type-status gd-status-rented">Reserved</span>
+              <% } %>
             </div>
             <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
           </div>
