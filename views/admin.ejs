@@ -1331,6 +1331,147 @@
 
       </div></div><!-- /accordion dashboard -->
 
+    <!-- Message Blast -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f43f5e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(244,63,94,0.15);">📢</div>
+          <div><div class="sa-title">Message Blast</div><div class="sa-desc">Generate personalized messages for past customers</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="padding:1.25rem;">
+
+      <!-- Stats bar -->
+      <%
+        const doneC = customers.filter(c => c.status === 'done');
+        const uniqueNames = [...new Set(doneC.map(c => c.customer_name))];
+        const blastData = uniqueNames.map(name => {
+          const records = doneC.filter(c => c.customer_name === name);
+          const lastGame = records[records.length - 1]?.game_title || '';
+          const totalRentals = records.length;
+          return { name, lastGame, totalRentals };
+        }).sort((a,b) => b.totalRentals - a.totalRentals);
+      %>
+      <div style="display:flex;gap:0.65rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.65rem 1rem;flex:1;min-width:120px;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Past Customers</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#22c55e;"><%= uniqueNames.length %></div>
+        </div>
+        <div style="background:#100a00;border:1px solid #3a2a00;border-radius:10px;padding:0.65rem 1rem;flex:1;min-width:120px;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Total Past Rentals</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#fbbf24;"><%= doneC.length %></div>
+        </div>
+        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.65rem 1rem;flex:2;min-width:180px;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">💡</div>
+          <div style="font-size:0.75rem;color:#555;line-height:1.5;">Copy a customer's message and paste it in <strong style="color:#aaa;">Facebook Messenger</strong> to reach them individually.</div>
+        </div>
+      </div>
+
+      <!-- Message Template Composer -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.5rem;">Message Template</label>
+        <div style="font-size:0.72rem;color:#555;margin-bottom:0.5rem;">Use <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{name}</code> and <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{game}</code> as placeholders.</div>
+        <textarea id="blastTemplate" rows="5" style="width:100%;background:#111;border:1px solid #333;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.85rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;">Hey {name}! 👋
+
+Kamusta na? Just wanted to reach out — we have new games available at PlayStation Hub! 🎮
+
+Last time you rented {game} — we've got even more titles now including PS5 exclusives!
+
+We also have a new Permanent Access option if you want to own a game slot forever 🔓
+
+Check it out: https://playstation-hub-production.up.railway.app
+
+Message us anytime to reserve your slot! 😊</textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+          <button onclick="generateBlast()" style="background:linear-gradient(135deg,#f43f5e,#e11d48);color:#fff;border:none;border-radius:8px;padding:0.55rem 1.1rem;font-weight:700;font-size:0.82rem;cursor:pointer;">⚡ Generate Messages</button>
+          <button onclick="copyAllNames()" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 1.1rem;font-weight:700;font-size:0.82rem;cursor:pointer;">📋 Copy All Names</button>
+          <button onclick="filterBlast('all')" id="blastFilterAll" style="background:var(--ps-blue);color:#000;border:none;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">All</button>
+          <button onclick="filterBlast('top')" id="blastFilterTop" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">Top Renters</button>
+          <input type="text" id="blastSearch" oninput="filterBlastSearch(this.value)" placeholder="Search name..." style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;padding:0.5rem 0.85rem;font-size:0.82rem;flex:1;min-width:140px;">
+        </div>
+      </div>
+
+      <!-- Copied toast -->
+      <div id="blastToast" style="display:none;background:#22c55e;color:#000;font-weight:700;font-size:0.8rem;padding:0.4rem 1rem;border-radius:20px;text-align:center;margin-bottom:0.75rem;">✅ Copied!</div>
+
+      <!-- Customer List -->
+      <div id="blastList" style="display:flex;flex-direction:column;gap:0.5rem;max-height:520px;overflow-y:auto;">
+        <% blastData.forEach((c, i) => { %>
+        <div class="blast-row" data-name="<%= c.name.toLowerCase() %>" data-rentals="<%= c.totalRentals %>"
+          style="background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;">
+          <div style="font-size:0.75rem;font-weight:900;color:#333;min-width:22px;text-align:right;">#<%= i+1 %></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><%= c.name %></div>
+            <div style="font-size:0.7rem;color:#555;margin-top:0.1rem;">Last: <%= c.lastGame %> &nbsp;·&nbsp; <%= c.totalRentals %> rental<%= c.totalRentals !== 1 ? 's' : '' %></div>
+          </div>
+          <button onclick="copyBlastMsg('<%= c.name.replace(/'/g,"\\'") %>','<%= c.lastGame.replace(/'/g,"\\'") %>')"
+            style="background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            📋 Copy Msg
+          </button>
+          <a href="http://m.me/PlaystationHub00" target="_blank"
+            style="background:var(--ps-blue);color:#000;border:none;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;flex-shrink:0;">
+            📘 FB
+          </a>
+        </div>
+        <% }) %>
+        <% if (blastData.length === 0) { %>
+        <div style="text-align:center;padding:2rem;color:#333;font-size:0.85rem;">No past customers yet.</div>
+        <% } %>
+      </div>
+
+      <script>
+      const _blastData = <%- JSON.stringify(blastData) %>;
+
+      function generateBlast() {
+        const tmpl = document.getElementById('blastTemplate').value;
+        document.querySelectorAll('.blast-preview').forEach(e => e.remove());
+        showBlastToast('⚡ Messages ready — click Copy Msg on each customer!');
+      }
+
+      function copyBlastMsg(name, game) {
+        const tmpl = document.getElementById('blastTemplate').value;
+        const msg = tmpl.replace(/\{name\}/g, name).replace(/\{game\}/g, game || 'a game');
+        navigator.clipboard.writeText(msg).then(() => showBlastToast('✅ Copied message for ' + name + '!'));
+      }
+
+      function copyAllNames() {
+        const rows = document.querySelectorAll('.blast-row:not([style*="display: none"]):not([style*="display:none"])');
+        const names = [...rows].map(r => r.querySelector('[style*="font-weight:700"]')?.textContent?.trim()).filter(Boolean);
+        navigator.clipboard.writeText(names.join('\n')).then(() => showBlastToast('✅ Copied ' + names.length + ' names!'));
+      }
+
+      function showBlastToast(msg) {
+        const t = document.getElementById('blastToast');
+        t.textContent = msg; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2500);
+      }
+
+      let _blastFilter = 'all';
+      function filterBlast(type) {
+        _blastFilter = type;
+        document.getElementById('blastFilterAll').style.background = type === 'all' ? 'var(--ps-blue)' : '#1a1a1a';
+        document.getElementById('blastFilterAll').style.color = type === 'all' ? '#000' : '#aaa';
+        document.getElementById('blastFilterTop').style.background = type === 'top' ? 'var(--ps-blue)' : '#1a1a1a';
+        document.getElementById('blastFilterTop').style.color = type === 'top' ? '#000' : '#aaa';
+        applyBlastFilters();
+      }
+
+      function filterBlastSearch(q) { applyBlastFilters(q); }
+
+      function applyBlastFilters(q) {
+        q = (q || document.getElementById('blastSearch').value || '').toLowerCase().trim();
+        document.querySelectorAll('.blast-row').forEach(row => {
+          const nameMatch = !q || row.dataset.name.includes(q);
+          const topMatch = _blastFilter !== 'top' || parseInt(row.dataset.rentals) >= 3;
+          row.style.display = (nameMatch && topMatch) ? '' : 'none';
+        });
+      }
+      </script>
+
+    </div>
+      </div></div><!-- /accordion message-blast -->
+
     <!-- Import Customers from Excel -->
     <div class="settings-accordion">
       <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #818cf8;">
