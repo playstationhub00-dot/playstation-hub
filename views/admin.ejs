@@ -1119,113 +1119,123 @@
       </div>
       <div class="settings-accordion-body open">
     <div style="margin-bottom:0;">
-      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
-        <span style="font-size:1.1rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
-        <span style="font-size:0.72rem;color:#444;margin-left:auto;">as of <%= now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <span style="font-size:1.05rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
+        <span style="font-size:0.7rem;color:#444;">as of <%= now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
       </div>
 
-      <!-- KPI row -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:0.75rem;">
-        <div style="background:linear-gradient(135deg,#0a1a0a,#061006);border:1px solid #1a3a1a;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#22c55e;">₱<%= totalRevenue.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= customers.length %> transactions</div>
+      <!-- KPI Row 1 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#22c55e;line-height:1.1;">₱<%= totalRevenue.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= customers.length %> transactions</div>
         </div>
-        <div style="background:linear-gradient(135deg,#1a0800,#100500);border:1px solid #3a1a00;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Game Costs</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#f59e0b;">₱<%= totalGameCosts.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> in library</div>
+        <div style="background:#1a0800;border:1px solid #3a1a00;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Game Costs</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#f59e0b;line-height:1.1;">₱<%= totalGameCosts.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= games.length %> games in library</div>
         </div>
-        <div style="background:linear-gradient(135deg,<%= netProfit >= 0 ? '#060a18,#03060f' : '#1a0606,#0f0303' %>);border:1px solid <%= netProfit >= 0 ? '#1a2a4a' : '#3a1a1a' %>;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Net Profit</div>
-          <div style="font-size:1.6rem;font-weight:900;color:<%= netProfit >= 0 ? 'var(--ps-blue)' : '#ef4444' %>;">₱<%= netProfit.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;">Earned − Game Costs</div>
-        </div>
-      </div>
-      <!-- KPI row 2 -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.75rem;margin-bottom:0.75rem;">
-        <div style="background:linear-gradient(135deg,#100a00,#0a0800);border:1px solid #3a2a00;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">This Month</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#fbbf24;">₱<%= monthRevenue.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= monthCustomers.length %> customer<%= monthCustomers.length !== 1 ? 's' : '' %></div>
-        </div>
-        <div style="background:linear-gradient(135deg,#0a0f1a,#060a10);border:1px solid #1a2a3a;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Sales</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#a78bfa;">₱<%= rentRevenue.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= customers.length - boughtCustomers.length %> rentals</div>
-        </div>
-        <div style="background:linear-gradient(135deg,#0f0a1a,#080610);border:1px solid #2a1a3a;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
-          <div style="font-size:1.6rem;font-weight:900;color:#60a5fa;">₱<%= buyRevenue.toLocaleString() %></div>
-          <div style="font-size:0.7rem;color:#444;margin-top:0.2rem;"><%= boughtCustomers.length %> game<%= boughtCustomers.length !== 1 ? 's' : '' %> sold</div>
+        <div style="background:<%= netProfit >= 0 ? '#060a18' : '#1a0606' %>;border:1px solid <%= netProfit >= 0 ? '#1a2a4a' : '#3a1a1a' %>;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Net Profit</div>
+          <div style="font-size:1.55rem;font-weight:900;color:<%= netProfit >= 0 ? 'var(--ps-blue)' : '#ef4444' %>;line-height:1.1;">₱<%= netProfit.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= totalRevenue > 0 ? Math.round((netProfit/totalRevenue)*100) : 0 %>% margin</div>
         </div>
       </div>
 
-      <!-- Status + overdue row -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.75rem;margin-bottom:0.75rem;">
-        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
-          <div style="font-size:1.5rem;">🟢</div>
-          <div><div style="font-size:1.4rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Currently Renting</div></div>
+      <!-- KPI Row 2 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
+        <div style="background:#100a00;border:1px solid #3a2a00;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">This Month</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#fbbf24;line-height:1.1;">₱<%= monthRevenue.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= monthCustomers.length %> customer<%= monthCustomers.length !== 1 ? 's' : '' %> so far</div>
         </div>
-        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
-          <div style="font-size:1.5rem;">🔖</div>
-          <div><div style="font-size:1.4rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Reservations</div></div>
+        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Revenue</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#a78bfa;line-height:1.1;">₱<%= rentRevenue.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= customers.length - boughtCustomers.length %> rentals · <%= totalRevenue > 0 ? Math.round((rentRevenue/totalRevenue)*100) : 0 %>% of total</div>
         </div>
-        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
-          <div style="font-size:1.5rem;">🛒</div>
-          <div><div style="font-size:1.4rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Bought Games</div></div>
-        </div>
-        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
-          <div style="font-size:1.5rem;">✅</div>
-          <div><div style="font-size:1.4rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Completed</div></div>
-        </div>
-        <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1a1a1a' %>;border-radius:10px;padding:0.85rem;display:flex;align-items:center;gap:0.75rem;">
-          <div style="font-size:1.5rem;">⚠️</div>
-          <div><div style="font-size:1.4rem;font-weight:900;color:<%= overdueCustomers.length > 0 ? '#ef4444' : '#555' %>;line-height:1;"><%= overdueCustomers.length %></div><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;">Overdue</div></div>
+        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;">₱<%= buyRevenue.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= boughtCustomers.length %> game<%= boughtCustomers.length !== 1 ? 's' : '' %> sold · <%= totalRevenue > 0 ? Math.round((buyRevenue/totalRevenue)*100) : 0 %>% of total</div>
         </div>
       </div>
 
-      <!-- Charts row: monthly bar + top games -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <!-- Status Row -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.65rem;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🟢</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Renting Now</div></div>
+        </div>
+        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🔖</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Reservations</div></div>
+        </div>
+        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🛒</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Games Sold</div></div>
+        </div>
+        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">✅</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Completed</div></div>
+        </div>
+        <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1e1e1e' %>;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">⚠️</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:<%= overdueCustomers.length > 0 ? '#ef4444' : '#555' %>;line-height:1;"><%= overdueCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Overdue</div></div>
+        </div>
+      </div>
 
-        <!-- Monthly Revenue Bar Chart -->
-        <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue (Last 6 Months)</div>
-          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:90px;">
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:0.65rem;margin-bottom:0.65rem;">
+
+        <!-- Monthly Bar Chart -->
+        <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — Last 6 Months</div>
+          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:110px;" id="dashBarChart">
             <% monthLabels.forEach((lbl, i) => {
-              const pct = Math.round((monthRevs[i] / maxMonthRev) * 100);
+              const pct = Math.max(Math.round((monthRevs[i] / maxMonthRev) * 100), 3);
               const isLast = i === monthLabels.length - 1;
+              const isPeak = monthRevs[i] === maxMonthRev && maxMonthRev > 0;
+              const barColor = isPeak ? '#3b82f6' : isLast ? '#22c55e' : '#2a2a2a';
+              const valColor = isPeak ? '#3b82f6' : isLast ? '#22c55e' : '#555';
             %>
             <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem;height:100%;">
               <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
-                <div style="width:100%;height:<%= Math.max(pct,3) %>%;background:<%= isLast ? 'var(--ps-blue)' : '#2a2a2a' %>;border-radius:4px 4px 0 0;min-height:3px;transition:height 0.3s;"
-                  title="₱<%= monthRevs[i].toLocaleString() %>"></div>
+                <div style="width:100%;height:<%= pct %>%;background:<%= barColor %>;border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;"
+                  onmouseenter="showDashTip(event,'<%= lbl %>: ₱<%= monthRevs[i].toLocaleString() %>')"
+                  onmouseleave="hideDashTip()"
+                  onmousemove="moveDashTip(event)"></div>
               </div>
-              <div style="font-size:0.6rem;color:#444;white-space:nowrap;"><%= lbl %></div>
+              <div style="font-size:0.58rem;color:#444;white-space:nowrap;"><%= lbl %></div>
               <% if (monthRevs[i] > 0) { %>
-              <div style="font-size:0.6rem;color:<%= isLast ? 'var(--ps-blue)' : '#555' %>;font-weight:700;">₱<%= monthRevs[i] >= 1000 ? (monthRevs[i]/1000).toFixed(1)+'k' : monthRevs[i] %></div>
-              <% } %>
+              <div style="font-size:0.58rem;font-weight:700;color:<%= valColor %>;">₱<%= monthRevs[i] >= 1000 ? (monthRevs[i]/1000).toFixed(1)+'k' : monthRevs[i] %></div>
+              <% } else { %><div style="font-size:0.58rem;"> </div><% } %>
             </div>
             <% }) %>
           </div>
         </div>
 
         <!-- Top Games -->
-        <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
+        <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
           <% if (topGames.length === 0) { %>
             <div style="color:#333;font-size:0.8rem;text-align:center;padding:1.5rem 0;">No data yet</div>
-          <% } else { %>
-          <div style="display:flex;flex-direction:column;gap:0.5rem;">
-            <% const maxCount = topGames[0][1]; %>
+          <% } else {
+            const maxCount = topGames[0][1];
+            const medals = ['🥇','🥈','🥉'];
+          %>
+          <div style="display:flex;flex-direction:column;gap:0.55rem;">
             <% topGames.forEach(([title, count], i) => { %>
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">
-                <div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;"><%= i+1 %>. <%= title %></div>
-                <div style="font-size:0.72rem;font-weight:700;color:var(--ps-blue);"><%= count %>x</div>
+                <div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%;"><%= medals[i] || (i+1)+'.' %> <%= title %></div>
+                <div style="font-size:0.72rem;font-weight:800;color:#3b82f6;"><%= count %>x</div>
               </div>
               <div style="background:#1a1a1a;border-radius:3px;height:5px;">
-                <div style="width:<%= Math.round((count/maxCount)*100) %>%;height:100%;background:var(--ps-blue);border-radius:3px;"></div>
+                <div style="width:<%= Math.round((count/maxCount)*100) %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;"></div>
               </div>
             </div>
             <% }) %>
@@ -1234,6 +1244,58 @@
         </div>
 
       </div>
+
+      <!-- Insight Pills -->
+      <%
+        const sortedRevs = [...monthRevs];
+        const peakIdx = sortedRevs.indexOf(Math.max(...sortedRevs));
+        const peakMonth = monthLabels[peakIdx] || '';
+        const peakVal = Math.max(...monthRevs);
+        const prevMonthRev = monthRevs[monthRevs.length - 2] || 0;
+        const currMonthRev = monthRevs[monthRevs.length - 1] || 0;
+        const rentPct = totalRevenue > 0 ? Math.round((rentRevenue/totalRevenue)*100) : 0;
+      %>
+      <div style="display:flex;flex-direction:column;gap:0.45rem;">
+        <% if (peakVal > 0) { %>
+        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
+          <span style="flex-shrink:0;">📈</span>
+          <span><strong style="color:#fff;">Best month: <%= peakMonth %></strong> — ₱<%= peakVal.toLocaleString() %>. Identify what worked and repeat it.</span>
+        </div>
+        <% } %>
+        <% if (overdueCustomers.length > 0) { %>
+        <div style="background:#1a0a0a;border:1px solid #3a1a1a;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
+          <span style="flex-shrink:0;">⚠️</span>
+          <span><strong style="color:#ef4444;"><%= overdueCustomers.length %> overdue rental<%= overdueCustomers.length !== 1 ? 's' : '' %></strong> — follow up immediately to recover games or collect late fees.</span>
+        </div>
+        <% } %>
+        <% if (rentPct > 90) { %>
+        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
+          <span style="flex-shrink:0;">💰</span>
+          <span><strong style="color:#fff;">Game sales are only <%= 100 - rentPct %>% of revenue</strong> — push buy options to returning renters to grow this.</span>
+        </div>
+        <% } %>
+        <% if (topGames.length > 0) { %>
+        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
+          <span style="flex-shrink:0;">🎮</span>
+          <span><strong style="color:#fff;"><%= topGames[0][0] %> is your #1 game</strong> — <%= topGames[0][1] %>x rented/sold. Keep it stocked and front-and-center on your site.</span>
+        </div>
+        <% } %>
+        <% if (doneCustomers.length > activeCustomers.length * 5) { %>
+        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
+          <span style="flex-shrink:0;">📉</span>
+          <span><strong style="color:#fff;"><%= doneCustomers.length %> past customers</strong> vs <%= activeCustomers.length %> active — most renters don't return. A Messenger follow-up campaign could recover many of them.</span>
+        </div>
+        <% } %>
+      </div>
+
+      <!-- Tooltip -->
+      <div id="dashTip" style="position:fixed;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:0.4rem 0.65rem;font-size:0.72rem;color:#fff;pointer-events:none;z-index:9999;display:none;white-space:nowrap;"></div>
+      <script>
+        function showDashTip(e, text) { var t=document.getElementById('dashTip'); t.textContent=text; t.style.display='block'; moveDashTip(e); }
+        function hideDashTip() { document.getElementById('dashTip').style.display='none'; }
+        function moveDashTip(e) { var t=document.getElementById('dashTip'); t.style.left=(e.clientX+12)+'px'; t.style.top=(e.clientY-28)+'px'; }
+      </script>
+
     </div>
 
       </div></div><!-- /accordion dashboard -->
