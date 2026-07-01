@@ -21,7 +21,6 @@
 </nav>
 
 <%
-  const promo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
   const ntSlots  = game.non_trophy_slots || 0;
   const trSlots  = game.trophy_slots || 0;
   const ps4Slots = game.ps4_primary_slots || 0;
@@ -30,6 +29,12 @@
   const trAvail = trSlots > 0;
   const ntAvail = ntSlots > 0;
   const allUnavail = ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0);
+  const buyNt = game.buy_nt_price || 0;
+  const buyTr = game.buy_tr_price || 0;
+  const hasBuy = buyNt > 0 || buyTr > 0;
+  const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
+  const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;
+  const buyTrFinal = buyPromo ? Math.round(buyTr * (1 - promo.buy_promo_pct / 100)) : buyTr;
 %>
 
 <div class="gd-page">
@@ -48,7 +53,6 @@
           </svg>
         </div>
       <% } %>
-      <!-- Platform badge -->
       <div class="gd-platform-badge"><%= game.platform %></div>
     </div>
 
@@ -64,203 +68,147 @@
       <h1 class="gd-title"><%= game.title %></h1>
       <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
 
-      <% if (allUnavail) { %>
-
-      <!-- NO SLOT — Reservation options -->
-      <div class="gd-noslot-banner">
-        <span class="gd-noslot-icon">⏳</span>
-        <div>
-          <div class="gd-noslot-title">No Slots Available Right Now</div>
-          <div class="gd-noslot-sub">All slots for this game are currently rented. Pick your preferred type and duration, then choose how you'd like to get in line.</div>
-        </div>
-      </div>
-
-      <!-- SELECT RENTAL TYPE -->
-      <div class="gd-section-label" style="margin-top:1.25rem;">SELECT RENTAL TYPE</div>
-      <div class="gd-type-options" id="typeOptions">
-
-        <% if (hasTrophy) { %>
-        <label class="gd-type-card" id="label-tr">
-          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🏆</span>
-              <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
-              <span class="gd-type-status gd-status-rented">Reserved</span>
-            </div>
-            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
-            <% if (game.tr_days_left != null && game.tr_days_left > 0) { %>
-            <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
-            <% } %>
-          </div>
-        </label>
+      <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
+      <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
+        <button id="toggleRent" onclick="setMode('rent')"
+          style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:var(--ps-blue);color:#000;transition:all 0.15s;letter-spacing:0.3px;">
+          ⏱️ Rent
+        </button>
+        <% if (hasBuy) { %>
+        <button id="toggleBuy" onclick="setMode('buy')"
+          style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:transparent;color:#555;transition:all 0.15s;letter-spacing:0.3px;">
+          ♾️ Buy Permanent
+        </button>
         <% } %>
-
-        <label class="gd-type-card" id="label-nt">
-          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🎮</span>
-              <span class="gd-type-name">Non-Trophy</span>
-              <span class="gd-type-status gd-status-rented">Reserved</span>
-            </div>
-            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
-            <% if (game.nt_days_left != null && game.nt_days_left > 0) { %>
-            <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
-            <% } %>
-          </div>
-        </label>
-
       </div>
 
-      <!-- SELECT DURATION -->
-      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
-      <div class="gd-duration-grid" id="durationGrid">
-        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
-          <span class="gd-dur-days">10</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-10">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
-          <span class="gd-dur-days">15</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-15">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
-          <span class="gd-dur-days">30</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-30">—</span>
-          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
-        </button>
-      </div>
+      <!-- ════════════════════════════════
+           RENT PANEL
+           ════════════════════════════════ -->
+      <div id="rentPanel">
 
-      <!-- TOTAL BREAKDOWN -->
-      <div class="gd-total-box" id="totalBox" style="display:none;">
-        <div class="gd-total-label">ORDER SUMMARY</div>
-        <div class="gd-total-rows" id="totalRows"></div>
-        <div class="gd-total-final">
-          <span>Total</span>
-          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
-        </div>
-      </div>
-
-      <!-- CHOOSE OPTION -->
-      <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-
-      <div class="gd-reserve-options">
-
-        <!-- Priority Reservation -->
-        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event, 'reserve')">
-          <div class="gd-reserve-badge">PRIORITY</div>
-          <div class="gd-reserve-icon">⭐</div>
-          <div class="gd-reserve-name">Reservation</div>
-          <div class="gd-reserve-fee">₱100 fee</div>
-          <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
-          <div class="gd-reserve-cta">📘 Reserve Now →</div>
-        </a>
-
-        <!-- Fall in Line -->
-        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event, 'queue')">
-          <div class="gd-reserve-icon">🎮</div>
-          <div class="gd-reserve-name">Fall in Line</div>
-          <div class="gd-reserve-fee">FREE</div>
-          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot is available.</div>
-          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-        </a>
-
-      </div>
-      <div id="reserveValidationMsg1" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
-
-      <% } else { %>
-
-      <!-- SELECT RENTAL TYPE -->
-      <div class="gd-section-label">SELECT RENTAL TYPE</div>
-      <div class="gd-type-options" id="typeOptions">
-
-        <% if (hasTrophy) { %>
-        <label class="gd-type-card" id="label-tr">
-          <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🏆</span>
-              <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
-              <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Reserved' %></span>
-            </div>
-            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
-            <% if (!trAvail && game.tr_days_left != null && game.tr_days_left > 0) { %>
-            <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
-            <% } %>
-          </div>
-        </label>
-        <% } %>
-
-        <label class="gd-type-card" id="label-nt">
-          <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🎮</span>
-              <span class="gd-type-name">Non-Trophy</span>
-              <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Reserved' %></span>
-            </div>
-            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
-            <% if (!ntAvail && game.nt_days_left != null && game.nt_days_left > 0) { %>
-            <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
-            <% } %>
-          </div>
-        </label>
-
-      </div>
-
-      <!-- SELECT DURATION -->
-      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
-      <div class="gd-duration-grid" id="durationGrid">
-        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
-          <span class="gd-dur-days">10</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-10">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
-          <span class="gd-dur-days">15</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-15">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
-          <span class="gd-dur-days">30</span>
-          <span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-30">—</span>
-          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
-        </button>
-      </div>
-
-      <!-- TOTAL BREAKDOWN -->
-      <div class="gd-total-box" id="totalBox" style="display:none;">
-        <div class="gd-total-label">ORDER SUMMARY</div>
-        <div class="gd-total-rows" id="totalRows"></div>
-        <div class="gd-total-final">
-          <span>Total</span>
-          <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
-        </div>
-      </div>
-
-      <!-- CTA: Message Us (shown when selected type has a slot) -->
-      <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
-        📘 Message Us on Facebook
-      </a>
-      <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
-      <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
-
-      <!-- CTA: Reserve options (shown when selected type has no slot) -->
-      <div id="reserveSection" style="display:none;">
-        <div class="gd-noslot-banner" style="margin-top:0.5rem;">
+        <% if (allUnavail) { %>
+        <!-- NO SLOT banner -->
+        <div class="gd-noslot-banner">
           <span class="gd-noslot-icon">⏳</span>
           <div>
-            <div class="gd-noslot-title">This type has no slot right now</div>
-            <div class="gd-noslot-sub">Choose how you'd like to get in line for this account type.</div>
+            <div class="gd-noslot-title">No Slots Available Right Now</div>
+            <div class="gd-noslot-sub">All slots for this game are currently rented. Pick your preferred type and duration, then choose how you'd like to get in line.</div>
           </div>
         </div>
-        <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
+        <% } %>
+
+        <!-- SELECT RENTAL TYPE -->
+        <div class="gd-section-label" style="margin-top:<%= allUnavail ? '1.25rem' : '0' %>;">SELECT RENTAL TYPE</div>
+        <div class="gd-type-options" id="typeOptions">
+
+          <% if (hasTrophy) { %>
+          <label class="gd-type-card" id="label-tr">
+            <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
+            <div class="gd-type-body">
+              <div class="gd-type-header">
+                <span class="gd-type-icon">🏆</span>
+                <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
+                <span class="gd-type-status <%= allUnavail ? 'gd-status-rented' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= allUnavail ? 'Reserved' : (trAvail ? 'Available' : 'Reserved') %></span>
+              </div>
+              <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+              <% if (!trAvail && game.tr_days_left != null && game.tr_days_left > 0) { %>
+              <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
+              <% } %>
+            </div>
+          </label>
+          <% } %>
+
+          <label class="gd-type-card" id="label-nt">
+            <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
+            <div class="gd-type-body">
+              <div class="gd-type-header">
+                <span class="gd-type-icon">🎮</span>
+                <span class="gd-type-name">Non-Trophy</span>
+                <span class="gd-type-status <%= allUnavail ? 'gd-status-rented' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= allUnavail ? 'Reserved' : (ntAvail ? 'Available' : 'Reserved') %></span>
+              </div>
+              <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+              <% if (!ntAvail && game.nt_days_left != null && game.nt_days_left > 0) { %>
+              <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
+              <% } %>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- SELECT DURATION -->
+        <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
+        <div class="gd-duration-grid" id="durationGrid">
+          <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
+            <span class="gd-dur-days">10</span>
+            <span class="gd-dur-label">DAYS</span>
+            <span class="gd-dur-price" id="price-10">—</span>
+          </button>
+          <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
+            <span class="gd-dur-days">15</span>
+            <span class="gd-dur-label">DAYS</span>
+            <span class="gd-dur-price" id="price-15">—</span>
+          </button>
+          <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
+            <span class="gd-dur-days">30</span>
+            <span class="gd-dur-label">DAYS</span>
+            <span class="gd-dur-price" id="price-30">—</span>
+            <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
+          </button>
+        </div>
+
+        <!-- TOTAL BREAKDOWN -->
+        <div class="gd-total-box" id="totalBox" style="display:none;">
+          <div class="gd-total-label">ORDER SUMMARY</div>
+          <div class="gd-total-rows" id="totalRows"></div>
+          <div class="gd-total-final">
+            <span>Total</span>
+            <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+          </div>
+        </div>
+
+        <% if (!allUnavail) { %>
+        <!-- CTA: Message Us (available slot) -->
+        <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
+          📘 Message Us on Facebook
+        </a>
+        <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+        <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+
+        <!-- CTA: Reserve options (no slot) -->
+        <div id="reserveSection" style="display:none;">
+          <div class="gd-noslot-banner" style="margin-top:0.5rem;">
+            <span class="gd-noslot-icon">⏳</span>
+            <div>
+              <div class="gd-noslot-title">This type has no slot right now</div>
+              <div class="gd-noslot-sub">Choose how you'd like to get in line for this account type.</div>
+            </div>
+          </div>
+          <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
+          <div class="gd-reserve-options">
+            <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
+              <div class="gd-reserve-badge">PRIORITY</div>
+              <div class="gd-reserve-icon">⭐</div>
+              <div class="gd-reserve-name">Reservation</div>
+              <div class="gd-reserve-fee">₱100 fee</div>
+              <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
+              <div class="gd-reserve-cta">📘 Reserve Now →</div>
+            </a>
+            <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+              <div class="gd-reserve-icon">🎮</div>
+              <div class="gd-reserve-name">Fall in Line</div>
+              <div class="gd-reserve-fee">FREE</div>
+              <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot is available.</div>
+              <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+            </a>
+          </div>
+          <div id="reserveValidationMsg2" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        </div>
+        <% } else { %>
+        <!-- All unavail: reservation options shown directly -->
+        <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
         <div class="gd-reserve-options">
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event, 'reserve')">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
             <div class="gd-reserve-badge">PRIORITY</div>
             <div class="gd-reserve-icon">⭐</div>
             <div class="gd-reserve-name">Reservation</div>
@@ -268,7 +216,7 @@
             <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
             <div class="gd-reserve-cta">📘 Reserve Now →</div>
           </a>
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event, 'queue')">
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
             <div class="gd-reserve-icon">🎮</div>
             <div class="gd-reserve-name">Fall in Line</div>
             <div class="gd-reserve-fee">FREE</div>
@@ -276,10 +224,89 @@
             <div class="gd-reserve-cta">📘 Join Waitlist →</div>
           </a>
         </div>
-        <div id="reserveValidationMsg2" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
-      </div>
+        <div id="reserveValidationMsg1" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        <% } %>
 
+      </div><!-- /rentPanel -->
+
+      <!-- ════════════════════════════════
+           BUY PERMANENT PANEL
+           ════════════════════════════════ -->
+      <% if (hasBuy) { %>
+      <div id="buyPanel" style="display:none;">
+
+        <!-- Promo badge -->
+        <% if (buyPromo) { %>
+        <div style="background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;border-radius:10px;padding:0.6rem 1rem;font-size:0.85rem;font-weight:800;text-align:center;margin-bottom:1.25rem;letter-spacing:0.3px;">
+          🎉 <%= promo.buy_promo_pct %>% OFF Permanent Access — Limited Time!
+        </div>
+        <% } %>
+
+        <div class="gd-section-label" style="margin-top:0;">SELECT ACCOUNT TYPE</div>
+
+        <!-- NT Buy card -->
+        <% if (buyNt > 0) { %>
+        <div class="gd-type-card" id="buyNtCard" onclick="selectBuyType('nt')" style="cursor:pointer;margin-bottom:0.75rem;border-color:#222;">
+          <div style="display:none;"><input type="radio" name="buyType" value="nt" id="buyRadioNt"></div>
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy — Permanent Access</span>
+            </div>
+            <div class="gd-type-desc">Played on our account. No trophy tracking. One-time payment, lifetime access.</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+              <% if (buyPromo) { %>
+                <span style="font-size:0.85rem;color:#555;text-decoration:line-through;">₱<%= buyNt %></span>
+              <% } %>
+              <span style="font-size:1.5rem;font-weight:900;color:#22c55e;">₱<%= buyNtFinal %></span>
+              <span style="font-size:0.72rem;color:#555;background:#1a1a1a;padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- TR Buy card -->
+        <% if (buyTr > 0 && hasTrophy) { %>
+        <div class="gd-type-card" id="buyTrCard" onclick="selectBuyType('tr')" style="cursor:pointer;margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
+          <div style="display:none;"><input type="radio" name="buyType" value="tr" id="buyRadioTr"></div>
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
+            </div>
+            <div class="gd-type-desc" style="color:#886600;">Earn trophies on your own PSN account. Play at your own pace forever.</div>
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+              <% if (buyPromo) { %>
+                <span style="font-size:0.85rem;color:#664d00;text-decoration:line-through;">₱<%= buyTr %></span>
+              <% } %>
+              <span style="font-size:1.5rem;font-weight:900;color:#ffc400;">₱<%= buyTrFinal %></span>
+              <span style="font-size:0.72rem;color:#664d00;background:rgba(255,196,0,0.1);padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- What you get -->
+        <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem;">What You Get</div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
+            <div>♾️ &nbsp;Permanent access — no time limit</div>
+            <div>🔓 &nbsp;Play anytime, as many times as you want</div>
+            <div>💬 &nbsp;Message us and we'll set it up for you</div>
+          </div>
+        </div>
+
+        <!-- Buy CTA -->
+        <a id="buyCtaBtn" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+          style="display:block;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;font-weight:800;font-size:1rem;text-align:center;padding:1rem;border-radius:12px;text-decoration:none;letter-spacing:0.3px;margin-bottom:0.5rem;"
+          onclick="return handleBuyClick(event)">
+          📘 Buy Permanent Access
+        </a>
+        <div id="buyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+
+      </div><!-- /buyPanel -->
       <% } %>
+
     </div>
   </div>
 </div>
@@ -291,6 +318,7 @@ const PRICES = {
   nt: { 10: <%= game.nt_price_10d %>, 15: <%= game.nt_price_15d %>, 30: <%= game.nt_price_30d %> },
   tr: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
 };
+const BUY_PRICES = { nt: <%= buyNtFinal %>, tr: <%= buyTrFinal %> };
 const PROMO = {
   enabled: <%= promo.enabled ? 'true' : 'false' %>,
   discount_pct: <%= promo.discount_pct %>,
@@ -301,7 +329,69 @@ const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' 
 
 let selectedType = null;
 let selectedDays = null;
+let selectedBuyType = null;
+let currentMode = 'rent';
 
+// ── Mode toggle ──
+function setMode(mode) {
+  currentMode = mode;
+  const isRent = mode === 'rent';
+  document.getElementById('rentPanel').style.display = isRent ? 'block' : 'none';
+  const buyPanel = document.getElementById('buyPanel');
+  if (buyPanel) buyPanel.style.display = isRent ? 'none' : 'block';
+  document.getElementById('toggleRent').style.background = isRent ? 'var(--ps-blue)' : 'transparent';
+  document.getElementById('toggleRent').style.color = isRent ? '#000' : '#555';
+  const tb = document.getElementById('toggleBuy');
+  if (tb) { tb.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)'; tb.style.color = isRent ? '#555' : '#fff'; }
+}
+
+// ── Buy type selection ──
+function selectBuyType(type) {
+  selectedBuyType = type;
+  ['nt','tr'].forEach(t => {
+    const card = document.getElementById('buyNtCard'  .replace('nt', t === 'nt' ? 'Nt' : 'Tr'));
+    // fix: use correct IDs
+  });
+  const ntCard = document.getElementById('buyNtCard');
+  const trCard = document.getElementById('buyTrCard');
+  if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
+  if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
+  updateBuyLink();
+}
+
+function updateBuyLink() {
+  const btn = document.getElementById('buyCtaBtn');
+  if (!btn || !selectedBuyType) return;
+  const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
+  const typeLabel = selectedBuyType === 'tr' ? 'Trophy Account' : 'Non-Trophy Account';
+  const price = BUY_PRICES[selectedBuyType];
+  const msg = [
+    'Hi! I want to BUY PERMANENT ACCESS ♾️',
+    'Game: ' + gameTitle,
+    'Account Type: ' + typeLabel,
+    'Price: ₱' + price
+  ].join('\n');
+  btn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+}
+
+function handleBuyClick(e) {
+  if (!selectedBuyType) {
+    e.preventDefault();
+    const el = document.getElementById('buyValidationMsg');
+    el.textContent = '⚠️ Please select Non-Trophy or Trophy account type first.';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+    // shake cards
+    ['buyNtCard','buyTrCard'].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) { c.style.transform='translateX(4px)'; setTimeout(()=>c.style.transform='',200); }
+    });
+    return false;
+  }
+  return true;
+}
+
+// ── Rent flow ──
 function onTypeChange(radio) {
   selectedType = radio.value;
   document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
@@ -309,7 +399,6 @@ function onTypeChange(radio) {
   updatePrices();
   updateTotal();
   updateReserveLinks();
-  // Swap CTA based on whether selected type has a slot
   const hasSlot = AVAIL[selectedType] !== false;
   const ctaBtn = document.getElementById('ctaBtn');
   const ctaHint = document.getElementById('ctaHint');
@@ -337,19 +426,15 @@ function updatePrices() {
 
 function updateTotal() {
   const box = document.getElementById('totalBox');
-  if (!selectedType || !selectedDays) { box.style.display = 'none'; return; }
-
+  if (!selectedType || !selectedDays) { if(box) box.style.display = 'none'; return; }
   const base = PRICES[selectedType][selectedDays];
   const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
   const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
   const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
   const total    = base - discount + deposit;
-
-  let rows = '';
-  rows += `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
+  let rows = `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
   if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${PROMO.discount_pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
-  if (deposit > 0)  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
-
+  if (deposit  > 0) rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
   document.getElementById('totalRows').innerHTML = rows;
   document.getElementById('totalFinal').textContent = '₱' + total;
   box.style.display = 'block';
@@ -359,73 +444,33 @@ function updateReserveLinks() {
   const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
   const typeLabel = selectedType === 'tr' ? 'Trophy Account' : selectedType === 'nt' ? 'Non-Trophy Account' : '';
   const daysLabel = selectedDays ? selectedDays + ' Days' : '';
-
-  // Compute total for the message
   let totalLine = '';
   if (selectedType && selectedDays) {
     const base = PRICES[selectedType][selectedDays];
     const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
     const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
     const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
-    const total    = base - discount + deposit;
-    totalLine = 'Total: ₱' + total;
+    totalLine = 'Total: ₱' + (base - discount + deposit);
     if (discount > 0) totalLine += ' (incl. ' + PROMO.discount_pct + '% promo discount)';
     if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
   }
-
-  // Message Us button (available slot)
   const ctaBtn = document.getElementById('ctaBtn');
   if (ctaBtn) {
-    const rentMsg = [
-      'Hi! I want to RENT a game 🎮',
-      'Game: ' + gameTitle,
-      typeLabel ? 'Account Type: ' + typeLabel : '',
-      daysLabel ? 'Duration: ' + daysLabel : '',
-      totalLine
-    ].filter(Boolean).join('\n');
-    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(rentMsg);
+    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to RENT a game 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine].filter(Boolean).join('\n'));
   }
-
-  // Priority Reservation button
   const rLink = document.getElementById('reserveLink');
-  if (rLink) {
-    const reserveMsg = [
-      'Hi! I want to PRIORITY RESERVE a slot ⭐',
-      'Game: ' + gameTitle,
-      typeLabel ? 'Account Type: ' + typeLabel : '',
-      daysLabel ? 'Duration: ' + daysLabel : '',
-      totalLine,
-      'Note: I am paying the ₱100 priority reservation fee.'
-    ].filter(Boolean).join('\n');
-    rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(reserveMsg);
-  }
-
-  // Fall in Line button
+  if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to PRIORITY RESERVE a slot ⭐','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine,'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n'));
   const qLink = document.getElementById('queueLink');
-  if (qLink) {
-    const queueMsg = [
-      'Hi! I want to JOIN THE WAITLIST (Fall in Line) 🎮',
-      'Game: ' + gameTitle,
-      typeLabel ? 'Account Type: ' + typeLabel : '',
-      daysLabel ? 'Duration: ' + daysLabel : '',
-      'Please notify me when a slot becomes available.'
-    ].filter(Boolean).join('\n');
-    qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(queueMsg);
-  }
+  if (qLink) qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to JOIN THE WAITLIST (Fall in Line) 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'','Please notify me when a slot becomes available.'].filter(Boolean).join('\n'));
 }
 
 function handleReserveClick(e, type) {
   if (!selectedDays) {
     e.preventDefault();
     const msg = '⚠️ Please select a rental duration (10, 15, or 30 days) before continuing.';
-    // show whichever validation el is visible
     ['reserveValidationMsg1','reserveValidationMsg2'].forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.offsetParent !== null) {
-        el.textContent = msg;
-        el.style.display = 'block';
-        setTimeout(() => { el.style.display = 'none'; }, 4000);
-      }
+      if (el && el.offsetParent !== null) { el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display='none', 4000); }
     });
     highlightDurationGrid();
     return false;
@@ -434,29 +479,18 @@ function handleReserveClick(e, type) {
 }
 
 function handleMessageUs(e) {
-  const validationEl = document.getElementById('ctaValidationMsg');
-  if (!selectedType && !selectedDays) {
-    e.preventDefault();
-    showValidation('Please select an account type and rental duration first.');
-    highlightDurationGrid();
-    return false;
-  }
-  if (!selectedDays) {
-    e.preventDefault();
-    showValidation('Please select a rental duration (10, 15, or 30 days) to continue.');
-    highlightDurationGrid();
-    return false;
-  }
-  if (validationEl) validationEl.style.display = 'none';
+  if (!selectedType && !selectedDays) { e.preventDefault(); showValidation('Please select an account type and rental duration first.'); highlightDurationGrid(); return false; }
+  if (!selectedDays) { e.preventDefault(); showValidation('Please select a rental duration (10, 15, or 30 days) to continue.'); highlightDurationGrid(); return false; }
+  const el = document.getElementById('ctaValidationMsg');
+  if (el) el.style.display = 'none';
   return true;
 }
 
 function showValidation(msg) {
   const el = document.getElementById('ctaValidationMsg');
   if (!el) return;
-  el.textContent = '⚠️ ' + msg;
-  el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 4000);
+  el.textContent = '⚠️ ' + msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4000);
 }
 
 function highlightDurationGrid() {
@@ -466,13 +500,12 @@ function highlightDurationGrid() {
   setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
 }
 
-// Auto-select first available type (prefer available slot, fallback to first)
+// Auto-select first available type on load
 window.addEventListener('DOMContentLoaded', () => {
-  const available = document.querySelector('input[name="rentalType"][value="tr"]') && AVAIL.tr
-    ? document.querySelector('input[name="rentalType"][value="tr"]')
-    : AVAIL.nt ? document.querySelector('input[name="rentalType"][value="nt"]')
-    : document.querySelector('input[name="rentalType"]');
-  if (available) { available.checked = true; onTypeChange(available); }
+  const preferred = (AVAIL.tr ? document.querySelector('input[name="rentalType"][value="tr"]') : null)
+    || (AVAIL.nt ? document.querySelector('input[name="rentalType"][value="nt"]') : null)
+    || document.querySelector('input[name="rentalType"]');
+  if (preferred) { preferred.checked = true; onTypeChange(preferred); }
   updateReserveLinks();
 });
 </script>

@@ -596,7 +596,9 @@ app.get('/game/:slug', (req, res) => {
   // Redirect numeric URLs to slug URL
   if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
   const resolved = resolveGamePrices(resolveSlotDays(game));
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const gdSettings = getSiteSettings();
+  const gdPromo = gdSettings.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdPromo });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
