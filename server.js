@@ -1550,6 +1550,34 @@ async function handleMessage(senderId, text) {
     );
   }
 
+  // ── SELL GAMES / BUY PERMANENT ───────────────────────────────────────────
+  if (/sell|nagbebenta|ibebenta|nabibili|pabili|for sale/.test(text)) {
+    const buyGames = games.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
+    const s = getSiteSettings();
+    const promo = s.promo || {};
+    let msg = '✅ Yes! We offer Permanent Access (Buy) on select games!\n\n';
+    msg += '♾️ PERMANENT ACCESS — One-time payment, play forever!\n\n';
+    if (buyGames.length > 0) {
+      msg += '🎮 Games available for purchase:\n';
+      buyGames.slice(0, 8).forEach(g => {
+        msg += `• ${g.title}`;
+        if (g.buy_nt_price) msg += ` — NT: ₱${g.buy_nt_price}`;
+        if (g.buy_tr_price) msg += ` / TR: ₱${g.buy_tr_price}`;
+        msg += '\n';
+      });
+      if (buyGames.length > 8) msg += `  ...and ${buyGames.length - 8} more\n`;
+    } else {
+      msg += '🎮 Select games available — message us for current titles!\n';
+    }
+    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
+      msg += `\n🔥 BUY PROMO: ${promo.buy_promo_pct}% OFF right now!\n`;
+    }
+    msg += '\n✨ FREE 3-hour trial before you buy!\n';
+    msg += '\n👉 See all: ' + SITE + '/browse\n';
+    msg += '💬 Tell me which game you want to buy!';
+    return sendText(senderId, msg);
+  }
+
   // ── BUY PERMANENT ────────────────────────────────────────────────────────
   if (/^buy|permanent|lifetime|forever|kahit kailan|sarili|own/.test(text)) {
     return sendText(senderId,
@@ -1591,7 +1619,7 @@ async function handleMessage(senderId, text) {
   }
 
   // ── CONTACT / HUMAN ───────────────────────────────────────────────────────
-  if (/contact|human|agent|tao|admin|owner|staff|ikaw|sino|you/.test(text)) {
+  if (/contact|human|agent|tao|admin|owner|staff|ikaw|sino/.test(text)) {
     return sendText(senderId,
       '📞 Talk to our team!\n\n' +
       'Just send your message here on Messenger and we\'ll reply as soon as possible. 😊\n\n' +
