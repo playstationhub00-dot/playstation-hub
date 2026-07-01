@@ -1622,6 +1622,34 @@ async function handleMessage(senderId, text) {
     return sendText(senderId, msg);
   }
 
+  // ── PROMO / DISCOUNT ─────────────────────────────────────────────────────
+  if (/promo|discount|sale|diskaunto|bawas|may promo|meron.*promo|promo.*meron|special/.test(text)) {
+    const s = getSiteSettings();
+    const promo = s.promo || {};
+    let msg = '🎉 PlayStation Hub Promos!\n\n';
+    let hasPromo = false;
+    if (promo.enabled && promo.discount_pct > 0) {
+      hasPromo = true;
+      msg += `⏱️ RENT PROMO — ${promo.discount_pct}% OFF!\n`;
+      msg += `   On ${promo.apply_on_days}-day rentals\n`;
+      if (promo.deposit) msg += `   +₱${promo.deposit} refundable deposit\n`;
+      msg += '\n';
+    }
+    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
+      hasPromo = true;
+      msg += `♾️ BUY PERMANENT PROMO — ${promo.buy_promo_pct}% OFF!\n`;
+      msg += `   Discounted one-time permanent access\n\n`;
+    }
+    if (!hasPromo) {
+      msg += '😊 Wala pang active promo ngayon, pero meron kaming:\n\n';
+    }
+    msg += '✨ FREE 3-hour trial bago mag-rent o bumili!\n';
+    msg += '🎮 Malawak na game selection — PS5 & PS4\n\n';
+    msg += '👉 Check our games: ' + SITE + '/browse\n';
+    msg += '💬 Message us para sa pinakabagong deals!';
+    return sendText(senderId, msg);
+  }
+
   // ── COMING SOON ───────────────────────────────────────────────────────────
   if (/coming soon|upcoming|reserve|reservation/.test(text)) {
     if (!upcoming.length) return sendText(senderId, '📭 No upcoming games right now. Check back soon!');
@@ -1637,7 +1665,7 @@ async function handleMessage(senderId, text) {
   }
 
   // ── ALL GAMES LIST ────────────────────────────────────────────────────────
-  if (/^(games?|list|lahat|all games?|available|ano.*games?|anong|meron)/.test(text)) {
+  if (/^(games?|list|lahat|all games?|available|ano.*games?|anong games?|meron.*games?)/.test(text)) {
     const avail = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) > 0);
     const full  = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) === 0);
     let msg = `🎮 PlayStation Hub — ${games.length} Games\n\n`;
