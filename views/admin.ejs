@@ -505,8 +505,16 @@
     </div>
 
     <!-- PRICE CATEGORIES -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🏷️</div>
+          <div><div class="sa-title">Price Categories</div><div class="sa-desc">Shared pricing tiers assigned to multiple games</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
     <div id="add-category-form" class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">🏷️ Price Categories</h2>
+      <h2 style="display:none;">🏷️ Price Categories</h2>
       <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
       <% if (priceCategories.length > 0) { %>
       <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
@@ -567,9 +575,19 @@
       </details>
     </div>
 
+    </div><!-- /price-cat inner --></div></div><!-- /accordion price-cat -->
+
     <!-- ADD GAME FORM -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid var(--ps-blue);">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎮</div>
+          <div><div class="sa-title">Add New Game</div><div class="sa-desc">Add a PS5 or PS4 game to your rental library</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
     <div id="add-game-form" class="form-card">
-      <h2>+ Add New Game</h2>
+      <h2 style="display:none;">+ Add New Game</h2>
       <form method="POST" action="/admin/add" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="form-group full"><label>Game Title *</label><input type="text" name="title" placeholder="e.g. God of War Ragnarök" required></div>
@@ -641,9 +659,19 @@
       </form>
     </div>
 
+    </div></div></div><!-- /accordion add-game -->
+
     <!-- GAMES TABLE -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
+          <div><div class="sa-title">All Games (<%= games.length %>)</div><div class="sa-desc">View, edit, and delete games in your library</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
     <div class="table-card">
-      <h2>All Games (<%= games.length %>)</h2>
+      <h2 style="display:none;">All Games (<%= games.length %>)</h2>
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
@@ -719,9 +747,19 @@
       </div>
     </div>
 
+    </div></div></div><!-- /accordion all-games -->
+
     <!-- UPCOMING GAMES -->
-    <div id="add-upcoming-form" class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);margin-top:1.5rem;">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">🔜 Add Upcoming Game <span style="font-size:0.75rem;font-weight:500;color:#666;margin-left:0.25rem;">— Open for Reservation</span></h2>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🔜</div>
+          <div><div class="sa-title">Coming Soon Games</div><div class="sa-desc">Add upcoming titles & manage reservations</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
+    <div id="add-upcoming-form" class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);">
+      <h2 style="display:none;">🔜 Add Upcoming Game</h2>
       <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="form-group full"><label>Game Title *</label><input type="text" name="title" placeholder="e.g. GTA VI" required></div>
@@ -835,6 +873,7 @@
       </div>
     </div>
     <% } %>
+      </div></div><!-- /accordion upcoming -->
 
   </div><!-- /tab-games -->
 
@@ -1023,7 +1062,15 @@
     %>
 
     <!-- ── DASHBOARD ── -->
-    <div style="margin-bottom:2rem;">
+    <div class="settings-accordion" style="margin-bottom:1rem;">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">📊</div>
+          <div><div class="sa-title">Business Dashboard</div><div class="sa-desc">Revenue, profit, monthly stats & top games</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
+    <div style="margin-bottom:0;">
       <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
         <span style="font-size:1.1rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
         <span style="font-size:0.72rem;color:#444;margin-left:auto;">as of <%= now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
@@ -1141,9 +1188,19 @@
       </div>
     </div>
 
+    </div></div></div><!-- /accordion dashboard -->
+
     <!-- Import Customers from Excel -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #818cf8;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(129,140,248,0.15);">📥</div>
+          <div><div class="sa-title">Import from Excel</div><div class="sa-desc">Bulk-import customer records via .xlsx file</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
     <div class="form-card" style="border-color:rgba(99,102,241,0.35);background:linear-gradient(135deg,#0d0d1f,#0a0a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.6rem;">📥 Import Customers from Excel</h2>
+      <h2 style="display:none;">📥 Import Customers from Excel</h2>
       <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 1rem;">
         Upload an Excel file (.xlsx) to bulk-import customer records. Existing customers are kept — only new rows are added.
       </p>
@@ -1185,11 +1242,19 @@
         </div>
         <p style="font-size:0.75rem;color:#666;margin:0.5rem 0 0;">account_type: <b style="color:#ccc">nt</b> / <b style="color:#ffc400">tr</b> / <b style="color:#60a5fa">ps4</b> &nbsp;|&nbsp; status: <b style="color:#ccc">renting</b> / <b style="color:#ccc">done</b> / <b style="color:#ccc">bought</b> / <b style="color:#ccc">reservation</b> &nbsp;|&nbsp; dates: YYYY-MM-DD</p>
       </div>
-    </div>
+    </div></div></div><!-- /accordion import -->
 
     <!-- Add Customer Form -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">👤</div>
+          <div><div class="sa-title">Add New Customer</div><div class="sa-desc">Log a rental, sale, or reservation manually</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
     <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">👤 Add New Customer</h2>
+      <h2 style="display:none;">👤 Add New Customer</h2>
       <form method="POST" action="/admin/customers/add">
         <div class="form-grid">
 
@@ -1348,8 +1413,18 @@
       </script>
     </div>
 
+    </div></div></div><!-- /accordion add-customer -->
+
     <!-- Customers Table -->
-    <div class="table-card" style="margin-top:1.5rem;">
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
+          <div><div class="sa-title">All Customers (<%= customers.length %>)</div><div class="sa-desc">View, filter, edit & manage all rental records</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
+    <div class="table-card" style="margin-top:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
         <div style="position:relative;flex:0 0 260px;">
@@ -1483,6 +1558,7 @@
       });
     }
     </script>
+    </div></div></div><!-- /accordion customers-table -->
 
   </div><!-- /tab-customers -->
 
