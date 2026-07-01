@@ -472,6 +472,122 @@
       </div><!-- /accordion-body reviews -->
     </div><!-- /accordion reviews -->
 
+    <!-- Bot Training -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🧠</div>
+          <div>
+            <div class="sa-title">Bot Training</div>
+            <div class="sa-desc">Teach the AI your communication style from past conversations — <%= botTraining.length %> example<%= botTraining.length !== 1 ? 's' : '' %> saved</div>
+          </div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+        <div style="padding:1.25rem;">
+
+          <!-- Info banner -->
+          <div style="background:rgba(168,85,247,0.07);border:1px solid #2a1a3a;border-radius:12px;padding:1rem;margin-bottom:1.25rem;font-size:0.8rem;color:#888;line-height:1.6;">
+            <strong style="color:#a855f7;">How it works:</strong> Paste real conversations between you and your customers. The AI will learn your exact Taglish tone, style, and how you handle questions — so the bot sounds just like you. Add 10–30 examples for best results.
+          </div>
+
+          <!-- Add example form -->
+          <form method="POST" action="/admin/bot-training/add">
+            <div style="display:grid;gap:0.75rem;margin-bottom:1rem;">
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.35rem;">Customer's Message</label>
+                <textarea name="customer_msg" rows="2" required placeholder='e.g. "may god of war ba kayo? magkano?"'
+                  style="width:100%;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.65rem;font-size:0.83rem;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
+              </div>
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#a855f7;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.35rem;">Your Reply (how YOU responded)</label>
+                <textarea name="your_reply" rows="3" required placeholder='e.g. "Meron po! God of War Ragnarok available. ₱149 for 10 days, ₱199 for 15 days, ₱349 for 30 days. Trophy account din available +₱50. Free 3hrs trial muna bago mag-rent! 😊"'
+                  style="width:100%;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.65rem;font-size:0.83rem;resize:vertical;font-family:inherit;box-sizing:border-box;"></textarea>
+              </div>
+              <div>
+                <label style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.35rem;">Category</label>
+                <select name="category" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.55rem 0.75rem;font-size:0.83rem;width:100%;">
+                  <option value="general">General</option>
+                  <option value="pricing">Pricing</option>
+                  <option value="availability">Availability</option>
+                  <option value="how_to_rent">How to Rent</option>
+                  <option value="payment">Payment</option>
+                  <option value="buy_permanent">Buy Permanent</option>
+                  <option value="complaint">Complaint/Issue</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" style="background:linear-gradient(135deg,#7b2ff7,#a855f7);color:#fff;border:none;border-radius:9px;padding:0.6rem 1.25rem;font-weight:700;font-size:0.85rem;cursor:pointer;">+ Add Training Example</button>
+          </form>
+
+          <!-- Facebook JSON import -->
+          <div style="margin:1.25rem 0;padding:1rem;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:12px;">
+            <div style="font-size:0.75rem;font-weight:700;color:#555;margin-bottom:0.5rem;">📥 Import from Facebook Conversation Export</div>
+            <div style="font-size:0.72rem;color:#444;margin-bottom:0.75rem;line-height:1.5;">
+              Download your Facebook messages: <strong style="color:#555;">Facebook Settings → Your Facebook Information → Download Your Information → Messages (JSON format)</strong>. Then upload the <code style="color:#888;">message_1.json</code> file here.
+            </div>
+            <input type="file" id="fbJsonFile" accept=".json" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#aaa;padding:0.5rem;font-size:0.78rem;width:100%;box-sizing:border-box;margin-bottom:0.5rem;">
+            <button onclick="importFbJson()" style="background:#1877f2;color:#fff;border:none;border-radius:8px;padding:0.5rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;">📘 Import Conversations</button>
+            <div id="fbImportStatus" style="font-size:0.75rem;color:#555;margin-top:0.5rem;"></div>
+          </div>
+
+          <!-- Saved examples list -->
+          <% if (botTraining.length > 0) { %>
+          <div style="margin-top:1rem;">
+            <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Saved Examples (<%= botTraining.length %>)</div>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;max-height:480px;overflow-y:auto;">
+              <% botTraining.slice().reverse().forEach(ex => { %>
+              <div style="background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:0.85rem 1rem;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
+                  <span style="font-size:0.65rem;background:#1a1a2a;color:#666;padding:0.15rem 0.5rem;border-radius:20px;"><%= ex.category %></span>
+                  <form method="POST" action="/admin/bot-training/delete/<%= ex.id %>" style="margin:0;" onsubmit="return confirm('Delete this example?')">
+                    <button type="submit" style="background:none;border:none;color:#333;cursor:pointer;font-size:0.75rem;padding:0;">🗑️</button>
+                  </form>
+                </div>
+                <div style="font-size:0.78rem;color:#666;margin-bottom:0.3rem;">👤 <em><%= ex.customer_msg.slice(0,120) %><%= ex.customer_msg.length > 120 ? '...' : '' %></em></div>
+                <div style="font-size:0.78rem;color:#a855f7;">💬 <%= ex.your_reply.slice(0,150) %><%= ex.your_reply.length > 150 ? '...' : '' %></div>
+              </div>
+              <% }) %>
+            </div>
+          </div>
+          <% } else { %>
+          <div style="text-align:center;padding:1.5rem;color:#333;font-size:0.82rem;margin-top:0.5rem;">No training examples yet. Add your first one above!</div>
+          <% } %>
+
+          <script>
+          async function importFbJson() {
+            const file = document.getElementById('fbJsonFile').files[0];
+            const status = document.getElementById('fbImportStatus');
+            if (!file) { status.textContent = 'Please select a JSON file first.'; return; }
+            status.textContent = 'Reading file...';
+            try {
+              const text = await file.text();
+              const data = JSON.parse(text);
+              // Facebook export: { messages: [...] } or array directly
+              const messages = data.messages || data;
+              if (!Array.isArray(messages)) { status.textContent = 'Invalid format — expected messages array.'; return; }
+              status.textContent = 'Importing ' + messages.length + ' messages...';
+              const resp = await fetch('/admin/bot-training/import-fb', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messages })
+              });
+              const result = await resp.json();
+              if (result.ok) {
+                status.innerHTML = '<span style="color:#22c55e;">✅ Imported ' + result.imported + ' conversation examples!</span> Reload to see them.';
+              } else {
+                status.innerHTML = '<span style="color:#f43f5e;">❌ ' + result.error + '</span>';
+              }
+            } catch(e) {
+              status.innerHTML = '<span style="color:#f43f5e;">❌ Error reading file: ' + e.message + '</span>';
+            }
+          }
+          </script>
+
+        </div>
+      </div>
+    </div><!-- /accordion bot-training -->
+
   </div><!-- /tab-settings -->
 
   <!-- ═══════════════ ANNOUNCEMENTS TAB ═══════════════ -->

@@ -61,7 +61,9 @@ db.defaults({
   customers: [],
   nextCustomerId: 1,
   visitors: [],
-  messenger_contacts: []
+  messenger_contacts: [],
+  bot_training: [],
+  nextBotTrainingId: 1
 }).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
@@ -677,7 +679,8 @@ app.get('/admin', requireAuth, (req, res) => {
   });
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews });
+  const botTraining = db.get('bot_training').value() || [];
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews, botTraining });
 });
 
 // Upcoming CRUD
@@ -1759,27 +1762,33 @@ async function handleMessage(senderId, text) {
       const gameList = games.slice(0, 20).map(g =>
         `${g.title} (${g.platform}) — NT: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d}${g.tr_price_10d ? `, TR: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
       ).join('\n');
+      const trainingExamples = (db.get('bot_training').value() || []).slice(0, 30);
+      const examplesText = trainingExamples.length > 0
+        ? '\n\nHere are real examples of how the owner replies to customers (learn this style exactly):\n' +
+          trainingExamples.map(e => `Customer: "${e.customer_msg}"\nYou: "${e.your_reply}"`).join('\n\n')
+        : '';
       const response = await client.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
+        max_tokens: 350,
         messages: [{
           role: 'user',
-          content: `You are a friendly Messenger bot for PlayStation Hub — a PS5/PS4 digital game rental shop in the Philippines. Reply in a friendly Taglish (Filipino-English mix) tone. Keep it short (max 5 sentences). Always end by encouraging them to message or visit the website.
+          content: `You are the Messenger bot for PlayStation Hub — a PS5/PS4 digital game rental shop in the Philippines run by a young Filipino owner. Reply EXACTLY in the owner's communication style based on the examples below. Match their tone, vocabulary, Taglish mix, and friendliness. Keep replies short and conversational.
 
 Business info:
 - Rent PS5/PS4 games for 10, 15, or 30 days
-- Two account types: Non-Trophy (play on our account) and Trophy (earn trophies on your own PSN)
+- Non-Trophy account (play on our account) and Trophy account (earn trophies on your own PSN)
 - Payment via GCash
 - FREE 3-hour trial before renting or buying
-- Also offer permanent/lifetime access (Buy option)
+- Also offer permanent/lifetime Buy access
 - Website: https://playstation-hub-production.up.railway.app
+${examplesText}
 
-Available games (sample):
+Available games:
 ${gameList}
 
 Customer message: "${text}"
 
-Reply naturally and helpfully. If they ask about a specific game not in our list, tell them it's not available but suggest similar ones or invite them to check the website.`
+Reply naturally in the owner's style. Max 5 sentences. If game not available, say so kindly and suggest alternatives.`
         }]
       });
       const aiReply = response.content[0]?.text?.trim();
@@ -1799,6 +1808,56 @@ Reply naturally and helpfully. If they ask about a specific game not in our list
     'Browse: ' + SITE + '/browse'
   );
 }
+
+// ── Bot Training ──────────────────────────────────────────────────────────────
+app.post('/admin/bot-training/add', requireAuth, (req, res) => {
+  const { customer_msg, your_reply, category } = req.body;
+  if (!customer_msg || !your_reply) return res.redirect('/admin?tab=settings&msg=error');
+  const id = db.get('nextBotTrainingId').value();
+  db.get('bot_training').push({
+    id,
+    customer_msg: customer_msg.trim(),
+    your_reply: your_reply.trim(),
+    category: category || 'general',
+    created_at: new Date().toISOString()
+  }).write();
+  db.set('nextBotTrainingId', id + 1).write();
+  res.redirect('/admin?tab=settings&msg=training_saved');
+});
+
+app.post('/admin/bot-training/delete/:id', requireAuth, (req, res) => {
+  db.get('bot_training').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin?tab=settings&msg=training_deleted');
+});
+
+app.post('/admin/bot-training/import-fb', requireAuth, express.json({ limit: '10mb' }), (req, res) => {
+  // Parse Facebook Messages JSON export
+  const { messages } = req.body;
+  if (!Array.isArray(messages)) return res.json({ ok: false, error: 'Invalid format' });
+  let imported = 0;
+  // Facebook export format: messages array with sender_name and content
+  // Group into pairs: customer message followed by page reply
+  for (let i = 0; i < messages.length - 1; i++) {
+    const msg = messages[i];
+    const next = messages[i + 1];
+    // If next message is from the page (your reply)
+    if (msg.content && next.content && msg.sender_name !== next.sender_name) {
+      const id = db.get('nextBotTrainingId').value();
+      db.get('bot_training').push({
+        id,
+        customer_msg: msg.content.slice(0, 500),
+        your_reply: next.content.slice(0, 500),
+        category: 'imported',
+        created_at: new Date().toISOString()
+      }).write();
+      db.set('nextBotTrainingId', id + 1).write();
+      imported++;
+      if (imported >= 100) break; // cap at 100 examples
+    }
+  }
+  res.json({ ok: true, imported });
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── AI Message Generator ──────────────────────────────────────────────────────
 app.post('/admin/ai-generate', requireAuth, async (req, res) => {
