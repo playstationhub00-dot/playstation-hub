@@ -60,7 +60,8 @@ db.defaults({
   nextPriceCategoryId: 1,
   customers: [],
   nextCustomerId: 1,
-  visitors: []
+  visitors: [],
+  messenger_contacts: []
 }).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
@@ -1464,6 +1465,13 @@ app.post('/webhook', express.json(), (req, res) => {
       if (!event.message || event.message.is_echo) return;
       const senderId = event.sender.id;
       const text = (event.message.text || '').toLowerCase().trim();
+      // Save/update PSID so we can blast later
+      const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
+      if (!existingContact) {
+        db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
+      } else {
+        db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
+      }
       handleMessage(senderId, text);
     });
   });
@@ -1638,6 +1646,61 @@ function handleMessage(senderId, text) {
     return sendText(senderId, msg);
   }
 }
+
+// ── Messenger Auto Blast ──────────────────────────────────────────────────────
+app.get('/admin/blast/contacts', requireAuth, (req, res) => {
+  const contacts = db.get('messenger_contacts').value() || [];
+  res.json({ count: contacts.length });
+});
+
+app.post('/admin/blast', requireAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.json({ ok: false, error: 'No message provided.' });
+  if (!PAGE_ACCESS_TOKEN) return res.json({ ok: false, error: 'MESSENGER_PAGE_TOKEN not configured on server.' });
+
+  const contacts = db.get('messenger_contacts').value() || [];
+  if (!contacts.length) return res.json({ ok: false, error: 'No contacts yet. Contacts are saved automatically when people message your Facebook Page.' });
+
+  const https = require('https');
+  let sent = 0, failed = 0;
+
+  function sendOne(psid) {
+    return new Promise((resolve) => {
+      const payload = JSON.stringify({
+        recipient: { id: psid },
+        message: { text: message },
+        messaging_type: 'MESSAGE_TAG',
+        tag: 'HUMAN_AGENT'
+      });
+      const options = {
+        hostname: 'graph.facebook.com',
+        path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      };
+      const r2 = https.request(options, (resp) => {
+        let data = '';
+        resp.on('data', c => data += c);
+        resp.on('end', () => {
+          if (resp.statusCode === 200) sent++;
+          else { failed++; console.log('[blast] fail psid=' + psid, resp.statusCode, data); }
+          resolve();
+        });
+      });
+      r2.on('error', () => { failed++; resolve(); });
+      r2.write(payload);
+      r2.end();
+    });
+  }
+
+  for (const c of contacts) {
+    await sendOne(c.psid);
+    await new Promise(r => setTimeout(r, 120)); // avoid rate limit
+  }
+
+  res.json({ ok: true, sent, failed, total: contacts.length });
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Reviews ──────────────────────────────────────────────────────────────────
 

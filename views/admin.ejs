@@ -1342,6 +1342,43 @@
       <div class="settings-accordion-body">
     <div style="padding:1.25rem;">
 
+      <!-- AUTO BLAST SECTION -->
+      <div style="background:linear-gradient(135deg,rgba(244,63,94,0.08),rgba(168,85,247,0.08));border:1px solid #3a1a2a;border-radius:14px;padding:1.25rem;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;">
+          <div style="font-size:1.2rem;">⚡</div>
+          <div>
+            <div style="font-weight:800;font-size:0.9rem;color:#f43f5e;">Auto Send via Messenger API</div>
+            <div style="font-size:0.72rem;color:#555;margin-top:0.1rem;">Sends directly to everyone who has ever messaged your Facebook Page</div>
+          </div>
+          <div style="margin-left:auto;background:#111;border:1px solid #2a2a2a;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.72rem;color:#aaa;" id="blastContactCount">
+            Loading contacts...
+          </div>
+        </div>
+        <textarea id="autoBlastMsg" rows="5" style="width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.83rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;margin-bottom:0.75rem;">Kamusta! 👋 PlayStation Hub dito!
+
+Nag-aalok kami ng mga bagong laro ngayon! 🎮
+
+Mayroon kaming mga PS5 exclusives at dagdag pang mga titles. Pumunta sa aming website para makita ang lahat:
+
+👉 https://playstation-hub-production.up.railway.app
+
+Mag-message lang para mag-reserve ng slot! 😊</textarea>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <button onclick="sendAutoBlast()" id="autoBlastBtn" style="background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;border:none;border-radius:9px;padding:0.6rem 1.25rem;font-weight:800;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+            ⚡ Send to All Contacts
+          </button>
+          <div id="autoBlastStatus" style="font-size:0.8rem;color:#555;"></div>
+        </div>
+        <div id="autoBlastResult" style="display:none;margin-top:0.85rem;background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;font-size:0.82rem;line-height:1.7;"></div>
+        <div style="margin-top:0.65rem;font-size:0.68rem;color:#333;line-height:1.5;">
+          ℹ️ Uses <strong style="color:#444;">HUMAN_AGENT</strong> tag — works for contacts who messaged within 7 days. Contacts are collected automatically from your Page's Messenger inbox.
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #1a1a1a;padding-top:1rem;margin-bottom:1rem;">
+        <div style="font-size:0.7rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Manual Copy-Paste Tool (for older contacts)</div>
+      </div>
+
       <!-- Stats bar -->
       <%
         const doneC = customers.filter(c => c.status === 'done');
@@ -1421,6 +1458,50 @@ Message us anytime to reserve your slot! 😊</textarea>
       </div>
 
       <script>
+      // Load contact count
+      fetch('/admin/blast/contacts').then(r=>r.json()).then(d=>{
+        document.getElementById('blastContactCount').textContent = d.count + ' FB contact' + (d.count!==1?'s':'');
+        document.getElementById('blastContactCount').style.color = d.count > 0 ? '#22c55e' : '#f43f5e';
+      }).catch(()=>{});
+
+      async function sendAutoBlast() {
+        const msg = document.getElementById('autoBlastMsg').value.trim();
+        if (!msg) return showBlastToast('Please write a message first!');
+        const btn = document.getElementById('autoBlastBtn');
+        const status = document.getElementById('autoBlastStatus');
+        const result = document.getElementById('autoBlastResult');
+        if (!confirm('Send this message to ALL your Facebook Messenger contacts?\n\nThis cannot be undone.')) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+        status.textContent = 'Please wait...';
+        result.style.display = 'none';
+        try {
+          const resp = await fetch('/admin/blast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'message=' + encodeURIComponent(msg)
+          });
+          const data = await resp.json();
+          result.style.display = 'block';
+          if (data.ok) {
+            result.innerHTML = '<strong style="color:#22c55e;">✅ Blast Complete!</strong><br>' +
+              '📤 Sent: <strong style="color:#22c55e;">' + data.sent + '</strong> &nbsp;|&nbsp; ' +
+              '❌ Failed: <strong style="color:' + (data.failed>0?'#f43f5e':'#555') + '">' + data.failed + '</strong> &nbsp;|&nbsp; ' +
+              '👥 Total contacts: <strong>' + data.total + '</strong>';
+            status.textContent = '';
+          } else {
+            result.innerHTML = '<strong style="color:#f43f5e;">❌ ' + (data.error || 'Send failed') + '</strong>';
+            status.textContent = '';
+          }
+        } catch(e) {
+          result.style.display = 'block';
+          result.innerHTML = '<strong style="color:#f43f5e;">❌ Network error. Try again.</strong>';
+          status.textContent = '';
+        }
+        btn.disabled = false;
+        btn.textContent = '⚡ Send to All Contacts';
+      }
+
       const _blastData = <%- JSON.stringify(blastData) %>;
 
       function generateBlast() {
