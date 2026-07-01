@@ -25,6 +25,8 @@ db.defaults({
   nextId: 1,
   nextUpcomingId: 1,
   upcoming: [],
+  reviews: [],
+  nextReviewId: 1,
   psplus: [],
   nextPsplusId: 1,
   psplus_popular: [],
@@ -552,7 +554,8 @@ app.get('/', (req, res) => {
   const psplusPrices = getPsplusPrices();
   const homePsplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), reviews });
 });
 
 app.get('/browse', (req, res) => {
@@ -665,7 +668,8 @@ app.get('/admin', requireAuth, (req, res) => {
     return a.end_date.localeCompare(b.end_date); // soonest first
   });
   const visitors = db.get('visitors').value();
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null });
+  const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews });
 });
 
 // Upcoming CRUD
@@ -1621,6 +1625,27 @@ function handleMessage(senderId, text) {
     return sendText(senderId, msg);
   }
 }
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+app.post('/admin/reviews/add', requireAuth, (req, res) => {
+  const { name, rating, text, game_rented, order } = req.body;
+  const id = db.get('nextReviewId').value();
+  db.get('reviews').push({ id, name, rating: parseInt(rating) || 5, text, game_rented: game_rented || '', order: parseInt(order) || 99, visible: true, created_at: new Date().toISOString() }).write();
+  db.set('nextReviewId', id + 1).write();
+  res.redirect('/admin#reviews');
+});
+
+app.post('/admin/reviews/delete/:id', requireAuth, (req, res) => {
+  db.get('reviews').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin#reviews');
+});
+
+app.post('/admin/reviews/toggle/:id', requireAuth, (req, res) => {
+  const review = db.get('reviews').find({ id: parseInt(req.params.id) }).value();
+  if (review) db.get('reviews').find({ id: parseInt(req.params.id) }).assign({ visible: !review.visible }).write();
+  res.redirect('/admin#reviews');
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 
