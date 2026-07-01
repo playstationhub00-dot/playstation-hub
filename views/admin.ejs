@@ -1409,10 +1409,10 @@ Message us anytime to reserve your slot! 😊</textarea>
             style="background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
             📋 Copy Msg
           </button>
-          <a href="https://www.facebook.com/messages/t/" target="_blank"
-            style="background:var(--ps-blue);color:#000;border:none;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;flex-shrink:0;">
-            📘 Inbox
-          </a>
+          <button onclick="openFBSearch('<%= c.name.replace(/'/g,"\\'") %>')"
+            style="background:#1877f2;color:#fff;border:none;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            📘 Find
+          </button>
         </div>
         <% }) %>
         <% if (blastData.length === 0) { %>
@@ -1458,6 +1458,12 @@ Message us anytime to reserve your slot! 😊</textarea>
       }
 
       function filterBlastSearch(q) { applyBlastFilters(q); }
+
+      function openFBSearch(name) {
+        navigator.clipboard.writeText(name).catch(()=>{});
+        window.open('https://www.facebook.com/messages/search/?query=' + encodeURIComponent(name), '_blank');
+        showBlastToast('📘 Opening Messenger search for ' + name);
+      }
 
       function applyBlastFilters(q) {
         q = (q || document.getElementById('blastSearch').value || '').toLowerCase().trim();
