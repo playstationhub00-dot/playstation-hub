@@ -124,7 +124,7 @@
 
     <!-- SITE SETTINGS -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #f0a500;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f0a500;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(240,165,0,0.15);">⚙️</div>
           <div>
@@ -134,7 +134,7 @@
         </div>
         <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div style="border-color:rgba(240,165,0,0.4);background:linear-gradient(135deg,#1a1500 0%,#1a1a0a 100%);">
       <h2 style="display:flex;align-items:center;gap:0.5rem;display:none;">⚙️ Site Settings</h2>
       <form method="POST" action="/admin/site-settings" enctype="multipart/form-data">
@@ -554,13 +554,13 @@
 
     <!-- PRICE CATEGORIES -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🏷️</div>
           <div><div class="sa-title">Price Categories</div><div class="sa-desc">Shared pricing tiers assigned to multiple games</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div id="add-category-form" class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
       <h2 style="display:none;">🏷️ Price Categories</h2>
       <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
@@ -627,13 +627,13 @@
 
     <!-- ADD GAME FORM -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid var(--ps-blue);">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid var(--ps-blue);">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎮</div>
           <div><div class="sa-title">Add New Game</div><div class="sa-desc">Add a PS5 or PS4 game to your rental library</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div id="add-game-form" class="form-card">
       <h2 style="display:none;">+ Add New Game</h2>
       <form method="POST" action="/admin/add" enctype="multipart/form-data">
@@ -711,13 +711,13 @@
 
     <!-- GAMES TABLE -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
           <div><div class="sa-title">All Games (<%= games.length %>)</div><div class="sa-desc">View, edit, and delete games in your library</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div class="table-card">
       <h2 style="display:none;">All Games (<%= games.length %>)</h2>
       <div style="overflow-x:auto;">
@@ -799,13 +799,13 @@
 
     <!-- UPCOMING GAMES -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🔜</div>
           <div><div class="sa-title">Coming Soon Games</div><div class="sa-desc">Add upcoming titles & manage reservations</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div id="add-upcoming-form" class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);">
       <h2 style="display:none;">🔜 Add Upcoming Game</h2>
       <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
@@ -1294,13 +1294,13 @@
 
     <!-- Add Customer Form -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(34,197,94,0.15);">👤</div>
           <div><div class="sa-title">Add New Customer</div><div class="sa-desc">Log a rental, sale, or reservation manually</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
       <h2 style="display:none;">👤 Add New Customer</h2>
       <form method="POST" action="/admin/customers/add">
@@ -1465,13 +1465,13 @@
 
     <!-- Customers Table -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
           <div><div class="sa-title">All Customers (<%= customers.length %>)</div><div class="sa-desc">View, filter, edit & manage all rental records</div></div>
         </div><span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="settings-accordion-body">
     <div class="table-card" style="margin-top:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
