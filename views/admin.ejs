@@ -104,9 +104,35 @@
   <!-- ═══════════════ SETTINGS TAB ═══════════════ -->
   <div class="tab-panel" id="tab-settings">
 
+    <style>
+    .settings-accordion { border:1px solid #222; border-radius:14px; overflow:hidden; margin-bottom:1rem; }
+    .settings-accordion-header { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; cursor:pointer; user-select:none; background:#111; transition:background 0.15s; }
+    .settings-accordion-header:hover { background:#161616; }
+    .settings-accordion-header .sa-left { display:flex; align-items:center; gap:0.75rem; }
+    .settings-accordion-header .sa-icon { font-size:1.2rem; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+    .settings-accordion-header .sa-title { font-weight:700; font-size:0.95rem; color:#fff; }
+    .settings-accordion-header .sa-desc { font-size:0.75rem; color:#555; margin-top:0.15rem; }
+    .settings-accordion-header .sa-arrow { color:#555; font-size:1rem; transition:transform 0.2s; }
+    .settings-accordion-header.open .sa-arrow { transform:rotate(180deg); }
+    .settings-accordion-body { display:none; padding:1.25rem; background:#0d0d0d; border-top:1px solid #1a1a1a; }
+    .settings-accordion-body.open { display:block; }
+    </style>
+
     <!-- SITE SETTINGS -->
-    <div class="form-card" style="border-color:rgba(240,165,0,0.4);background:linear-gradient(135deg,#1a1500 0%,#1a1a0a 100%);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">⚙️ Site Settings</h2>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #f0a500;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(240,165,0,0.15);">⚙️</div>
+          <div>
+            <div class="sa-title">Site Settings</div>
+            <div class="sa-desc">Website title, logo, favicon & hero background</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
+    <div style="border-color:rgba(240,165,0,0.4);background:linear-gradient(135deg,#1a1500 0%,#1a1a0a 100%);">
+      <h2 style="display:flex;align-items:center;gap:0.5rem;display:none;">⚙️ Site Settings</h2>
       <form method="POST" action="/admin/site-settings" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="form-group full">
@@ -186,11 +212,25 @@
         });
       }
       </script>
-    </div>
+    </div><!-- /site-settings inner -->
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion site-settings -->
 
     <!-- HERO SLIDES MANAGER -->
-    <div class="form-card" style="border-color:rgba(240,165,0,0.5);background:linear-gradient(135deg,#0d0d00,#1a1a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">🖼 Hero Promo Slideshow</h2>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🖼</div>
+          <div>
+            <div class="sa-title">Hero Promo Slider</div>
+            <div class="sa-desc">Upload promo banners shown as a slideshow on the homepage</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(240,165,0,0.5);background:linear-gradient(135deg,#0d0d00,#1a1a0a);">
+      <h2 style="display:none;">🖼 Hero Promo Slideshow</h2>
       <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;">Upload promo posters. They replace the homepage hero with an auto-sliding carousel (auto-advances every 5 seconds). Remove all slides to restore the text hero.</p>
 
       <!-- Current slides -->
@@ -223,14 +263,28 @@
           <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Upload Slide</button>
         </div>
       </form>
-    </div>
+    </div><!-- /hero-slides inner -->
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion hero-slides -->
 
     <!-- PROMO SETTINGS -->
     <%
       const adminPromo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
     %>
-    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">🎉 Promo & Pricing Rules</h2>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🎉</div>
+          <div>
+            <div class="sa-title">Promo & Pricing Rules</div>
+            <div class="sa-desc">Discount %, rental duration rules & security deposit</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
+      <h2 style="display:none;">🎉 Promo & Pricing Rules</h2>
       <form method="POST" action="/admin/promo">
         <div class="form-grid">
           <div class="form-group full">
@@ -256,11 +310,25 @@
           <button type="submit" class="btn btn-primary" style="background:#22c55e;color:#000;">Save Promo Settings</button>
         </div>
       </form>
-    </div>
+    </div><!-- /promo inner -->
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion promo -->
 
     <!-- HERO TEXT EDITOR -->
-    <div class="form-card" style="border-color:rgba(240,165,0,0.3);background:linear-gradient(135deg,#111000,#1a1a0a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">✏️ Home Page Hero Text</h2>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">✏️</div>
+          <div>
+            <div class="sa-title">Home Page Hero Text</div>
+            <div class="sa-desc">Edit headline, subtitle, colors & font size</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(240,165,0,0.3);background:linear-gradient(135deg,#111000,#1a1a0a);">
+      <h2 style="display:none;">✏️ Home Page Hero Text</h2>
       <form method="POST" action="/admin/hero-text">
         <div class="form-grid">
           <div class="form-group">
@@ -333,7 +401,9 @@
         updatePreview();
       })();
       </script>
-    </div>
+    </div><!-- /hero-text inner -->
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion hero-text -->
 
   </div><!-- /tab-settings -->
 
@@ -1643,6 +1713,13 @@
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
 const tabs = ['settings','announcements','games','customers','psplus','security','visitors'];
+
+function toggleAccordion(header) {
+  const body = header.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+}
 
 function switchTab(name) {
   tabs.forEach(t => {
