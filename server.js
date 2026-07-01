@@ -1647,6 +1647,44 @@ function handleMessage(senderId, text) {
   }
 }
 
+// ── AI Message Generator ──────────────────────────────────────────────────────
+app.post('/admin/ai-generate', requireAuth, async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt || !prompt.trim()) return res.json({ ok: false, error: 'No prompt provided.' });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.json({ ok: false, error: 'ANTHROPIC_API_KEY not set on server.' });
+  try {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic.default({ apiKey });
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 400,
+      messages: [{
+        role: 'user',
+        content: `You are helping a Philippine PlayStation game rental shop (PlayStation Hub) write a Messenger message to send to past customers.
+
+The message should:
+- Be in a friendly Filipino/Taglish tone (mix of Filipino and English is fine)
+- Use {name} placeholder where the customer's name should appear
+- Use {game} placeholder where the last game they rented should appear
+- Be concise (3-6 sentences max)
+- End with the website link: https://playstation-hub-production.up.railway.app
+- NOT include any subject line or "Message:" prefix — just the message body
+
+User's request: ${prompt.trim()}
+
+Write only the message, nothing else.`
+      }]
+    });
+    const text = response.content[0]?.text || '';
+    res.json({ ok: true, message: text.trim() });
+  } catch (e) {
+    console.error('[ai-generate]', e.message);
+    res.json({ ok: false, error: 'AI error: ' + e.message });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Messenger Auto Blast ──────────────────────────────────────────────────────
 app.get('/admin/blast/contacts', requireAuth, (req, res) => {
   const contacts = db.get('messenger_contacts').value() || [];

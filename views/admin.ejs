@@ -1408,7 +1408,23 @@ Mag-message lang para mag-reserve ng slot! 😊</textarea>
       <!-- Message Template Composer -->
       <div style="margin-bottom:1rem;">
         <label style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.5rem;">Message Template</label>
-        <div style="font-size:0.72rem;color:#555;margin-bottom:0.5rem;">Use <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{name}</code> and <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{game}</code> as placeholders.</div>
+        <div style="font-size:0.72rem;color:#555;margin-bottom:0.75rem;">Use <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{name}</code> and <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{game}</code> as placeholders.</div>
+
+        <!-- AI Generator -->
+        <div style="background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(59,130,246,0.06));border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem;margin-bottom:0.85rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:#a855f7;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.35rem;">
+            <span>✨</span> AI Message Generator
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <input type="text" id="aiPrompt" placeholder='e.g. "encourage them to come back for holidays" or "promote our Buy permanent option"'
+              style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.55rem 0.85rem;font-size:0.8rem;min-width:0;">
+            <button onclick="generateAITemplate()" id="aiGenBtn"
+              style="background:linear-gradient(135deg,#7b2ff7,#3b82f6);color:#fff;border:none;border-radius:8px;padding:0.55rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+              ✨ Generate
+            </button>
+          </div>
+          <div id="aiGenStatus" style="font-size:0.72rem;color:#555;margin-top:0.4rem;min-height:1rem;"></div>
+        </div>
         <textarea id="blastTemplate" rows="5" style="width:100%;background:#111;border:1px solid #333;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.85rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;">Hey {name}! 👋
 
 Kamusta na? Just wanted to reach out — we have new games available at PlayStation Hub! 🎮
@@ -1458,6 +1474,33 @@ Message us anytime to reserve your slot! 😊</textarea>
       </div>
 
       <script>
+      async function generateAITemplate() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) { document.getElementById('aiGenStatus').textContent = 'Please describe what kind of message you want.'; return; }
+        const btn = document.getElementById('aiGenBtn');
+        const status = document.getElementById('aiGenStatus');
+        btn.disabled = true; btn.textContent = '⏳ Generating...';
+        status.textContent = 'AI is writing your message...';
+        try {
+          const resp = await fetch('/admin/ai-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'prompt=' + encodeURIComponent(prompt)
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            document.getElementById('blastTemplate').value = data.message;
+            document.getElementById('autoBlastMsg').value = data.message;
+            status.innerHTML = '<span style="color:#22c55e;">✅ Message generated! You can edit it before sending.</span>';
+          } else {
+            status.innerHTML = '<span style="color:#f43f5e;">❌ ' + (data.error || 'Failed') + '</span>';
+          }
+        } catch(e) {
+          status.innerHTML = '<span style="color:#f43f5e;">❌ Network error.</span>';
+        }
+        btn.disabled = false; btn.textContent = '✨ Generate';
+      }
+
       // Load contact count
       fetch('/admin/blast/contacts').then(r=>r.json()).then(d=>{
         document.getElementById('blastContactCount').textContent = d.count + ' FB contact' + (d.count!==1?'s':'');
