@@ -291,14 +291,18 @@
       <h2 style="display:none;">🎉 Promo & Pricing Rules</h2>
       <form method="POST" action="/admin/promo">
         <div class="form-grid">
+          <!-- RENT PROMO -->
+          <div class="form-group full" style="margin-bottom:0;">
+            <label style="color:#22c55e;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">⏱️ Rent Promo</label>
+          </div>
           <div class="form-group full">
             <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
               <input type="checkbox" name="enabled" <%= adminPromo.enabled ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#22c55e;">
-              <span>Enable Promo Discount on Game Detail page</span>
+              <span>Enable Rent Promo Discount</span>
             </label>
           </div>
           <div class="form-group">
-            <label>Discount % <span style="color:#555;font-size:0.75rem;">(applied when promo is active)</span></label>
+            <label>Rent Discount % <span style="color:#555;font-size:0.75rem;">(applied when promo is active)</span></label>
             <input type="number" name="discount_pct" value="<%= adminPromo.discount_pct %>" min="0" max="100" placeholder="10">
           </div>
           <div class="form-group">
@@ -308,6 +312,21 @@
           <div class="form-group">
             <label>Trophy Account Security Deposit (₱) <span style="color:#555;font-size:0.75rem;">(refundable, added to Trophy rentals)</span></label>
             <input type="number" name="deposit" value="<%= adminPromo.deposit %>" min="0" placeholder="100">
+          </div>
+
+          <!-- BUY PROMO -->
+          <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
+            <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Promo</label>
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+              <input type="checkbox" name="buy_promo_enabled" <%= adminPromo.buy_promo_enabled ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#a855f7;">
+              <span>Enable Buy Promo Discount</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Buy Discount % <span style="color:#555;font-size:0.75rem;">(applied to permanent access price)</span></label>
+            <input type="number" name="buy_promo_pct" value="<%= adminPromo.buy_promo_pct || 0 %>" min="0" max="100" placeholder="0">
           </div>
         </div>
         <div class="form-actions" style="margin-top:0.75rem;">
@@ -697,6 +716,18 @@
           <div class="form-group" id="add_trophy_slots" style="display:none;">
             <label>Trophy Account Slots <span style="color:#ffc400;font-size:0.72rem;">🏆 how many accounts</span></label>
             <input type="number" name="trophy_slots" value="1" min="1" max="20">
+          </div>
+          <!-- Buy Permanent Prices -->
+          <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
+            <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Access Prices (₱) <span style="font-weight:400;color:#555;font-size:0.78rem;text-transform:none;letter-spacing:0;">— leave 0 to hide Buy option</span></label>
+          </div>
+          <div class="form-group">
+            <label>🎮 Non-Trophy Buy Price</label>
+            <input type="number" name="buy_nt_price" value="0" min="0" placeholder="e.g. 999">
+          </div>
+          <div class="form-group">
+            <label>🏆 Trophy Buy Price</label>
+            <input type="number" name="buy_tr_price" value="0" min="0" placeholder="e.g. 1199">
           </div>
           <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description of the game..."></textarea></div>
         </div>

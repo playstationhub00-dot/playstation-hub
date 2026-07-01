@@ -8,32 +8,42 @@
   const totalSlots = ntSlots + trSlots + (showPs4 ? ps4Slots : 0);
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
+  const buyNt = game.buy_nt_price || 0;
+  const buyTr = game.buy_tr_price || 0;
+  const hasBuy = buyNt > 0 || buyTr > 0;
+  const gameSlug = game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const modalArgs = `'${game.title.replace(/'/g,"\\'")}',${game.nt_price_10d||0},${game.nt_price_15d||0},${game.nt_price_30d||0},${game.tr_price_10d||0},${game.tr_price_15d||0},${game.tr_price_30d||0},${hasTrophy?'true':'false'},true,${buyNt},${buyTr}`;
 %>
-<a href="/game/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>" class="game-card game-card-link">
+<div class="game-card" style="cursor:default;">
 
-  <!-- Cover + platform badge -->
-  <div class="gc-cover-wrap">
-    <% if (game.cover_image) { %>
-      <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
-    <% } else { %>
-      <div class="game-cover-placeholder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-        </svg>
-        <span>No Image</span>
-      </div>
-    <% } %>
-    <span class="gc-platform-badge"><%= game.platform %></span>
-    <% if (isLastSlot) { %>
-      <div class="gc-slot-banner gc-slot-banner-last">LAST SLOT!</div>
-    <% } else if (noSlot) { %>
-      <div class="gc-slot-banner gc-slot-banner-none">NO SLOT</div>
-    <% } %>
-  </div>
+  <!-- Clickable cover → game detail page -->
+  <a href="/game/<%= gameSlug %>" class="game-card-link" style="display:block;text-decoration:none;">
+    <div class="gc-cover-wrap">
+      <% if (game.cover_image) { %>
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+      <% } else { %>
+        <div class="game-cover-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          <span>No Image</span>
+        </div>
+      <% } %>
+      <span class="gc-platform-badge"><%= game.platform %></span>
+      <% if (isLastSlot) { %>
+        <div class="gc-slot-banner gc-slot-banner-last">LAST SLOT!</div>
+      <% } else if (noSlot) { %>
+        <div class="gc-slot-banner gc-slot-banner-none">NO SLOT</div>
+      <% } %>
+      <% if (hasBuy) { %>
+        <div style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;font-size:0.58rem;font-weight:800;padding:0.18rem 0.45rem;border-radius:20px;letter-spacing:0.3px;">♾️ BUY</div>
+      <% } %>
+    </div>
+  </a>
 
   <div class="game-info">
     <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
-    <div class="game-title"><%= game.title %></div>
+    <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
 
     <!-- Pricing columns side by side -->
     <div class="gc-price-table">
@@ -80,7 +90,6 @@
             <span class="gc-col-icon">🏆</span>
             <span class="gc-col-label">TROPHY</span>
           </div>
-          <!-- Trophy slots -->
           <% if (hasTrophy) { %>
           <div class="gc-slot-count">
             <% if (trSlots > 0) { %>
@@ -90,7 +99,6 @@
             <% } %>
           </div>
           <% } %>
-          <!-- PS4 Primary slots -->
           <% if (showPs4) { %>
           <div class="gc-slot-count">
             <span class="gc-slot-type-label">PS4</span>
@@ -118,10 +126,17 @@
       From ₱<%= game.nt_price_10d || game.tr_price_10d || '—' %>
       <span style="color:#555;font-size:0.75em;"> / 10 days</span>
     </div>
+
+    <!-- Action buttons -->
     <% if (allUnavail) { %>
-    <span class="rent-btn rent-btn-reserve">Reserve a Slot →</span>
+    <span class="rent-btn rent-btn-reserve" onclick="event.preventDefault();openReserveModal('<%= game.title.replace(/'/g,"\\'") %>')">Reserve a Slot →</span>
     <% } else { %>
-    <span class="rent-btn">Rent Now</span>
+    <div style="display:flex;gap:0.4rem;">
+      <span class="rent-btn" style="flex:1;text-align:center;" onclick="event.preventDefault();openRentModal(<%= modalArgs %>)">⏱️ Rent</span>
+      <% if (hasBuy) { %>
+      <span class="rent-btn" style="flex:1;text-align:center;background:linear-gradient(135deg,#7b2ff7,#f107a3);border-color:transparent;" onclick="event.preventDefault();openRentModal(<%= modalArgs %>);setTimeout(()=>switchModalTab('buy'),50)">♾️ Buy</span>
+      <% } %>
+    </div>
     <% } %>
   </div>
-</a>
+</div>

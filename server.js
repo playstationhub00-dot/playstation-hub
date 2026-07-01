@@ -555,7 +555,9 @@ app.get('/', (req, res) => {
   const homePsplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
   const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), reviews });
+  const s = getSiteSettings();
+  const promo = s.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo });
 });
 
 app.get('/browse', (req, res) => {
@@ -599,12 +601,15 @@ app.get('/game/:slug', (req, res) => {
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, (req, res) => {
-  const { enabled, discount_pct, apply_on_days, deposit } = req.body;
+  const { enabled, discount_pct, apply_on_days, deposit,
+          buy_promo_enabled, buy_promo_pct } = req.body;
   db.set('site_settings.promo', {
     enabled: enabled === 'on',
     discount_pct: Math.min(100, Math.max(0, parseInt(discount_pct) || 10)),
     apply_on_days: parseInt(apply_on_days) || 30,
-    deposit: Math.max(0, parseInt(deposit) || 100)
+    deposit: Math.max(0, parseInt(deposit) || 100),
+    buy_promo_enabled: buy_promo_enabled === 'on',
+    buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0))
   }).write();
   res.redirect('/admin?msg=promo_saved');
 });
@@ -835,6 +840,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
+    buy_nt_price, buy_tr_price,
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     price_category_id, price_mode, cost } = req.body;
@@ -862,6 +868,8 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 1) : 0,
     trophy_account: trophy_account === 'on',
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
+    buy_nt_price: parseInt(buy_nt_price) || 0,
+    buy_tr_price: parseInt(buy_tr_price) || 0,
     cost: parseInt(cost) || 0,
     created_at: new Date().toISOString()
   }).write();
@@ -878,6 +886,7 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
+    buy_nt_price, buy_tr_price,
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     price_category_id, price_mode, cost } = req.body;
@@ -903,6 +912,8 @@ app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res
     trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 0) : 0,
     trophy_account: trophy_account === 'on',
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
+    buy_nt_price: parseInt(buy_nt_price) || 0,
+    buy_tr_price: parseInt(buy_tr_price) || 0,
     cost: parseInt(cost) || 0
   }).write();
   res.redirect('/admin?msg=updated');

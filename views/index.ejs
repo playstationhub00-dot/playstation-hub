@@ -285,8 +285,23 @@ function openReserveModal(title) {
 function closeReserveModal() { document.getElementById('reserveModal').classList.remove('active'); }
 document.getElementById('reserveModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReserveModal(); });
 
-function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy, hasNt) {
+// Promo config from server
+const _rentPromo = { enabled: <%- promo.enabled ? 'true' : 'false' %>, pct: <%= promo.discount_pct || 0 %>, days: <%= promo.apply_on_days || 30 %> };
+const _buyPromo  = { enabled: <%- promo.buy_promo_enabled ? 'true' : 'false' %>, pct: <%= promo.buy_promo_pct || 0 %> };
+
+function switchModalTab(tab) {
+  const isRent = tab === 'rent';
+  document.getElementById('modalRentPanel').style.display = isRent ? 'block' : 'none';
+  document.getElementById('modalBuyPanel').style.display  = isRent ? 'none'  : 'block';
+  document.getElementById('modalTabRent').style.background = isRent ? 'var(--ps-blue)' : 'transparent';
+  document.getElementById('modalTabRent').style.color      = isRent ? '#000' : '#555';
+  document.getElementById('modalTabBuy').style.background  = isRent ? 'transparent' : 'var(--ps-blue)';
+  document.getElementById('modalTabBuy').style.color       = isRent ? '#555' : '#000';
+}
+
+function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy, hasNt, buyNt, buyTr) {
   document.getElementById('modalGameTitle').textContent = title;
+  // Rent prices
   document.getElementById('modalNtP10').textContent = '₱' + nt10;
   document.getElementById('modalNtP15').textContent = '₱' + nt15;
   document.getElementById('modalNtP30').textContent = '₱' + nt30;
@@ -295,6 +310,37 @@ function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy, has
   document.getElementById('modalTrP30').textContent = '₱' + tr30;
   document.getElementById('modalNtSection').style.display = hasNt ? 'block' : 'none';
   document.getElementById('modalTrophySection').style.display = hasTrophy ? 'block' : 'none';
+  // Buy prices
+  const hasBuyNt = buyNt > 0;
+  const hasBuyTr = buyTr > 0 && hasTrophy;
+  document.getElementById('modalBuyNtSection').style.display = hasBuyNt ? 'block' : 'none';
+  document.getElementById('modalBuyTrSection').style.display = hasBuyTr ? 'block' : 'none';
+  // Apply buy promo
+  if (_buyPromo.enabled && _buyPromo.pct > 0) {
+    document.getElementById('modalBuyPromoBadge').style.display = 'block';
+    document.getElementById('modalBuyPromoText').textContent = _buyPromo.pct + '%';
+    if (hasBuyNt) {
+      const disc = Math.round(buyNt * (1 - _buyPromo.pct / 100));
+      document.getElementById('modalBuyNtOriginal').textContent = '₱' + buyNt;
+      document.getElementById('modalBuyNtOriginal').style.display = 'block';
+      document.getElementById('modalBuyNtPrice').textContent = '₱' + disc;
+    }
+    if (hasBuyTr) {
+      const disc = Math.round(buyTr * (1 - _buyPromo.pct / 100));
+      document.getElementById('modalBuyTrOriginal').textContent = '₱' + buyTr;
+      document.getElementById('modalBuyTrOriginal').style.display = 'block';
+      document.getElementById('modalBuyTrPrice').textContent = '₱' + disc;
+    }
+  } else {
+    document.getElementById('modalBuyPromoBadge').style.display = 'none';
+    document.getElementById('modalBuyNtOriginal').style.display = 'none';
+    document.getElementById('modalBuyTrOriginal').style.display = 'none';
+    document.getElementById('modalBuyNtPrice').textContent = hasBuyNt ? '₱' + buyNt : '—';
+    document.getElementById('modalBuyTrPrice').textContent = hasBuyTr ? '₱' + buyTr : '—';
+  }
+  // Show/hide buy tab
+  document.getElementById('modalTabBuy').style.display = (hasBuyNt || hasBuyTr) ? '' : 'none';
+  switchModalTab('rent');
   document.getElementById('rentModal').classList.add('active');
 }
 function closeRentModal() { document.getElementById('rentModal').classList.remove('active'); }

@@ -128,6 +128,18 @@
           <input type="number" name="trophy_slots" value="<%= game.trophy_slots || 0 %>" min="0" max="20">
         </div>
 
+        <!-- Buy Permanent Prices -->
+        <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
+          <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Access Prices (₱) <span style="font-weight:400;color:#555;font-size:0.78rem;text-transform:none;">— leave 0 to hide Buy option</span></label>
+        </div>
+        <div class="form-group">
+          <label>🎮 Non-Trophy Buy Price</label>
+          <input type="number" name="buy_nt_price" value="<%= game.buy_nt_price || 0 %>" min="0" placeholder="e.g. 999">
+        </div>
+        <div class="form-group">
+          <label>🏆 Trophy Buy Price</label>
+          <input type="number" name="buy_tr_price" value="<%= game.buy_tr_price || 0 %>" min="0" placeholder="e.g. 1199">
+        </div>
         <div class="form-group full">
           <label>Description</label>
           <textarea name="description"><%= game.description || '' %></textarea>
