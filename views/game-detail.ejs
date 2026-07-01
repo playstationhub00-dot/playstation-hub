@@ -507,6 +507,11 @@ window.addEventListener('DOMContentLoaded', () => {
     || document.querySelector('input[name="rentalType"]');
   if (preferred) { preferred.checked = true; onTypeChange(preferred); }
   updateReserveLinks();
+  // Auto-switch to buy tab if ?mode=buy
+  if (new URLSearchParams(window.location.search).get('mode') === 'buy') {
+    const buyBtn = document.getElementById('toggleBuy');
+    if (buyBtn) setMode('buy');
+  }
 });
 </script>
 </body>

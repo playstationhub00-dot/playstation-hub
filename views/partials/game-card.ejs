@@ -129,12 +129,12 @@
 
     <!-- Action buttons -->
     <% if (allUnavail) { %>
-    <span class="rent-btn rent-btn-reserve" onclick="event.preventDefault();openReserveModal('<%= game.title.replace(/'/g,"\\'") %>')">Reserve a Slot →</span>
+    <a href="/game/<%= gameSlug %>" class="rent-btn rent-btn-reserve" style="display:block;text-align:center;text-decoration:none;">Reserve a Slot →</a>
     <% } else { %>
     <div style="display:flex;gap:0.4rem;">
-      <span class="rent-btn" style="flex:1;text-align:center;" onclick="event.preventDefault();openRentModal(<%= modalArgs %>)">⏱️ Rent</span>
+      <a href="/game/<%= gameSlug %>" class="rent-btn" style="flex:1;text-align:center;text-decoration:none;">⏱️ Rent</a>
       <% if (hasBuy) { %>
-      <span class="rent-btn" style="flex:1;text-align:center;background:linear-gradient(135deg,#7b2ff7,#f107a3);border-color:transparent;" onclick="event.preventDefault();openRentModal(<%= modalArgs %>);setTimeout(()=>switchModalTab('buy'),50)">♾️ Buy</span>
+      <a href="/game/<%= gameSlug %>?mode=buy" class="rent-btn" style="flex:1;text-align:center;text-decoration:none;background:linear-gradient(135deg,#7b2ff7,#f107a3);border-color:transparent;">♾️ Buy</a>
       <% } %>
     </div>
     <% } %>
