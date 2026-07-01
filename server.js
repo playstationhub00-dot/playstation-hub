@@ -1472,7 +1472,7 @@ app.post('/webhook', express.json(), (req, res) => {
       } else {
         db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
       }
-      handleMessage(senderId, text);
+      handleMessage(senderId, text).catch(e => console.error('[handleMessage]', e));
     });
   });
 });
@@ -1510,12 +1510,13 @@ function sendImage(recipientId, imageUrl) {
   });
 }
 
-function handleMessage(senderId, text) {
+async function handleMessage(senderId, text) {
   const games = getGames();
   const upcoming = getUpcoming();
+  const SITE = process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app';
 
   // ── HELP / GREETING ──────────────────────────────────────────────────────
-  if (!text || /^(hi|hello|hey|uy|oi|sup|start|help|menu|kamusta)/.test(text)) {
+  if (!text || /^(hi|hello|hey|uy|oi|sup|start|help|menu|kamusta|good morning|good afternoon|good evening|musta|helo|hellow|helow)/.test(text)) {
     return sendText(senderId,
       '👋 Hi! Welcome to PlayStation Hub!\n\n' +
       'Here\'s what I can help you with:\n\n' +
@@ -1523,43 +1524,101 @@ function handleMessage(senderId, text) {
       '🔜 Type "coming soon" — see upcoming games\n' +
       '🔍 Type a game name — check price & availability\n' +
       '💰 Type "prices" — see pricing guide\n' +
+      '📋 Type "how to rent" — step-by-step rental guide\n' +
+      '♾️ Type "buy" — permanent access info\n' +
       '📞 Type "contact" — talk to a human\n\n' +
-      'Browse all games 👉 https://playstation-hub-production.up.railway.app/browse'
+      'Browse all games 👉 ' + SITE + '/browse'
+    );
+  }
+
+  // ── HOW TO RENT / PROCESS ────────────────────────────────────────────────
+  if (/how.*(rent|order|borrow|get|kumuha|mag|process|works?|start|begin)|pano|paano|step|guide|tutorial|procedure/.test(text)) {
+    return sendText(senderId,
+      '📋 How to Rent at PlayStation Hub\n\n' +
+      '𝟭. Choose a game\n' +
+      '   Browse our games 👉 ' + SITE + '/browse\n\n' +
+      '𝟮. Pick your account type\n' +
+      '   🎮 Non-Trophy — play on our account\n' +
+      '   🏆 Trophy — earn trophies on your own PSN\n\n' +
+      '𝟯. Choose rental duration\n' +
+      '   ⏱ 10 days | 15 days | 30 days\n\n' +
+      '𝟰. Message us here to confirm\n' +
+      '   We\'ll set up your account access!\n\n' +
+      '𝟱. Pay via GCash & enjoy! 🎉\n\n' +
+      '✨ BONUS: 3 hours FREE trial before you commit!\n\n' +
+      '💬 Ready to rent? Just tell me which game you want! 😊'
+    );
+  }
+
+  // ── BUY PERMANENT ────────────────────────────────────────────────────────
+  if (/^buy|permanent|lifetime|forever|kahit kailan|sarili|own/.test(text)) {
+    return sendText(senderId,
+      '♾️ Buy Permanent Access — PlayStation Hub\n\n' +
+      'Own a game slot forever with a one-time payment!\n\n' +
+      '🎮 Non-Trophy Permanent\n' +
+      '   Play on our account, no time limit\n\n' +
+      '🏆 Trophy Permanent\n' +
+      '   Earn trophies on YOUR own PSN account\n\n' +
+      '✨ Benefits:\n' +
+      '• One-time payment, play forever\n' +
+      '• No monthly fees\n' +
+      '• 3 hours FREE trial before you buy\n' +
+      '• Message us to set it up anytime\n\n' +
+      '👉 Check buy prices: ' + SITE + '/browse\n\n' +
+      '💬 Which game are you interested in buying?'
+    );
+  }
+
+  // ── TRIAL ────────────────────────────────────────────────────────────────
+  if (/trial|libre|free|try|subukan|test/.test(text)) {
+    return sendText(senderId,
+      '🎮 FREE 3-Hour Trial!\n\n' +
+      'Yes! We offer a 3-hour FREE trial on our account before you rent or buy. 🎉\n\n' +
+      'Just tell us which game you want to try and we\'ll set it up for you!\n\n' +
+      '💬 Which game would you like to try?'
+    );
+  }
+
+  // ── PAYMENT ──────────────────────────────────────────────────────────────
+  if (/pay|gcash|payment|bayad|bayaran|how.*pay|magbayad/.test(text)) {
+    return sendText(senderId,
+      '💳 Payment at PlayStation Hub\n\n' +
+      'We accept payment via:\n\n' +
+      '📱 GCash — send to our GCash number\n\n' +
+      'Once you\'ve chosen a game and duration, message us and we\'ll give you the payment details. Payment first before we set up access. 😊\n\n' +
+      '💬 Ready to rent? Tell me which game!'
     );
   }
 
   // ── CONTACT / HUMAN ───────────────────────────────────────────────────────
-  if (/contact|human|agent|tao|admin|owner/.test(text)) {
+  if (/contact|human|agent|tao|admin|owner|staff|ikaw|sino|you/.test(text)) {
     return sendText(senderId,
-      '📞 You can reach us directly on Messenger anytime!\n\n' +
-      'Just send your message here and our team will reply as soon as possible. 😊'
+      '📞 Talk to our team!\n\n' +
+      'Just send your message here on Messenger and we\'ll reply as soon as possible. 😊\n\n' +
+      'We\'re usually available during the day. For urgent concerns, message us directly!'
     );
   }
 
   // ── PRICES GUIDE ─────────────────────────────────────────────────────────
-  if (/^price|magkano|how much|pricelist/.test(text)) {
-    const cats = [
-      { label: '🎮 Standard Games', nt10: 149, nt15: 199, nt30: 299, tr10: 199, tr15: 249, tr30: 349 }
-    ];
-    // sample from actual games
-    const sample = games.filter(g => g.nt_price_10d).slice(0, 3);
+  if (/price|magkano|how much|pricelist|presyo|halaga|cost/.test(text)) {
+    const sample = games.filter(g => g.nt_price_10d).slice(0, 4);
     let msg = '💰 PlayStation Hub Pricing\n\n';
     msg += '━━━━━━━━━━━━━━━━━━━\n';
     msg += '🎮 NON-TROPHY ACCOUNT\n';
-    msg += '  10 Days | 15 Days | 30 Days\n';
+    msg += '  10D / 15D / 30D\n';
     if (sample.length) {
       sample.forEach(g => {
-        msg += `  ${g.title.slice(0,20)}: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d}\n`;
+        msg += `  ${g.title.slice(0,18)}: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d}\n`;
       });
     }
-    msg += '\n🏆 TROPHY ACCOUNT\n';
-    msg += '  10 Days | 15 Days | 30 Days\n';
+    msg += '\n🏆 TROPHY ACCOUNT (+₱50)\n';
     if (sample.length) {
       sample.forEach(g => {
-        if (g.tr_price_10d) msg += `  ${g.title.slice(0,20)}: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d}\n`;
+        if (g.tr_price_10d) msg += `  ${g.title.slice(0,18)}: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d}\n`;
       });
     }
-    msg += '\n📖 See all prices:\nhttps://playstation-hub-production.up.railway.app/browse';
+    msg += '\n✨ FREE 3-hour trial available!\n';
+    msg += '📖 See all prices: ' + SITE + '/browse';
     return sendText(senderId, msg);
   }
 
@@ -1573,25 +1632,26 @@ function handleMessage(senderId, text) {
       if (g.nt_price_30d) msg += `   From ₱${g.nt_price_30d} (30 days)\n`;
       msg += '\n';
     });
-    msg += '📩 To reserve: https://playstation-hub-production.up.railway.app/browse';
+    msg += '📩 Reserve now: ' + SITE + '/browse';
     return sendText(senderId, msg);
   }
 
   // ── ALL GAMES LIST ────────────────────────────────────────────────────────
-  if (/^(games?|list|lahat|all games?|available)/.test(text)) {
+  if (/^(games?|list|lahat|all games?|available|ano.*games?|anong|meron)/.test(text)) {
     const avail = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) > 0);
     const full  = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) === 0);
-    let msg = `🎮 PlayStation Hub Game List\n(${games.length} games total)\n\n`;
+    let msg = `🎮 PlayStation Hub — ${games.length} Games\n\n`;
     if (avail.length) {
-      msg += '✅ AVAILABLE NOW:\n';
-      avail.slice(0, 10).forEach(g => { msg += `• ${g.title} (${g.platform})\n`; });
-      if (avail.length > 10) msg += `  ...and ${avail.length - 10} more\n`;
+      msg += `✅ AVAILABLE NOW (${avail.length}):\n`;
+      avail.slice(0, 12).forEach(g => { msg += `• ${g.title} (${g.platform})\n`; });
+      if (avail.length > 12) msg += `  ...and ${avail.length - 12} more\n`;
     }
     if (full.length) {
       msg += `\n🔴 FULLY RENTED (${full.length} games)\n`;
-      full.slice(0, 5).forEach(g => { msg += `• ${g.title}\n`; });
+      full.slice(0, 4).forEach(g => { msg += `• ${g.title}\n`; });
+      if (full.length > 4) msg += `  ...and ${full.length - 4} more\n`;
     }
-    msg += '\n🔍 Search all games:\nhttps://playstation-hub-production.up.railway.app/browse';
+    msg += '\n🔍 See all: ' + SITE + '/browse';
     return sendText(senderId, msg);
   }
 
@@ -1599,17 +1659,6 @@ function handleMessage(senderId, text) {
   const matches = games.filter(g => g.title.toLowerCase().includes(text));
   const upMatches = upcoming.filter(g => g.title.toLowerCase().includes(text));
 
-  if (matches.length === 0 && upMatches.length === 0) {
-    return sendText(senderId,
-      `😕 I couldn't find "${text}" in our library.\n\n` +
-      'Try typing:\n• "games" — see full list\n• "coming soon" — upcoming titles\n\n' +
-      '🔍 Browse: https://playstation-hub-production.up.railway.app/browse'
-    );
-  }
-
-  const SITE = process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app';
-
-  // Found in available games
   if (matches.length > 0) {
     const g = matches[0];
     const ntSlots = g.non_trophy_slots || 0;
@@ -1619,10 +1668,11 @@ function handleMessage(senderId, text) {
     msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
     if (g.tr_price_10d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
     msg += `\n💰 PRICING:\n`;
-    msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d} (10/15/30 days)\n`;
-    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d} (10/15/30 days)\n`;
-    msg += `\n📄 Game page: ${SITE}/game/${slug}`;
-    msg += `\n🌐 Browse all: ${SITE}/browse`;
+    msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d}\n`;
+    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d}\n`;
+    msg += `(10 / 15 / 30 days)\n`;
+    msg += `\n✨ FREE 3-hour trial available!\n`;
+    msg += `\n📄 View game: ${SITE}/game/${slug}`;
     if (matches.length > 1) msg += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
     if (g.cover_image) {
       return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
@@ -1630,7 +1680,6 @@ function handleMessage(senderId, text) {
     return sendText(senderId, msg);
   }
 
-  // Found in upcoming
   if (upMatches.length > 0) {
     const g = upMatches[0];
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
@@ -1638,13 +1687,61 @@ function handleMessage(senderId, text) {
     msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
     if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
     if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
-    msg += `\n📄 Reserve page: ${SITE}/upcoming/${slug}`;
-    msg += `\n🌐 Browse all: ${SITE}/browse`;
+    msg += `\n📄 Reserve: ${SITE}/upcoming/${slug}`;
     if (g.cover_image) {
       return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
     }
     return sendText(senderId, msg);
   }
+
+  // ── AI FALLBACK ───────────────────────────────────────────────────────────
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (apiKey) {
+    try {
+      const Anthropic = require('@anthropic-ai/sdk');
+      const client = new Anthropic.default({ apiKey });
+      const gameList = games.slice(0, 20).map(g =>
+        `${g.title} (${g.platform}) — NT: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d}${g.tr_price_10d ? `, TR: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
+      ).join('\n');
+      const response = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `You are a friendly Messenger bot for PlayStation Hub — a PS5/PS4 digital game rental shop in the Philippines. Reply in a friendly Taglish (Filipino-English mix) tone. Keep it short (max 5 sentences). Always end by encouraging them to message or visit the website.
+
+Business info:
+- Rent PS5/PS4 games for 10, 15, or 30 days
+- Two account types: Non-Trophy (play on our account) and Trophy (earn trophies on your own PSN)
+- Payment via GCash
+- FREE 3-hour trial before renting or buying
+- Also offer permanent/lifetime access (Buy option)
+- Website: https://playstation-hub-production.up.railway.app
+
+Available games (sample):
+${gameList}
+
+Customer message: "${text}"
+
+Reply naturally and helpfully. If they ask about a specific game not in our list, tell them it's not available but suggest similar ones or invite them to check the website.`
+        }]
+      });
+      const aiReply = response.content[0]?.text?.trim();
+      if (aiReply) return sendText(senderId, aiReply);
+    } catch(e) {
+      console.error('[bot AI fallback]', e.message);
+    }
+  }
+
+  // ── FINAL FALLBACK ────────────────────────────────────────────────────────
+  return sendText(senderId,
+    '😊 Hindi ko sure kung ano ang ibig mong sabihin, pero nandito kami para tumulong!\n\n' +
+    '🎮 Type "games" — available games\n' +
+    '💰 Type "prices" — pricing guide\n' +
+    '📋 Type "how to rent" — rental steps\n' +
+    '🔍 Or type a game name to search!\n\n' +
+    'Browse: ' + SITE + '/browse'
+  );
 }
 
 // ── AI Message Generator ──────────────────────────────────────────────────────
