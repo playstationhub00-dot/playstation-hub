@@ -200,7 +200,25 @@ nav {
 .gd-cover-col { position: relative; flex-shrink: 0; width: 380px; }
 .gd-cover { width: 100%; height: 480px; border-radius: 14px; object-fit: cover; object-position: top; display: block; }
 .gd-cover-placeholder { height: 480px; background: #111; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
-.gd-platform-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.25rem 0.5rem; border-radius: 5px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.15); }
+.gd-platform-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: #fff; font-size: 0.65rem; font-weight: 800; padding: 0.25rem 0.5rem; border-radius: 5px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.15); z-index: 3; }
+
+/* ── Gameplay Slider ─────────────────────────────────────── */
+.gd-slider { position: relative; width: 100%; border-radius: 14px; overflow: hidden; }
+.gd-slider-track { display: flex; transition: transform 0.35s ease; }
+.gd-slide { flex: 0 0 100%; }
+.gd-slide .gd-cover { border-radius: 0; }
+.gd-slider-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.55); color: #fff; font-size: 1.5rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 3; transition: background 0.15s; }
+.gd-slider-arrow:hover { background: rgba(0,0,0,0.85); }
+.gd-slider-prev { left: 8px; }
+.gd-slider-next { right: 8px; }
+.gd-slider-dots { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; z-index: 3; }
+.gd-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,0.4); cursor: pointer; padding: 0; transition: background 0.15s, width 0.15s; }
+.gd-dot.active { background: #fff; width: 20px; border-radius: 4px; }
+.gd-thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.gd-thumb { flex: 0 0 auto; width: 68px; height: 68px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; background: none; padding: 0; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; }
+.gd-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gd-thumb.active { opacity: 1; border-color: var(--ps-blue); }
+.gd-thumb:hover { opacity: 1; }
 .gd-detail-col { flex: 1; min-width: 0; }
 .gd-genres { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
 .gd-genre-tag { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.8px; padding: 0.2rem 0.6rem; border-radius: 4px; background: rgba(255,255,255,0.07); color: #aaa; border: 1px solid #222; }

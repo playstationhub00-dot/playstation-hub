@@ -842,7 +842,7 @@ app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
   res.redirect('/admin?msg=announcement');
 });
 
-app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
@@ -851,7 +851,9 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     non_trophy_slots, ps4_primary_slots,
     price_category_id, price_mode, cost } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
+  const cover_image = coverFile ? '/uploads/' + coverFile.filename : '';
+  const gallery = (req.files && req.files.gallery ? req.files.gallery : []).map(f => '/uploads/' + f.filename);
   const useCategory = price_mode === 'category' && price_category_id;
   const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').push({
@@ -859,6 +861,7 @@ app.post('/admin/add', upload.single('cover_image'), requireAuth, (req, res) => 
     title: title.trim(),
     platform: platform || 'PS5',
     cover_image,
+    gallery,
     available_slots: parseInt(available_slots) || 1,
     renters: parseInt(renters) || 0,
     price_category_id: cat ? parseInt(price_category_id) : null,
@@ -888,21 +891,34 @@ app.get('/admin/edit/:id', requireAuth, (req, res) => {
   res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories() });
 });
 
-app.post('/admin/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
     buy_nt_price, buy_tr_price,
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
+    remove_gallery,
     price_category_id, price_mode, cost } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
+  const cover_image = coverFile ? '/uploads/' + coverFile.filename : existing.cover_image;
+
+  // Gallery: keep existing minus removed, then append newly uploaded
+  const toRemove = Array.isArray(remove_gallery) ? remove_gallery : (remove_gallery ? [remove_gallery] : []);
+  let gallery = (existing.gallery || []).filter(img => !toRemove.includes(img));
+  toRemove.forEach(img => {
+    const fp = path.join(uploadsDir, path.basename(img));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  });
+  const newGallery = (req.files && req.files.gallery ? req.files.gallery : []).map(f => '/uploads/' + f.filename);
+  gallery = gallery.concat(newGallery);
+
   const useCategory = price_mode === 'category' && price_category_id;
   const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').find({ id: parseInt(req.params.id) }).assign({
-    title: title.trim(), platform, cover_image,
+    title: title.trim(), platform, cover_image, gallery,
     available_slots: parseInt(available_slots),
     renters: parseInt(renters),
     price_category_id: cat ? parseInt(price_category_id) : null,
@@ -931,6 +947,10 @@ app.post('/admin/delete/:id', requireAuth, (req, res) => {
     const filePath = path.join(uploadsDir, path.basename(game.cover_image));
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   }
+  (game?.gallery || []).forEach(img => {
+    const fp = path.join(uploadsDir, path.basename(img));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  });
   db.get('games').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?msg=deleted');
 });

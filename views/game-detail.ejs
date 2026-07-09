@@ -42,18 +42,46 @@
 
   <div class="gd-layout">
 
-    <!-- LEFT: Cover -->
+    <!-- LEFT: Cover + Gameplay Slider -->
+    <%
+      const slides = [];
+      if (game.cover_image) slides.push(game.cover_image);
+      (game.gallery || []).forEach(img => { if (img) slides.push(img); });
+    %>
     <div class="gd-cover-col">
-      <% if (game.cover_image) { %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover">
+      <% if (slides.length) { %>
+        <div class="gd-slider" id="gdSlider">
+          <div class="gd-slider-track" id="gdSliderTrack">
+            <% slides.forEach((img, i) => { %>
+              <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> screenshot <%= i+1 %>" class="gd-cover"></div>
+            <% }) %>
+          </div>
+          <div class="gd-platform-badge"><%= game.platform %></div>
+          <% if (slides.length > 1) { %>
+            <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
+            <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
+            <div class="gd-slider-dots" id="gdSliderDots">
+              <% slides.forEach((img, i) => { %>
+                <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
+              <% }) %>
+            </div>
+          <% } %>
+        </div>
+        <% if (slides.length > 1) { %>
+        <div class="gd-thumbs" id="gdThumbs">
+          <% slides.forEach((img, i) => { %>
+            <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>"></button>
+          <% }) %>
+        </div>
+        <% } %>
       <% } else { %>
         <div class="gd-cover gd-cover-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
             <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
           </svg>
         </div>
+        <div class="gd-platform-badge"><%= game.platform %></div>
       <% } %>
-      <div class="gd-platform-badge"><%= game.platform %></div>
     </div>
 
     <!-- RIGHT: Detail + Rental Form -->
@@ -109,9 +137,9 @@
               <div class="gd-type-header">
                 <span class="gd-type-icon">🏆</span>
                 <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
-                <span class="gd-type-status <%= allUnavail ? 'gd-status-rented' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= allUnavail ? 'Reserved' : (trAvail ? 'Available' : 'Reserved') %></span>
+                <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
               </div>
-              <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+              <div class="gd-type-desc">✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.<br><span style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong></span></div>
               <% if (!trAvail && game.tr_days_left != null && game.tr_days_left > 0) { %>
               <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
               <% } %>
@@ -125,9 +153,9 @@
               <div class="gd-type-header">
                 <span class="gd-type-icon">🎮</span>
                 <span class="gd-type-name">Non-Trophy</span>
-                <span class="gd-type-status <%= allUnavail ? 'gd-status-rented' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= allUnavail ? 'Reserved' : (ntAvail ? 'Available' : 'Reserved') %></span>
+                <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
               </div>
-              <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+              <div class="gd-type-desc">🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.<br><span style="color:#888;">Setup: Settings → Account → Other → Console Sharing → <strong>DON'T enable</strong></span></div>
               <% if (!ntAvail && game.nt_days_left != null && game.nt_days_left > 0) { %>
               <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
               <% } %>
@@ -520,6 +548,33 @@ window.addEventListener('DOMContentLoaded', () => {
     if (buyBtn) setMode('buy');
   }
 });
+
+// ── Gameplay image slider ──
+let gdIndex = 0;
+const gdSlideCount = <%= slides.length %>;
+function gdGo(i) {
+  if (gdSlideCount <= 1) return;
+  gdIndex = (i + gdSlideCount) % gdSlideCount;
+  const track = document.getElementById('gdSliderTrack');
+  if (track) track.style.transform = 'translateX(-' + (gdIndex * 100) + '%)';
+  document.querySelectorAll('#gdSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gdIndex));
+  document.querySelectorAll('#gdThumbs .gd-thumb').forEach((t, ti) => {
+    t.classList.toggle('active', ti === gdIndex);
+    if (ti === gdIndex) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  });
+}
+function gdMove(dir) { gdGo(gdIndex + dir); }
+// Swipe support on touch devices
+(function() {
+  const slider = document.getElementById('gdSlider');
+  if (!slider || gdSlideCount <= 1) return;
+  let startX = 0;
+  slider.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  slider.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) gdMove(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>

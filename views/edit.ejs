@@ -114,6 +114,29 @@
           <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
         </div>
 
+        <!-- Gameplay Gallery -->
+        <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;">
+          <label style="color:#38bdf8;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">🖼️ Gameplay Gallery <span style="font-weight:400;color:#555;font-size:0.78rem;text-transform:none;">— shown as a slider on the game page</span></label>
+          <% const gal = game.gallery || []; %>
+          <% if (gal.length) { %>
+          <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin:0.75rem 0;">
+            <% gal.forEach(img => { %>
+            <label style="position:relative;cursor:pointer;display:block;">
+              <img src="<%= img %>" style="width:90px;height:90px;object-fit:cover;border-radius:8px;border:1px solid #222;display:block;">
+              <span style="display:flex;align-items:center;gap:0.3rem;justify-content:center;margin-top:0.3rem;font-size:0.72rem;color:#ef4444;font-weight:600;">
+                <input type="checkbox" name="remove_gallery" value="<%= img %>" style="width:auto;margin:0;"> Remove
+              </span>
+            </label>
+            <% }) %>
+          </div>
+          <div style="font-size:0.72rem;color:#555;margin-bottom:0.5rem;">Tick <strong>Remove</strong> to delete a screenshot when you save.</div>
+          <% } else { %>
+          <div style="font-size:0.8rem;color:#555;margin:0.5rem 0;">No gameplay screenshots yet. Add some below 👇</div>
+          <% } %>
+          <label style="font-size:0.8rem;color:#aaa;">Add screenshots <span style="color:#555;">(you can select multiple, up to 10)</span></label>
+          <input type="file" name="gallery" accept="image/*" multiple style="padding:0.5rem;">
+        </div>
+
         <!-- Trophy account toggle -->
         <div class="form-group" style="justify-content:center;">
           <label>Trophy Account Available</label>
