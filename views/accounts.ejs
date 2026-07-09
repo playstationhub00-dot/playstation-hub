@@ -12,6 +12,13 @@
     .acc-stat { background: #15151d; border-radius: 10px; padding: 0.7rem 1.1rem; min-width: 120px; }
     .acc-stat .lbl { font-size: 0.72rem; color: #888; }
     .acc-stat .val { font-size: 1.5rem; font-weight: 900; color: #fff; }
+    .acc-search-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+    .acc-search { flex: 1; max-width: 360px; padding: 0.6rem 0.9rem; background: #15151d; border: 1px solid #2a2a35; border-radius: 8px; color: #fff; font-size: 0.85rem; }
+    .acc-search:focus { outline: none; border-color: var(--ps-blue); }
+    .acc-search-count { font-size: 0.75rem; color: #888; }
+    .acc-group { margin-bottom: 1.75rem; }
+    .acc-group-title { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid #23232e; }
+    .acc-group-count { font-size: 0.78rem; color: #666; font-weight: 500; }
     .acc-table-scroll { overflow-x: auto; border-radius: 12px; border: 1px solid #23232e; }
     .acc-table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.8rem; }
     .acc-table th { background: #1a1a24; color: #fff; padding: 0.6rem 0.7rem; text-align: left; border: 1px solid #2a2a35; font-size: 0.72rem; letter-spacing: 0.4px; }
@@ -108,25 +115,34 @@
     </form>
   </details>
 
-  <!-- ACCOUNTS TABLE -->
-  <div class="acc-table-scroll">
-    <table class="acc-table">
-      <thead>
-        <tr>
-          <th style="min-width:190px;">Account / Games</th>
-          <th>Permanent<br>(TR / NT)</th>
-          <th class="tr-col">🏆 Trophy</th>
-          <th class="nt-col">🎮 Non-Trophy</th>
-          <th class="ps4-col">🕹️ PS4 Primary</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (!accounts.length) { %>
-          <tr><td colspan="6" style="text-align:center;color:#666;padding:2rem;">No accounts yet. Click “+ Add Account” above to create your first one.</td></tr>
-        <% } %>
-        <% accounts.forEach(acc => { %>
-        <tr>
+  <!-- SEARCH -->
+  <div class="acc-search-wrap">
+    <input type="text" id="accSearch" class="acc-search" placeholder="🔍 Search games or accounts..." oninput="filterAccounts()">
+    <span id="accSearchCount" class="acc-search-count"></span>
+  </div>
+
+  <!-- ACCOUNTS TABLES (grouped by price category) -->
+  <% if (!accounts.length) { %>
+    <div style="text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No accounts yet. Click “+ Add Account” above to create your first one.</div>
+  <% } %>
+  <% groups.forEach(group => { %>
+  <div class="acc-group" data-group>
+    <div class="acc-group-title"><%= group.name %> <span class="acc-group-count">(<%= group.accounts.length %>)</span></div>
+    <div class="acc-table-scroll">
+      <table class="acc-table">
+        <thead>
+          <tr>
+            <th style="min-width:190px;">Account / Games</th>
+            <th>Permanent<br>(TR / NT)</th>
+            <th class="tr-col">🏆 Trophy</th>
+            <th class="nt-col">🎮 Non-Trophy</th>
+            <th class="ps4-col">🕹️ PS4 Primary</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        <% group.accounts.forEach(acc => { %>
+        <tr data-searchable="<%= (acc.label + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(games, id)).join(' ')).toLowerCase() %>">
           <td>
             <div class="acc-name"><%= acc.label %></div>
             <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
@@ -211,10 +227,35 @@
           </td>
         </tr>
         <% }) %>
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
+  <% }) %>
+
+  <div id="accNoResults" style="display:none;text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No games or accounts match your search.</div>
 </div>
+
+<script>
+function filterAccounts() {
+  const q = document.getElementById('accSearch').value.trim().toLowerCase();
+  const groups = document.querySelectorAll('[data-group]');
+  let totalVisible = 0;
+  groups.forEach(group => {
+    const rows = group.querySelectorAll('tr[data-searchable]');
+    let visibleInGroup = 0;
+    rows.forEach(row => {
+      const match = !q || row.dataset.searchable.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleInGroup++;
+    });
+    group.style.display = visibleInGroup > 0 ? '' : 'none';
+    totalVisible += visibleInGroup;
+  });
+  document.getElementById('accSearchCount').textContent = q ? totalVisible + ' match' + (totalVisible !== 1 ? 'es' : '') : '';
+  document.getElementById('accNoResults').style.display = (q && totalVisible === 0) ? 'block' : 'none';
+}
+</script>
 
 <%- include('partials/footer') %>
 </body>

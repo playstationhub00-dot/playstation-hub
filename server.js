@@ -1310,13 +1310,40 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
 
 // ── Accounts Dashboard ────────────────────────────────────────────────────────
 app.get('/admin/accounts', requireAuth, (req, res) => {
+  const allGames = getGames();
+  const gamesById = {};
+  allGames.forEach(g => { gamesById[g.id] = g; });
+  const categories = getPriceCategories();
+  const categoryById = {};
+  categories.forEach(c => { categoryById[c.id] = c; });
+
   const accounts = getAccounts().map(a => {
     const slotView = {};
     ACCOUNT_SLOT_TYPES.forEach(t => {
       slotView[t] = { ...a.slots[t], days_left: slotDaysLeft(a.slots[t]) };
     });
-    return { ...a, slotView };
+    // Category = the price category of the first linked game (if any)
+    const linkedGame = a.game_ids && a.game_ids.length ? gamesById[a.game_ids[0]] : null;
+    const cat = linkedGame && linkedGame.price_category_id ? categoryById[linkedGame.price_category_id] : null;
+    return { ...a, slotView, category_id: cat ? cat.id : null, category_name: cat ? cat.name : 'Uncategorized' };
   });
+
+  // Group by category name, sorted alphabetically by account label within each group
+  const groupsMap = {};
+  accounts.forEach(a => {
+    if (!groupsMap[a.category_name]) groupsMap[a.category_name] = [];
+    groupsMap[a.category_name].push(a);
+  });
+  const groupNames = Object.keys(groupsMap).sort((a, b) => {
+    if (a === 'Uncategorized') return 1;
+    if (b === 'Uncategorized') return -1;
+    return a.localeCompare(b);
+  });
+  const groups = groupNames.map(name => ({
+    name,
+    accounts: groupsMap[name].sort((a, b) => a.label.localeCompare(b.label))
+  }));
+
   // Summary stats
   const stats = { total: 0, open: 0, rented: 0, ending: 0 };
   accounts.forEach(a => ACCOUNT_SLOT_TYPES.forEach(t => {
@@ -1326,9 +1353,9 @@ app.get('/admin/accounts', requireAuth, (req, res) => {
     if (s.status === 'open') stats.open++;
     if (s.status === 'rented') { stats.rented++; if (s.days_left != null && s.days_left <= 3) stats.ending++; }
   }));
-  const games = getGames().sort((a, b) => a.title.localeCompare(b.title));
+  const games = allGames.sort((a, b) => a.title.localeCompare(b.title));
   res.render('accounts', {
-    accounts, stats, games,
+    accounts, groups, stats, games,
     customers: getCustomers(),
     settings: getSiteSettings(),
     SLOT_TYPES: ACCOUNT_SLOT_TYPES,
