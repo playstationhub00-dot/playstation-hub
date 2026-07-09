@@ -96,6 +96,7 @@
     <button class="admin-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Announcements</button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
+    <a class="admin-tab" href="/admin/accounts" style="text-decoration:none;line-height:1.2;">🗂️ Accounts</a>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
     <button class="admin-tab" data-tab="visitors" onclick="switchTab('visitors')">👁️ Visitors</button>
     <button class="admin-tab" data-tab="security" onclick="switchTab('security')">🔒 Security</button>
@@ -1863,6 +1864,17 @@ Message us anytime to reserve your slot! 😊</textarea>
               <option value="reservation">🔖 Reservation</option>
               <option value="done">✅ Done</option>
               <option value="bought">🛒 Bought</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label>🗂️ Assign to Account Slot <span style="color:#555;font-size:0.72rem;">(optional — marks that slot rented/buyed on the Accounts dashboard)</span></label>
+            <% const SLOT_LBL = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
+            <select name="account_assign">
+              <option value="">— None —</option>
+              <% (accounts||[]).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => { const s=a.slots[t]; if (s && s.enabled && s.status==='open') { %>
+                <option value="<%= a.id %>:<%= t %>"><%= a.label %> — <%= SLOT_LBL[t] %></option>
+              <% } }) }) %>
             </select>
           </div>
 

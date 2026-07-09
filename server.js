@@ -63,8 +63,14 @@ db.defaults({
   visitors: [],
   messenger_contacts: [],
   bot_training: [],
-  nextBotTrainingId: 1
+  nextBotTrainingId: 1,
+  accounts: [],
+  nextAccountId: 1
 }).write();
+
+// Ensure accounts collection exists for pre-existing databases
+if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
+if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
 (function migrateVisitorPaths() {
@@ -271,6 +277,59 @@ function newCustomerId() {
   const id = db.get('nextCustomerId').value();
   db.set('nextCustomerId', id + 1).write();
   return id;
+}
+
+// ── Accounts (per-account slot inventory) ──────────────────────────────────
+const ACCOUNT_SLOT_TYPES = ['trophy', 'non_trophy', 'ps4_primary'];
+const ACCOUNT_STATUSES = ['open', 'rented', 'buyed', 'na', 'maintenance'];
+function blankSlot(enabled) {
+  return { enabled: enabled !== false, status: 'open', renter_id: null, renter_name: '', start: '', end: '' };
+}
+function normalizeAccount(a) {
+  if (!a) return a;
+  a.slots = a.slots || {};
+  ACCOUNT_SLOT_TYPES.forEach(t => {
+    if (!a.slots[t]) a.slots[t] = blankSlot(true);
+    if (!ACCOUNT_STATUSES.includes(a.slots[t].status)) a.slots[t].status = 'open';
+  });
+  a.game_ids = Array.isArray(a.game_ids) ? a.game_ids : [];
+  return a;
+}
+function getAccounts() { return (db.get('accounts').value() || []).map(normalizeAccount); }
+function getAccount(id) {
+  const a = db.get('accounts').find({ id: parseInt(id) }).value();
+  return a ? normalizeAccount(a) : a;
+}
+function newAccountId() {
+  const id = db.get('nextAccountId').value() || 1;
+  db.set('nextAccountId', id + 1).write();
+  return id;
+}
+// Days until a slot's end date (null if no end date). Negative = expired.
+function slotDaysLeft(slot) {
+  if (!slot || !slot.end) return null;
+  const end = new Date(slot.end + 'T23:59:59');
+  if (isNaN(end)) return null;
+  return Math.ceil((end - new Date()) / 86400000);
+}
+// Aggregate availability of a game across every account that holds it (phase 2).
+function gameAccountSummary(gameId) {
+  const gid = parseInt(gameId);
+  const summary = {};
+  ACCOUNT_SLOT_TYPES.forEach(t => { summary[t] = { available: 0, total: 0, next_end: null }; });
+  getAccounts().forEach(acc => {
+    if (!acc.game_ids.includes(gid)) return;
+    ACCOUNT_SLOT_TYPES.forEach(t => {
+      const s = acc.slots[t];
+      if (!s || !s.enabled) return;
+      summary[t].total++;
+      if (s.status === 'open') summary[t].available++;
+      else if (s.status === 'rented' && s.end) {
+        if (!summary[t].next_end || s.end < summary[t].next_end) summary[t].next_end = s.end;
+      }
+    });
+  });
+  return summary;
 }
 
 function getPriceCategories() { return db.get('price_categories').value() || []; }
@@ -680,7 +739,7 @@ app.get('/admin', requireAuth, (req, res) => {
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const botTraining = db.get('bot_training').value() || [];
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews, botTraining });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
 });
 
 // Upcoming CRUD
@@ -1058,8 +1117,37 @@ app.post('/admin/hero-slides/delete', requireAuth, (req, res) => {
 });
 
 // Customer CRUD
+// Apply/clear an account slot from a customer assignment string "id:type"
+function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate }) {
+  if (!assignStr || !assignStr.includes(':')) return;
+  const [idPart, type] = assignStr.split(':');
+  const account = getAccount(idPart);
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return;
+  const slot = account.slots[type];
+  if (!slot || !slot.enabled) return;
+  if (status === 'bought') { slot.status = 'buyed'; slot.start = ''; slot.end = ''; }
+  else { slot.status = 'rented'; slot.start = new Date().toISOString().slice(0, 10); slot.end = endDate || ''; }
+  slot.renter_id = customerId;
+  slot.renter_name = customerName;
+  account.slots[type] = slot;
+  db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+}
+// Free any account slot currently linked to a given customer id
+function freeAccountSlotsForCustomer(customerId) {
+  getAccounts().forEach(acc => {
+    let changed = false;
+    ACCOUNT_SLOT_TYPES.forEach(t => {
+      if (acc.slots[t] && acc.slots[t].renter_id === customerId) {
+        acc.slots[t] = blankSlot(acc.slots[t].enabled);
+        changed = true;
+      }
+    });
+    if (changed) db.get('accounts').find({ id: acc.id }).assign({ slots: acc.slots }).write();
+  });
+}
+
 app.post('/admin/customers/add', requireAuth, (req, res) => {
-  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
   // Reservation uses upcoming game (prefixed id), others use regular game
@@ -1106,6 +1194,13 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
     if (aType === 'tr') adjustTrophySlots(parseInt(game_id), -1);
     else if (aType === 'ps4') adjustPs4Slots(parseInt(game_id), -1);
     else adjustNtSlots(parseInt(game_id), -1);
+  }
+  // Assign account slot if chosen (renting or bought only)
+  if (account_assign && (activeStatus === 'renting' || activeStatus === 'bought')) {
+    applyAccountAssignment(account_assign, {
+      customerId: id, customerName: customer_name.trim(),
+      status: activeStatus, endDate: end_date || ''
+    });
   }
   res.redirect('/admin?tab=customers&msg=customer_added');
 });
@@ -1187,6 +1282,8 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
       else adjustNtSlots(game.id, delta);
     }
   }
+  // Free linked account slot(s) when customer is no longer active
+  if (wasActive && !isActive) freeAccountSlotsForCustomer(parseInt(req.params.id));
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({ status }).write();
   res.redirect('/admin?tab=customers&msg=customer_updated');
 });
@@ -1206,8 +1303,124 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
       else adjustNtSlots(game.id, +1);
     }
   }
+  freeAccountSlotsForCustomer(parseInt(req.params.id));
   db.get('customers').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?tab=customers&msg=customer_deleted');
+});
+
+// ── Accounts Dashboard ────────────────────────────────────────────────────────
+app.get('/admin/accounts', requireAuth, (req, res) => {
+  const accounts = getAccounts().map(a => {
+    const slotView = {};
+    ACCOUNT_SLOT_TYPES.forEach(t => {
+      slotView[t] = { ...a.slots[t], days_left: slotDaysLeft(a.slots[t]) };
+    });
+    return { ...a, slotView };
+  });
+  // Summary stats
+  const stats = { total: 0, open: 0, rented: 0, ending: 0 };
+  accounts.forEach(a => ACCOUNT_SLOT_TYPES.forEach(t => {
+    const s = a.slotView[t];
+    if (!s.enabled) return;
+    stats.total++;
+    if (s.status === 'open') stats.open++;
+    if (s.status === 'rented') { stats.rented++; if (s.days_left != null && s.days_left <= 3) stats.ending++; }
+  }));
+  const games = getGames().sort((a, b) => a.title.localeCompare(b.title));
+  res.render('accounts', {
+    accounts, stats, games,
+    customers: getCustomers(),
+    settings: getSiteSettings(),
+    SLOT_TYPES: ACCOUNT_SLOT_TYPES,
+    STATUSES: ACCOUNT_STATUSES,
+    msg: req.query.msg || ''
+  });
+});
+
+function parseGameIds(raw) {
+  if (Array.isArray(raw)) return raw.map(x => parseInt(x)).filter(Boolean);
+  if (typeof raw === 'string' && raw.trim()) return raw.split(',').map(x => parseInt(x)).filter(Boolean);
+  return [];
+}
+
+app.post('/admin/accounts/add', requireAuth, (req, res) => {
+  const { label, games_text, game_ids, note, price_permanent_tr, price_permanent_nt,
+    enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
+  if (!label || !label.trim()) return res.redirect('/admin/accounts?msg=error');
+  db.get('accounts').push({
+    id: newAccountId(),
+    label: label.trim(),
+    games_text: games_text || '',
+    game_ids: parseGameIds(game_ids),
+    note: note || '',
+    price_permanent_tr: parseInt(price_permanent_tr) || 5000,
+    price_permanent_nt: parseInt(price_permanent_nt) || 4500,
+    slots: {
+      trophy: blankSlot(enable_trophy !== undefined),
+      non_trophy: blankSlot(enable_non_trophy !== undefined),
+      ps4_primary: blankSlot(enable_ps4_primary !== undefined)
+    },
+    created_at: new Date().toISOString()
+  }).write();
+  res.redirect('/admin/accounts?msg=account_added');
+});
+
+app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
+  const { label, games_text, game_ids, note, price_permanent_tr, price_permanent_nt,
+    enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
+  const existing = getAccount(req.params.id);
+  if (!existing) return res.redirect('/admin/accounts?msg=error');
+  const slots = existing.slots;
+  slots.trophy.enabled = enable_trophy !== undefined;
+  slots.non_trophy.enabled = enable_non_trophy !== undefined;
+  slots.ps4_primary.enabled = enable_ps4_primary !== undefined;
+  db.get('accounts').find({ id: parseInt(req.params.id) }).assign({
+    label: (label || existing.label).trim(),
+    games_text: games_text !== undefined ? games_text : existing.games_text,
+    game_ids: parseGameIds(game_ids),
+    note: note !== undefined ? note : existing.note,
+    price_permanent_tr: parseInt(price_permanent_tr) || existing.price_permanent_tr,
+    price_permanent_nt: parseInt(price_permanent_nt) || existing.price_permanent_nt,
+    slots
+  }).write();
+  res.redirect('/admin/accounts?msg=account_updated');
+});
+
+app.post('/admin/accounts/delete/:id', requireAuth, (req, res) => {
+  db.get('accounts').remove({ id: parseInt(req.params.id) }).write();
+  res.redirect('/admin/accounts?msg=account_deleted');
+});
+
+// Update a single slot's status / renter / expiration
+app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
+  const { status, renter_id, renter_name, days, end_date } = req.body;
+  const type = req.params.type;
+  const account = getAccount(req.params.id);
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return res.redirect('/admin/accounts?msg=error');
+  const slot = account.slots[type];
+  const newStatus = ACCOUNT_STATUSES.includes(status) ? status : slot.status;
+
+  if (newStatus === 'rented' || newStatus === 'buyed') {
+    slot.status = newStatus;
+    const cust = renter_id ? getCustomer(renter_id) : null;
+    slot.renter_id = cust ? cust.id : null;
+    slot.renter_name = cust ? cust.customer_name : (renter_name || '');
+    if (newStatus === 'rented') {
+      if (end_date) slot.end = end_date;
+      else if (days) {
+        const d = new Date(); d.setDate(d.getDate() + (parseInt(days) || 0));
+        slot.end = d.toISOString().slice(0, 10);
+      }
+      slot.start = slot.start || new Date().toISOString().slice(0, 10);
+    } else { slot.start = ''; slot.end = ''; }
+  } else {
+    // open / na / maintenance → clear renter + dates
+    slot.status = newStatus;
+    slot.renter_id = null; slot.renter_name = ''; slot.start = ''; slot.end = '';
+  }
+  account.slots[type] = slot;
+  db.get('accounts').find({ id: parseInt(req.params.id) }).assign({ slots: account.slots }).write();
+  res.redirect('/admin/accounts?msg=slot_updated');
 });
 
 // ── Customer Import / Sample ──────────────────────────────────────────────────

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounts Dashboard — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .acc-wrap { max-width: 1300px; margin: 0 auto; padding: 1.5rem; }
+    .acc-summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
+    .acc-stat { background: #15151d; border-radius: 10px; padding: 0.7rem 1.1rem; min-width: 120px; }
+    .acc-stat .lbl { font-size: 0.72rem; color: #888; }
+    .acc-stat .val { font-size: 1.5rem; font-weight: 900; color: #fff; }
+    .acc-table-scroll { overflow-x: auto; border-radius: 12px; border: 1px solid #23232e; }
+    .acc-table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.8rem; }
+    .acc-table th { background: #1a1a24; color: #fff; padding: 0.6rem 0.7rem; text-align: left; border: 1px solid #2a2a35; font-size: 0.72rem; letter-spacing: 0.4px; }
+    .acc-table th.tr-col { background: #14301f; }
+    .acc-table th.nt-col { background: #301416; }
+    .acc-table th.ps4-col { background: #14301f; }
+    .acc-table td { padding: 0.55rem 0.7rem; border: 1px solid #23232e; color: #ddd; vertical-align: top; }
+    .acc-table tr:nth-child(even) td { background: #111119; }
+    .acc-name { font-weight: 800; color: #fbbf24; }
+    .acc-games { font-size: 0.68rem; color: #777; margin-top: 3px; line-height: 1.4; }
+    .acc-price { text-align: center; color: #bbb; font-size: 0.74rem; white-space: nowrap; }
+    .slot-cell { min-width: 130px; }
+    .slot-pill { display: block; width: 100%; border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.68rem; font-weight: 800; cursor: pointer; text-align: center; letter-spacing: 0.4px; }
+    .st-open { background: #166534; color: #dcfce7; }
+    .st-rented { background: #991b1b; color: #fee2e2; }
+    .st-buyed { background: #1e40af; color: #dbeafe; }
+    .st-na { background: #6b21a8; color: #f3e8ff; }
+    .st-maintenance { background: #92620a; color: #fef3c7; }
+    .st-disabled { background: #222; color: #666; }
+    .slot-exp { font-size: 0.66rem; color: #999; margin-top: 3px; text-align: center; }
+    .slot-exp.soon { color: #fbbf24; font-weight: 700; }
+    .slot-exp.expired { color: #f87171; font-weight: 700; }
+    details.slot-det > summary { list-style: none; cursor: pointer; }
+    details.slot-det > summary::-webkit-details-marker { display: none; }
+    .slot-form { background: #0c0c14; border: 1px solid #2a2a35; border-radius: 8px; padding: 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+    .slot-form select, .slot-form input { width: 100%; padding: 5px; font-size: 0.72rem; background: #1a1a22; border: 1px solid #333; border-radius: 5px; color: #fff; }
+    .slot-form button { background: var(--ps-blue); color: #000; border: none; border-radius: 5px; padding: 6px; font-weight: 800; font-size: 0.72rem; cursor: pointer; }
+    .acc-actions { display: flex; gap: 6px; }
+    .acc-actions a, .acc-actions button { font-size: 0.68rem; padding: 4px 8px; border-radius: 5px; text-decoration: none; border: 1px solid #333; background: #1a1a22; color: #ccc; cursor: pointer; }
+    .acc-actions .del { border-color: rgba(239,68,68,0.4); color: #f87171; }
+    details.acc-add > summary { display: inline-block; background: var(--ps-blue); color: #000; font-weight: 800; padding: 0.55rem 1rem; border-radius: 8px; cursor: pointer; list-style: none; margin-bottom: 1rem; }
+    details.acc-add > summary::-webkit-details-marker { display: none; }
+    .acc-edit-form { background: #111119; border: 1px solid #23232e; border-radius: 10px; padding: 1rem; margin-top: 0.5rem; }
+    .acc-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+    .acc-edit-grid label { font-size: 0.72rem; color: #aaa; display: block; margin-bottom: 3px; }
+    .acc-edit-grid input, .acc-edit-grid select, .acc-edit-grid textarea { width: 100%; padding: 6px; background: #1a1a22; border: 1px solid #333; border-radius: 5px; color: #fff; font-size: 0.8rem; }
+    .slot-toggles { display: flex; gap: 14px; flex-wrap: wrap; margin: 0.5rem 0; font-size: 0.78rem; color: #ccc; }
+    .slot-toggles label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .msg-banner { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <div class="nav-links">
+    <a href="/admin" class="admin-btn">Admin Panel</a>
+  </div>
+</nav>
+
+<%
+  const STATUS_LABEL = { open:'OPEN', rented:'RENTED', buyed:'BUYED', na:'NOT AVAILABLE', maintenance:'MAINTENANCE' };
+  const SLOT_LABEL = { trophy:'Trophy', non_trophy:'Non-Trophy', ps4_primary:'PS4 Primary' };
+  function gameTitleById(games, id){ const g = games.find(x=>x.id===id); return g ? g.title : ('#'+id); }
+%>
+
+<div class="acc-wrap">
+  <a href="/admin" class="back-link">← Back to Admin</a>
+  <h1>🎮 Accounts Dashboard</h1>
+  <p style="color:#888;font-size:0.85rem;margin-bottom:0.5rem;">Track each PSN account and its Trophy / Non-Trophy / PS4 Primary slots. Click a status pill to change it.</p>
+
+  <% if (msg) { %><div class="msg-banner">✅ <%= msg.replace(/_/g,' ') %></div><% } %>
+
+  <div class="acc-summary">
+    <div class="acc-stat"><div class="lbl">Total slots</div><div class="val"><%= stats.total %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#4ade80;">Open</div><div class="val" style="color:#4ade80;"><%= stats.open %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#f87171;">Rented</div><div class="val" style="color:#f87171;"><%= stats.rented %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#fbbf24;">Ending ≤3 days</div><div class="val" style="color:#fbbf24;"><%= stats.ending %></div></div>
+  </div>
+
+  <!-- ADD ACCOUNT -->
+  <details class="acc-add">
+    <summary>+ Add Account</summary>
+    <form method="POST" action="/admin/accounts/add" class="acc-edit-form">
+      <div class="acc-edit-grid">
+        <div style="grid-column:1/-1;"><label>Account Label *</label><input type="text" name="label" placeholder="e.g. PSHub Main Account" required></div>
+        <div style="grid-column:1/-1;"><label>Games in this account (free text — shown internally)</label><textarea name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6..."></textarea></div>
+        <div style="grid-column:1/-1;"><label>Link catalog games (optional — powers the game-card summary)</label>
+          <select name="game_ids" multiple size="5" style="height:auto;">
+            <% games.forEach(g => { %><option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option><% }) %>
+          </select>
+          <span style="font-size:0.68rem;color:#666;">Hold Ctrl / Cmd to select multiple.</span>
+        </div>
+        <div><label>Trophy permanent price (₱)</label><input type="number" name="price_permanent_tr" value="5000" min="0"></div>
+        <div><label>Non-Trophy permanent price (₱)</label><input type="number" name="price_permanent_nt" value="4500" min="0"></div>
+        <div><label>Internal note</label><input type="text" name="note" placeholder="email tag, reminders..."></div>
+      </div>
+      <div class="slot-toggles">
+        <label><input type="checkbox" name="enable_trophy" checked> 🏆 Trophy slot</label>
+        <label><input type="checkbox" name="enable_non_trophy" checked> 🎮 Non-Trophy slot</label>
+        <label><input type="checkbox" name="enable_ps4_primary" checked> 🕹️ PS4 Primary slot</label>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Create Account</button>
+    </form>
+  </details>
+
+  <!-- ACCOUNTS TABLE -->
+  <div class="acc-table-scroll">
+    <table class="acc-table">
+      <thead>
+        <tr>
+          <th style="min-width:190px;">Account / Games</th>
+          <th>Permanent<br>(TR / NT)</th>
+          <th class="tr-col">🏆 Trophy</th>
+          <th class="nt-col">🎮 Non-Trophy</th>
+          <th class="ps4-col">🕹️ PS4 Primary</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!accounts.length) { %>
+          <tr><td colspan="6" style="text-align:center;color:#666;padding:2rem;">No accounts yet. Click “+ Add Account” above to create your first one.</td></tr>
+        <% } %>
+        <% accounts.forEach(acc => { %>
+        <tr>
+          <td>
+            <div class="acc-name"><%= acc.label %></div>
+            <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
+            <% if (acc.game_ids && acc.game_ids.length) { %>
+              <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(games, id)).join(', ') %></div>
+            <% } %>
+            <% if (acc.note) { %><div class="acc-games" style="color:#666;">📝 <%= acc.note %></div><% } %>
+          </td>
+          <td class="acc-price">₱<%= acc.price_permanent_tr %><br>₱<%= acc.price_permanent_nt %></td>
+
+          <% SLOT_TYPES.forEach(type => {
+               const s = acc.slotView[type];
+               const stClass = !s.enabled ? 'st-disabled' : ('st-' + s.status);
+               const label = !s.enabled ? 'DISABLED' : STATUS_LABEL[s.status];
+          %>
+          <td class="slot-cell">
+            <% if (!s.enabled) { %>
+              <div class="slot-pill st-disabled">DISABLED</div>
+            <% } else { %>
+              <details class="slot-det">
+                <summary><div class="slot-pill <%= stClass %>"><%= label %></div></summary>
+                <form method="POST" action="/admin/accounts/<%= acc.id %>/slot/<%= type %>" class="slot-form">
+                  <select name="status" onchange="this.closest('form').querySelector('.renter-wrap').style.display = (this.value==='rented'||this.value==='buyed')?'block':'none'; this.closest('form').querySelector('.days-wrap').style.display = this.value==='rented'?'block':'none';">
+                    <% STATUSES.forEach(st => { %>
+                      <option value="<%= st %>" <%= s.status===st?'selected':'' %>><%= STATUS_LABEL[st] %></option>
+                    <% }) %>
+                  </select>
+                  <div class="renter-wrap" style="display:<%= (s.status==='rented'||s.status==='buyed')?'block':'none' %>;">
+                    <select name="renter_id">
+                      <option value="">— Link customer (optional) —</option>
+                      <% customers.forEach(c => { %><option value="<%= c.id %>" <%= s.renter_id===c.id?'selected':'' %>><%= c.customer_name %></option><% }) %>
+                    </select>
+                  </div>
+                  <div class="days-wrap" style="display:<%= s.status==='rented'?'block':'none' %>;">
+                    <input type="number" name="days" min="1" placeholder="Days (e.g. 30)">
+                    <input type="date" name="end_date" value="<%= s.end || '' %>" title="Or set end date directly">
+                  </div>
+                  <button type="submit">Update slot</button>
+                </form>
+              </details>
+              <% if (s.status==='rented' && s.end) { %>
+                <div class="slot-exp <%= s.days_left!=null && s.days_left<0 ? 'expired' : (s.days_left!=null && s.days_left<=3 ? 'soon':'') %>">
+                  <%= s.end %><% if (s.days_left!=null) { %><br><%= s.days_left<0 ? 'ended — confirm' : s.days_left+'d left' %><% } %>
+                </div>
+                <% if (s.renter_name) { %><div class="slot-exp"><%= s.renter_name %></div><% } %>
+              <% } else if (s.status==='buyed' && s.renter_name) { %>
+                <div class="slot-exp"><%= s.renter_name %></div>
+              <% } %>
+            <% } %>
+          </td>
+          <% }) %>
+
+          <td>
+            <div class="acc-actions">
+              <details style="display:inline;">
+                <summary style="cursor:pointer;list-style:none;font-size:0.68rem;padding:4px 8px;border-radius:5px;border:1px solid #333;background:#1a1a22;color:#ccc;">Edit</summary>
+                <form method="POST" action="/admin/accounts/edit/<%= acc.id %>" class="acc-edit-form" style="position:absolute;z-index:10;width:320px;">
+                  <div class="acc-edit-grid" style="grid-template-columns:1fr;">
+                    <div><label>Label</label><input type="text" name="label" value="<%= acc.label %>"></div>
+                    <div><label>Games (text)</label><textarea name="games_text" rows="2"><%= acc.games_text %></textarea></div>
+                    <div><label>Linked games</label>
+                      <select name="game_ids" multiple size="4" style="height:auto;">
+                        <% games.forEach(g => { %><option value="<%= g.id %>" <%= acc.game_ids.includes(g.id)?'selected':'' %>><%= g.title %></option><% }) %>
+                      </select>
+                    </div>
+                    <div><label>TR price</label><input type="number" name="price_permanent_tr" value="<%= acc.price_permanent_tr %>"></div>
+                    <div><label>NT price</label><input type="number" name="price_permanent_nt" value="<%= acc.price_permanent_nt %>"></div>
+                    <div><label>Note</label><input type="text" name="note" value="<%= acc.note %>"></div>
+                  </div>
+                  <div class="slot-toggles">
+                    <label><input type="checkbox" name="enable_trophy" <%= acc.slots.trophy.enabled?'checked':'' %>> 🏆</label>
+                    <label><input type="checkbox" name="enable_non_trophy" <%= acc.slots.non_trophy.enabled?'checked':'' %>> 🎮</label>
+                    <label><input type="checkbox" name="enable_ps4_primary" <%= acc.slots.ps4_primary.enabled?'checked':'' %>> 🕹️</label>
+                  </div>
+                  <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Save</button>
+                </form>
+              </details>
+              <form method="POST" action="/admin/accounts/delete/<%= acc.id %>" onsubmit="return confirm('Delete this account?');" style="display:inline;">
+                <button type="submit" class="del">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
