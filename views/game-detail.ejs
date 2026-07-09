@@ -21,14 +21,37 @@
 </nav>
 
 <%
-  const ntSlots  = game.non_trophy_slots || 0;
-  const trSlots  = game.trophy_slots || 0;
-  const ps4Slots = game.ps4_primary_slots || 0;
-  const showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
-  const hasTrophy = !!(game.trophy_account || trSlots > 0);
-  const trAvail = trSlots > 0;
-  const ntAvail = ntSlots > 0;
-  const allUnavail = ntSlots <= 0 && trSlots <= 0 && (!showPs4 || ps4Slots <= 0);
+  // ── Availability: from linked accounts (phase 2) or legacy per-game counts ──
+  const sum = typeof accountSummary !== 'undefined' ? accountSummary : null;
+  const hasAccounts = sum && (sum.trophy.total + sum.non_trophy.total + sum.ps4_primary.total) > 0;
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + 'T23:59:59');
+    if (isNaN(d)) return null;
+    return Math.max(0, Math.ceil((d - new Date()) / 86400000));
+  }
+  let ntSlots, trSlots, ps4Slots, trAvail, ntAvail, ps4Avail;
+  let trLeft = 0, ntLeft = 0, ps4Left = 0, trNext = null, ntNext = null, ps4Next = null;
+  let hasTrophy, showPs4;
+  if (hasAccounts) {
+    trLeft = sum.trophy.available; ntLeft = sum.non_trophy.available; ps4Left = sum.ps4_primary.available;
+    trNext = daysUntil(sum.trophy.next_end); ntNext = daysUntil(sum.non_trophy.next_end); ps4Next = daysUntil(sum.ps4_primary.next_end);
+    trSlots = trLeft; ntSlots = ntLeft; ps4Slots = ps4Left;
+    trAvail = trLeft > 0; ntAvail = ntLeft > 0; ps4Avail = ps4Left > 0;
+    hasTrophy = sum.trophy.total > 0;
+    showPs4 = sum.ps4_primary.total > 0;
+  } else {
+    ntSlots  = game.non_trophy_slots || 0;
+    trSlots  = game.trophy_slots || 0;
+    ps4Slots = game.ps4_primary_slots || 0;
+    showPs4  = game.platform === 'PS4' || game.platform === 'PS4/PS5';
+    hasTrophy = !!(game.trophy_account || trSlots > 0);
+    trAvail = trSlots > 0;
+    ntAvail = ntSlots > 0;
+    ps4Avail = ps4Slots > 0;
+    trLeft = trSlots; ntLeft = ntSlots; ps4Left = ps4Slots;
+  }
+  const allUnavail = !ntAvail && !trAvail && (!showPs4 || !ps4Avail);
   const buyNt = game.buy_nt_price || 0;
   const buyTr = game.buy_tr_price || 0;
   const hasBuy = buyNt > 0 || buyTr > 0;
@@ -136,12 +159,14 @@
             <div class="gd-type-body">
               <div class="gd-type-header">
                 <span class="gd-type-icon">🏆</span>
-                <span class="gd-type-name">Trophy<% if(showPs4){ %> / PS4 Primary<% } %></span>
+                <span class="gd-type-name">Trophy</span>
                 <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
+                <% if (hasAccounts && trAvail) { %><span class="gd-slots-left"><%= trLeft %> slot<%= trLeft !== 1 ? 's' : '' %> left</span><% } %>
               </div>
               <div class="gd-type-desc">✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.<br><span style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong></span></div>
-              <% if (!trAvail && game.tr_days_left != null && game.tr_days_left > 0) { %>
-              <div class="gd-avail-soon">📅 Available in <strong><%= game.tr_days_left %> day<%= game.tr_days_left !== 1 ? 's' : '' %></strong></div>
+              <% const trSoon = hasAccounts ? trNext : (game.tr_days_left != null && game.tr_days_left > 0 ? game.tr_days_left : null); %>
+              <% if (!trAvail && trSoon != null && trSoon > 0) { %>
+              <div class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></div>
               <% } %>
             </div>
           </label>
@@ -154,13 +179,33 @@
                 <span class="gd-type-icon">🎮</span>
                 <span class="gd-type-name">Non-Trophy</span>
                 <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
+                <% if (hasAccounts && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> left</span><% } %>
               </div>
               <div class="gd-type-desc">🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.<br><span style="color:#888;">Setup: Settings → Account → Other → Console Sharing → <strong>DON'T enable</strong></span></div>
-              <% if (!ntAvail && game.nt_days_left != null && game.nt_days_left > 0) { %>
-              <div class="gd-avail-soon">📅 Available in <strong><%= game.nt_days_left %> day<%= game.nt_days_left !== 1 ? 's' : '' %></strong></div>
+              <% const ntSoon = hasAccounts ? ntNext : (game.nt_days_left != null && game.nt_days_left > 0 ? game.nt_days_left : null); %>
+              <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
+              <div class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></div>
               <% } %>
             </div>
           </label>
+
+          <% if (showPs4) { %>
+          <label class="gd-type-card" id="label-ps4">
+            <input type="radio" name="rentalType" value="ps4" onchange="onTypeChange(this)">
+            <div class="gd-type-body">
+              <div class="gd-type-header">
+                <span class="gd-type-icon">🕹️</span>
+                <span class="gd-type-name">PS4 Primary</span>
+                <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full Slot' %></span>
+                <% if (hasAccounts && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> slot<%= ps4Left !== 1 ? 's' : '' %> left</span><% } %>
+              </div>
+              <div class="gd-type-desc">🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.<br><span style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong> (on PS4)</span></div>
+              <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
+              <div class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></div>
+              <% } %>
+            </div>
+          </label>
+          <% } %>
 
         </div>
 
@@ -351,7 +396,8 @@
 <script>
 const PRICES = {
   nt: { 10: <%= game.nt_price_10d %>, 15: <%= game.nt_price_15d %>, 30: <%= game.nt_price_30d %> },
-  tr: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
+  tr: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> },
+  ps4: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
 };
 const BUY_PRICES = { nt: <%= buyNtFinal %>, tr: <%= buyTrFinal %> };
 const PROMO = {
@@ -360,7 +406,7 @@ const PROMO = {
   apply_on_days: <%= promo.apply_on_days %>,
   deposit: <%= promo.deposit %>
 };
-const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %> };
+const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %>, ps4: <%= ps4Avail ? 'true' : 'false' %> };
 
 let selectedType = null;
 let selectedDays = null;
@@ -465,7 +511,7 @@ function updateTotal() {
   const base = PRICES[selectedType][selectedDays];
   const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
   const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
-  const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+  const deposit  = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
   const total    = base - discount + deposit;
   let rows = `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
   if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${PROMO.discount_pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
@@ -477,14 +523,14 @@ function updateTotal() {
 
 function updateReserveLinks() {
   const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
-  const typeLabel = selectedType === 'tr' ? 'Trophy Account' : selectedType === 'nt' ? 'Non-Trophy Account' : '';
+  const typeLabel = selectedType === 'tr' ? 'Trophy Account' : selectedType === 'ps4' ? 'PS4 Primary Account' : selectedType === 'nt' ? 'Non-Trophy Account' : '';
   const daysLabel = selectedDays ? selectedDays + ' Days' : '';
   let totalLine = '';
   if (selectedType && selectedDays) {
     const base = PRICES[selectedType][selectedDays];
     const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
     const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
-    const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
+    const deposit  = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
     totalLine = 'Total: ₱' + (base - discount + deposit);
     if (discount > 0) totalLine += ' (incl. ' + PROMO.discount_pct + '% promo discount)';
     if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
@@ -539,6 +585,7 @@ function highlightDurationGrid() {
 window.addEventListener('DOMContentLoaded', () => {
   const preferred = (AVAIL.tr ? document.querySelector('input[name="rentalType"][value="tr"]') : null)
     || (AVAIL.nt ? document.querySelector('input[name="rentalType"][value="nt"]') : null)
+    || (AVAIL.ps4 ? document.querySelector('input[name="rentalType"][value="ps4"]') : null)
     || document.querySelector('input[name="rentalType"]');
   if (preferred) { preferred.checked = true; onTypeChange(preferred); }
   updateReserveLinks();

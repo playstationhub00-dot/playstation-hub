@@ -660,7 +660,7 @@ app.get('/game/:slug', (req, res) => {
   const resolved = resolveGamePrices(resolveSlotDays(game));
   const gdSettings = getSiteSettings();
   const gdPromo = gdSettings.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdPromo });
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdPromo, accountSummary: gameAccountSummary(game.id) });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
