@@ -1334,9 +1334,15 @@ app.get('/admin/accounts', requireAuth, (req, res) => {
     if (!groupsMap[a.category_name]) groupsMap[a.category_name] = [];
     groupsMap[a.category_name].push(a);
   });
+  const CATEGORY_ORDER = ['new games', 'deluxe', 'special', 'regular'];
   const groupNames = Object.keys(groupsMap).sort((a, b) => {
     if (a === 'Uncategorized') return 1;
     if (b === 'Uncategorized') return -1;
+    const ai = CATEGORY_ORDER.indexOf(a.toLowerCase());
+    const bi = CATEGORY_ORDER.indexOf(b.toLowerCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
     return a.localeCompare(b);
   });
   const groups = groupNames.map(name => ({
