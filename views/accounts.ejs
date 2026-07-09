@@ -27,6 +27,12 @@
     .acc-table th.ps4-col { background: #14301f; }
     .acc-table td { padding: 0.55rem 0.7rem; border: 1px solid #23232e; color: #ddd; vertical-align: top; }
     .acc-table tr:nth-child(even) td { background: #111119; }
+    .acc-name-row { display: flex; align-items: flex-start; gap: 8px; }
+    .acc-covers { display: flex; flex-shrink: 0; }
+    .acc-covers img.acc-cover-thumb { object-fit: cover; }
+    .acc-cover-thumb { width: 36px; height: 48px; border-radius: 5px; border: 1.5px solid #23232e; margin-left: -12px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+    .acc-cover-thumb:first-child { margin-left: 0; }
+    .acc-cover-placeholder { background: #1a1a24; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #444; }
     .acc-name { font-weight: 800; color: #fbbf24; }
     .acc-games { font-size: 0.68rem; color: #777; margin-top: 3px; line-height: 1.4; }
     .acc-price { text-align: center; color: #bbb; font-size: 0.74rem; white-space: nowrap; }
@@ -73,6 +79,7 @@
   const STATUS_LABEL = { open:'OPEN', rented:'RENTED', buyed:'BUYED', na:'NOT AVAILABLE', maintenance:'MAINTENANCE' };
   const SLOT_LABEL = { trophy:'Trophy', non_trophy:'Non-Trophy', ps4_primary:'PS4 Primary' };
   function gameTitleById(games, id){ const g = games.find(x=>x.id===id); return g ? g.title : ('#'+id); }
+  function gameById(games, id){ return games.find(x=>x.id===id); }
 %>
 
 <div class="acc-wrap">
@@ -144,12 +151,27 @@
         <% group.accounts.forEach(acc => { %>
         <tr data-searchable="<%= (acc.label + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(games, id)).join(' ')).toLowerCase() %>">
           <td>
-            <div class="acc-name"><%= acc.label %></div>
-            <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
-            <% if (acc.game_ids && acc.game_ids.length) { %>
-              <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(games, id)).join(', ') %></div>
-            <% } %>
-            <% if (acc.note) { %><div class="acc-games" style="color:#666;">📝 <%= acc.note %></div><% } %>
+            <div class="acc-name-row">
+              <% if (acc.game_ids && acc.game_ids.length) { %>
+                <div class="acc-covers">
+                  <% acc.game_ids.slice(0, 4).forEach(id => { const g = gameById(games, id); %>
+                    <% if (g && g.cover_image) { %>
+                      <img src="<%= g.cover_image %>" alt="<%= g.title %>" class="acc-cover-thumb" title="<%= g.title %>">
+                    <% } else { %>
+                      <div class="acc-cover-thumb acc-cover-placeholder" title="<%= g ? g.title : '' %>">🎮</div>
+                    <% } %>
+                  <% }) %>
+                </div>
+              <% } %>
+              <div>
+                <div class="acc-name"><%= acc.label %></div>
+                <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
+                <% if (acc.game_ids && acc.game_ids.length) { %>
+                  <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(games, id)).join(', ') %></div>
+                <% } %>
+                <% if (acc.note) { %><div class="acc-games" style="color:#666;">📝 <%= acc.note %></div><% } %>
+              </div>
+            </div>
           </td>
           <td class="acc-price">₱<%= acc.price_permanent_tr %><br>₱<%= acc.price_permanent_nt %></td>
 
