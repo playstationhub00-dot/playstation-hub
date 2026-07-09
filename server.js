@@ -141,6 +141,8 @@ const upload = multer({
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+// Expose account-summary helper to every EJS template (e.g. partials/game-card.ejs)
+app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
 app.use(express.static(path.join(__dirname, 'public')));
 // Serve uploads from persistent data directory
 app.use('/uploads', express.static(uploadsDir));
