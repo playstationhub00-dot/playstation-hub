@@ -104,6 +104,21 @@
         </div>
 
         <div class="form-group full">
+          <label>🗂️ Assign to Account Slot <span style="color:#555;font-size:0.72rem;">(controls the Accounts dashboard — leave as-is if unsure)</span></label>
+          <% const SLOT_LBL = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
+          <select name="account_assign">
+            <option value="">— None —</option>
+            <% (accounts||[]).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => {
+                 const s = a.slots[t];
+                 const key = a.id + ':' + t;
+                 const isCurrent = currentAssign === key;
+                 if (s && s.enabled && (s.status === 'open' || isCurrent)) { %>
+              <option value="<%= key %>" <%= isCurrent ? 'selected' : '' %>><%= a.label %> — <%= SLOT_LBL[t] %><%= isCurrent ? ' (current)' : '' %></option>
+            <% } }) }) %>
+          </select>
+        </div>
+
+        <div class="form-group full">
           <label>Notes</label>
           <input type="text" name="notes" value="<%= customer.notes || '' %>" placeholder="Optional notes...">
         </div>

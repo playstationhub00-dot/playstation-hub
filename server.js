@@ -1147,6 +1147,28 @@ function freeAccountSlotsForCustomer(customerId) {
     if (changed) db.get('accounts').find({ id: acc.id }).assign({ slots: acc.slots }).write();
   });
 }
+// Find the "accId:type" string of whichever slot is currently linked to a customer, or null
+function findAccountAssignmentForCustomer(customerId) {
+  for (const acc of getAccounts()) {
+    for (const t of ACCOUNT_SLOT_TYPES) {
+      if (acc.slots[t] && acc.slots[t].renter_id === customerId) return acc.id + ':' + t;
+    }
+  }
+  return null;
+}
+// Update renter_name/end date on an already-assigned slot WITHOUT resetting its start date
+function refreshAccountAssignment(assignStr, { customerName, endDate }) {
+  if (!assignStr || !assignStr.includes(':')) return;
+  const [idPart, type] = assignStr.split(':');
+  const account = getAccount(idPart);
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return;
+  const slot = account.slots[type];
+  if (!slot || !slot.enabled) return;
+  slot.renter_name = customerName;
+  if (slot.status === 'rented' && endDate) slot.end = endDate;
+  account.slots[type] = slot;
+  db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+}
 
 app.post('/admin/customers/add', requireAuth, (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
@@ -1211,11 +1233,12 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const customer = getCustomer(req.params.id);
   if (!customer) return res.redirect('/admin?tab=customers');
   const games = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('edit-customer', { customer, games, upcoming: getUpcoming(), settings: getSiteSettings() });
+  const currentAssign = findAccountAssignmentForCustomer(customer.id);
+  res.render('edit-customer', { customer, games, upcoming: getUpcoming(), settings: getSiteSettings(), accounts: getAccounts(), currentAssign });
 });
 
 app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
-  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes } = req.body;
+  const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
@@ -1223,6 +1246,26 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const isActive = status === 'renting' || status === 'bought';
   const wasUpcoming = String(existing.game_id).startsWith('upcoming_');
   const isUpcomingNew = String(game_id || existing.game_id).startsWith('upcoming_');
+
+  // ── Sync linked account slot (dashboard) with this edit ──
+  const customerId = parseInt(req.params.id);
+  const finalCustomerName = (customer_name || existing.customer_name).trim();
+  const finalEndDate = end_date || existing.end_date;
+  const priorAssign = findAccountAssignmentForCustomer(customerId);
+  const submittedAssign = account_assign !== undefined ? (account_assign || null) : priorAssign;
+  if (!isActive) {
+    // No longer renting/bought → free whatever slot was linked
+    if (priorAssign) freeAccountSlotsForCustomer(customerId);
+  } else if (submittedAssign !== priorAssign) {
+    // Assignment target changed (or game/type changed under it) → free old, apply new
+    if (priorAssign) freeAccountSlotsForCustomer(customerId);
+    if (submittedAssign) {
+      applyAccountAssignment(submittedAssign, { customerId, customerName: finalCustomerName, status, endDate: finalEndDate });
+    }
+  } else if (priorAssign) {
+    // Same slot as before → just refresh name/end date, keep original start date
+    refreshAccountAssignment(priorAssign, { customerName: finalCustomerName, endDate: finalEndDate });
+  }
 
   // Revert old game slot/trophy changes if was active
   if (wasActive && !wasUpcoming) {
