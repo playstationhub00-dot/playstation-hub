@@ -165,13 +165,8 @@ function getCustDays() {
   return parseInt(sel.value) || 0;
 }
 function updateCustPrice() {
-  const sel = document.getElementById('cust_game');
-  const opt = sel.options[sel.selectedIndex];
-  const days = document.getElementById('cust_days').value;
-  const type = document.getElementById('cust_type').value;
-  if (!opt || !opt.value || days === 'custom') { updateCustEndDate(); return; }
-  const price = opt.dataset[type + days];
-  if (price) document.getElementById('cust_price').value = price;
+  // Price is intentionally left untouched here — changing the game, duration, or
+  // account type on an existing customer should not overwrite what they already paid.
   updateCustEndDate();
 }
 function updateCustEndDate() {
