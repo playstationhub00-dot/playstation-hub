@@ -640,11 +640,7 @@ function sortUpcoming(list) {
 
 app.get('/', (req, res) => {
   const all = getGames().map(resolveGamePrices).map(resolveSlotDays).sort((a, b) => a.title.localeCompare(b.title));
-  const rentalCounts = getCustomers().reduce((acc, c) => {
-    acc[c.game_title] = (acc[c.game_title] || 0) + 1;
-    return acc;
-  }, {});
-  const featured = [...all].sort((a, b) => (rentalCounts[b.title] || 0) - (rentalCounts[a.title] || 0)).slice(0, 10);
+  const featured = [...all].sort((a, b) => (b.renters || 0) - (a.renters || 0)).slice(0, 10);
   const upcoming = sortUpcoming(getUpcoming());
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 10);
   const psplusPrices = getPsplusPrices();
