@@ -143,6 +143,8 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 // Expose account-summary helper to every EJS template (e.g. partials/game-card.ejs)
 app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
+// Expose shared per-game availability computation (accounts-vs-legacy fallback, per slot type)
+app.locals.computeAvailability = require('./lib/availability');
 app.use(express.static(path.join(__dirname, 'public')));
 // Serve uploads from persistent data directory
 app.use('/uploads', express.static(uploadsDir));
@@ -332,6 +334,32 @@ function gameAccountSummary(gameId) {
     });
   });
   return summary;
+}
+// Build a gameId → summary map in a single pass over all accounts, so pages that render
+// many game-card partials (browse, index) don't recompute the summary per card.
+function buildAccountSummaryMap() {
+  const map = {};
+  function blankSummary() {
+    const s = {};
+    ACCOUNT_SLOT_TYPES.forEach(t => { s[t] = { available: 0, total: 0, next_end: null }; });
+    return s;
+  }
+  getAccounts().forEach(acc => {
+    acc.game_ids.forEach(gid => {
+      if (!map[gid]) map[gid] = blankSummary();
+      const summary = map[gid];
+      ACCOUNT_SLOT_TYPES.forEach(t => {
+        const s = acc.slots[t];
+        if (!s || !s.enabled) return;
+        summary[t].total++;
+        if (s.status === 'open') summary[t].available++;
+        else if (s.status === 'rented' && s.end) {
+          if (!summary[t].next_end || s.end < summary[t].next_end) summary[t].next_end = s.end;
+        }
+      });
+    });
+  });
+  return map;
 }
 
 function getPriceCategories() { return db.get('price_categories').value() || []; }
@@ -621,7 +649,7 @@ app.get('/', (req, res) => {
   const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const s = getSiteSettings();
   const promo = s.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo });
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo, accountSummaryMap: buildAccountSummaryMap() });
 });
 
 app.get('/browse', (req, res) => {
@@ -642,7 +670,7 @@ app.get('/browse', (req, res) => {
   // PS Plus monthly entries sorted newest first
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), accountSummaryMap: buildAccountSummaryMap() });
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────
@@ -966,9 +994,13 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? '/uploads/' + coverFile.filename : existing.cover_image;
 
-  // Gallery: keep existing minus removed, then append newly uploaded
-  const toRemove = Array.isArray(remove_gallery) ? remove_gallery : (remove_gallery ? [remove_gallery] : []);
-  let gallery = (existing.gallery || []).filter(img => !toRemove.includes(img));
+  // Gallery: keep existing minus removed, then append newly uploaded.
+  // Only ever delete files that are actually in THIS game's own gallery — a submitted
+  // remove_gallery entry naming any other file (tampered or stale) is ignored.
+  const requestedRemove = Array.isArray(remove_gallery) ? remove_gallery : (remove_gallery ? [remove_gallery] : []);
+  const existingGallery = existing.gallery || [];
+  const toRemove = requestedRemove.filter(img => existingGallery.includes(img));
+  let gallery = existingGallery.filter(img => !toRemove.includes(img));
   toRemove.forEach(img => {
     const fp = path.join(uploadsDir, path.basename(img));
     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
@@ -1013,6 +1045,15 @@ app.post('/admin/delete/:id', requireAuth, (req, res) => {
     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
   });
   db.get('games').remove({ id: parseInt(req.params.id) }).write();
+  // Remove this game's id from every account's game_ids so no phantom links remain.
+  const deletedGameId = parseInt(req.params.id);
+  getAccounts().forEach(acc => {
+    if (acc.game_ids.includes(deletedGameId)) {
+      db.get('accounts').find({ id: acc.id }).assign({
+        game_ids: acc.game_ids.filter(gid => gid !== deletedGameId)
+      }).write();
+    }
+  });
   res.redirect('/admin?msg=deleted');
 });
 
@@ -1120,22 +1161,30 @@ app.post('/admin/hero-slides/delete', requireAuth, (req, res) => {
 
 // Customer CRUD
 // Apply/clear an account slot from a customer assignment string "id:type"
+// Returns true on success, false if the target slot doesn't exist / is disabled (caller must
+// surface this rather than leaving the customer marked active with nothing actually reserved).
 function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate }) {
-  if (!assignStr || !assignStr.includes(':')) return;
+  if (!assignStr || !assignStr.includes(':')) return true;
   const [idPart, type] = assignStr.split(':');
   const account = getAccount(idPart);
-  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return;
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return false;
   const slot = account.slots[type];
-  if (!slot || !slot.enabled) return;
+  if (!slot || !slot.enabled) return false;
   if (status === 'bought') { slot.status = 'buyed'; slot.start = ''; slot.end = ''; }
   else { slot.status = 'rented'; slot.start = new Date().toISOString().slice(0, 10); slot.end = endDate || ''; }
   slot.renter_id = customerId;
   slot.renter_name = customerName;
   account.slots[type] = slot;
   db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+  return true;
 }
-// Free any account slot currently linked to a given customer id
+// Free any account slot currently linked to a given customer id.
+// NOTE: slots with only a free-text renter_name (no linked customer, renter_id === null) are
+// never matched here — there is no customer-side event that could correspond to freeing them,
+// and this app has no automated/expiry-based sweep for ANY slot type (linked or free-text).
+// Freeing a free-text slot today is a manual admin action via /admin/accounts/:id/slot/:type.
 function freeAccountSlotsForCustomer(customerId) {
+  let anyChanged = false;
   getAccounts().forEach(acc => {
     let changed = false;
     ACCOUNT_SLOT_TYPES.forEach(t => {
@@ -1144,8 +1193,12 @@ function freeAccountSlotsForCustomer(customerId) {
         changed = true;
       }
     });
-    if (changed) db.get('accounts').find({ id: acc.id }).assign({ slots: acc.slots }).write();
+    if (changed) {
+      db.get('accounts').find({ id: acc.id }).assign({ slots: acc.slots }).value();
+      anyChanged = true;
+    }
   });
+  if (anyChanged) db.write();
 }
 // Find the "accId:type" string of whichever slot is currently linked to a customer, or null
 function findAccountAssignmentForCustomer(customerId) {
@@ -1156,18 +1209,23 @@ function findAccountAssignmentForCustomer(customerId) {
   }
   return null;
 }
-// Update renter_name/end date on an already-assigned slot WITHOUT resetting its start date
-function refreshAccountAssignment(assignStr, { customerName, endDate }) {
-  if (!assignStr || !assignStr.includes(':')) return;
+// Update renter_name/end date/status on an already-assigned slot WITHOUT resetting its start date.
+// Returns true on success, false if the target slot no longer exists/is disabled (caller should surface this).
+function refreshAccountAssignment(assignStr, { customerName, endDate, status }) {
+  if (!assignStr || !assignStr.includes(':')) return true;
   const [idPart, type] = assignStr.split(':');
   const account = getAccount(idPart);
-  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return;
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return false;
   const slot = account.slots[type];
-  if (!slot || !slot.enabled) return;
+  if (!slot || !slot.enabled) return false;
   slot.renter_name = customerName;
-  if (slot.status === 'rented' && endDate) slot.end = endDate;
+  // Keep slot.status in sync when the customer toggles between renting ↔ bought on the same slot.
+  if (status === 'bought' && slot.status !== 'buyed') { slot.status = 'buyed'; slot.end = ''; }
+  else if (status === 'renting' && slot.status !== 'rented') { slot.status = 'rented'; if (endDate) slot.end = endDate; }
+  else if (slot.status === 'rented' && endDate) slot.end = endDate;
   account.slots[type] = slot;
   db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+  return true;
 }
 
 app.post('/admin/customers/add', requireAuth, (req, res) => {
@@ -1221,10 +1279,11 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
   }
   // Assign account slot if chosen (renting or bought only)
   if (account_assign && (activeStatus === 'renting' || activeStatus === 'bought')) {
-    applyAccountAssignment(account_assign, {
+    const assigned = applyAccountAssignment(account_assign, {
       customerId: id, customerName: customer_name.trim(),
       status: activeStatus, endDate: end_date || ''
     });
+    if (!assigned) return res.redirect('/admin?tab=customers&msg=slot_unavailable');
   }
   res.redirect('/admin?tab=customers&msg=customer_added');
 });
@@ -1253,6 +1312,7 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const finalEndDate = end_date || existing.end_date;
   const priorAssign = findAccountAssignmentForCustomer(customerId);
   const submittedAssign = account_assign !== undefined ? (account_assign || null) : priorAssign;
+  let slotAssignFailed = false;
   if (!isActive) {
     // No longer renting/bought → free whatever slot was linked
     if (priorAssign) freeAccountSlotsForCustomer(customerId);
@@ -1260,12 +1320,13 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     // Assignment target changed (or game/type changed under it) → free old, apply new
     if (priorAssign) freeAccountSlotsForCustomer(customerId);
     if (submittedAssign) {
-      applyAccountAssignment(submittedAssign, { customerId, customerName: finalCustomerName, status, endDate: finalEndDate });
+      slotAssignFailed = !applyAccountAssignment(submittedAssign, { customerId, customerName: finalCustomerName, status, endDate: finalEndDate });
     }
   } else if (priorAssign) {
-    // Same slot as before → just refresh name/end date, keep original start date
-    refreshAccountAssignment(priorAssign, { customerName: finalCustomerName, endDate: finalEndDate });
+    // Same slot as before → refresh name/end date/status (renting ↔ bought), keep original start date
+    slotAssignFailed = !refreshAccountAssignment(priorAssign, { customerName: finalCustomerName, endDate: finalEndDate, status });
   }
+  if (slotAssignFailed) return res.redirect('/admin?tab=customers&msg=slot_unavailable');
 
   // Revert old game slot/trophy changes if was active
   if (wasActive && !wasUpcoming) {
@@ -1301,7 +1362,7 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     account_type: account_type || existing.account_type,
     start_date: start_date || existing.start_date,
     end_date: end_date || existing.end_date,
-    price: parseInt(price) || existing.price,
+    price: price !== undefined && price !== '' ? (parseInt(price) || 0) : existing.price,
     status: status || existing.status,
     notes: notes || ''
   }).write();
@@ -1328,7 +1389,13 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
     }
   }
   // Free linked account slot(s) when customer is no longer active
-  if (wasActive && !isActive) freeAccountSlotsForCustomer(parseInt(req.params.id));
+  if (wasActive && !isActive) {
+    freeAccountSlotsForCustomer(parseInt(req.params.id));
+  } else if (wasActive && isActive && existing.status !== status) {
+    // Toggling renting ↔ bought on the same linked slot — keep slot.status in sync
+    const linkedAssign = findAccountAssignmentForCustomer(parseInt(req.params.id));
+    if (linkedAssign) refreshAccountAssignment(linkedAssign, { customerName: existing.customer_name, endDate: existing.end_date, status });
+  }
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({ status }).write();
   res.redirect('/admin?tab=customers&msg=customer_updated');
 });
@@ -1457,14 +1524,25 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     games_text: games_text !== undefined ? games_text : existing.games_text,
     game_ids: parseGameIds(game_ids),
     note: note !== undefined ? note : existing.note,
-    price_permanent_tr: parseInt(price_permanent_tr) || existing.price_permanent_tr,
-    price_permanent_nt: parseInt(price_permanent_nt) || existing.price_permanent_nt,
+    price_permanent_tr: price_permanent_tr !== undefined && price_permanent_tr !== '' ? (parseInt(price_permanent_tr) || 0) : existing.price_permanent_tr,
+    price_permanent_nt: price_permanent_nt !== undefined && price_permanent_nt !== '' ? (parseInt(price_permanent_nt) || 0) : existing.price_permanent_nt,
     slots
   }).write();
   res.redirect('/admin/accounts?msg=account_updated');
 });
 
 app.post('/admin/accounts/delete/:id', requireAuth, (req, res) => {
+  const account = getAccount(req.params.id);
+  if (account) {
+    // Unlink any customers whose active slot pointed at this account, so no customer
+    // record is left dangling on a deleted account.
+    ACCOUNT_SLOT_TYPES.forEach(t => {
+      const slot = account.slots[t];
+      if (slot && slot.renter_id) {
+        db.get('customers').find({ id: slot.renter_id }).assign({ status: 'done' }).write();
+      }
+    });
+  }
   db.get('accounts').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin/accounts?msg=account_deleted');
 });
