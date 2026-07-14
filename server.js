@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 const session = require('express-session');
+const computeAvailability = require('./lib/availability');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -144,7 +145,7 @@ app.set('views', path.join(__dirname, 'views'));
 // Expose account-summary helper to every EJS template (e.g. partials/game-card.ejs)
 app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
 // Expose shared per-game availability computation (accounts-vs-legacy fallback, per slot type)
-app.locals.computeAvailability = require('./lib/availability');
+app.locals.computeAvailability = computeAvailability;
 app.use(express.static(path.join(__dirname, 'public')));
 // Serve uploads from persistent data directory
 app.use('/uploads', express.static(uploadsDir));
@@ -653,7 +654,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/browse', (req, res) => {
-  const { search, platform, genre } = req.query;
+  const { search, platform, genre, unit } = req.query;
+  const accountSummaryMap = buildAccountSummaryMap();
   let games = getGames().map(resolveGamePrices).map(resolveSlotDays);
   if (search) {
     const q = search.toLowerCase();
@@ -664,13 +666,21 @@ app.get('/browse', (req, res) => {
   }
   if (platform) games = games.filter(g => g.platform === platform || g.platform === 'PS4/PS5');
   if (genre) games = games.filter(g => g.genre === genre);
+  // Availability-by-unit filter: PS4 = has an open PS4 Primary slot;
+  // PS5 = has an open Trophy or Non-Trophy slot, regardless of PS4 Primary status.
+  if (unit === 'ps4' || unit === 'ps5') {
+    games = games.filter(g => {
+      const avail = computeAvailability(g, accountSummaryMap[g.id]);
+      return unit === 'ps4' ? (avail.showPs4 && avail.ps4Avail) : (avail.trAvail || avail.ntAvail);
+    });
+  }
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
   const upcoming = sortUpcoming(getUpcoming());
   // PS Plus monthly entries sorted newest first
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), accountSummaryMap: buildAccountSummaryMap() });
+  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', unit: unit || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), accountSummaryMap });
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────

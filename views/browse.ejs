@@ -44,8 +44,13 @@
         <option value="<%= g %>" <%= genre === g ? 'selected' : '' %>><%= g %></option>
       <% }) %>
     </select>
+    <select class="filter-select" name="unit" onchange="this.form.submit()">
+      <option value="">Any Availability</option>
+      <option value="ps4" <%= unit === 'ps4' ? 'selected' : '' %>>🕹️ PS4 Primary Available</option>
+      <option value="ps5" <%= unit === 'ps5' ? 'selected' : '' %>>🏆 PS5 Trophy/Non-Trophy Available</option>
+    </select>
     <button type="submit" class="filter-btn">Search</button>
-    <% if (search || platform || genre) { %>
+    <% if (search || platform || genre || unit) { %>
       <a href="/browse" class="btn-outline btn" style="padding:0.65rem 1rem;font-size:0.875rem;">Clear</a>
     <% } %>
   </form>
@@ -53,7 +58,7 @@
 </div>
 
 <!-- UPCOMING GAMES — hidden when searching/filtering -->
-<% if (!search && !platform && !genre) { %>
+<% if (!search && !platform && !genre && !unit) { %>
 <%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
 <% } %>
 
