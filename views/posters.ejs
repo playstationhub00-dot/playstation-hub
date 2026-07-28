@@ -146,12 +146,20 @@ function showCat(idx) {
 function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 function downloadPoster(id) {
   const node = document.getElementById(id);
-  return html2canvas(node, { scale: 1, backgroundColor: null, useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 }).then(canvas => {
-    const a = document.createElement('a');
-    a.download = 'pshub-poster-' + id + '.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  });
+  // The live preview shrinks this node via CSS transform:scale for on-screen display.
+  // html2canvas bakes that transform into the capture, so it must be neutralized
+  // (via a higher-specificity inline style) right before rendering, then restored.
+  const prevTransform = node.style.transform;
+  node.style.transform = 'none';
+  return html2canvas(node, { scale: 1, backgroundColor: '#0a0518', useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 })
+    .then(canvas => {
+      node.style.transform = prevTransform;
+      const a = document.createElement('a');
+      a.download = 'pshub-poster-' + id + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    })
+    .catch(err => { node.style.transform = prevTransform; throw err; });
 }
 async function downloadCategory(gi) {
   const panel = document.getElementById('catPanel' + gi);
