@@ -1456,17 +1456,7 @@ app.get('/admin/accounts', requireAuth, (req, res) => {
     if (!groupsMap[a.category_name]) groupsMap[a.category_name] = [];
     groupsMap[a.category_name].push(a);
   });
-  const CATEGORY_ORDER = ['new games', 'deluxe', 'special', 'regular'];
-  const groupNames = Object.keys(groupsMap).sort((a, b) => {
-    if (a === 'Uncategorized') return 1;
-    if (b === 'Uncategorized') return -1;
-    const ai = CATEGORY_ORDER.indexOf(a.toLowerCase());
-    const bi = CATEGORY_ORDER.indexOf(b.toLowerCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    if (ai !== -1) return -1;
-    if (bi !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  const groupNames = sortCategoryNames(Object.keys(groupsMap));
   const groups = groupNames.map(name => ({
     name,
     accounts: groupsMap[name].sort((a, b) => a.label.localeCompare(b.label))
@@ -1497,6 +1487,58 @@ function parseGameIds(raw) {
   if (typeof raw === 'string' && raw.trim()) return raw.split(',').map(x => parseInt(x)).filter(Boolean);
   return [];
 }
+
+// Shared category display order (New Games → Deluxe → Special → Regular → Uncategorized last)
+const PRICE_CATEGORY_ORDER = ['new games', 'deluxe', 'special', 'regular'];
+function sortCategoryNames(names) {
+  return names.sort((a, b) => {
+    if (a === 'Uncategorized') return 1;
+    if (b === 'Uncategorized') return -1;
+    const ai = PRICE_CATEGORY_ORDER.indexOf(a.toLowerCase());
+    const bi = PRICE_CATEGORY_ORDER.indexOf(b.toLowerCase());
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+}
+
+// Groups every catalog game by its price category (New Games/Deluxe/Special/Regular/Uncategorized),
+// with effective prices resolved (category price or the game's own custom price).
+function gamesByPriceCategory() {
+  const categories = getPriceCategories();
+  const categoryById = {};
+  categories.forEach(c => { categoryById[c.id] = c; });
+  const groupsMap = {};
+  getGames().map(resolveGamePrices).forEach(g => {
+    const cat = g.price_category_id ? categoryById[g.price_category_id] : null;
+    const name = cat ? cat.name : 'Uncategorized';
+    if (!groupsMap[name]) groupsMap[name] = [];
+    groupsMap[name].push(g);
+  });
+  return sortCategoryNames(Object.keys(groupsMap)).map(name => ({
+    name,
+    games: groupsMap[name].sort((a, b) => a.title.localeCompare(b.title))
+  }));
+}
+
+// ── Poster Generator (admin) ──────────────────────────────────────────────────
+app.get('/admin/posters', requireAuth, (req, res) => {
+  const groups = gamesByPriceCategory();
+  const posterGroups = groups.map(g => {
+    const density = g.games.length <= 4 ? 'large' : 'compact';
+    const perPage = density === 'large' ? 4 : 12;
+    const pages = [];
+    for (let i = 0; i < g.games.length; i += perPage) pages.push(g.games.slice(i, i + perPage));
+    const missingCovers = g.games.filter(game => !game.cover_image).map(game => game.title);
+    return { name: g.name, density, pages, count: g.games.length, missingCovers };
+  });
+  res.render('posters', {
+    posterGroups,
+    settings: getSiteSettings(),
+    promo: (getSiteSettings().promo) || { enabled: false, discount_pct: 0, apply_on_days: 30 }
+  });
+});
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, price_permanent_tr, price_permanent_nt,
