@@ -275,7 +275,8 @@
 
     <!-- PROMO SETTINGS -->
     <%
-      const adminPromo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
+      const adminPromo = settings.promo || { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100 };
+      const adminDiscounts = adminPromo.discounts || { 10: 0, 15: 0, 30: 0 };
     %>
     <div class="settings-accordion">
       <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
@@ -303,13 +304,20 @@
               <span>Enable Rent Promo Discount</span>
             </label>
           </div>
-          <div class="form-group">
-            <label>Rent Discount % <span style="color:#555;font-size:0.75rem;">(applied when promo is active)</span></label>
-            <input type="number" name="discount_pct" value="<%= adminPromo.discount_pct %>" min="0" max="100" placeholder="10">
+          <div class="form-group full" style="margin-bottom:0;">
+            <label style="color:#888;font-size:0.78rem;">Discount % per duration <span style="color:#555;">(0 = no discount for that duration — set any combination of 10/15/30 days)</span></label>
           </div>
           <div class="form-group">
-            <label>Apply on Duration (days) <span style="color:#555;font-size:0.75rem;">(e.g. 30 = 30-day rentals get the discount)</span></label>
-            <input type="number" name="apply_on_days" value="<%= adminPromo.apply_on_days %>" min="1" placeholder="30">
+            <label>10-Day Discount %</label>
+            <input type="number" name="discount_10" value="<%= adminDiscounts[10] || 0 %>" min="0" max="100" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>15-Day Discount %</label>
+            <input type="number" name="discount_15" value="<%= adminDiscounts[15] || 0 %>" min="0" max="100" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>30-Day Discount %</label>
+            <input type="number" name="discount_30" value="<%= adminDiscounts[30] || 0 %>" min="0" max="100" placeholder="10">
           </div>
           <div class="form-group">
             <label>Trophy Account Security Deposit (₱) <span style="color:#555;font-size:0.75rem;">(refundable, added to Trophy rentals)</span></label>

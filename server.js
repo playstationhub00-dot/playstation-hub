@@ -437,10 +437,25 @@ function getSiteSettings() {
     s.hero_slides = [];
   }
   if (!s.promo) {
-    db.set('site_settings.promo', { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 }).write();
+    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 }).write();
     s.promo = db.get('site_settings.promo').value();
+  } else if (!s.promo.discounts) {
+    // Migrate legacy single-duration promo (discount_pct + apply_on_days) to the
+    // per-duration `discounts` map, preserving whatever was already configured.
+    const discounts = { 10: 0, 15: 0, 30: 0 };
+    if (s.promo.discount_pct > 0 && PROMO_DURATIONS.includes(s.promo.apply_on_days)) {
+      discounts[s.promo.apply_on_days] = s.promo.discount_pct;
+    }
+    db.set('site_settings.promo.discounts', discounts).write();
+    s.promo.discounts = discounts;
   }
   return s;
+}
+// Every duration a rent promo can apply to, and the % discount for a given duration.
+const PROMO_DURATIONS = [10, 15, 30];
+function getPromoDiscountPct(promo, days) {
+  if (!promo || !promo.enabled || !promo.discounts) return 0;
+  return promo.discounts[days] || 0;
 }
 
 app.get('/how-it-works', (req, res) => {
@@ -476,8 +491,7 @@ app.get('/ps-plus/rent', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : rawSlots;
   const settings = getSiteSettings();
-  const promo = settings.promo || { enabled: true, discount_pct: 10, apply_on_days: 30, deposit: 100 };
-  res.render('psplus-rent', { prices, slots, promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings });
+  res.render('psplus-rent', { prices, slots, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings });
 });
 
 // PS Plus admin CRUD
@@ -649,8 +663,7 @@ app.get('/', (req, res) => {
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
   const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const s = getSiteSettings();
-  const promo = s.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo, accountSummaryMap: buildAccountSummaryMap() });
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, accountSummaryMap: buildAccountSummaryMap() });
 });
 
 app.get('/browse', (req, res) => {
@@ -699,18 +712,21 @@ app.get('/game/:slug', (req, res) => {
   if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
   const resolved = resolveGamePrices(resolveSlotDays(game));
   const gdSettings = getSiteSettings();
-  const gdPromo = gdSettings.promo || { enabled: false, discount_pct: 0, apply_on_days: 30, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 };
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdPromo, accountSummary: gameAccountSummary(game.id) });
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id) });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, (req, res) => {
-  const { enabled, discount_pct, apply_on_days, deposit,
+  const { enabled, discount_10, discount_15, discount_30, deposit,
           buy_promo_enabled, buy_promo_pct } = req.body;
+  const discounts = {
+    10: Math.min(100, Math.max(0, parseInt(discount_10) || 0)),
+    15: Math.min(100, Math.max(0, parseInt(discount_15) || 0)),
+    30: Math.min(100, Math.max(0, parseInt(discount_30) || 0))
+  };
   db.set('site_settings.promo', {
     enabled: enabled === 'on',
-    discount_pct: Math.min(100, Math.max(0, parseInt(discount_pct) || 10)),
-    apply_on_days: parseInt(apply_on_days) || 30,
+    discounts,
     deposit: Math.max(0, parseInt(deposit) || 100),
     buy_promo_enabled: buy_promo_enabled === 'on',
     buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0))
@@ -1524,20 +1540,29 @@ function gamesByPriceCategory() {
 
 // ── Poster Generator (admin) ──────────────────────────────────────────────────
 app.get('/admin/posters', requireAuth, (req, res) => {
+  const settings = getSiteSettings();
+  const promo = settings.promo;
+  // 10 days is always the cheapest tier, so it's what "From ₱X" shows —
+  // apply that duration's promo discount (if any) so the poster stays accurate.
+  const discount10 = getPromoDiscountPct(promo, 10);
   const groups = gamesByPriceCategory();
   const posterGroups = groups.map(g => {
     const density = g.games.length <= 4 ? 'large' : 'compact';
     const perPage = density === 'large' ? 4 : 12;
+    const gamesWithFromPrice = g.games.map(game => {
+      const prices = [game.nt_price_10d, game.tr_price_10d].filter(p => p > 0);
+      const rawFrom = prices.length ? Math.min(...prices) : null;
+      const fromPrice = rawFrom != null && discount10 > 0 ? Math.round(rawFrom * (1 - discount10 / 100)) : rawFrom;
+      return { ...game, fromPrice };
+    });
     const pages = [];
-    for (let i = 0; i < g.games.length; i += perPage) pages.push(g.games.slice(i, i + perPage));
+    for (let i = 0; i < gamesWithFromPrice.length; i += perPage) pages.push(gamesWithFromPrice.slice(i, i + perPage));
     const missingCovers = g.games.filter(game => !game.cover_image).map(game => game.title);
     return { name: g.name, density, pages, count: g.games.length, missingCovers };
   });
-  res.render('posters', {
-    posterGroups,
-    settings: getSiteSettings(),
-    promo: (getSiteSettings().promo) || { enabled: false, discount_pct: 0, apply_on_days: 30 }
-  });
+  // Which durations currently have an active discount, for the poster's promo banner
+  const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
+  res.render('posters', { posterGroups, settings, activePromos });
 });
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
@@ -2100,11 +2125,12 @@ async function handleMessage(senderId, text) {
     const promo = s.promo || {};
     let msg = '🎉 PlayStation Hub Promos!\n\n';
     let hasPromo = false;
-    if (promo.enabled && promo.discount_pct > 0) {
+    const activeDurations = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0) : [];
+    if (activeDurations.length > 0) {
       hasPromo = true;
-      msg += `⏱️ RENT PROMO — ${promo.discount_pct}% OFF!\n`;
-      msg += `   On ${promo.apply_on_days}-day rentals\n`;
-      if (promo.deposit) msg += `   +₱${promo.deposit} refundable deposit\n`;
+      msg += `⏱️ RENT PROMO!\n`;
+      activeDurations.forEach(d => { msg += `   ${getPromoDiscountPct(promo, d)}% OFF on ${d}-day rentals\n`; });
+      if (promo.deposit) msg += `   +₱${promo.deposit} refundable deposit (Trophy accounts)\n`;
       msg += '\n';
     }
     if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {

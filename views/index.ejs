@@ -286,7 +286,7 @@ function closeReserveModal() { document.getElementById('reserveModal').classList
 document.getElementById('reserveModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeReserveModal(); });
 
 // Promo config from server
-const _rentPromo = { enabled: <%- promo.enabled ? 'true' : 'false' %>, pct: <%= promo.discount_pct || 0 %>, days: <%= promo.apply_on_days || 30 %> };
+const _rentPromo = { enabled: <%- promo.enabled ? 'true' : 'false' %>, discounts: { 10: <%= (promo.discounts && promo.discounts[10]) || 0 %>, 15: <%= (promo.discounts && promo.discounts[15]) || 0 %>, 30: <%= (promo.discounts && promo.discounts[30]) || 0 %> } };
 const _buyPromo  = { enabled: <%- promo.buy_promo_enabled ? 'true' : 'false' %>, pct: <%= promo.buy_promo_pct || 0 %> };
 
 function switchModalTab(tab) {

@@ -99,12 +99,13 @@
             <div class="poster-cat-title"><%= grp.name %></div>
             <div class="poster-cat-sub">PS5 &amp; PS4 Digital Game Rentals</div>
           </div>
-          <% if (promo.enabled && promo.discount_pct > 0) { %>
-          <div class="poster-promo">🔥 <span class="pct"><%= promo.discount_pct %>% OFF</span> on <%= promo.apply_on_days %>-Day Rentals — Limited Time!</div>
+          <% if (activePromos.length === 1) { %>
+          <div class="poster-promo">🔥 <span class="pct"><%= activePromos[0].pct %>% OFF</span> on <%= activePromos[0].days %>-Day Rentals — Limited Time!</div>
+          <% } else if (activePromos.length > 1) { %>
+          <div class="poster-promo">🔥 <span class="pct">UP TO <%= Math.max(...activePromos.map(p => p.pct)) %>% OFF</span> — <%= activePromos.map(p => p.days + 'D').join(' / ') %> Promos Active!</div>
           <% } %>
           <div class="poster-grid <%= grp.density %>">
             <% pageGames.forEach(g => { %>
-              <% const prices = [g.nt_price_10d, g.tr_price_10d].filter(p => p > 0); const fromPrice = prices.length ? Math.min(...prices) : null; %>
               <div class="poster-tile">
                 <% if (g.cover_image) { %>
                   <div class="poster-tile-cover" style="background-image:url('<%= g.cover_image %>');"></div>
@@ -113,7 +114,7 @@
                 <% } %>
                 <div class="poster-tile-info">
                   <div class="poster-tile-title"><%= g.title %></div>
-                  <% if (fromPrice) { %><div class="poster-tile-price">From ₱<%= fromPrice %></div><% } %>
+                  <% if (g.fromPrice) { %><div class="poster-tile-price">From ₱<%= g.fromPrice %></div><% } %>
                 </div>
               </div>
             <% }) %>

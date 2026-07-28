@@ -99,19 +99,13 @@
       <!-- SELECT DURATION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durationGrid">
-        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
-          <span class="gd-dur-days">10</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-10">—</span>
+        <% [10, 15, 30].forEach(d => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
+        <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
+          <span class="gd-dur-days"><%= d %></span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-<%= d %>">—</span>
+          <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
         </button>
-        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
-          <span class="gd-dur-days">15</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-15">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
-          <span class="gd-dur-days">30</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-30">—</span>
-          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
-        </button>
+        <% }) %>
       </div>
 
       <!-- ORDER SUMMARY -->
@@ -177,19 +171,13 @@
       <!-- SELECT DURATION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durationGrid">
-        <button class="gd-dur-btn" data-days="10" onclick="onDurChange(this)">
-          <span class="gd-dur-days">10</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-10">—</span>
+        <% [10, 15, 30].forEach(d => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
+        <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
+          <span class="gd-dur-days"><%= d %></span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-price" id="price-<%= d %>">—</span>
+          <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
         </button>
-        <button class="gd-dur-btn" data-days="15" onclick="onDurChange(this)">
-          <span class="gd-dur-days">15</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-15">—</span>
-        </button>
-        <button class="gd-dur-btn" data-days="30" onclick="onDurChange(this)">
-          <span class="gd-dur-days">30</span><span class="gd-dur-label">DAYS</span>
-          <span class="gd-dur-price" id="price-30">—</span>
-          <% if (promo.enabled) { %><span class="gd-dur-promo"><%= promo.discount_pct %>% OFF</span><% } %>
-        </button>
+        <% }) %>
       </div>
 
       <!-- ORDER SUMMARY -->
@@ -253,10 +241,10 @@ const PRICES = {
 };
 const PROMO = {
   enabled: <%= promo.enabled ? 'true' : 'false' %>,
-  discount_pct: <%= promo.discount_pct %>,
-  apply_on_days: <%= promo.apply_on_days %>,
+  discounts: { 10: <%= (promo.discounts && promo.discounts[10]) || 0 %>, 15: <%= (promo.discounts && promo.discounts[15]) || 0 %>, 30: <%= (promo.discounts && promo.discounts[30]) || 0 %> },
   deposit: <%= promo.deposit %>
 };
+function promoPctFor(days) { return PROMO.enabled ? (PROMO.discounts[days] || 0) : 0; }
 const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %> };
 
 let selectedType = null;
@@ -298,12 +286,12 @@ function updateTotal() {
   const box = document.getElementById('totalBox');
   if (!selectedType || !selectedDays) { if(box) box.style.display = 'none'; return; }
   const base = PRICES[selectedType][selectedDays];
-  const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
-  const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+  const pct = promoPctFor(selectedDays);
+  const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
   const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
   const total    = base - discount + deposit;
   let rows = `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
-  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${PROMO.discount_pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
+  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
   if (deposit  > 0) rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
   document.getElementById('totalRows').innerHTML = rows;
   document.getElementById('totalFinal').textContent = '₱' + total;
@@ -316,12 +304,12 @@ function updateLinks() {
   let totalLine = '';
   if (selectedType && selectedDays) {
     const base = PRICES[selectedType][selectedDays];
-    const isPromoDay = PROMO.enabled && selectedDays === PROMO.apply_on_days;
-    const discount = isPromoDay ? Math.round(base * PROMO.discount_pct / 100) : 0;
+    const pct = promoPctFor(selectedDays);
+    const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
     const deposit  = selectedType === 'tr' ? PROMO.deposit : 0;
     const total    = base - discount + deposit;
     totalLine = 'Total: ₱' + total;
-    if (discount > 0) totalLine += ' (incl. ' + PROMO.discount_pct + '% promo discount)';
+    if (discount > 0) totalLine += ' (incl. ' + pct + '% promo discount)';
     if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
   }
   const ctaBtn = document.getElementById('ctaBtn');
