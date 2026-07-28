@@ -17,6 +17,12 @@
     .pg-cat-panel.active { display: block; }
     .pg-warn { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); color: #fbbf24; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.85rem; line-height: 1.6; }
     .pg-warn strong { color: #fff; }
+    .pg-msg { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; padding: 0.7rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.85rem; }
+    .pg-bg-section { background: #111119; border: 1px solid #23232e; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    .pg-bg-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .pg-bg-preview { width: 90px; height: 112px; border-radius: 8px; object-fit: cover; border: 1px solid #2a2a35; background: #1a1a24; }
+    .pg-bg-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pg-bg-form input[type="file"] { font-size: 0.78rem; color: #ccc; }
     .pg-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; }
     .pg-btn { background: var(--ps-blue); color: #000; border: none; border-radius: 8px; padding: 0.65rem 1.2rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
     .pg-btn.outline { background: transparent; border: 1px solid #333; color: #ccc; }
@@ -67,6 +73,30 @@
   <h1>📸 Poster Generator</h1>
   <p style="color:#888;font-size:0.85rem;">Auto-generated from your live catalog. Prices only — no slot availability, so posted images stay accurate. Pick a category, then download.</p>
 
+  <% if (msg === 'bg_saved') { %><div class="pg-msg">✅ Custom background updated — applied to every poster below.</div><% } %>
+  <% if (msg === 'bg_removed') { %><div class="pg-msg">✅ Custom background removed — posters use the default look again.</div><% } %>
+  <% if (msg === 'error') { %><div class="pg-warn"><strong>⚠️ No file selected.</strong> Choose an image first.</div><% } %>
+
+  <div class="pg-bg-section">
+    <label style="display:block;font-weight:700;font-size:0.85rem;margin-bottom:0.6rem;">🎨 Custom Poster Background <span style="color:#666;font-weight:500;font-size:0.75rem;">— applies to every category poster below, replacing the plain gradient</span></label>
+    <div class="pg-bg-row">
+      <% if (settings.poster_background_path) { %>
+        <img src="<%= settings.poster_background_path %>" alt="Current poster background" class="pg-bg-preview">
+      <% } else { %>
+        <div class="pg-bg-preview" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:0.68rem;text-align:center;padding:4px;">No custom background set</div>
+      <% } %>
+      <form method="POST" action="/admin/posters/background" enctype="multipart/form-data" class="pg-bg-form">
+        <input type="file" name="poster_background" accept="image/*" required>
+        <button type="submit" class="pg-btn">⬆ Upload</button>
+      </form>
+      <% if (settings.poster_background_path) { %>
+      <form method="POST" action="/admin/posters/background/remove" onsubmit="return confirm('Remove the custom background and go back to the default plain look?');">
+        <button type="submit" class="pg-btn outline">Remove</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
   <div class="pg-cat-tabs">
     <% posterGroups.forEach((grp, gi) => { %>
       <button type="button" class="pg-cat-tab<%= gi===0 ? ' active' : '' %>" onclick="showCat(<%= gi %>)"><%= grp.name %> <span class="cnt">(<%= grp.count %>)</span></button>
@@ -92,8 +122,13 @@
         <%= grp.name %><% if (grp.pages.length > 1) { %> — Page <%= pi+1 %>/<%= grp.pages.length %><% } %>
         <button type="button" class="pg-btn outline" style="margin-left:10px;padding:0.3rem 0.7rem;font-size:0.72rem;" onclick="downloadPoster('poster-<%= gi %>-<%= pi %>')">⬇ Download</button>
       </div>
+      <%
+        const posterBgStyle = settings.poster_background_path
+          ? `background-image: linear-gradient(rgba(6,4,20,0.55), rgba(10,2,30,0.7)), url('${settings.poster_background_path}'); background-size: cover; background-position: center;`
+          : '';
+      %>
       <div class="pg-preview-scaler">
-        <div class="poster" id="poster-<%= gi %>-<%= pi %>">
+        <div class="poster" id="poster-<%= gi %>-<%= pi %>" style="<%= posterBgStyle %>">
           <div class="poster-header">
             <img class="poster-logo" src="<%= settings.logo_path %>" alt="logo">
             <div class="poster-cat-title"><%= grp.name %></div>

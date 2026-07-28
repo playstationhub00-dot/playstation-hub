@@ -1580,7 +1580,28 @@ app.get('/admin/posters', requireAuth, (req, res) => {
   });
   // Which durations currently have an active discount, for the poster's promo banner
   const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
-  res.render('posters', { posterGroups, settings, activePromos });
+  res.render('posters', { posterGroups, settings, activePromos, msg: req.query.msg || '' });
+});
+
+// Custom poster background (applies to every category poster, replacing the flat gradient)
+app.post('/admin/posters/background', requireAuth, upload.single('poster_background'), (req, res) => {
+  if (!req.file) return res.redirect('/admin/posters?msg=error');
+  const settings = getSiteSettings();
+  if (settings.poster_background_path) {
+    const oldFp = path.join(uploadsDir, path.basename(settings.poster_background_path));
+    if (fs.existsSync(oldFp)) { try { fs.unlinkSync(oldFp); } catch (e) {} }
+  }
+  db.set('site_settings.poster_background_path', '/uploads/' + req.file.filename).write();
+  res.redirect('/admin/posters?msg=bg_saved');
+});
+app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
+  const settings = getSiteSettings();
+  if (settings.poster_background_path) {
+    const fp = path.join(uploadsDir, path.basename(settings.poster_background_path));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  }
+  db.set('site_settings.poster_background_path', '').write();
+  res.redirect('/admin/posters?msg=bg_removed');
 });
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
