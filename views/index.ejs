@@ -142,7 +142,7 @@
     <a href="<%= psplusSlug ? '/game/' + psplusSlug : '/game/17' %>" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
         <% } else { %>
           <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0a0800,#1a1400);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>

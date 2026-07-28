@@ -561,6 +561,8 @@ app.post('/admin/psplus/popular/add', upload.single('cover_image'), requireAuth,
     description: description || '',
     rank: parseInt(rank) || 0,
     cover_image,
+    cover_focal_x: 50,
+    cover_focal_y: 50,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=popular_added');
@@ -573,13 +575,18 @@ app.get('/admin/psplus/popular/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
-  const { title, platform, genre, description, rank } = req.body;
+  const { title, platform, genre, description, rank, cover_focal_x, cover_focal_y } = req.body;
   const existing = getPsplusPopularEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  // A freshly uploaded cover resets the focal point — the old point won't line up with the new image.
+  const focalX = req.file ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_x)));
+  const focalY = req.file ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_y)));
   db.get('psplus_popular').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
-    description: description || '', rank: parseInt(rank) || 0, cover_image
+    description: description || '', rank: parseInt(rank) || 0, cover_image,
+    cover_focal_x: isNaN(focalX) ? (existing.cover_focal_x != null ? existing.cover_focal_x : 50) : focalX,
+    cover_focal_y: isNaN(focalY) ? (existing.cover_focal_y != null ? existing.cover_focal_y : 50) : focalY
   }).write();
   res.redirect('/admin?msg=popular_updated');
 });

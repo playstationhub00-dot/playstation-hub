@@ -44,13 +44,56 @@
           <label>Rank <span style="color:#555;font-size:0.75rem;">(display order)</span></label>
           <input type="number" name="rank" value="<%= entry.rank || 1 %>" min="1">
         </div>
-        <div class="form-group">
+        <div class="form-group full">
           <label>Cover Image <span style="color:#555;font-size:0.75rem;">(blank = keep current)</span></label>
           <% if (entry.cover_image) { %>
             <img src="<%= entry.cover_image %>" style="width:80px;border-radius:6px;margin-bottom:0.5rem;">
           <% } %>
-          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;">
+          <input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;" onchange="document.getElementById('focalPicker').style.display=this.files.length?'none':'';">
         </div>
+
+        <% if (entry.cover_image) { %>
+        <div class="form-group full" id="focalPicker">
+          <label>🎯 Cover Position <span style="color:#555;font-size:0.75rem;">— click the part of the image you want kept visible when it's cropped in the card</span></label>
+          <div id="focalImgWrap" style="position:relative;display:inline-block;max-width:360px;border-radius:8px;overflow:hidden;cursor:crosshair;border:1px solid #222;">
+            <img id="focalImg" src="<%= entry.cover_image %>" style="display:block;width:100%;height:auto;">
+            <div id="focalDot" style="position:absolute;width:22px;height:22px;border-radius:50%;background:rgba(0,112,209,0.35);border:2px solid var(--ps-blue);box-shadow:0 0 0 2px rgba(0,0,0,0.6);transform:translate(-50%,-50%);pointer-events:none;left:<%= entry.cover_focal_x != null ? entry.cover_focal_x : 50 %>%;top:<%= entry.cover_focal_y != null ? entry.cover_focal_y : 50 %>%;"></div>
+          </div>
+          <div style="margin-top:0.4rem;">
+            <button type="button" class="btn btn-outline" style="padding:0.3rem 0.7rem;font-size:0.72rem;" onclick="resetFocal()">Reset to Center</button>
+          </div>
+          <input type="hidden" name="cover_focal_x" id="cover_focal_x" value="<%= entry.cover_focal_x != null ? entry.cover_focal_x : 50 %>">
+          <input type="hidden" name="cover_focal_y" id="cover_focal_y" value="<%= entry.cover_focal_y != null ? entry.cover_focal_y : 50 %>">
+        </div>
+        <script>
+        (function() {
+          const wrap = document.getElementById('focalImgWrap');
+          const dot = document.getElementById('focalDot');
+          const xInput = document.getElementById('cover_focal_x');
+          const yInput = document.getElementById('cover_focal_y');
+          function setFromEvent(e) {
+            const rect = wrap.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            let x = ((clientX - rect.left) / rect.width) * 100;
+            let y = ((clientY - rect.top) / rect.height) * 100;
+            x = Math.min(100, Math.max(0, Math.round(x)));
+            y = Math.min(100, Math.max(0, Math.round(y)));
+            dot.style.left = x + '%';
+            dot.style.top = y + '%';
+            xInput.value = x;
+            yInput.value = y;
+          }
+          wrap.addEventListener('click', setFromEvent);
+        })();
+        function resetFocal() {
+          document.getElementById('focalDot').style.left = '50%';
+          document.getElementById('focalDot').style.top = '50%';
+          document.getElementById('cover_focal_x').value = 50;
+          document.getElementById('cover_focal_y').value = 50;
+        }
+        </script>
+        <% } %>
         <div class="form-group full">
           <label>Description</label>
           <textarea name="description"><%= entry.description || '' %></textarea>
