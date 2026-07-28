@@ -23,7 +23,7 @@
   <a href="/game/<%= gameSlug %>" class="game-card-link" style="display:block;text-decoration:none;">
     <div class="gc-cover-wrap">
       <% if (game.cover_image) { %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover">
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
       <% } else { %>
         <div class="game-cover-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

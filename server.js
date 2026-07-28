@@ -968,6 +968,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? '/uploads/' + coverFile.filename : '';
+  const cover_focal_x = 50, cover_focal_y = 50; // fine-tuned later via Edit, once the cover is visible
   const gallery = (req.files && req.files.gallery ? req.files.gallery : []).map(f => '/uploads/' + f.filename);
   const useCategory = price_mode === 'category' && price_category_id;
   const cat = useCategory ? getPriceCategory(price_category_id) : null;
@@ -976,6 +977,8 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     title: title.trim(),
     platform: platform || 'PS5',
     cover_image,
+    cover_focal_x,
+    cover_focal_y,
     gallery,
     available_slots: parseInt(available_slots) || 1,
     renters: parseInt(renters) || 0,
@@ -1013,12 +1016,18 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     buy_nt_price, buy_tr_price,
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
-    remove_gallery,
+    remove_gallery, cover_focal_x, cover_focal_y,
     price_category_id, price_mode, cost } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? '/uploads/' + coverFile.filename : existing.cover_image;
+  // A freshly uploaded cover resets the focal point — the old point was picked for
+  // the old image and won't line up with the new one until re-adjusted.
+  const focalX = coverFile ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_x)));
+  const focalY = coverFile ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_y)));
+  const cover_focal_x_final = isNaN(focalX) ? (existing.cover_focal_x != null ? existing.cover_focal_x : 50) : focalX;
+  const cover_focal_y_final = isNaN(focalY) ? (existing.cover_focal_y != null ? existing.cover_focal_y : 50) : focalY;
 
   // Gallery: keep existing minus removed, then append newly uploaded.
   // Only ever delete files that are actually in THIS game's own gallery — a submitted
@@ -1037,7 +1046,9 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
   const useCategory = price_mode === 'category' && price_category_id;
   const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').find({ id: parseInt(req.params.id) }).assign({
-    title: title.trim(), platform, cover_image, gallery,
+    title: title.trim(), platform, cover_image,
+    cover_focal_x: cover_focal_x_final, cover_focal_y: cover_focal_y_final,
+    gallery,
     available_slots: parseInt(available_slots),
     renters: parseInt(renters),
     price_category_id: cat ? parseInt(price_category_id) : null,

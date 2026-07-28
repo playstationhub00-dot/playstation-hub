@@ -51,7 +51,9 @@
         <div class="gd-slider" id="gdSlider">
           <div class="gd-slider-track" id="gdSliderTrack">
             <% slides.forEach((img, i) => { %>
-              <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> screenshot <%= i+1 %>" class="gd-cover"></div>
+              <% const isCover = i === 0 && game.cover_image && img === game.cover_image; %>
+              <% const focalStyle = isCover ? ('object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;') : ''; %>
+              <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> screenshot <%= i+1 %>" class="gd-cover" style="<%= focalStyle %>"></div>
             <% }) %>
           </div>
           <div class="gd-platform-badge"><%= game.platform %></div>

@@ -108,7 +108,7 @@
             <% pageGames.forEach(g => { %>
               <div class="poster-tile">
                 <% if (g.cover_image) { %>
-                  <div class="poster-tile-cover" style="background-image:url('<%= g.cover_image %>');"></div>
+                  <div class="poster-tile-cover" style="background-image:url('<%= g.cover_image %>');background-position:<%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;"></div>
                 <% } else { %>
                   <div class="poster-tile-cover placeholder">🎮</div>
                 <% } %>
