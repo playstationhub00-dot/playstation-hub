@@ -139,6 +139,13 @@ const upload = multer({
   fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
   limits: { fileSize: 5 * 1024 * 1024 }
 });
+// Poster background images tend to be larger (full-bleed photography), so give
+// that upload a higher ceiling than the standard 5MB thumbnail/cover limit.
+const uploadPosterBg = multer({
+  storage,
+  fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
+  limits: { fileSize: 20 * 1024 * 1024 }
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -1584,7 +1591,7 @@ app.get('/admin/posters', requireAuth, (req, res) => {
 });
 
 // Custom poster background (applies to every category poster, replacing the flat gradient)
-app.post('/admin/posters/background', requireAuth, upload.single('poster_background'), (req, res) => {
+app.post('/admin/posters/background', requireAuth, uploadPosterBg.single('poster_background'), (req, res) => {
   if (!req.file) return res.redirect('/admin/posters?msg=error');
   const settings = getSiteSettings();
   if (settings.poster_background_path) {
@@ -2480,6 +2487,19 @@ app.post('/admin/reviews/toggle/:id', requireAuth, (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Catches errors thrown/passed in any route above (e.g. multer file-size limit,
+// disk write failures) so they're logged and the user gets redirected instead of
+// Express's bare "Internal Server Error" page.
+app.use((err, req, res, next) => {
+  console.error(`[error] ${req.method} ${req.originalUrl}:`, err);
+  if (res.headersSent) return next(err);
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    const back = req.get('referer') || '/admin';
+    return res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=file_too_large');
+  }
+  res.status(500).send('Something went wrong. Please try again.');
+});
 
 app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
