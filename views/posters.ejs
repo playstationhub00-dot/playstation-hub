@@ -97,6 +97,15 @@
     </div>
   </div>
 
+  <div class="pg-quality-row" style="display:flex;align-items:center;gap:0.5rem;margin:0.8rem 0 1.2rem;">
+    <label for="pgQuality" style="font-weight:700;font-size:0.85rem;">🖼️ Download Quality</label>
+    <select id="pgQuality" class="pg-quality-select">
+      <option value="1">Standard (1080×1350)</option>
+      <option value="2">HD (2160×2700)</option>
+      <option value="3" selected>Ultra HD (3240×4050)</option>
+    </select>
+  </div>
+
   <div class="pg-cat-tabs">
     <% posterGroups.forEach((grp, gi) => { %>
       <button type="button" class="pg-cat-tab<%= gi===0 ? ' active' : '' %>" onclick="showCat(<%= gi %>)"><%= grp.name %> <span class="cnt">(<%= grp.count %>)</span></button>
@@ -186,7 +195,8 @@ function downloadPoster(id) {
   // (via a higher-specificity inline style) right before rendering, then restored.
   const prevTransform = node.style.transform;
   node.style.transform = 'none';
-  return html2canvas(node, { scale: 1, backgroundColor: '#0a0518', useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 })
+  const scale = parseInt(document.getElementById('pgQuality').value, 10) || 3;
+  return html2canvas(node, { scale, backgroundColor: '#0a0518', useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 })
     .then(canvas => {
       node.style.transform = prevTransform;
       const a = document.createElement('a');
