@@ -610,7 +610,10 @@ nav {
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 550px;
+  /* No fixed height — the card shrinks to just cover + title while collapsed,
+     and grows when .gc-reveal opens (hover/tap), instead of leaving dead space
+     below the title in the collapsed state. */
+  height: auto;
 }
 .game-card:hover {
   transform: translateY(-4px);
