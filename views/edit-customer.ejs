@@ -144,17 +144,21 @@ function toggleCustStatus(status) {
   const grpRegular = document.getElementById('cust_optgroup_regular');
   const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
   const gameSel = document.getElementById('cust_game');
+  const currentIsUpcoming = gameSel.value.startsWith('upcoming_');
   if (status === 'reservation') {
     daysGroup.setAttribute('hidden', '');
     grpRegular.style.display = 'none';
     grpUpcoming.style.display = '';
     gameLabel.textContent = 'Upcoming Game Reserved *';
-    gameSel.value = '';
+    // Only reset if the current selection isn't already an upcoming game —
+    // switching between non-reservation statuses (e.g. renting -> done)
+    // shouldn't blank out a selection that's still valid.
+    if (!currentIsUpcoming) gameSel.value = '';
   } else {
     grpRegular.style.display = '';
     grpUpcoming.style.display = 'none';
     gameLabel.textContent = 'Game Rented *';
-    gameSel.value = '';
+    if (currentIsUpcoming) gameSel.value = '';
     if (status === 'bought') daysGroup.setAttribute('hidden', '');
     else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
   }
@@ -179,6 +183,7 @@ function updateCustEndDate() {
 }
 </script>
 
+<script src="/js/admin-searchable-select.js"></script>
 <%- include('partials/footer') %>
 </body>
 </html>

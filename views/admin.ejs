@@ -1916,20 +1916,24 @@ Message us anytime to reserve your slot! 😊</textarea>
         const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
         const gameSel = document.getElementById('cust_game');
 
+        const currentIsUpcoming = gameSel.value.startsWith('upcoming_');
+
         if (status === 'reservation') {
           // Show only coming soon games
           daysGroup.removeAttribute('hidden');
           grpRegular.style.display = 'none';
           grpUpcoming.style.display = '';
           gameLabel.textContent = 'Coming Soon Game *';
-          // Reset selection to avoid carrying over a regular game
-          gameSel.value = '';
+          // Only reset if the current selection isn't already an upcoming game —
+          // switching between non-reservation statuses (e.g. renting -> done)
+          // shouldn't blank out a selection that's still valid.
+          if (!currentIsUpcoming) gameSel.value = '';
         } else {
           // Show only regular games
           grpRegular.style.display = '';
           grpUpcoming.style.display = 'none';
           gameLabel.textContent = 'Game Rented *';
-          gameSel.value = '';
+          if (currentIsUpcoming) gameSel.value = '';
           if (status === 'bought') {
             daysGroup.setAttribute('hidden', '');
           } else {
@@ -2411,5 +2415,6 @@ function switchTab(name) {
 })();
 </script>
 
+<script src="/js/admin-searchable-select.js"></script>
 </body>
 </html>
