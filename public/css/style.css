@@ -595,22 +595,7 @@ nav {
 .gc-days-left { font-size: 0.58rem; font-weight: 700; color: #f59e0b; white-space: nowrap; }
 .gc-days-left-tr { color: #ffc400; }
 .gc-days-left-ps4 { color: #60a5fa; }
-/* Price stays hidden until the shopper hovers (desktop) or taps the card (mobile,
-   toggled via .gc-price-show in browse.js-equivalent inline script) — keeps the
-   card focused on availability/urgency at a glance, price is a deliberate reveal. */
-.gc-price-rows {
-  display: flex; flex-direction: column; gap: 0.15rem;
-  margin-top: auto; padding-top: 0; max-height: 0; opacity: 0; overflow: hidden;
-  transition: max-height 0.25s ease, opacity 0.2s ease, padding-top 0.2s ease;
-}
-.game-card:hover .gc-price-rows,
-.game-card.gc-price-show .gc-price-rows { max-height: 100px; opacity: 1; padding-top: 0.3rem; }
-.gc-price-hint {
-  margin-top: auto; padding-top: 0.3rem; text-align: center;
-  font-size: 0.58rem; color: #555; transition: opacity 0.2s ease;
-}
-.game-card:hover .gc-price-hint,
-.game-card.gc-price-show .gc-price-hint { display: none; }
+.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; margin-top: auto; padding-top: 0.3rem; }
 .gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
 .gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
 .gc-price      { font-size: 0.72rem; font-weight: 400; color: #fff; }
@@ -659,6 +644,19 @@ nav {
 
 .game-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
 .game-title { font-weight: 700; font-size: 0.95rem; line-height: 1.3; height: 1.24rem; overflow: hidden; white-space: nowrap; flex-shrink: 0; }
+/* Card shows only the title by default — hover (desktop) or tap the card (mobile,
+   toggled via .gc-price-show, since :hover doesn't apply on touch) reveals genre,
+   price, availability, and the Rent/Buy buttons underneath. */
+.gc-reveal {
+  max-height: 0; opacity: 0; overflow: hidden;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+.game-card:hover .gc-reveal,
+.game-card.gc-price-show .gc-reveal { max-height: 500px; opacity: 1; }
+.gc-reveal-hint { font-size: 0.68rem; color: #555; transition: opacity 0.2s ease; }
+.game-card:hover .gc-reveal-hint,
+.game-card.gc-price-show .gc-reveal-hint { display: none; }
 .game-platform {
   font-size: 0.72rem;
   color: var(--ps-blue);

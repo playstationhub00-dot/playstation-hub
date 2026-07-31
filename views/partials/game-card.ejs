@@ -45,8 +45,12 @@
   </a>
 
   <div class="game-info">
-    <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
+    <div class="gc-reveal-hint">👆 Tap to see price &amp; rent</div>
+
+    <!-- Hidden by default — hover (desktop) or tap the card (mobile) to reveal price/availability + Rent/Buy -->
+    <div class="gc-reveal">
+    <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
 
     <!-- Pricing columns side by side -->
     <div class="gc-price-table">
@@ -75,7 +79,6 @@
             <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price">₱<%= game.nt_price_15d %></span></div>
             <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price">₱<%= game.nt_price_30d %></span></div>
           </div>
-          <div class="gc-price-hint">👆 Tap for price</div>
         </div>
       </div>
 
@@ -119,7 +122,6 @@
             <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_15d %></span></div>
             <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_30d %></span></div>
           </div>
-          <div class="gc-price-hint">👆 Tap for price</div>
           <% } %>
         </div>
       </div>
@@ -143,5 +145,6 @@
       <% } %>
     </div>
     <% } %>
+    </div><!-- /gc-reveal -->
   </div>
 </div>
