@@ -109,9 +109,10 @@
           </select>
           <span style="font-size:0.68rem;color:#666;">Hold Ctrl / Cmd to select multiple.</span>
         </div>
+        <div><label>Account Email</label><input type="email" name="email" placeholder="e.g. pshub.account1@gmail.com"></div>
         <div><label>Trophy permanent price (₱)</label><input type="number" name="price_permanent_tr" value="5000" min="0"></div>
         <div><label>Non-Trophy permanent price (₱)</label><input type="number" name="price_permanent_nt" value="4500" min="0"></div>
-        <div><label>Internal note</label><input type="text" name="note" placeholder="email tag, reminders..."></div>
+        <div><label>Internal note</label><input type="text" name="note" placeholder="reminders, misc info..."></div>
       </div>
       <div class="slot-toggles">
         <label><input type="checkbox" name="enable_trophy" checked> 🏆 Trophy slot</label>
@@ -149,7 +150,7 @@
         </thead>
         <tbody>
         <% group.accounts.forEach(acc => { %>
-        <tr data-searchable="<%= (acc.label + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(games, id)).join(' ')).toLowerCase() %>">
+        <tr data-searchable="<%= (acc.label + ' ' + (acc.email||'') + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(games, id)).join(' ')).toLowerCase() %>">
           <td>
             <div class="acc-name-row">
               <% if (acc.game_ids && acc.game_ids.length) { %>
@@ -165,6 +166,7 @@
               <% } %>
               <div>
                 <div class="acc-name"><%= acc.label %></div>
+                <% if (acc.email) { %><div class="acc-games" style="color:#888;">✉️ <%= acc.email %></div><% } %>
                 <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
                 <% if (acc.game_ids && acc.game_ids.length) { %>
                   <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(games, id)).join(', ') %></div>
@@ -224,6 +226,7 @@
                 <form method="POST" action="/admin/accounts/edit/<%= acc.id %>" class="acc-edit-form" style="position:absolute;z-index:10;width:320px;">
                   <div class="acc-edit-grid" style="grid-template-columns:1fr;">
                     <div><label>Label</label><input type="text" name="label" value="<%= acc.label %>"></div>
+                    <div><label>Email</label><input type="email" name="email" value="<%= acc.email %>" placeholder="e.g. pshub.account1@gmail.com"></div>
                     <div><label>Games (text)</label><textarea name="games_text" rows="2"><%= acc.games_text %></textarea></div>
                     <div><label>Linked games</label>
                       <select name="game_ids" multiple size="4" style="height:auto;">

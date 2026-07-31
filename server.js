@@ -305,6 +305,7 @@ function normalizeAccount(a) {
     if (!ACCOUNT_STATUSES.includes(a.slots[t].status)) a.slots[t].status = 'open';
   });
   a.game_ids = Array.isArray(a.game_ids) ? a.game_ids : [];
+  a.email = a.email || '';
   return a;
 }
 function getAccounts() { return (db.get('accounts').value() || []).map(normalizeAccount); }
@@ -1612,7 +1613,7 @@ app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
 });
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
-  const { label, games_text, game_ids, note, price_permanent_tr, price_permanent_nt,
+  const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
     enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
   if (!label || !label.trim()) return res.redirect('/admin/accounts?msg=error');
   db.get('accounts').push({
@@ -1621,6 +1622,7 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
     games_text: games_text || '',
     game_ids: parseGameIds(game_ids),
     note: note || '',
+    email: (email || '').trim(),
     price_permanent_tr: parseInt(price_permanent_tr) || 5000,
     price_permanent_nt: parseInt(price_permanent_nt) || 4500,
     slots: {
@@ -1634,7 +1636,7 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
 });
 
 app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
-  const { label, games_text, game_ids, note, price_permanent_tr, price_permanent_nt,
+  const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
     enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
   const existing = getAccount(req.params.id);
   if (!existing) return res.redirect('/admin/accounts?msg=error');
@@ -1647,6 +1649,7 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     games_text: games_text !== undefined ? games_text : existing.games_text,
     game_ids: parseGameIds(game_ids),
     note: note !== undefined ? note : existing.note,
+    email: email !== undefined ? email.trim() : existing.email,
     price_permanent_tr: price_permanent_tr !== undefined && price_permanent_tr !== '' ? (parseInt(price_permanent_tr) || 0) : existing.price_permanent_tr,
     price_permanent_nt: price_permanent_nt !== undefined && price_permanent_nt !== '' ? (parseInt(price_permanent_nt) || 0) : existing.price_permanent_nt,
     slots
