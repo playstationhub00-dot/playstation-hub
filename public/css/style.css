@@ -504,23 +504,31 @@ nav {
   backdrop-filter: blur(4px);
   border: 1px solid rgba(255,255,255,0.15);
 }
+/* Corner badge instead of a full-width strip — stays urgent without covering the cover art */
 .gc-slot-banner {
   position: absolute;
-  bottom: 0; left: 0; right: 0;
-  text-align: center;
-  font-size: 0.75rem;
+  top: 8px; left: 8px;
+  font-size: 0.6rem;
   font-weight: 900;
-  letter-spacing: 1.5px;
-  padding: 0.35rem 0;
+  letter-spacing: 0.4px;
+  padding: 0.22rem 0.5rem;
+  border-radius: 6px;
   text-transform: uppercase;
+  backdrop-filter: blur(4px);
 }
 .gc-slot-banner-last {
   background: rgba(220, 38, 38, 0.92);
   color: #fff;
+  animation: gc-pulse 1.6s ease-in-out infinite;
 }
 .gc-slot-banner-none {
-  background: rgba(30, 30, 30, 0.88);
-  color: #555;
+  background: rgba(20, 20, 20, 0.85);
+  color: #999;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+@keyframes gc-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
 }
 .gc-genre {
   font-size: 0.62rem;
@@ -587,7 +595,22 @@ nav {
 .gc-days-left { font-size: 0.58rem; font-weight: 700; color: #f59e0b; white-space: nowrap; }
 .gc-days-left-tr { color: #ffc400; }
 .gc-days-left-ps4 { color: #60a5fa; }
-.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; margin-top: auto; padding-top: 0.3rem; }
+/* Price stays hidden until the shopper hovers (desktop) or taps the card (mobile,
+   toggled via .gc-price-show in browse.js-equivalent inline script) — keeps the
+   card focused on availability/urgency at a glance, price is a deliberate reveal. */
+.gc-price-rows {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  margin-top: auto; padding-top: 0; max-height: 0; opacity: 0; overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding-top 0.2s ease;
+}
+.game-card:hover .gc-price-rows,
+.game-card.gc-price-show .gc-price-rows { max-height: 100px; opacity: 1; padding-top: 0.3rem; }
+.gc-price-hint {
+  margin-top: auto; padding-top: 0.3rem; text-align: center;
+  font-size: 0.58rem; color: #555; transition: opacity 0.2s ease;
+}
+.game-card:hover .gc-price-hint,
+.game-card.gc-price-show .gc-price-hint { display: none; }
 .gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
 .gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
 .gc-price      { font-size: 0.72rem; font-weight: 400; color: #fff; }

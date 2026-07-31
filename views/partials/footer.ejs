@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Tap a game card (outside its links) to reveal pricing — :hover alone doesn't exist on touch -->
+<script>
+document.addEventListener('click', function(e) {
+  var card = e.target.closest('.game-card');
+  if (!card) return;
+  if (e.target.closest('a, button')) return;
+  card.classList.toggle('gc-price-show');
+});
+</script>
+
 <!-- Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
