@@ -483,6 +483,10 @@ nav {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
+  /* Grid items stretch to the row's tallest cell by default — without this, expanding
+     one card's .gc-reveal on hover/tap stretches every other card in that row to match,
+     showing empty space below their still-collapsed titles. */
+  align-items: start;
 }
 
 /* ── New Game Card Layout ─────────────────────────────────── */
@@ -1276,7 +1280,9 @@ footer {
 
 /* UPCOMING GAMES SLIDER */
 .upcoming-slider-wrap { position: relative; display: flex; align-items: center; gap: 0.5rem; }
-.upcoming-slider { display: flex; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; padding-top: 18px; flex: 1; }
+/* align-items: flex-start — otherwise flex stretches every card in the row to
+   match whichever one has its .gc-reveal open on hover/tap. */
+.upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; padding-top: 18px; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
 .upcoming-slider .game-card { min-width: 240px; max-width: 240px; scroll-snap-align: start; flex-shrink: 0; }
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
