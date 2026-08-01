@@ -476,8 +476,11 @@ nav {
   background: var(--border);
 }
 
-/* Hide from-price on desktop — full price table shows instead */
-.gc-from-price { display: none; }
+/* "From ₱X" shown under the title on homepage cards only (Browse shows this per-category instead) */
+.gc-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; }
+
+/* Per-category "Price Starts at" pill next to the game-count badge on Browse Games */
+.cat-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.2rem 0.65rem; }
 
 /* GAME GRID */
 .games-grid {
@@ -1516,7 +1519,7 @@ footer {
   .slider-card-wrap .gc-price { font-size: 0.6rem; }
   .slider-card-wrap .gc-price-orig { font-size: 0.5rem; }
   .slider-card-wrap .gc-price-wrap { gap: 0.2rem; }
-  .slider-card-wrap .gc-from-price { display: none; }
+  .slider-card-wrap .gc-price-start { font-size: 0.68rem; }
   .slider-card-wrap .rent-btn { font-size: 0.65rem; padding: 0.35rem 0.4rem; margin-top: 0.35rem; border-radius: 7px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.55rem; padding: 0.18rem 0.4rem; }
   /* PS Plus cards */

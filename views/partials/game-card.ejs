@@ -21,6 +21,13 @@
   const gcPromo = typeof promo !== 'undefined' ? promo : null;
   const gcPromoPct = (d) => (typeof getPromoDiscountPct === 'function') ? getPromoDiscountPct(gcPromo, d) : 0;
   const gcFinal = (base, d) => { const pct = gcPromoPct(d); return pct > 0 ? base - Math.round(base * pct / 100) : base; };
+  // Lowest final (promo-applied) price across every duration/type this game offers —
+  // shown as "From ₱X" on the card when showPriceStart is passed in (homepage only;
+  // Browse shows this per-category instead, see browse.ejs).
+  const gcAllPrices = [[game.nt_price_10d,10],[game.nt_price_15d,15],[game.nt_price_30d,30],
+    ...(hasTrophy ? [[game.tr_price_10d,10],[game.tr_price_15d,15],[game.tr_price_30d,30]] : [])]
+    .filter(([base]) => base > 0).map(([base, d]) => gcFinal(base, d));
+  const gcStartPrice = gcAllPrices.length ? Math.min(...gcAllPrices) : null;
 %>
 <div class="game-card" style="cursor:default;">
 
@@ -51,6 +58,9 @@
 
   <div class="game-info">
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
+    <% if (typeof showPriceStart !== 'undefined' && showPriceStart && gcStartPrice) { %>
+      <div class="gc-price-start">From ₱<%= gcStartPrice %></div>
+    <% } %>
     <div class="gc-reveal-hint">👆 Tap to see price &amp; rent</div>
 
     <!-- Hidden by default — hover (desktop) or tap the card (mobile) to reveal price/availability + Rent/Buy -->
@@ -144,11 +154,6 @@
       </div>
       <% } %>
 
-    </div>
-
-    <div class="gc-from-price">
-      From ₱<%= game.nt_price_10d || game.tr_price_10d || '—' %>
-      <span style="color:#555;font-size:0.75em;"> / 10 days</span>
     </div>
 
     <!-- Action buttons -->

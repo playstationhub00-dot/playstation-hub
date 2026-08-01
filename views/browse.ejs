@@ -89,23 +89,43 @@
       });
       // Order categories as defined in admin
       const orderedCats = priceCategories.filter(c => catMap[c.id]);
+      // Lowest promo-adjusted price across every game/duration/type in a category,
+      // for the "Price Starts at" line next to the category header.
+      function catMinPrice(gamesArr) {
+        let min = null;
+        gamesArr.forEach(g => {
+          [10, 15, 30].forEach(d => {
+            const pct = getPromoDiscountPct(promo, d);
+            ['nt_price_', 'tr_price_'].forEach(prefix => {
+              const base = g[prefix + d + 'd'];
+              if (base > 0) {
+                const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
+                if (min === null || final < min) min = final;
+              }
+            });
+          });
+        });
+        return min;
+      }
     %>
-    <% orderedCats.forEach((cat, ci) => { %>
+    <% orderedCats.forEach((cat, ci) => { const catMin = catMinPrice(catMap[cat.id].games); %>
     <div class="section cat-section" id="cat-section-<%= cat.id %>" style="<%= ci > 0 || upcoming.length > 0 ? 'border-top:1px solid #1a1a1a;padding-top:3rem;' : 'padding-top:2rem;' %>">
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
         <h2 class="section-title" style="margin:0;"><%= cat.name %></h2>
         <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= catMap[cat.id].games.length %> game<%= catMap[cat.id].games.length !== 1 ? 's' : '' %></span>
+        <% if (catMin) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= catMin %></span><% } %>
       </div>
       <div class="games-grid rentals-grid">
         <% catMap[cat.id].games.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
       </div>
     </div>
     <% }) %>
-    <% if (uncategorized.length > 0) { %>
+    <% if (uncategorized.length > 0) { const uncatMin = catMinPrice(uncategorized); %>
     <div class="section cat-section" id="cat-section-uncategorized" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
         <h2 class="section-title" style="margin:0;">Other Games</h2>
         <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= uncategorized.length %> game<%= uncategorized.length !== 1 ? 's' : '' %></span>
+        <% if (uncatMin) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= uncatMin %></span><% } %>
       </div>
       <div class="games-grid rentals-grid">
         <% uncategorized.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
