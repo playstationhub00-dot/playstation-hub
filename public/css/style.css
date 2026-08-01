@@ -147,6 +147,33 @@ nav {
   font-weight: 700;
 }
 .nav-links .admin-btn:hover { background: #FFD700; color: #000; }
+.nav-links .nav-cta {
+  background: var(--ps-blue);
+  color: #000;
+  padding: 0.5rem 1.15rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.nav-links .nav-cta:hover { background: #FFD700; color: #000; }
+
+/* Hero trust strip — sits under either hero variant (default or slideshow) */
+.hero-trust-tag {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: rgba(240,165,0,0.1); border: 1px solid rgba(240,165,0,0.3);
+  color: var(--ps-blue); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 0.4rem 0.9rem; border-radius: 20px; margin-bottom: 1.25rem;
+}
+.hero-trust-strip {
+  max-width: 1400px; margin: 0 auto; padding: 1.75rem 2rem;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.hero-trust-item { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; }
+.hero-trust-item b { display: block; color: var(--text-primary); font-size: 0.85rem; font-weight: 700; margin-bottom: 0.15rem; }
+@media (max-width: 700px) {
+  .hero-trust-strip { grid-template-columns: repeat(2, 1fr); padding: 1.5rem; gap: 1rem; }
+}
 
 /* HERO */
 .hero {
