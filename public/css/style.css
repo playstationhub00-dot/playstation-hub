@@ -603,6 +603,8 @@ nav {
 .gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; margin-top: auto; padding-top: 0.3rem; }
 .gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
 .gc-dur        { font-size: 0.62rem; color: #555; font-weight: 600; }
+.gc-price-wrap { display: flex; align-items: center; gap: 0.3rem; }
+.gc-price-orig { font-size: 0.6rem; color: #555; text-decoration: line-through; }
 .gc-price      { font-size: 0.72rem; font-weight: 400; color: #fff; }
 .gc-price-tr   { color: #ffc400; }
 .gc-price-ps4  { color: #60a5fa; }
@@ -1497,6 +1499,8 @@ footer {
   .slider-card-wrap .gc-price-row { font-size: 0.58rem; gap: 0.15rem; }
   .slider-card-wrap .gc-dur { font-size: 0.54rem; }
   .slider-card-wrap .gc-price { font-size: 0.6rem; }
+  .slider-card-wrap .gc-price-orig { font-size: 0.5rem; }
+  .slider-card-wrap .gc-price-wrap { gap: 0.2rem; }
   .slider-card-wrap .gc-from-price { display: none; }
   .slider-card-wrap .rent-btn { font-size: 0.65rem; padding: 0.35rem 0.4rem; margin-top: 0.35rem; border-radius: 7px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.55rem; padding: 0.18rem 0.4rem; }

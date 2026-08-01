@@ -16,6 +16,11 @@
   const hasBuy = buyNt > 0 || buyTr > 0;
   const gameSlug = game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const modalArgs = `'${game.title.replace(/'/g,"\\'")}',${game.nt_price_10d||0},${game.nt_price_15d||0},${game.nt_price_30d||0},${game.tr_price_10d||0},${game.tr_price_15d||0},${game.tr_price_30d||0},${hasTrophy?'true':'false'},true,${buyNt},${buyTr}`;
+  // Promo discount per duration — same math as the game-detail order summary, so the
+  // card shows the actual final price next to the crossed-out base price, not just a badge.
+  const gcPromo = typeof promo !== 'undefined' ? promo : null;
+  const gcPromoPct = (d) => (typeof getPromoDiscountPct === 'function') ? getPromoDiscountPct(gcPromo, d) : 0;
+  const gcFinal = (base, d) => { const pct = gcPromoPct(d); return pct > 0 ? base - Math.round(base * pct / 100) : base; };
 %>
 <div class="game-card" style="cursor:default;">
 
@@ -75,9 +80,15 @@
             <% } %>
           </div>
           <div class="gc-price-rows">
-            <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price">₱<%= game.nt_price_10d %></span></div>
-            <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price">₱<%= game.nt_price_15d %></span></div>
-            <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price">₱<%= game.nt_price_30d %></span></div>
+            <% [[10, game.nt_price_10d], [15, game.nt_price_15d], [30, game.nt_price_30d]].forEach(([d, base]) => { const pct = gcPromoPct(d); %>
+            <div class="gc-price-row">
+              <span class="gc-dur"><%= d %>D</span>
+              <span class="gc-price-wrap">
+                <% if (pct > 0) { %><span class="gc-price-orig">₱<%= base %></span><% } %>
+                <span class="gc-price">₱<%= gcFinal(base, d) %></span>
+              </span>
+            </div>
+            <% }) %>
           </div>
         </div>
       </div>
@@ -118,9 +129,15 @@
           <% } %>
           <% if (hasTrophy) { %>
           <div class="gc-price-rows">
-            <div class="gc-price-row"><span class="gc-dur">10D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_10d %></span></div>
-            <div class="gc-price-row"><span class="gc-dur">15D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_15d %></span></div>
-            <div class="gc-price-row"><span class="gc-dur">30D</span><span class="gc-price gc-price-tr">₱<%= game.tr_price_30d %></span></div>
+            <% [[10, game.tr_price_10d], [15, game.tr_price_15d], [30, game.tr_price_30d]].forEach(([d, base]) => { const pct = gcPromoPct(d); %>
+            <div class="gc-price-row">
+              <span class="gc-dur"><%= d %>D</span>
+              <span class="gc-price-wrap">
+                <% if (pct > 0) { %><span class="gc-price-orig">₱<%= base %></span><% } %>
+                <span class="gc-price gc-price-tr">₱<%= gcFinal(base, d) %></span>
+              </span>
+            </div>
+            <% }) %>
           </div>
           <% } %>
         </div>
