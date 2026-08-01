@@ -470,7 +470,15 @@ function updatePrices() {
   if (!selectedType) return;
   [10, 15, 30].forEach(d => {
     const el = document.getElementById('price-' + d);
-    if (el) el.textContent = '₱' + PRICES[selectedType][d];
+    if (!el) return;
+    const base = PRICES[selectedType][d];
+    const pct = promoPctFor(d);
+    if (pct > 0) {
+      const final = base - Math.round(base * pct / 100);
+      el.innerHTML = '<span class="gd-dur-price-orig">₱' + base + '</span> ₱' + final;
+    } else {
+      el.textContent = '₱' + base;
+    }
   });
 }
 

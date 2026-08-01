@@ -261,6 +261,7 @@ nav {
 .gd-dur-days { font-size: 1.4rem; font-weight: 900; line-height: 1; }
 .gd-dur-label { font-size: 0.6rem; font-weight: 700; color: #555; letter-spacing: 0.5px; }
 .gd-dur-price { font-size: 0.82rem; font-weight: 700; color: var(--ps-blue); margin-top: 0.25rem; }
+.gd-dur-price-orig { font-size: 0.7rem; font-weight: 500; color: #666; text-decoration: line-through; margin-right: 0.25rem; }
 .gd-dur-promo { position: absolute; top: -8px; right: -4px; background: #ef4444; color: #fff; font-size: 0.55rem; font-weight: 800; padding: 0.15rem 0.3rem; border-radius: 4px; letter-spacing: 0.3px; }
 .gd-total-box { background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 1rem 1.1rem; margin-top: 1.25rem; }
 .gd-total-label { font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; color: #444; text-transform: uppercase; margin-bottom: 0.65rem; }
