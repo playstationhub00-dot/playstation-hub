@@ -537,15 +537,6 @@ nav {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
   50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
 }
-/* Always-visible status line under the title — same urgency, no hover needed to see it */
-.gc-info-status {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  padding: 0.15rem 0;
-}
-.gc-info-status-last { color: #f87171; }
-.gc-info-status-none { color: #777; }
 .gc-genre {
   font-size: 0.62rem;
   font-weight: 700;

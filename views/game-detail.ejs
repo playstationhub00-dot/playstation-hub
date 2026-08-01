@@ -24,7 +24,9 @@
   // ── Availability: from linked accounts (phase 2) or legacy per-game counts, per slot type ──
   const sum = typeof accountSummary !== 'undefined' ? accountSummary : null;
   const availability = computeAvailability(game, sum);
-  const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc } = availability;
+  const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc, totalSlots } = availability;
+  const isLastSlot = totalSlots === 1;
+  const noSlot = totalSlots === 0;
   const trLeft = trSlots, ntLeft = ntSlots, ps4Left = ps4Slots;
   const trNext = availability.trNext, ntNext = availability.ntNext, ps4Next = availability.ps4Next;
   const buyNt = game.buy_nt_price || 0;
@@ -57,6 +59,11 @@
             <% }) %>
           </div>
           <div class="gd-platform-badge"><%= game.platform %></div>
+          <% if (isLastSlot) { %>
+            <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
+          <% } else if (noSlot) { %>
+            <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
+          <% } %>
           <% if (slides.length > 1) { %>
             <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
             <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
@@ -75,12 +82,17 @@
         </div>
         <% } %>
       <% } else { %>
-        <div class="gd-cover gd-cover-placeholder">
+        <div class="gd-cover gd-cover-placeholder" style="position:relative;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
             <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
           </svg>
+          <div class="gd-platform-badge"><%= game.platform %></div>
+          <% if (isLastSlot) { %>
+            <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
+          <% } else if (noSlot) { %>
+            <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
+          <% } %>
         </div>
-        <div class="gd-platform-badge"><%= game.platform %></div>
       <% } %>
     </div>
 

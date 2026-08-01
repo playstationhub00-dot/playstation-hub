@@ -51,11 +51,6 @@
 
   <div class="game-info">
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
-    <% if (isLastSlot) { %>
-      <div class="gc-info-status gc-info-status-last">🔥 Last Slot Left</div>
-    <% } else if (noSlot) { %>
-      <div class="gc-info-status gc-info-status-none">😔 Sold Out</div>
-    <% } %>
     <div class="gc-reveal-hint">👆 Tap to see price &amp; rent</div>
 
     <!-- Hidden by default — hover (desktop) or tap the card (mobile) to reveal price/availability + Rent/Buy -->
