@@ -848,7 +848,13 @@ app.get('/admin', requireAuth, (req, res) => {
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const botTraining = db.get('bot_training').value() || [];
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
+  // Slim payload for the client-side dashboard (year filter + month drill-down) —
+  // only the fields it needs, not the full customer records.
+  const dashboardData = customers.map(c => ({
+    price: c.price || 0, status: c.status, start_date: c.start_date || '', created_at: c.created_at || '',
+    end_date: c.end_date || '', game_title: c.game_title || '', customer_name: c.customer_name || ''
+  }));
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
 });
 
 // Upcoming CRUD

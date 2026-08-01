@@ -1215,56 +1215,19 @@
   <div class="tab-panel" id="tab-customers">
 
     <%
+      // Only static/live (not time-filtered) figures stay server-computed:
+      // current-status snapshots and all-time cost/profit (games have no purchase
+      // date, so cost can't be attributed to a year — see dashboard JS for the rest).
       const activeCustomers = customers.filter(c => c.status === 'renting');
-      const boughtCustomers = customers.filter(c => c.status === 'bought');
-      const doneCustomers = customers.filter(c => c.status === 'done');
-      const reservationCustomers = customers.filter(c => c.status === 'reservation');
-
-      // Sales calculations
-      const totalRevenue = customers.reduce((s, c) => s + (c.price || 0), 0);
-      const rentRevenue  = customers.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
-      const buyRevenue   = boughtCustomers.reduce((s, c) => s + (c.price || 0), 0);
+      const boughtCustomersNow = customers.filter(c => c.status === 'bought');
+      const doneCustomersNow = customers.filter(c => c.status === 'done');
+      const reservationCustomersNow = customers.filter(c => c.status === 'reservation');
+      const totalRevenueAllTime = customers.reduce((s, c) => s + (c.price || 0), 0);
       const totalGameCosts = games.reduce((s, g) => s + (g.cost || 0), 0);
-      const netProfit = totalRevenue - totalGameCosts;
-
-      // This month — based on start_date (when they actually started renting/buying)
-      const now = new Date();
-      const thisMonth = now.getMonth(), thisYear = now.getFullYear();
-      const monthCustomers = customers.filter(c => {
-        const dateStr = c.start_date || c.created_at;
-        if (!dateStr) return false;
-        const d = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
-        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-      });
-      const monthRevenue = monthCustomers.reduce((s, c) => s + (c.price || 0), 0);
-
-      // Overdue
+      const netProfitAllTime = totalRevenueAllTime - totalGameCosts;
       const today0 = new Date(); today0.setHours(0,0,0,0);
-      const overdueCustomers = activeCustomers.filter(c => {
-        if (!c.end_date) return false;
-        return new Date(c.end_date + 'T00:00:00') < today0;
-      });
-
-      // Top games by rental count
-      const gameCount = {};
-      customers.forEach(c => { gameCount[c.game_title] = (gameCount[c.game_title] || 0) + 1; });
-      const topGames = Object.entries(gameCount).sort((a,b) => b[1]-a[1]).slice(0, 5);
-
-      // Monthly revenue for last 6 months
-      const monthLabels = [], monthRevs = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(thisYear, thisMonth - i, 1);
-        const lbl = d.toLocaleDateString('en-US', {month:'short', year:'2-digit'});
-        monthLabels.push(lbl);
-        const rev = customers.filter(c => {
-          const dateStr = c.start_date || c.created_at;
-          if (!dateStr) return false;
-          const cd = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
-          return cd.getMonth() === d.getMonth() && cd.getFullYear() === d.getFullYear();
-        }).reduce((s, c) => s + (c.price || 0), 0);
-        monthRevs.push(rev);
-      }
-      const maxMonthRev = Math.max(...monthRevs, 1);
+      const overdueCustomers = activeCustomers.filter(c => c.end_date && new Date(c.end_date + 'T00:00:00') < today0);
+      const dashNow = new Date();
     %>
 
     <!-- ── DASHBOARD ── -->
@@ -1279,50 +1242,54 @@
     <div style="margin-bottom:0;">
 
       <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
         <span style="font-size:1.05rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
-        <span style="font-size:0.7rem;color:#444;">as of <%= now.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <select id="dashYearSelect" onchange="renderDashboard()" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.35rem 0.6rem;font-size:0.78rem;"></select>
+          <span style="font-size:0.7rem;color:#444;">as of <%= dashNow.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
+        </div>
       </div>
 
       <!-- KPI Row 1 -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
         <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:0.9rem 1rem;">
           <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
-          <div style="font-size:1.55rem;font-weight:900;color:#22c55e;line-height:1.1;">₱<%= totalRevenue.toLocaleString() %></div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= customers.length %> transactions</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#22c55e;line-height:1.1;" id="dashTotalEarned">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashTransactions">0 transactions</div>
         </div>
         <div style="background:#1a0800;border:1px solid #3a1a00;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Game Costs</div>
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Game Costs <span class="dash-tag">all-time</span></div>
           <div style="font-size:1.55rem;font-weight:900;color:#f59e0b;line-height:1.1;">₱<%= totalGameCosts.toLocaleString() %></div>
           <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= games.length %> games in library</div>
         </div>
-        <div style="background:<%= netProfit >= 0 ? '#060a18' : '#1a0606' %>;border:1px solid <%= netProfit >= 0 ? '#1a2a4a' : '#3a1a1a' %>;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Net Profit</div>
-          <div style="font-size:1.55rem;font-weight:900;color:<%= netProfit >= 0 ? 'var(--ps-blue)' : '#ef4444' %>;line-height:1.1;">₱<%= netProfit.toLocaleString() %></div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= totalRevenue > 0 ? Math.round((netProfit/totalRevenue)*100) : 0 %>% margin</div>
+        <div style="background:<%= netProfitAllTime >= 0 ? '#060a18' : '#1a0606' %>;border:1px solid <%= netProfitAllTime >= 0 ? '#1a2a4a' : '#3a1a1a' %>;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Net Profit <span class="dash-tag">all-time</span></div>
+          <div style="font-size:1.55rem;font-weight:900;color:<%= netProfitAllTime >= 0 ? 'var(--ps-blue)' : '#ef4444' %>;line-height:1.1;">₱<%= netProfitAllTime.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= totalRevenueAllTime > 0 ? Math.round((netProfitAllTime/totalRevenueAllTime)*100) : 0 %>% margin</div>
         </div>
       </div>
 
       <!-- KPI Row 2 -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
         <div style="background:#100a00;border:1px solid #3a2a00;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">This Month</div>
-          <div style="font-size:1.55rem;font-weight:900;color:#fbbf24;line-height:1.1;">₱<%= monthRevenue.toLocaleString() %></div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= monthCustomers.length %> customer<%= monthCustomers.length !== 1 ? 's' : '' %> so far</div>
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Unique Renters</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#fbbf24;line-height:1.1;" id="dashUniqueRenters">0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;">by name — not a verified customer ID</div>
         </div>
         <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:0.9rem 1rem;">
           <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Revenue</div>
-          <div style="font-size:1.55rem;font-weight:900;color:#a78bfa;line-height:1.1;">₱<%= rentRevenue.toLocaleString() %></div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= customers.length - boughtCustomers.length %> rentals · <%= totalRevenue > 0 ? Math.round((rentRevenue/totalRevenue)*100) : 0 %>% of total</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#a78bfa;line-height:1.1;" id="dashRentRevenue">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashRentSub">0 rentals · 0% of total</div>
         </div>
         <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem 1rem;">
           <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
-          <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;">₱<%= buyRevenue.toLocaleString() %></div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= boughtCustomers.length %> game<%= boughtCustomers.length !== 1 ? 's' : '' %> sold · <%= totalRevenue > 0 ? Math.round((buyRevenue/totalRevenue)*100) : 0 %>% of total</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;" id="dashBuyRevenue">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashBuySub">0 games sold · 0% of total</div>
         </div>
       </div>
 
       <!-- Status Row -->
+      <div style="font-size:0.62rem;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Live Status <span class="dash-tag">now</span></div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.65rem;">
         <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
           <div style="font-size:1.2rem;">🟢</div>
@@ -1330,15 +1297,15 @@
         </div>
         <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
           <div style="font-size:1.2rem;">🔖</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Reservations</div></div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Reservations</div></div>
         </div>
         <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
           <div style="font-size:1.2rem;">🛒</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Games Sold</div></div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Games Sold</div></div>
         </div>
         <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
           <div style="font-size:1.2rem;">✅</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Completed</div></div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Completed</div></div>
         </div>
         <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1e1e1e' %>;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
           <div style="font-size:1.2rem;">⚠️</div>
@@ -1351,112 +1318,251 @@
 
         <!-- Monthly Bar Chart -->
         <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — Last 6 Months</div>
-          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:110px;" id="dashBarChart">
-            <% monthLabels.forEach((lbl, i) => {
-              const pct = Math.max(Math.round((monthRevs[i] / maxMonthRev) * 100), 3);
-              const isLast = i === monthLabels.length - 1;
-              const isPeak = monthRevs[i] === maxMonthRev && maxMonthRev > 0;
-              const barColor = isPeak ? '#3b82f6' : isLast ? '#22c55e' : '#2a2a2a';
-              const valColor = isPeak ? '#3b82f6' : isLast ? '#22c55e' : '#555';
-            %>
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem;height:100%;">
-              <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
-                <div style="width:100%;height:<%= pct %>%;background:<%= barColor %>;border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;"
-                  onmouseenter="showDashTip(event,'<%= lbl %>: ₱<%= monthRevs[i].toLocaleString() %>')"
-                  onmouseleave="hideDashTip()"
-                  onmousemove="moveDashTip(event)"></div>
-              </div>
-              <div style="font-size:0.58rem;color:#444;white-space:nowrap;"><%= lbl %></div>
-              <% if (monthRevs[i] > 0) { %>
-              <div style="font-size:0.58rem;font-weight:700;color:<%= valColor %>;">₱<%= monthRevs[i] >= 1000 ? (monthRevs[i]/1000).toFixed(1)+'k' : monthRevs[i] %></div>
-              <% } else { %><div style="font-size:0.58rem;"> </div><% } %>
-            </div>
-            <% }) %>
-          </div>
+          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — <span id="dashChartYearLabel"></span> <span style="color:#333;font-weight:500;">(click a month for details)</span></div>
+          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:110px;" id="dashBarChart"></div>
         </div>
 
         <!-- Top Games -->
         <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
           <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
-          <% if (topGames.length === 0) { %>
-            <div style="color:#333;font-size:0.8rem;text-align:center;padding:1.5rem 0;">No data yet</div>
-          <% } else {
-            const maxCount = topGames[0][1];
-            const medals = ['🥇','🥈','🥉'];
-          %>
-          <div style="display:flex;flex-direction:column;gap:0.55rem;">
-            <% topGames.forEach(([title, count], i) => { %>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">
-                <div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%;"><%= medals[i] || (i+1)+'.' %> <%= title %></div>
-                <div style="font-size:0.72rem;font-weight:800;color:#3b82f6;"><%= count %>x</div>
-              </div>
-              <div style="background:#1a1a1a;border-radius:3px;height:5px;">
-                <div style="width:<%= Math.round((count/maxCount)*100) %>%;height:100%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;"></div>
-              </div>
-            </div>
-            <% }) %>
-          </div>
-          <% } %>
+          <div id="dashTopGames"></div>
         </div>
 
+      </div>
+
+      <!-- Month Drill-Down Panel -->
+      <div id="dashMonthPanel" style="display:none;background:#0a0e18;border:1px solid #1a2a4a;border-radius:12px;padding:1rem;margin-bottom:0.65rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+          <span style="font-size:0.85rem;font-weight:800;color:#fff;" id="dashMonthTitle"></span>
+          <button type="button" onclick="clearMonthSelection()" style="background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.7rem;font-weight:700;cursor:pointer;">✕ Clear</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.85rem;">
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthEarned" style="color:#22c55e;">₱0</div><div class="dash-month-lbl">Total Earned</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthTransactions" style="color:#fff;">0</div><div class="dash-month-lbl">Transactions</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthRenters" style="color:#fbbf24;">0</div><div class="dash-month-lbl">Unique Renters</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthReservations" style="color:#c084fc;">0</div><div class="dash-month-lbl">Reservations</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthBuys" style="color:#60a5fa;">0</div><div class="dash-month-lbl">Games Bought</div></div>
+        </div>
+        <div style="font-size:0.68rem;color:#666;margin-bottom:0.6rem;">🎮 <strong id="dashMonthStillRenting" style="color:#22c55e;">0</strong> rental<span id="dashMonthStillRentingS"></span> still active during this month</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Most Rented This Month</div>
+        <div id="dashMonthTopGames"></div>
       </div>
 
       <!-- Insight Pills -->
-      <%
-        const sortedRevs = [...monthRevs];
-        const peakIdx = sortedRevs.indexOf(Math.max(...sortedRevs));
-        const peakMonth = monthLabels[peakIdx] || '';
-        const peakVal = Math.max(...monthRevs);
-        const prevMonthRev = monthRevs[monthRevs.length - 2] || 0;
-        const currMonthRev = monthRevs[monthRevs.length - 1] || 0;
-        const rentPct = totalRevenue > 0 ? Math.round((rentRevenue/totalRevenue)*100) : 0;
-      %>
-      <div style="display:flex;flex-direction:column;gap:0.45rem;">
-        <% if (peakVal > 0) { %>
-        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
-          <span style="flex-shrink:0;">📈</span>
-          <span><strong style="color:#fff;">Best month: <%= peakMonth %></strong> — ₱<%= peakVal.toLocaleString() %>. Identify what worked and repeat it.</span>
-        </div>
-        <% } %>
-        <% if (overdueCustomers.length > 0) { %>
-        <div style="background:#1a0a0a;border:1px solid #3a1a1a;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
-          <span style="flex-shrink:0;">⚠️</span>
-          <span><strong style="color:#ef4444;"><%= overdueCustomers.length %> overdue rental<%= overdueCustomers.length !== 1 ? 's' : '' %></strong> — follow up immediately to recover games or collect late fees.</span>
-        </div>
-        <% } %>
-        <% if (rentPct > 90) { %>
-        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
-          <span style="flex-shrink:0;">💰</span>
-          <span><strong style="color:#fff;">Game sales are only <%= 100 - rentPct %>% of revenue</strong> — push buy options to returning renters to grow this.</span>
-        </div>
-        <% } %>
-        <% if (topGames.length > 0) { %>
-        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
-          <span style="flex-shrink:0;">🎮</span>
-          <span><strong style="color:#fff;"><%= topGames[0][0] %> is your #1 game</strong> — <%= topGames[0][1] %>x rented/sold. Keep it stocked and front-and-center on your site.</span>
-        </div>
-        <% } %>
-        <% if (doneCustomers.length > activeCustomers.length * 5) { %>
-        <div style="background:#111;border:1px solid #1e1e1e;border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">
-          <span style="flex-shrink:0;">📉</span>
-          <span><strong style="color:#fff;"><%= doneCustomers.length %> past customers</strong> vs <%= activeCustomers.length %> active — most renters don't return. A Messenger follow-up campaign could recover many of them.</span>
-        </div>
-        <% } %>
-      </div>
+      <div id="dashInsights" style="display:flex;flex-direction:column;gap:0.45rem;"></div>
 
       <!-- Tooltip -->
       <div id="dashTip" style="position:fixed;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:0.4rem 0.65rem;font-size:0.72rem;color:#fff;pointer-events:none;z-index:9999;display:none;white-space:nowrap;"></div>
-      <script>
-        function showDashTip(e, text) { var t=document.getElementById('dashTip'); t.textContent=text; t.style.display='block'; moveDashTip(e); }
-        function hideDashTip() { document.getElementById('dashTip').style.display='none'; }
-        function moveDashTip(e) { var t=document.getElementById('dashTip'); t.style.left=(e.clientX+12)+'px'; t.style.top=(e.clientY-28)+'px'; }
-      </script>
 
     </div>
 
       </div></div><!-- /accordion dashboard -->
+
+    <script>
+    (function() {
+      const DASH_DATA = <%- JSON.stringify(dashboardData).replace(/</g, '\\u003c') %>;
+      let dashSelectedMonth = null; // { year, month } or null
+
+      function dashCustDate(c) {
+        const raw = c.start_date || c.created_at;
+        if (!raw) return null;
+        const d = c.start_date ? new Date(c.start_date + 'T00:00:00') : new Date(c.created_at);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      function dashAvailableYears() {
+        const years = new Set();
+        DASH_DATA.forEach(c => { const d = dashCustDate(c); if (d) years.add(d.getFullYear()); });
+        return [...years].sort((a, b) => b - a);
+      }
+      function dashUniqueRenters(list) {
+        const set = new Set();
+        list.forEach(c => { if (c.customer_name) set.add(c.customer_name.trim().toLowerCase()); });
+        return set.size;
+      }
+      function dashFilterYear(year) {
+        if (year === 'all') return DASH_DATA;
+        return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year; });
+      }
+      function dashFilterMonth(year, month) {
+        return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year && d.getMonth() === month; });
+      }
+      // "Still renting" = overlapped the month at all: started by month-end, and
+      // either has no end date yet (ongoing) or ended on/after month-start.
+      function dashOverlapsMonth(c, year, month) {
+        if (c.status !== 'renting' && c.status !== 'done') return false;
+        const start = dashCustDate(c);
+        if (!start) return false;
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        if (start > monthEnd) return false;
+        if (!c.end_date) return true;
+        const end = new Date(c.end_date + 'T23:59:59');
+        return end >= monthStart;
+      }
+      function dashEscapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+      function dashTopGames(list, limit) {
+        const counts = {};
+        list.forEach(c => { if (c.game_title) counts[c.game_title] = (counts[c.game_title] || 0) + 1; });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit || 5);
+      }
+      function dashRenderTopGamesList(el, topGames, emptyMsg) {
+        if (!topGames.length) { el.innerHTML = '<div style="color:#333;font-size:0.8rem;text-align:center;padding:1.5rem 0;">' + emptyMsg + '</div>'; return; }
+        const maxCount = topGames[0][1];
+        const medals = ['🥇','🥈','🥉'];
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.55rem;">' + topGames.map(([title, count], i) =>
+          '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">' +
+          '<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%;">' + (medals[i] || (i+1)+'.') + ' ' + dashEscapeHtml(title) + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:800;color:#3b82f6;">' + count + 'x</div></div>' +
+          '<div style="background:#1a1a1a;border-radius:3px;height:5px;"><div style="width:' + Math.round((count/maxCount)*100) + '%;height:100%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;"></div></div></div>'
+        ).join('') + '</div>';
+      }
+
+      function populateYearSelect() {
+        const sel = document.getElementById('dashYearSelect');
+        const years = dashAvailableYears();
+        const currentYear = new Date().getFullYear();
+        let opts = '<option value="all">All Time</option>';
+        years.forEach(y => { opts += '<option value="' + y + '">' + y + '</option>'; });
+        sel.innerHTML = opts;
+        sel.value = years.includes(currentYear) ? String(currentYear) : (years.length ? String(years[0]) : 'all');
+      }
+
+      window.renderDashboard = function() {
+        const raw = document.getElementById('dashYearSelect').value;
+        const yearNum = raw === 'all' ? null : parseInt(raw);
+        const scoped = raw === 'all' ? DASH_DATA : dashFilterYear(yearNum);
+
+        const totalEarned = scoped.reduce((s, c) => s + (c.price || 0), 0);
+        const rentList = scoped.filter(c => c.status !== 'bought');
+        const buyList = scoped.filter(c => c.status === 'bought');
+        const rentRevenue = rentList.reduce((s, c) => s + (c.price || 0), 0);
+        const buyRevenue = buyList.reduce((s, c) => s + (c.price || 0), 0);
+
+        document.getElementById('dashTotalEarned').textContent = '₱' + totalEarned.toLocaleString();
+        document.getElementById('dashTransactions').textContent = scoped.length + ' transaction' + (scoped.length !== 1 ? 's' : '');
+        document.getElementById('dashUniqueRenters').textContent = dashUniqueRenters(scoped);
+        document.getElementById('dashRentRevenue').textContent = '₱' + rentRevenue.toLocaleString();
+        document.getElementById('dashRentSub').textContent = rentList.length + ' rentals · ' + (totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0) + '% of total';
+        document.getElementById('dashBuyRevenue').textContent = '₱' + buyRevenue.toLocaleString();
+        document.getElementById('dashBuySub').textContent = buyList.length + ' game' + (buyList.length !== 1 ? 's' : '') + ' sold · ' + (totalEarned > 0 ? Math.round(buyRevenue/totalEarned*100) : 0) + '% of total';
+
+        dashRenderTopGamesList(document.getElementById('dashTopGames'), dashTopGames(scoped, 5), 'No data yet');
+
+        const years = dashAvailableYears();
+        const chartYear = yearNum || years[0] || new Date().getFullYear();
+        renderDashChart(chartYear);
+        renderDashInsights(scoped, chartYear);
+
+        if (dashSelectedMonth && dashSelectedMonth.year !== chartYear) clearMonthSelection();
+        else if (dashSelectedMonth) renderMonthPanel();
+      };
+
+      const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const MONTH_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+      function renderDashChart(year) {
+        document.getElementById('dashChartYearLabel').textContent = year;
+        const revs = [], renters = [];
+        for (let m = 0; m < 12; m++) {
+          const list = dashFilterMonth(year, m);
+          revs.push(list.reduce((s, c) => s + (c.price || 0), 0));
+          renters.push(dashUniqueRenters(list));
+        }
+        const maxRev = Math.max(...revs, 1);
+        const now = new Date();
+        const container = document.getElementById('dashBarChart');
+        container.innerHTML = MONTH_SHORT.map((lbl, i) => {
+          const pct = revs[i] > 0 ? Math.max(Math.round(revs[i] / maxRev * 100), 3) : 0;
+          const isCurrent = year === now.getFullYear() && i === now.getMonth();
+          const isPeak = revs[i] === maxRev && maxRev > 0;
+          const isSelected = dashSelectedMonth && dashSelectedMonth.year === year && dashSelectedMonth.month === i;
+          const barColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#2a2a2a';
+          const valColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#555';
+          const valStr = revs[i] >= 1000 ? (revs[i]/1000).toFixed(1) + 'k' : revs[i];
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;height:100%;">' +
+            '<div style="flex:1;display:flex;align-items:flex-end;width:100%;">' +
+            '<div onclick="selectDashMonth(' + year + ',' + i + ')" ' +
+            'onmouseenter="showDashTip(event,\'' + lbl + ' ' + year + ': ₱' + revs[i].toLocaleString() + ' · ' + renters[i] + ' renter' + (renters[i]!==1?'s':'') + '\')" ' +
+            'onmouseleave="hideDashTip()" onmousemove="moveDashTip(event)" ' +
+            'style="width:100%;height:' + pct + '%;background:' + barColor + ';border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;' + (isSelected ? 'box-shadow:0 0 0 2px #F0A500;' : '') + '"></div></div>' +
+            '<div style="font-size:0.58rem;color:#444;white-space:nowrap;">' + lbl + '</div>' +
+            (revs[i] > 0 ? '<div style="font-size:0.58rem;font-weight:700;color:' + valColor + ';">₱' + valStr + '</div>' : '<div style="font-size:0.58rem;">&nbsp;</div>') +
+            (renters[i] > 0 ? '<div style="font-size:0.52rem;color:#555;">👤' + renters[i] + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
+            '</div>';
+        }).join('');
+      }
+
+      window.selectDashMonth = function(year, month) {
+        dashSelectedMonth = { year, month };
+        renderDashChart(year);
+        renderMonthPanel();
+      };
+      window.clearMonthSelection = function() {
+        dashSelectedMonth = null;
+        document.getElementById('dashMonthPanel').style.display = 'none';
+        const raw = document.getElementById('dashYearSelect').value;
+        const yearNum = raw === 'all' ? null : parseInt(raw);
+        const years = dashAvailableYears();
+        renderDashChart(yearNum || years[0] || new Date().getFullYear());
+      };
+
+      function renderMonthPanel() {
+        if (!dashSelectedMonth) return;
+        const { year, month } = dashSelectedMonth;
+        const list = dashFilterMonth(year, month);
+        const totalEarned = list.reduce((s, c) => s + (c.price || 0), 0);
+        const reservations = list.filter(c => c.status === 'reservation');
+        const buys = list.filter(c => c.status === 'bought');
+        const stillRenting = DASH_DATA.filter(c => dashOverlapsMonth(c, year, month));
+
+        document.getElementById('dashMonthTitle').textContent = '📅 ' + MONTH_LONG[month] + ' ' + year;
+        document.getElementById('dashMonthEarned').textContent = '₱' + totalEarned.toLocaleString();
+        document.getElementById('dashMonthTransactions').textContent = list.length;
+        document.getElementById('dashMonthRenters').textContent = dashUniqueRenters(list);
+        document.getElementById('dashMonthReservations').textContent = reservations.length;
+        document.getElementById('dashMonthBuys').textContent = buys.length;
+        document.getElementById('dashMonthStillRenting').textContent = stillRenting.length;
+        document.getElementById('dashMonthStillRentingS').textContent = stillRenting.length !== 1 ? 's were' : ' was';
+        dashRenderTopGamesList(document.getElementById('dashMonthTopGames'), dashTopGames(list, 5), 'No rentals this month');
+
+        document.getElementById('dashMonthPanel').style.display = 'block';
+      }
+
+      function renderDashInsights(scoped, chartYear) {
+        const rentRevenue = scoped.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
+        const totalEarned = scoped.reduce((s, c) => s + (c.price || 0), 0);
+        const rentPct = totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0;
+        const topGames = dashTopGames(scoped, 1);
+
+        let revs = [];
+        for (let m = 0; m < 12; m++) revs.push(dashFilterMonth(chartYear, m).reduce((s, c) => s + (c.price || 0), 0));
+        const peakVal = Math.max(...revs);
+        const peakMonth = MONTH_SHORT[revs.indexOf(peakVal)];
+
+        const pills = [];
+        if (peakVal > 0) pills.push(['📈', '<strong style="color:#fff;">Best month: ' + peakMonth + ' ' + chartYear + '</strong> — ₱' + peakVal.toLocaleString() + '. Identify what worked and repeat it.', '#111', '#1e1e1e']);
+        if (<%= overdueCustomers.length %> > 0) pills.push(['⚠️', '<strong style="color:#ef4444;"><%= overdueCustomers.length %> overdue rental<%= overdueCustomers.length !== 1 ? "s" : "" %></strong> — follow up immediately to recover games or collect late fees.', '#1a0a0a', '#3a1a1a']);
+        if (rentPct > 90 && totalEarned > 0) pills.push(['💰', '<strong style="color:#fff;">Game sales are only ' + (100 - rentPct) + '% of revenue</strong> — push buy options to returning renters to grow this.', '#111', '#1e1e1e']);
+        if (topGames.length > 0) pills.push(['🎮', '<strong style="color:#fff;">' + dashEscapeHtml(topGames[0][0]) + ' is your #1 game</strong> — ' + topGames[0][1] + 'x rented/sold. Keep it stocked and front-and-center on your site.', '#111', '#1e1e1e']);
+        if (<%= doneCustomersNow.length %> > <%= activeCustomers.length %> * 5) pills.push(['📉', '<strong style="color:#fff;"><%= doneCustomersNow.length %> past customers</strong> vs <%= activeCustomers.length %> active — most renters don\'t return. A Messenger follow-up campaign could recover many of them.', '#111', '#1e1e1e']);
+
+        document.getElementById('dashInsights').innerHTML = pills.map(([icon, text, bg, border]) =>
+          '<div style="background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">' +
+          '<span style="flex-shrink:0;">' + icon + '</span><span>' + text + '</span></div>'
+        ).join('');
+      }
+
+      function showDashTip(e, text) { var t=document.getElementById('dashTip'); t.textContent=text; t.style.display='block'; moveDashTip(e); }
+      function hideDashTip() { document.getElementById('dashTip').style.display='none'; }
+      function moveDashTip(e) { var t=document.getElementById('dashTip'); t.style.left=(e.clientX+12)+'px'; t.style.top=(e.clientY-28)+'px'; }
+      window.showDashTip = showDashTip; window.hideDashTip = hideDashTip; window.moveDashTip = moveDashTip;
+
+      populateYearSelect();
+      renderDashboard();
+    })();
+    </script>
 
     <!-- Message Blast -->
     <div class="settings-accordion">

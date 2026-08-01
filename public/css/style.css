@@ -931,6 +931,12 @@ select.ss-native {
 .ss-option.active { color: #F0A500; font-weight: 600; }
 .ss-empty { padding: 0.6rem 0.9rem; font-size: 0.82rem; color: #555; font-style: italic; }
 
+/* Business Dashboard — year filter, live-status tag, month drill-down */
+.dash-tag { font-size: 0.55rem; font-weight: 700; color: #666; text-transform: none; letter-spacing: 0; background: #1a1a1a; border-radius: 4px; padding: 0.05rem 0.35rem; margin-left: 0.3rem; }
+.dash-month-stat { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.6rem 0.5rem; text-align: center; }
+.dash-month-val { font-size: 1.1rem; font-weight: 900; line-height: 1.1; }
+.dash-month-lbl { font-size: 0.58rem; color: #555; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.4px; }
+
 /* GAMES TABLE */
 .table-card {
   background: var(--bg-card);
