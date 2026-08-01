@@ -732,7 +732,7 @@ app.get('/', (req, res) => {
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
   const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const s = getSiteSettings();
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, accountSummaryMap: buildAccountSummaryMap() });
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap() });
 });
 
 app.get('/browse', (req, res) => {

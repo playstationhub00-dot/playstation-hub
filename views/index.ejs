@@ -114,6 +114,81 @@
   </div>
 </div>
 
+<!-- PRICE TIERS -->
+<% if (priceCategories && priceCategories.length) { %>
+<%
+  const tierData = priceCategories.map(cat => {
+    const catGames = games.filter(g => g.price_category_id === cat.id);
+    let min = null;
+    catGames.forEach(g => {
+      [10, 15, 30].forEach(d => {
+        const pct = getPromoDiscountPct(promo, d);
+        ['nt_price_', 'tr_price_'].forEach(prefix => {
+          const base = g[prefix + d + 'd'];
+          if (base > 0) {
+            const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
+            if (min === null || final < min) min = final;
+          }
+        });
+      });
+    });
+    return { id: cat.id, name: cat.name, count: catGames.length, min };
+  }).filter(t => t.count > 0);
+%>
+<% if (tierData.length) { %>
+<div class="tier-section">
+  <h2 class="section-title">Browse by Price Tier</h2>
+  <div class="tier-grid">
+    <% tierData.forEach(t => { %>
+    <a href="/browse#cat-section-<%= t.id %>" class="tier-card">
+      <div>
+        <div class="tier-card-name"><%= t.name %></div>
+        <div class="tier-card-count"><%= t.count %> title<%= t.count !== 1 ? 's' : '' %></div>
+      </div>
+      <% if (t.min) { %><div class="tier-card-price">From ₱<%= t.min %></div><% } %>
+      <div class="tier-card-go">→</div>
+    </a>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+<% } %>
+
+<!-- SPOTLIGHT: MOST RENTED GAME -->
+<% if (featured.length && featured[0].renters > 0) { %>
+<%
+  const spotGame = featured[0];
+  const spotSum = accountSummaryMap[spotGame.id] || null;
+  const spotAvail = computeAvailability(spotGame, spotSum, { nt: spotGame.nt_days_left, tr: spotGame.tr_days_left, ps4: spotGame.ps4_days_left });
+  const spotOpenSlots = spotAvail.ntSlots + spotAvail.trSlots + (spotAvail.showPs4 ? spotAvail.ps4Slots : 0);
+  const spotPct = getPromoDiscountPct(promo, 10);
+  const spotBase = spotGame.nt_price_10d || spotGame.tr_price_10d || 0;
+  const spotFinal = spotPct > 0 ? spotBase - Math.round(spotBase * spotPct / 100) : spotBase;
+  const spotSlug = spotGame.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+%>
+<div class="spotlight-section">
+  <div class="spotlight-card">
+    <div class="spotlight-cover">
+      <% if (spotGame.cover_image) { %>
+        <img src="<%= spotGame.cover_image %>" alt="<%= spotGame.title %>" style="object-position: <%= spotGame.cover_focal_x != null ? spotGame.cover_focal_x : 50 %>% <%= spotGame.cover_focal_y != null ? spotGame.cover_focal_y : 50 %>%;">
+      <% } %>
+    </div>
+    <div>
+      <div class="spotlight-tag">Most Rented This Month</div>
+      <h2 class="spotlight-title"><%= spotGame.title %></h2>
+      <% if (spotGame.description) { %><p class="spotlight-desc"><%= spotGame.description %></p><% } %>
+      <div class="spotlight-price">₱<%= spotFinal %><% if (spotPct > 0) { %><span style="font-size:1rem;color:var(--text-secondary);text-decoration:line-through;margin-left:0.5rem;font-weight:500;">₱<%= spotBase %></span><% } %></div>
+      <% if (spotOpenSlots > 0) { %>
+      <div class="spotlight-avail"><%= spotOpenSlots %> slot<%= spotOpenSlots !== 1 ? 's' : '' %> available now</div>
+      <% } else { %>
+      <div class="spotlight-avail" style="color:#ef4444;">No open slots right now</div>
+      <% } %>
+      <a href="/game/<%= spotSlug %>" class="btn btn-primary">Rent This Game</a>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <!-- MOST POPULAR SLIDER -->
 <div class="section">
   <h2 class="section-title">Most Popular</h2>
@@ -168,6 +243,23 @@
 </div>
 <% } %>
 
+<!-- PROMO BAND -->
+<%
+  const activeDurations = promo.enabled ? [10, 15, 30].filter(d => getPromoDiscountPct(promo, d) > 0) : [];
+  const maxPromoPct = activeDurations.length ? Math.max(...activeDurations.map(d => getPromoDiscountPct(promo, d))) : 0;
+%>
+<% if (activeDurations.length) { %>
+<div class="promo-section">
+  <div class="promo-band">
+    <div>
+      <h2 class="promo-band-title">Up to <%= maxPromoPct %>% Off Longer Rentals</h2>
+      <p class="promo-band-sub"><%= activeDurations.map(d => d + '-day').join(', ') %> promos running now — discount applied automatically at checkout.</p>
+    </div>
+    <a href="/browse" class="btn btn-primary">See Discounted Games</a>
+  </div>
+</div>
+<% } %>
+
 <!-- UPCOMING GAMES -->
 <%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: false }) %>
 
@@ -180,6 +272,33 @@
       <% games.slice(0, 10).forEach(game => { %><div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideSection('allGamesSlider',1)" aria-label="Next">&#8250;</button>
+  </div>
+</div>
+
+<!-- WHY RENT FROM US -->
+<div class="why-section">
+  <h2 class="section-title">Why Rent From Us</h2>
+  <div class="why-grid">
+    <div class="why-card">
+      <div class="why-icon">🏆</div>
+      <div class="why-title">Your Own Account</div>
+      <div class="why-desc">Trophy rentals run on your profile, so progress and trophies stay yours.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">⏱️</div>
+      <div class="why-title">Try It Free First</div>
+      <div class="why-desc">Three hours on our account before you commit to a rental or a buy.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">💾</div>
+      <div class="why-title">Fully Digital</div>
+      <div class="why-desc">No discs, no meetups, no shipping. Set up over Messenger in minutes.</div>
+    </div>
+    <div class="why-card">
+      <div class="why-icon">💳</div>
+      <div class="why-title">Pay Locally</div>
+      <div class="why-desc">GCash and Maya. Refundable deposit on trophy accounts only.</div>
+    </div>
   </div>
 </div>
 

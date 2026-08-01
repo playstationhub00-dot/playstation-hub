@@ -482,6 +482,75 @@ nav {
 /* Per-category "Price Starts at" pill next to the game-count badge on Browse Games */
 .cat-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.2rem 0.65rem; }
 
+/* ── HOMEPAGE: PRICE TIERS ──────────────────────────────────────────────── */
+.tier-section { padding: 4rem 2rem 3.5rem; max-width: 1400px; margin: 0 auto; }
+.tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+.tier-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 1.75rem 1.5rem; text-decoration: none; color: inherit;
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 148px; position: relative; transition: border-color 0.15s, transform 0.15s;
+}
+.tier-card:hover { border-color: rgba(240,165,0,0.4); transform: translateY(-2px); }
+.tier-card-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
+.tier-card-count { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.3rem; }
+.tier-card-price { font-size: 0.85rem; color: var(--ps-blue); font-weight: 700; margin-top: 1.5rem; }
+.tier-card-go {
+  position: absolute; right: 1.25rem; bottom: 1.25rem; width: 30px; height: 30px;
+  border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; font-size: 0.9rem; color: var(--text-secondary);
+}
+
+/* ── HOMEPAGE: SPOTLIGHT ────────────────────────────────────────────────── */
+.spotlight-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.spotlight-card {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem;
+}
+.spotlight-cover { border-radius: 14px; overflow: hidden; aspect-ratio: 16/10; background: #111; }
+.spotlight-cover img { width: 100%; height: 100%; object-fit: cover; }
+.spotlight-tag {
+  display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ps-blue); background: rgba(240,165,0,0.1);
+  border: 1px solid rgba(240,165,0,0.3); padding: 0.35rem 0.75rem; border-radius: 20px; margin-bottom: 1rem;
+}
+.spotlight-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 0.75rem; }
+.spotlight-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin: 0 0 1.25rem; }
+.spotlight-price { font-size: 1.9rem; font-weight: 800; color: var(--ps-blue); letter-spacing: -0.02em; }
+.spotlight-avail { font-size: 0.78rem; color: #22c55e; font-weight: 600; margin: 0.4rem 0 1.5rem; }
+
+/* ── HOMEPAGE: PROMO BAND ───────────────────────────────────────────────── */
+.promo-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.promo-band {
+  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
+  border-radius: 20px; padding: 2.25rem 2.5rem; border: 1px solid rgba(240,165,0,0.3);
+  background: linear-gradient(100deg, rgba(240,165,0,0.1), transparent 65%), var(--bg-card);
+}
+.promo-band-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.015em; margin: 0 0 0.5rem; }
+.promo-band-sub { font-size: 0.85rem; color: var(--text-secondary); margin: 0; max-width: 46ch; }
+
+/* ── HOMEPAGE: WHY RENT FROM US ─────────────────────────────────────────── */
+.why-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+.why-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem 1.5rem; }
+.why-icon {
+  width: 40px; height: 40px; border-radius: 11px; background: rgba(240,165,0,0.1);
+  display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-bottom: 1rem;
+}
+.why-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+.why-desc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.55; }
+
+@media (max-width: 900px) {
+  .tier-grid, .why-grid { grid-template-columns: repeat(2, 1fr); }
+  .spotlight-card { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .tier-grid, .why-grid { grid-template-columns: 1fr; gap: 0.85rem; }
+  .tier-section, .spotlight-section, .promo-section, .why-section { padding-left: 1rem; padding-right: 1rem; }
+  .spotlight-card { padding: 1.5rem; }
+  .promo-band { padding: 1.75rem; flex-direction: column; align-items: flex-start; }
+}
+
 /* GAME GRID */
 .games-grid {
   display: grid;
