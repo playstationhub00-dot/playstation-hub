@@ -1319,7 +1319,7 @@
         <!-- Monthly Bar Chart -->
         <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
           <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — <span id="dashChartYearLabel"></span> <span style="color:#333;font-weight:500;">(click a month for details)</span></div>
-          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:110px;" id="dashBarChart"></div>
+          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:122px;" id="dashBarChart"></div>
         </div>
 
         <!-- Top Games -->
@@ -1346,6 +1346,11 @@
         <div style="font-size:0.68rem;color:#666;margin-bottom:0.6rem;">🎮 <strong id="dashMonthStillRenting" style="color:#22c55e;">0</strong> rental<span id="dashMonthStillRentingS"></span> still active during this month</div>
         <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Most Rented This Month</div>
         <div id="dashMonthTopGames"></div>
+
+        <div style="border-top:1px solid #1a2a3a;margin-top:0.85rem;padding-top:0.85rem;">
+          <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">📣 Month Log <span style="color:#333;font-weight:500;text-transform:none;">— ads &amp; screenshots for this month</span></div>
+          <div id="dashMonthLogArea"></div>
+        </div>
       </div>
 
       <!-- Insight Pills -->
@@ -1361,7 +1366,11 @@
     <script>
     (function() {
       const DASH_DATA = <%- JSON.stringify(dashboardData).replace(/</g, '\\u003c') %>;
+      const MONTH_LOGS = {};
+      (<%- JSON.stringify(monthLogs).replace(/</g, '\\u003c') %>).forEach(function(m) { MONTH_LOGS[m.key] = m; });
+      function monthKeyFor(year, month) { return year + '-' + String(month + 1).padStart(2, '0'); }
       let dashSelectedMonth = null; // { year, month } or null
+      let dashMonthLogEditMode = false;
 
       function dashCustDate(c) {
         const raw = c.start_date || c.created_at;
@@ -1419,14 +1428,15 @@
         ).join('') + '</div>';
       }
 
-      function populateYearSelect() {
+      function populateYearSelect(preferYear) {
         const sel = document.getElementById('dashYearSelect');
         const years = dashAvailableYears();
         const currentYear = new Date().getFullYear();
         let opts = '<option value="all">All Time</option>';
         years.forEach(y => { opts += '<option value="' + y + '">' + y + '</option>'; });
         sel.innerHTML = opts;
-        sel.value = years.includes(currentYear) ? String(currentYear) : (years.length ? String(years[0]) : 'all');
+        const pick = (preferYear && years.includes(preferYear)) ? preferYear : (years.includes(currentYear) ? currentYear : (years.length ? years[0] : null));
+        sel.value = pick != null ? String(pick) : 'all';
       }
 
       window.renderDashboard = function() {
@@ -1490,17 +1500,20 @@
             '<div style="font-size:0.58rem;color:#444;white-space:nowrap;">' + lbl + '</div>' +
             (revs[i] > 0 ? '<div style="font-size:0.58rem;font-weight:700;color:' + valColor + ';">₱' + valStr + '</div>' : '<div style="font-size:0.58rem;">&nbsp;</div>') +
             (renters[i] > 0 ? '<div style="font-size:0.52rem;color:#555;">👤' + renters[i] + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
+            ((MONTH_LOGS[monthKeyFor(year, i)] && MONTH_LOGS[monthKeyFor(year, i)].ad_count > 0) ? '<div style="font-size:0.52rem;color:#F0A500;">📣' + MONTH_LOGS[monthKeyFor(year, i)].ad_count + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
             '</div>';
         }).join('');
       }
 
       window.selectDashMonth = function(year, month) {
         dashSelectedMonth = { year, month };
+        dashMonthLogEditMode = false;
         renderDashChart(year);
         renderMonthPanel();
       };
       window.clearMonthSelection = function() {
         dashSelectedMonth = null;
+        dashMonthLogEditMode = false;
         document.getElementById('dashMonthPanel').style.display = 'none';
         const raw = document.getElementById('dashYearSelect').value;
         const yearNum = raw === 'all' ? null : parseInt(raw);
@@ -1526,9 +1539,85 @@
         document.getElementById('dashMonthStillRenting').textContent = stillRenting.length;
         document.getElementById('dashMonthStillRentingS').textContent = stillRenting.length !== 1 ? 's were' : ' was';
         dashRenderTopGamesList(document.getElementById('dashMonthTopGames'), dashTopGames(list, 5), 'No rentals this month');
+        renderMonthLogArea();
 
         document.getElementById('dashMonthPanel').style.display = 'block';
       }
+
+      function renderMonthLogArea() {
+        if (!dashSelectedMonth) return;
+        const key = monthKeyFor(dashSelectedMonth.year, dashSelectedMonth.month);
+        const log = MONTH_LOGS[key];
+        const area = document.getElementById('dashMonthLogArea');
+        if (dashMonthLogEditMode) {
+          area.innerHTML = buildMonthLogForm(key, log);
+        } else if (log) {
+          area.innerHTML = buildMonthLogView(log);
+        } else {
+          area.innerHTML = '<button type="button" onclick="toggleMonthLogEdit(true)" style="background:#161616;border:1px dashed #333;color:#888;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem;cursor:pointer;width:100%;">＋ Add month log — track ads &amp; upload screenshots</button>';
+        }
+      }
+
+      function buildMonthLogView(log) {
+        let html = '<div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;">';
+        html += '<span style="background:rgba(240,165,0,0.12);border:1px solid rgba(240,165,0,0.35);color:#F0A500;border-radius:20px;padding:0.2rem 0.65rem;font-size:0.72rem;font-weight:700;">📣 ' + log.ad_count + ' ad' + (log.ad_count !== 1 ? 's' : '') + '</span>';
+        if (log.ad_spend > 0) html += '<span style="color:#888;font-size:0.72rem;">₱' + log.ad_spend.toLocaleString() + ' spent</span>';
+        html += '<button type="button" onclick="toggleMonthLogEdit(true)" style="margin-left:auto;background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:20px;padding:0.2rem 0.65rem;font-size:0.68rem;cursor:pointer;">✏️ Edit</button>';
+        html += '</div>';
+        if (log.note) html += '<div style="font-size:0.75rem;color:#ccc;margin-bottom:0.6rem;line-height:1.4;">' + dashEscapeHtml(log.note) + '</div>';
+        if (log.images.length) {
+          html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' + log.images.map(img =>
+            '<a href="' + img + '" target="_blank" rel="noopener"><img src="' + img + '" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #2a2a2a;"></a>'
+          ).join('') + '</div>';
+        }
+        return html;
+      }
+
+      function buildMonthLogForm(key, log) {
+        const adCount = log ? log.ad_count : 0;
+        const adSpend = log && log.ad_spend ? log.ad_spend : '';
+        const note = log ? dashEscapeHtml(log.note) : '';
+        const slotsLeft = 6 - (log ? log.images.length : 0);
+        let html = '<form method="POST" action="/admin/month-log" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:0.5rem;">';
+        html += '<input type="hidden" name="month_key" value="' + key + '">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Ads Run</label><input type="number" name="ad_count" min="0" value="' + adCount + '" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;"></div>';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Ad Spend (₱, optional)</label><input type="number" name="ad_spend" min="0" value="' + adSpend + '" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;"></div>';
+        html += '</div>';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Note</label><textarea name="note" rows="2" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;resize:vertical;">' + note + '</textarea></div>';
+        if (slotsLeft > 0) html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Add Screenshots (' + slotsLeft + ' slot' + (slotsLeft !== 1 ? 's' : '') + ' left, 6 max)</label><input type="file" name="images" accept="image/*" multiple style="width:100%;font-size:0.75rem;color:#999;"></div>';
+        if (log && log.images.length) {
+          html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' + log.images.map(img =>
+            '<div style="position:relative;"><img src="' + img + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #2a2a2a;">' +
+            '<button type="button" onclick="deleteMonthLogImage(\'' + key + '\',\'' + img + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:0.6rem;cursor:pointer;line-height:1;padding:0;">✕</button></div>'
+          ).join('') + '</div>';
+        }
+        html += '<div style="display:flex;gap:0.5rem;align-items:center;">';
+        html += '<button type="submit" style="background:#166534;color:#fff;border:none;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>';
+        html += '<button type="button" onclick="toggleMonthLogEdit(false)" style="background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;cursor:pointer;">Cancel</button>';
+        if (log) html += '<button type="button" onclick="deleteMonthLog(\'' + key + '\')" style="margin-left:auto;background:#1a0a0a;border:1px solid #3a1a1a;color:#ef4444;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;cursor:pointer;">Delete Log</button>';
+        html += '</div></form>';
+        return html;
+      }
+
+      window.toggleMonthLogEdit = function(edit) { dashMonthLogEditMode = edit; renderMonthLogArea(); };
+      window.deleteMonthLogImage = function(key, imgPath) {
+        if (!confirm('Remove this screenshot?')) return;
+        const f = document.createElement('form');
+        f.method = 'POST'; f.action = '/admin/month-log/image/delete';
+        const k = document.createElement('input'); k.type = 'hidden'; k.name = 'month_key'; k.value = key;
+        const p = document.createElement('input'); p.type = 'hidden'; p.name = 'image_path'; p.value = imgPath;
+        f.appendChild(k); f.appendChild(p);
+        document.body.appendChild(f); f.submit();
+      };
+      window.deleteMonthLog = function(key) {
+        if (!confirm('Delete this month\'s log (ads, spend, note, and all screenshots)?')) return;
+        const f = document.createElement('form');
+        f.method = 'POST'; f.action = '/admin/month-log/delete';
+        const k = document.createElement('input'); k.type = 'hidden'; k.name = 'month_key'; k.value = key;
+        f.appendChild(k);
+        document.body.appendChild(f); f.submit();
+      };
 
       function renderDashInsights(scoped, chartYear) {
         const rentRevenue = scoped.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
@@ -1559,7 +1648,16 @@
       function moveDashTip(e) { var t=document.getElementById('dashTip'); t.style.left=(e.clientX+12)+'px'; t.style.top=(e.clientY-28)+'px'; }
       window.showDashTip = showDashTip; window.hideDashTip = hideDashTip; window.moveDashTip = moveDashTip;
 
-      populateYearSelect();
+      // Reopen a specific month's drill-down after a month-log save redirects back
+      // with ?month=YYYY-MM, so the panel doesn't just close on you after saving.
+      let dashPreferYear = null;
+      const dashMonthParam = new URLSearchParams(window.location.search).get('month');
+      if (dashMonthParam && /^\d{4}-\d{2}$/.test(dashMonthParam)) {
+        const parts = dashMonthParam.split('-').map(Number);
+        dashSelectedMonth = { year: parts[0], month: parts[1] - 1 };
+        dashPreferYear = parts[0];
+      }
+      populateYearSelect(dashPreferYear);
       renderDashboard();
     })();
     </script>
@@ -2488,6 +2586,7 @@ function switchTab(name) {
     psplus_added:'psplus', psplus_updated:'psplus', psplus_deleted:'psplus',
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
+    month_log_saved:'customers', month_log_deleted:'customers',
     settings_saved:'settings', password_changed:'security',
     wrong_password:'security', password_mismatch:'security', password_too_short:'security'
   };
@@ -2497,7 +2596,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');

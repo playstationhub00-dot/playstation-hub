@@ -66,12 +66,14 @@ db.defaults({
   bot_training: [],
   nextBotTrainingId: 1,
   accounts: [],
-  nextAccountId: 1
+  nextAccountId: 1,
+  month_logs: []
 }).write();
 
 // Ensure accounts collection exists for pre-existing databases
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
 if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
+if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
 (function migrateVisitorPaths() {
@@ -327,6 +329,21 @@ function newAccountId() {
   const id = db.get('nextAccountId').value() || 1;
   db.set('nextAccountId', id + 1).write();
   return id;
+}
+
+// ── Month logs (dashboard drill-down: ad count/spend + screenshots per YYYY-MM) ──
+function normalizeMonthLog(m) {
+  if (!m) return m;
+  m.images = Array.isArray(m.images) ? m.images : [];
+  m.ad_count = m.ad_count || 0;
+  m.ad_spend = m.ad_spend || 0;
+  m.note = m.note || '';
+  return m;
+}
+function getMonthLogs() { return (db.get('month_logs').value() || []).map(normalizeMonthLog); }
+function getMonthLog(key) {
+  const m = db.get('month_logs').find({ key }).value();
+  return m ? normalizeMonthLog(m) : m;
 }
 // Days until a slot's end date (null if no end date). Negative = expired.
 function slotDaysLeft(slot) {
@@ -854,7 +871,8 @@ app.get('/admin', requireAuth, (req, res) => {
     price: c.price || 0, status: c.status, start_date: c.start_date || '', created_at: c.created_at || '',
     end_date: c.end_date || '', game_title: c.game_title || '', customer_name: c.customer_name || ''
   }));
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
+  const monthLogs = getMonthLogs();
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
 });
 
 // Upcoming CRUD
@@ -1780,6 +1798,52 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
   account.slots[type] = slot;
   db.get('accounts').find({ id: parseInt(req.params.id) }).assign({ slots: account.slots }).write();
   res.redirect('/admin/accounts?msg=slot_updated');
+});
+
+// ── Month Logs (dashboard drill-down: ad count/spend + screenshots) ───────────
+// Upsert by YYYY-MM key. Existing images are kept; newly uploaded ones are
+// appended, capped at 6 total per month.
+app.post('/admin/month-log', requireAuth, upload.array('images', 6), (req, res) => {
+  const { month_key, ad_count, ad_spend, note } = req.body;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month_key || '')) return res.redirect('/admin?tab=customers&msg=error');
+  const existing = getMonthLog(month_key);
+  const newImages = (req.files || []).map(f => '/uploads/' + f.filename);
+  const images = [...(existing ? existing.images : []), ...newImages].slice(0, 6);
+  const entry = {
+    key: month_key,
+    ad_count: parseInt(ad_count) || 0,
+    ad_spend: parseInt(ad_spend) || 0,
+    note: (note || '').trim(),
+    images,
+    updated_at: new Date().toISOString()
+  };
+  if (existing) db.get('month_logs').find({ key: month_key }).assign(entry).write();
+  else db.get('month_logs').push(entry).write();
+  res.redirect('/admin?tab=customers&month=' + month_key + '&msg=month_log_saved');
+});
+
+app.post('/admin/month-log/image/delete', requireAuth, (req, res) => {
+  const { month_key, image_path } = req.body;
+  const existing = getMonthLog(month_key);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  const fp = path.join(uploadsDir, path.basename(image_path || ''));
+  if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  const images = existing.images.filter(img => img !== image_path);
+  db.get('month_logs').find({ key: month_key }).assign({ images }).write();
+  res.redirect('/admin?tab=customers&month=' + month_key + '&msg=month_log_saved');
+});
+
+app.post('/admin/month-log/delete', requireAuth, (req, res) => {
+  const { month_key } = req.body;
+  const existing = getMonthLog(month_key);
+  if (existing) {
+    existing.images.forEach(img => {
+      const fp = path.join(uploadsDir, path.basename(img));
+      if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+    });
+    db.get('month_logs').remove({ key: month_key }).write();
+  }
+  res.redirect('/admin?tab=customers&msg=month_log_deleted');
 });
 
 // ── Customer Import / Sample ──────────────────────────────────────────────────
