@@ -891,6 +891,19 @@ nav {
 .form-group textarea { resize: vertical; min-height: 80px; }
 .form-actions { margin-top: 1rem; display: flex; gap: 0.75rem; }
 
+/* Game swap preview — shown on the customer edit page when the selected game
+   differs from the one originally rented/bought. */
+.cust-swap-box { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 10px; padding: 0.9rem 1rem; }
+.cust-swap-title { font-size: 0.78rem; font-weight: 800; color: #ccc; margin-bottom: 0.6rem; letter-spacing: 0.3px; }
+.cust-swap-rows { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px dashed #2a2a2a; }
+.cust-swap-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+.cust-swap-row span { color: #666; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; }
+.cust-swap-row strong { color: #fff; }
+.cust-swap-topup { color: #fbbf24; font-size: 0.9rem; font-weight: 700; }
+.cust-swap-ok { color: #4ade80; font-size: 0.9rem; font-weight: 700; }
+.cust-swap-sub { color: #888; font-size: 0.72rem; font-weight: 500; margin-top: 0.2rem; }
+.cust-swap-note { color: #f59e0b; font-size: 0.75rem; margin-top: 0.5rem; }
+
 /* SEARCHABLE SELECT — replaces plain <select> with a filterable combobox in the admin panel */
 .ss-wrap { position: relative; }
 /* Visually hidden (not display:none) so native `required` validation still fires on submit. */

@@ -2033,6 +2033,11 @@ Message us anytime to reserve your slot! 😊</textarea>
                 <% if (isReservation && String(c.game_id).startsWith('upcoming_')) { %>
                 <div style="margin-top:0.2rem;"><span style="background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:6px;padding:0.1rem 0.45rem;font-size:0.65rem;color:#a855f7;font-weight:700;">🔜 Coming Soon</span></div>
                 <% } %>
+                <% if (c.swap_history && c.swap_history.length) { const lastSwap = c.swap_history[c.swap_history.length - 1]; %>
+                <div style="margin-top:0.2rem;font-size:0.68rem;color:#888;" title="Swapped from <%= lastSwap.from_game_title %> to <%= lastSwap.to_game_title %> on <%= new Date(lastSwap.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) %>">
+                  🔄 Swapped from <%= lastSwap.from_game_title %><% if (lastSwap.top_up > 0) { %> <span style="color:#fbbf24;font-weight:700;">(+₱<%= lastSwap.top_up %>)</span><% } %>
+                </div>
+                <% } %>
               </td>
               <td style="color:#aaa;font-size:0.85rem;"><%= (isBought || isReservation) ? '—' : c.days + ' days' %></td>
               <td>

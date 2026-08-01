@@ -285,8 +285,16 @@ db.write = function() {
   return r;
 };
 
-function getCustomers() { return db.get('customers').value() || []; }
-function getCustomer(id) { return db.get('customers').find({ id: parseInt(id) }).value(); }
+function normalizeCustomer(c) {
+  if (!c) return c;
+  c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
+  return c;
+}
+function getCustomers() { return (db.get('customers').value() || []).map(normalizeCustomer); }
+function getCustomer(id) {
+  const c = db.get('customers').find({ id: parseInt(id) }).value();
+  return c ? normalizeCustomer(c) : c;
+}
 function newCustomerId() {
   const id = db.get('nextCustomerId').value();
   db.set('nextCustomerId', id + 1).write();
@@ -466,6 +474,33 @@ const PROMO_DURATIONS = [10, 15, 30];
 function getPromoDiscountPct(promo, days) {
   if (!promo || !promo.enabled || !promo.discounts) return 0;
   return promo.discounts[days] || 0;
+}
+
+// Effective price for `game` at the given duration/account type/status, with the
+// active promo discount applied — the same number a walk-in customer would pay
+// today. Used to price a game swap's top-up. Returns null when there's no reliable
+// basis to compute one (custom duration, missing price data) so the caller falls
+// back to manual admin entry instead of guessing. PS4 Primary has no price fields
+// of its own on games, so it borrows the Non-Trophy price (flagged via ps4Fallback).
+function computeSwapReferencePrice(game, { days, accountType, isBought, promo }) {
+  if (!game) return null;
+  const ps4Fallback = accountType === 'ps4';
+  const usingType = ps4Fallback ? 'nt' : accountType;
+  if (isBought) {
+    const val = usingType === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
+    if (!val) return null;
+    const price = (promo && promo.buy_promo_enabled && promo.buy_promo_pct > 0)
+      ? Math.round(val * (1 - promo.buy_promo_pct / 100)) : val;
+    return { price, ps4Fallback };
+  }
+  const d = parseInt(days);
+  if (!PROMO_DURATIONS.includes(d)) return null;
+  const resolved = resolveGamePrices(game);
+  const base = resolved[usingType + '_price_' + d + 'd'];
+  if (!base) return null;
+  const pct = getPromoDiscountPct(promo, d);
+  const price = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  return { price, ps4Fallback };
 }
 
 app.get('/how-it-works', (req, res) => {
@@ -1408,16 +1443,49 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
       else adjustNtSlots(newGame.id, -1);
     }
   }
-  const newGame = getGame(game_id) || getGame(existing.game_id);
+  const newGame = !isUpcomingNew ? (getGame(game_id) || getGame(existing.game_id)) : null;
+  const finalGameId = isUpcomingNew ? String(game_id) : (parseInt(game_id) || existing.game_id);
+
+  // ── Game swap pricing: if the game changed (catalog → catalog, not a reservation),
+  // price the new game at the submitted duration/type with the active promo applied,
+  // and never let the recorded price drop below what was already paid — downgrades
+  // aren't refunded, they just carry the original total forward.
+  let finalPrice = price !== undefined && price !== '' ? (parseInt(price) || 0) : existing.price;
+  const gameChanged = !wasUpcoming && !isUpcomingNew && newGame && newGame.id !== existing.game_id;
+  if (gameChanged) {
+    const settings = getSiteSettings();
+    const ref = computeSwapReferencePrice(newGame, {
+      days: actualDays,
+      accountType: account_type || existing.account_type || 'nt',
+      isBought: (status || existing.status) === 'bought',
+      promo: settings.promo
+    });
+    if (ref) {
+      const pricePaid = existing.price || 0;
+      const topUp = Math.max(0, ref.price - pricePaid);
+      finalPrice = Math.max(finalPrice, pricePaid);
+      const swapEntry = {
+        at: new Date().toISOString(),
+        from_game_id: existing.game_id, from_game_title: existing.game_title,
+        to_game_id: newGame.id, to_game_title: newGame.title,
+        days: actualDays, account_type: account_type || existing.account_type || 'nt',
+        price_before: pricePaid, new_game_price: ref.price, price_after: finalPrice,
+        top_up: topUp, ps4_fallback: ref.ps4Fallback
+      };
+      db.get('customers').find({ id: parseInt(req.params.id) })
+        .assign({ swap_history: [...(existing.swap_history || []), swapEntry] }).write();
+    }
+  }
+
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({
     customer_name: (customer_name || existing.customer_name).trim(),
-    game_id: parseInt(game_id) || existing.game_id,
+    game_id: finalGameId,
     game_title: newGame ? newGame.title : existing.game_title,
     days: actualDays,
     account_type: account_type || existing.account_type,
     start_date: start_date || existing.start_date,
     end_date: end_date || existing.end_date,
-    price: price !== undefined && price !== '' ? (parseInt(price) || 0) : existing.price,
+    price: finalPrice,
     status: status || existing.status,
     notes: notes || ''
   }).write();

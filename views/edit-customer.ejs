@@ -36,8 +36,10 @@
             <optgroup label="Available Games" id="cust_optgroup_regular" style="<%= customer.status === 'reservation' ? 'display:none' : '' %>">
               <% games.forEach(g => { %>
               <option value="<%= g.id %>"
+                data-title="<%= g.title.replace(/"/g,'&quot;') %>"
                 data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
                 data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
                 <%= g.id === customer.game_id ? 'selected' : '' %>>
                 <%= g.title %> (<%= g.platform %>)
               </option>
@@ -52,6 +54,17 @@
               <% }) %>
             </optgroup>
           </select>
+        </div>
+
+        <div class="form-group full" id="cust_swap_panel" hidden>
+          <div class="cust-swap-box">
+            <div class="cust-swap-title">🔄 Game Swap</div>
+            <div class="cust-swap-rows">
+              <div class="cust-swap-row"><span>From</span><strong id="cust_swap_from"></strong></div>
+              <div class="cust-swap-row"><span>To</span><strong id="cust_swap_to"></strong></div>
+            </div>
+            <div id="cust_swap_result"></div>
+          </div>
         </div>
 
         <div class="form-group" id="cust_days_group" <%= (customer.status === 'bought' || customer.status === 'reservation') ? 'hidden' : '' %>>
@@ -133,6 +146,15 @@
 </div>
 
 <script>
+const CUST_ORIGINAL_GAME_ID = <%- JSON.stringify(String(customer.game_id)) %>;
+const CUST_ORIGINAL_PRICE = <%= customer.price || 0 %>;
+const CUST_PROMO = {
+  enabled: <%- settings.promo && settings.promo.enabled ? 'true' : 'false' %>,
+  discounts: { 10: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[10]) || 0 %>, 15: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[15]) || 0 %>, 30: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[30]) || 0 %> },
+  buyEnabled: <%- settings.promo && settings.promo.buy_promo_enabled ? 'true' : 'false' %>,
+  buyPct: <%= (settings.promo && settings.promo.buy_promo_pct) || 0 %>
+};
+
 function toggleCustCustomDays(val) {
   const inp = document.getElementById('cust_custom_days');
   if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
@@ -162,6 +184,7 @@ function toggleCustStatus(status) {
     if (status === 'bought') daysGroup.setAttribute('hidden', '');
     else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
   }
+  updateCustPrice();
 }
 function getCustDays() {
   const sel = document.getElementById('cust_days');
@@ -169,9 +192,68 @@ function getCustDays() {
   return parseInt(sel.value) || 0;
 }
 function updateCustPrice() {
-  // Price is intentionally left untouched here — changing the game, duration, or
-  // account type on an existing customer should not overwrite what they already paid.
   updateCustEndDate();
+  renderCustSwapPanel();
+}
+
+// If the selected game differs from the customer's original game, price the new
+// game at the current duration/type (promo-adjusted) and show what the customer
+// owes on top of what they already paid — never less than what they paid, no
+// refunds on a downgrade. Mirrors computeSwapReferencePrice() in server.js.
+function renderCustSwapPanel() {
+  const panel = document.getElementById('cust_swap_panel');
+  const gameSel = document.getElementById('cust_game');
+  const selectedId = gameSel.value;
+
+  if (!selectedId || selectedId.startsWith('upcoming_') || CUST_ORIGINAL_GAME_ID.startsWith('upcoming_') || selectedId === CUST_ORIGINAL_GAME_ID) {
+    panel.hidden = true;
+    return;
+  }
+
+  const opt = gameSel.options[gameSel.selectedIndex];
+  const toTitle = (opt.dataset.title || opt.textContent).trim();
+  let fromTitle = <%- JSON.stringify(customer.game_title) %>;
+  Array.from(gameSel.options).forEach(o => { if (o.value === CUST_ORIGINAL_GAME_ID && o.dataset.title) fromTitle = o.dataset.title; });
+  document.getElementById('cust_swap_from').textContent = fromTitle;
+  document.getElementById('cust_swap_to').textContent = toTitle;
+
+  const status = document.getElementById('cust_status').value;
+  const isBought = status === 'bought';
+  const accountType = document.getElementById('cust_type').value;
+  const ps4Fallback = accountType === 'ps4';
+  const usingType = ps4Fallback ? 'nt' : accountType;
+  const days = document.getElementById('cust_days').value;
+
+  let refPrice = null;
+  if (isBought) {
+    const raw = parseFloat(opt.dataset[usingType === 'tr' ? 'buytr' : 'buynt']) || 0;
+    if (raw > 0) refPrice = (CUST_PROMO.buyEnabled && CUST_PROMO.buyPct > 0) ? Math.round(raw * (1 - CUST_PROMO.buyPct / 100)) : raw;
+  } else if (days === '10' || days === '15' || days === '30') {
+    const raw = parseFloat(opt.dataset[usingType + days]) || 0;
+    if (raw > 0) {
+      const pct = CUST_PROMO.enabled ? (CUST_PROMO.discounts[days] || 0) : 0;
+      refPrice = pct > 0 ? raw - Math.round(raw * pct / 100) : raw;
+    }
+  }
+
+  const resultEl = document.getElementById('cust_swap_result');
+  const priceInput = document.getElementById('cust_price');
+
+  if (refPrice == null) {
+    resultEl.innerHTML = '<div class="cust-swap-note">⚠️ Custom duration or no price set for this type — enter the new total manually.</div>';
+    panel.hidden = false;
+    return;
+  }
+
+  const topUp = Math.max(0, refPrice - CUST_ORIGINAL_PRICE);
+  const newTotal = Math.max(refPrice, CUST_ORIGINAL_PRICE);
+  let html = topUp > 0
+    ? '<div class="cust-swap-topup">➕ Customer pays <strong>₱' + topUp + '</strong> more<div class="cust-swap-sub">New total on record: ₱' + newTotal + '</div></div>'
+    : '<div class="cust-swap-ok">✅ No additional payment — no refund on downgrades<div class="cust-swap-sub">Total stays ₱' + newTotal + '</div></div>';
+  if (ps4Fallback) html += '<div class="cust-swap-note">🕹️ PS4 Primary has no separate price — using Non-Trophy pricing.</div>';
+  resultEl.innerHTML = html;
+  priceInput.value = newTotal;
+  panel.hidden = false;
 }
 function updateCustEndDate() {
   const start = document.getElementById('cust_start').value;
