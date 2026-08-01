@@ -513,28 +513,39 @@ nav {
 .gc-slot-banner {
   position: absolute;
   top: 8px; left: 8px;
-  font-size: 0.6rem;
+  font-size: 0.66rem;
   font-weight: 900;
   letter-spacing: 0.4px;
-  padding: 0.22rem 0.5rem;
+  padding: 0.28rem 0.6rem;
   border-radius: 6px;
   text-transform: uppercase;
   backdrop-filter: blur(4px);
 }
 .gc-slot-banner-last {
-  background: rgba(220, 38, 38, 0.92);
+  background: #dc2626;
   color: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 2px 10px rgba(220,38,38,0.5);
   animation: gc-pulse 1.6s ease-in-out infinite;
 }
 .gc-slot-banner-none {
-  background: rgba(20, 20, 20, 0.85);
-  color: #999;
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15, 15, 15, 0.92);
+  color: #bbb;
+  border: 1px solid rgba(255,255,255,0.18);
 }
 @keyframes gc-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.55); }
-  50% { box-shadow: 0 0 0 6px rgba(220,38,38,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
+  50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
 }
+/* Always-visible status line under the title — same urgency, no hover needed to see it */
+.gc-info-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 0.15rem 0;
+}
+.gc-info-status-last { color: #f87171; }
+.gc-info-status-none { color: #777; }
 .gc-genre {
   font-size: 0.62rem;
   font-weight: 700;
