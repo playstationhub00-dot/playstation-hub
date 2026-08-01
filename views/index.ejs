@@ -65,7 +65,27 @@
   if (slides.length > 1) setInterval(() => goTo(cur + 1), 5000);
 })();
 </script>
+<div class="hero-trust-strip">
+  <div class="hero-trust-item"><b>Instant Setup</b>Delivered in minutes</div>
+  <div class="hero-trust-item"><b>Try Before You Rent</b>3 free hours</div>
+  <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
+  <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
+</div>
 <% } else { %>
+<%
+  // Real games for the auto-rotating showcase panel — top-rented first, cover art required.
+  const heroGames = featured.filter(g => g.cover_image).slice(0, 6).map(g => {
+    const sum = accountSummaryMap[g.id] || null;
+    const avail = computeAvailability(g, sum, { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
+    const openSlots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
+    const pct = getPromoDiscountPct(promo, 10);
+    const base = g.nt_price_10d || g.tr_price_10d || 0;
+    const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
+    const typeLabel = (avail.hasTrophy && avail.trSlots > 0) ? 'Trophy' : (avail.ntSlots > 0 ? 'Non-Trophy' : (avail.showPs4 && avail.ps4Slots > 0 ? 'PS4 Primary' : 'Trophy'));
+    const slotLabel = openSlots > 0 ? openSlots + ' slot' + (openSlots !== 1 ? 's' : '') + ' left' : 'Fully booked';
+    return { title: g.title, cover: g.cover_image, focalX: g.cover_focal_x, focalY: g.cover_focal_y, price: final, meta: typeLabel + ' · ' + slotLabel };
+  });
+%>
 <section class="hero<%= settings.hero_bg.type !== 'default' ? ' hero-custom-bg' : '' %>">
   <% if (settings.hero_bg.type === 'image' && settings.hero_bg.path) { %>
     <div class="hero-bg-media" style="background-image:url('<%= settings.hero_bg.path %>');background-size:cover;background-position:center;"></div>
@@ -76,27 +96,64 @@
     </video>
     <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
   <% } %>
-  <div class="hero-content">
-    <div class="hero-trust-tag">🎮 3-Hour Free Trial</div>
-    <% const ht = settings.hero_text; %>
-    <h1 style="font-size:<%= ht.title_size %>px;">
-      <%= ht.line1 %><% if (ht.line1 && ht.line2) { %><br><% } %><span style="color:<%= ht.highlight_color %>;"><%= ht.highlight %></span><% if (ht.line2) { %> <%= ht.line2 %><% } %>
-    </h1>
-    <p style="color:<%= ht.subtitle_color %>;"><%= ht.subtitle %></p>
-    <div class="hero-actions">
-      <a href="/browse" class="btn btn-primary">Browse All Games</a>
-      <a href="#how" class="btn btn-outline">How It Works</a>
+  <div class="hero-grid<%= heroGames.length ? '' : ' no-showcase' %>">
+    <div class="hero-content">
+      <div class="hero-trust-tag">🎮 3-Hour Free Trial</div>
+      <% const ht = settings.hero_text; %>
+      <h1 style="font-size:<%= ht.title_size %>px;">
+        <%= ht.line1 %><% if (ht.line1 && ht.line2) { %><br><% } %><span style="color:<%= ht.highlight_color %>;"><%= ht.highlight %></span><% if (ht.line2) { %> <%= ht.line2 %><% } %>
+      </h1>
+      <p style="color:<%= ht.subtitle_color %>;"><%= ht.subtitle %></p>
+      <div class="hero-actions">
+        <a href="/browse" class="btn btn-primary">Browse All Games</a>
+        <a href="#how" class="btn btn-outline">How It Works</a>
+      </div>
+      <div class="hero-trust-row">
+        <div class="hero-trust-item"><b>Instant Setup</b>Delivered in minutes</div>
+        <div class="hero-trust-item"><b>Try Before You Rent</b>3 free hours</div>
+        <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
+        <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
+      </div>
     </div>
+    <% if (heroGames.length) { %>
+    <div class="hero-showcase" id="heroShowcase">
+      <% if (heroGames.length > 1) { %>
+      <div class="hero-showcase-dots">
+        <% heroGames.forEach((g, i) => { %><div class="hero-showcase-dot<%= i === 0 ? ' active' : '' %>"></div><% }) %>
+      </div>
+      <% } %>
+      <% heroGames.forEach((g, i) => { %>
+      <div class="hero-showcase-card<%= i === 0 ? ' active' : '' %>">
+        <img src="<%= g.cover %>" alt="<%= g.title %>" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
+        <div class="hero-showcase-info">
+          <div>
+            <div class="hero-showcase-title"><%= g.title %></div>
+            <div class="hero-showcase-meta"><%= g.meta %></div>
+          </div>
+          <div class="hero-showcase-price">₱<%= g.price %></div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <script>
+    (function(){
+      const cards = document.querySelectorAll('#heroShowcase .hero-showcase-card');
+      const dots = document.querySelectorAll('#heroShowcase .hero-showcase-dot');
+      if (cards.length < 2) return;
+      let cur = 0;
+      setInterval(function(){
+        cards[cur].classList.remove('active');
+        if (dots[cur]) dots[cur].classList.remove('active');
+        cur = (cur + 1) % cards.length;
+        cards[cur].classList.add('active');
+        if (dots[cur]) dots[cur].classList.add('active');
+      }, 3500);
+    })();
+    </script>
+    <% } %>
   </div>
 </section>
 <% } %>
-
-<div class="hero-trust-strip">
-  <div class="hero-trust-item"><b>Instant Setup</b>Delivered in minutes</div>
-  <div class="hero-trust-item"><b>Try Before You Rent</b>3 free hours</div>
-  <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
-  <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
-</div>
 
 <div class="stats-bar">
   <div class="stat">
