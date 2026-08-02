@@ -834,8 +834,9 @@ nav {
 .gc-reveal-hint { font-size: 0.68rem; color: #555; transition: opacity 0.2s ease; }
 .game-card:hover .gc-reveal-hint,
 .game-card.gc-price-show .gc-reveal-hint { display: none; }
-/* Homepage only: price/rent info stays visible at all times, no hover/tap needed. */
-.home-page .gc-reveal { max-height: none; opacity: 1; overflow: visible; }
+/* Homepage only: hide the price table/rent buttons entirely — cards show just cover,
+   title, and "Price Starts at" for a cleaner grid. Full details live on the game page. */
+.home-page .gc-reveal { display: none; }
 .home-page .gc-reveal-hint { display: none; }
 .game-platform {
   font-size: 0.72rem;

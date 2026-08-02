@@ -279,11 +279,11 @@
 </div>
 
 <!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: false }) %>
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true }) %>
 
 <!-- MOST PLAYED IN PS PLUS SLIDER -->
 <% if (psplusPopular.length > 0) { %>
-<div class="section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
+<div class="section" style="padding-top:3rem;">
   <h2 class="section-title">
     <span style="background:linear-gradient(135deg,#FFD700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">★</span>
     Most Played in PS Plus
@@ -352,7 +352,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 <% } %>
 
 <!-- WHY RENT FROM US -->
-<div class="why-section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
+<div class="why-section" style="padding-top:3rem;">
   <h2 class="section-title">Why Rent From Us</h2>
   <div class="why-grid">
     <div class="why-card">
@@ -408,7 +408,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 
 <!-- Reviews Section -->
 <% if (reviews && reviews.length > 0) { %>
-<section class="section" style="border-top:1px solid #1a1a1a;padding:2.5rem 0 2rem;">
+<section class="section" style="padding:2.5rem 0 2rem;">
   <h2 class="section-title" style="color:#fff;margin-bottom:1.75rem;">
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">
       <span style="background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1em;">⭐</span>
