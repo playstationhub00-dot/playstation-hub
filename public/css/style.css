@@ -918,6 +918,10 @@ nav {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
   50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
 }
+@keyframes gc-breathe {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 rgba(220,38,38,0); }
+  50% { opacity: 0.8; box-shadow: 0 0 16px rgba(220,38,38,0.65); }
+}
 .gc-new-days-left {
   display: block;
   background: linear-gradient(135deg, #dc2626, #b91c1c);
@@ -928,6 +932,7 @@ nav {
   text-transform: uppercase;
   text-align: center;
   padding: 0.55rem 0.75rem;
+  animation: gc-breathe 2.4s ease-in-out infinite;
 }
 .gc-genre {
   font-size: 0.62rem;
