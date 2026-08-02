@@ -65,6 +65,10 @@ body.light-mode .game-desc-inline { background: #f8f8f8; color: #333; }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* overflow-x lives only on <html> — setting it on body too would leave overflow-y at
+   its default "visible", which the spec computes to "auto" whenever overflow-x isn't
+   also visible. That turns body into its own scroll container and breaks
+   position:sticky (nav) relative to the real viewport. */
 html { overflow-x: hidden; }
 
 body {
@@ -72,8 +76,6 @@ body {
   background: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
-  overflow-x: hidden;
-  width: 100%;
 }
 
 /* ANNOUNCEMENT BAR */
