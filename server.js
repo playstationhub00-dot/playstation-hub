@@ -1775,14 +1775,26 @@ function sortCategoryNames(names) {
   });
 }
 
+// Same "added this calendar month" rule as the homepage/Browse NEW badge (see
+// partials/game-card.ejs) — kept in one place so both stay in sync.
+function isAddedThisMonth(game) {
+  if (!game.created_at) return false;
+  const d = new Date(game.created_at);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
 // Groups every catalog game by its price category (New Games/Deluxe/Special/Regular/Uncategorized),
 // with effective prices resolved (category price or the game's own custom price).
-function gamesByPriceCategory() {
+// `excludeIds` pulls games out of their normal category — used to split this month's
+// new arrivals into their own poster group instead of duplicating them here too.
+function gamesByPriceCategory(excludeIds) {
+  const skip = excludeIds || new Set();
   const categories = getPriceCategories();
   const categoryById = {};
   categories.forEach(c => { categoryById[c.id] = c; });
   const groupsMap = {};
-  getGames().map(resolveGamePrices).forEach(g => {
+  getGames().map(resolveGamePrices).filter(g => !skip.has(g.id)).forEach(g => {
     const cat = g.price_category_id ? categoryById[g.price_category_id] : null;
     const name = cat ? cat.name : 'Uncategorized';
     if (!groupsMap[name]) groupsMap[name] = [];
@@ -1795,27 +1807,36 @@ function gamesByPriceCategory() {
 }
 
 // ── Poster Generator (admin) ──────────────────────────────────────────────────
+// Turns a flat game list into the {density, pages, count, missingCovers} shape a
+// poster group needs — shared by the price-category groups and the New Arrivals group.
+function buildPosterGroup(name, games, discount10) {
+  const density = games.length <= 4 ? 'large' : 'compact';
+  const perPage = density === 'large' ? 4 : 12;
+  const gamesWithFromPrice = games.map(game => {
+    const prices = [game.nt_price_10d, game.tr_price_10d].filter(p => p > 0);
+    const rawFrom = prices.length ? Math.min(...prices) : null;
+    const fromPrice = rawFrom != null && discount10 > 0 ? Math.round(rawFrom * (1 - discount10 / 100)) : rawFrom;
+    return { ...game, fromPrice };
+  });
+  const pages = [];
+  for (let i = 0; i < gamesWithFromPrice.length; i += perPage) pages.push(gamesWithFromPrice.slice(i, i + perPage));
+  const missingCovers = games.filter(game => !game.cover_image).map(game => game.title);
+  return { name, density, pages, count: games.length, missingCovers };
+}
 app.get('/admin/posters', requireAuth, (req, res) => {
   const settings = getSiteSettings();
   const promo = settings.promo;
   // 10 days is always the cheapest tier, so it's what "From ₱X" shows —
   // apply that duration's promo discount (if any) so the poster stays accurate.
   const discount10 = getPromoDiscountPct(promo, 10);
-  const groups = gamesByPriceCategory();
-  const posterGroups = groups.map(g => {
-    const density = g.games.length <= 4 ? 'large' : 'compact';
-    const perPage = density === 'large' ? 4 : 12;
-    const gamesWithFromPrice = g.games.map(game => {
-      const prices = [game.nt_price_10d, game.tr_price_10d].filter(p => p > 0);
-      const rawFrom = prices.length ? Math.min(...prices) : null;
-      const fromPrice = rawFrom != null && discount10 > 0 ? Math.round(rawFrom * (1 - discount10 / 100)) : rawFrom;
-      return { ...game, fromPrice };
-    });
-    const pages = [];
-    for (let i = 0; i < gamesWithFromPrice.length; i += perPage) pages.push(gamesWithFromPrice.slice(i, i + perPage));
-    const missingCovers = g.games.filter(game => !game.cover_image).map(game => game.title);
-    return { name: g.name, density, pages, count: g.games.length, missingCovers };
-  });
+  // Games added this month get pulled into their own "New Arrivals" poster instead of
+  // sitting mixed into their price-category poster — same "added this month" rule as
+  // the site-wide NEW badge, so the two stay consistent.
+  const newArrivalGames = getGames().map(resolveGamePrices).filter(isAddedThisMonth).sort((a, b) => a.title.localeCompare(b.title));
+  const newArrivalIds = new Set(newArrivalGames.map(g => g.id));
+  const groups = gamesByPriceCategory(newArrivalIds);
+  const posterGroups = groups.map(g => buildPosterGroup(g.name, g.games, discount10));
+  if (newArrivalGames.length) posterGroups.unshift(buildPosterGroup('🆕 New Arrivals', newArrivalGames, discount10));
   // Which durations currently have an active discount, for the poster's promo banner
   const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
   res.render('posters', { posterGroups, settings, activePromos, msg: req.query.msg || '' });
