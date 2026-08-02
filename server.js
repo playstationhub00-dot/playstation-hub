@@ -1152,6 +1152,17 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
   res.redirect('/admin?msg=updated');
 });
 
+// Description-only update — used for bulk-filling descriptions without having to
+// resubmit every other field (the full edit route requires all of them or it
+// overwrites prices/slots/platform with blanks).
+app.post('/admin/games/:id/description', requireAuth, (req, res) => {
+  const game = getGame(req.params.id);
+  if (!game) return res.status(404).json({ ok: false, error: 'Game not found' });
+  const description = (req.body.description || '').trim();
+  db.get('games').find({ id: parseInt(req.params.id) }).assign({ description }).write();
+  res.json({ ok: true, id: game.id, title: game.title });
+});
+
 app.post('/admin/delete/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (game?.cover_image) {
