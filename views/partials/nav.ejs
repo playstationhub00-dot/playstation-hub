@@ -93,7 +93,8 @@
         const av = x.s > 0
           ? '<span class="navsearch-avail-yes">' + x.s + ' slot' + (x.s !== 1 ? 's' : '') + ' left</span>'
           : '<span class="navsearch-avail-no">FULLY BOOKED</span>';
-        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">🎮</div>' +
+        const thumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🎮';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + thumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span>' + av + '</div></div>' +
           (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') + '</a>';
@@ -102,7 +103,8 @@
     if (soon.length) {
       h += '<div class="navsearch-head">Coming soon</div>';
       soon.forEach(x => {
-        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">🔜</div>' +
+        const soonThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🔜';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + soonThumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span><span>' + x.d + '</span></div></div>' +
           '<span class="navsearch-badge-soon">SOON</span></a>';

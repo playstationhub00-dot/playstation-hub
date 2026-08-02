@@ -795,12 +795,12 @@ app.get('/api/search-index', (req, res) => {
     const prices = [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(p => p > 0);
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now'
+      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || ''
     };
   });
   const soon = sortUpcoming(getUpcoming()).map(g => ({
     t: g.title, p: g.platform, d: g.release_date || 'TBA',
-    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon'
+    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: g.cover_image || ''
   }));
   res.json([...available, ...soon]);
 });
