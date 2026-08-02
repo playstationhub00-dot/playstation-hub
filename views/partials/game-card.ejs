@@ -30,7 +30,10 @@
   const gcStartPrice = gcAllPrices.length ? Math.min(...gcAllPrices) : null;
   // NEW badge lasts a fixed 11 days from created_at — same window used by the Admin
   // "Added" column and the New Arrivals poster group (server.js NEW_GAME_WINDOW_DAYS).
-  const gcIsNew = game.created_at && Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000) < 11;
+  const gcDaysSinceAdded = game.created_at ? Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000) : null;
+  const gcIsNew = gcDaysSinceAdded !== null && gcDaysSinceAdded < 11;
+  const gcNewDaysLeft = gcIsNew ? 11 - gcDaysSinceAdded : null;
+  const gcNeverRented = (game.renters || 0) === 0;
 %>
 <div class="game-card" style="cursor:default;">
 
@@ -63,6 +66,9 @@
   </a>
 
   <div class="game-info">
+    <% if (gcIsNew && gcNeverRented) { %>
+      <div class="gc-new-days-left">⏳ <%= gcNewDaysLeft %> day<%= gcNewDaysLeft !== 1 ? 's' : '' %> left as NEW</div>
+    <% } %>
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
     <% if (typeof showPriceStart !== 'undefined' && showPriceStart && gcStartPrice) { %>
       <div class="gc-price-start">Price Starts at ₱<%= gcStartPrice %></div>

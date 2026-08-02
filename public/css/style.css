@@ -918,6 +918,12 @@ nav {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
   50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
 }
+.gc-new-days-left {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ff8a3d;
+  margin-bottom: 0.3rem;
+}
 .gc-genre {
   font-size: 0.62rem;
   font-weight: 700;
