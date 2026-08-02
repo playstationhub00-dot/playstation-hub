@@ -785,6 +785,26 @@ function gameSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+// Lightweight public index for the nav search box — small enough (~50 games) to ship
+// whole and filter client-side, so results appear with no per-keystroke round-trip.
+app.get('/api/search-index', (req, res) => {
+  const accountSummaryMap = buildAccountSummaryMap();
+  const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {
+    const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
+    const slots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
+    const prices = [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(p => p > 0);
+    return {
+      t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
+      s: slots, u: '/game/' + gameSlug(g.title), y: 'now'
+    };
+  });
+  const soon = sortUpcoming(getUpcoming()).map(g => ({
+    t: g.title, p: g.platform, d: g.release_date || 'TBA',
+    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon'
+  }));
+  res.json([...available, ...soon]);
+});
+
 app.get('/game/:slug', (req, res) => {
   const param = req.params.slug;
   // Support both numeric ID (old links) and slug

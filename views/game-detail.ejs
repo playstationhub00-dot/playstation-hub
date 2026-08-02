@@ -10,15 +10,7 @@
 </head>
 <body>
 <%- include('partials/announcement') %>
-<nav>
-  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
-  <div class="nav-links">
-    <a href="/browse">Browse Games</a>
-    <a href="/ps-plus">PS Plus Deluxe</a>
-    <a href="/how-it-works">How It Works</a>
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
+<%- include('partials/nav', { active: 'browse' }) %>
 
 <%
   // ── Availability: from linked accounts (phase 2) or legacy per-game counts, per slot type ──

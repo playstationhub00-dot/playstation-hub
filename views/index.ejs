@@ -12,16 +12,7 @@
 
 <%- include('partials/announcement') %>
 <%- include('partials/popup') %>
-<nav>
-  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
-  <div class="nav-links">
-    <a href="/browse">Browse Games</a>
-    <a href="/ps-plus">PS Plus Deluxe</a>
-    <a href="/how-it-works">How It Works</a>
-    <a href="/admin">Admin Panel</a>
-    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
-  </div>
-</nav>
+<%- include('partials/nav', { active: 'home' }) %>
 
 <% const heroSlides = settings.hero_slides && settings.hero_slides.length > 0 ? settings.hero_slides : null; %>
 <% if (heroSlides) { %>
