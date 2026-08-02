@@ -6,7 +6,9 @@
       Coming Soon
     </span>
     <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">Open for Reservation</span>
+    <button type="button" class="section-toggle-btn" onclick="toggleCollapsible('upcomingBody', this)" aria-label="Collapse Coming Soon">▾</button>
   </h2>
+  <div class="collapsible-body" id="upcomingBody">
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="upcomingSlider">
@@ -51,6 +53,7 @@
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideUpcoming(1)" aria-label="Next">&#8250;</button>
   </div>
+  </div>
 </div>
 <script>
 function slideUpcoming(dir) {
@@ -60,5 +63,11 @@ function slideUpcoming(dir) {
   const cardW = card ? card.offsetWidth + 20 : 280;
   slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
 }
+window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
+  const body = document.getElementById(id);
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if (btn) btn.classList.toggle('collapsed', collapsed);
+};
 </script>
 <% } %>

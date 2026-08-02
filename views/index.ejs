@@ -278,6 +278,9 @@
   </div>
 </div>
 
+<!-- UPCOMING GAMES (COMING SOON) -->
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: false }) %>
+
 <!-- MOST PLAYED IN PS PLUS SLIDER -->
 <% if (psplusPopular.length > 0) { %>
 <div class="section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">
@@ -285,7 +288,9 @@
     <span style="background:linear-gradient(135deg,#FFD700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">★</span>
     Most Played in PS Plus
     <a href="/ps-plus" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a>
+    <button type="button" class="section-toggle-btn" onclick="toggleCollapsible('psplusBody', this)" aria-label="Collapse Most Played in PS Plus">▾</button>
   </h2>
+  <div class="collapsible-body" id="psplusBody">
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('psplusSlider',-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="psplusSlider">
@@ -317,7 +322,16 @@
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideSection('psplusSlider',1)" aria-label="Next">&#8250;</button>
   </div>
+  </div>
 </div>
+<script>
+window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
+  const body = document.getElementById(id);
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  if (btn) btn.classList.toggle('collapsed', collapsed);
+};
+</script>
 <% } %>
 
 <!-- PROMO BAND -->
@@ -336,9 +350,6 @@
   </div>
 </div>
 <% } %>
-
-<!-- UPCOMING GAMES -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: false }) %>
 
 <!-- WHY RENT FROM US -->
 <div class="why-section" style="border-top:1px solid #1a1a1a;padding-top:3rem;">

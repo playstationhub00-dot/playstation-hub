@@ -546,6 +546,19 @@ nav {
   height: 1px;
   background: var(--border);
 }
+.section-toggle-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-secondary);
+  width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center;
+  justify-content: center; cursor: pointer; font-size: 0.8rem; line-height: 1;
+  flex-shrink: 0; transition: transform 0.25s ease, background 0.15s, color 0.15s;
+}
+.section-toggle-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.section-toggle-btn.collapsed { transform: rotate(-90deg); }
+.collapsible-body {
+  overflow: hidden; max-height: 600px; opacity: 1;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin-top 0.25s ease;
+}
+.collapsible-body.collapsed { max-height: 0; opacity: 0; margin-top: 0; }
 
 /* "From ₱X" shown under the title on homepage cards only (Browse shows this per-category instead) */
 .gc-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; }
