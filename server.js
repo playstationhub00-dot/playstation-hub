@@ -813,7 +813,23 @@ app.get('/api/search-index', (req, res) => {
   const psplus = getPsplusPopular().map(g => ({
     t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: g.cover_image || ''
   }));
-  res.json([...available, ...soon, ...psplus]);
+  // Titles inside each month's free-text games_list (e.g. "Call of Duty: Modern
+  // Warfare III") aren't their own catalog entries — they only exist as lines in that
+  // month's card, opened via a modal rather than a page. Deep-link to the month page
+  // with ?month=<id> so ps-plus.ejs can auto-open the right card on load.
+  const seenTitles = new Set(psplus.map(x => x.t.toLowerCase()));
+  const psplusMonthly = [];
+  getPsplus().forEach(entry => {
+    (entry.games_list || '').split('\n').map(g => g.trim()).filter(Boolean).forEach(title => {
+      const key = title.toLowerCase();
+      if (seenTitles.has(key)) return;
+      seenTitles.add(key);
+      psplusMonthly.push({
+        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: entry.cover_image || ''
+      });
+    });
+  });
+  res.json([...available, ...soon, ...psplus, ...psplusMonthly]);
 });
 
 app.get('/game/:slug', (req, res) => {

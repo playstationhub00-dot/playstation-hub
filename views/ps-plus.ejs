@@ -199,7 +199,7 @@
         const gamesList = (entry.games_list || '').split('\n').map(g=>g.trim()).filter(Boolean);
         const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots, prices: { nt10: prices.nt_price_10d, nt15: prices.nt_price_15d, nt30: prices.nt_price_30d, tr10: prices.tr_price_10d, tr15: prices.tr_price_15d, tr30: prices.tr_price_30d } }).replace(/'/g,"&#39;");
       %>
-      <div class="psplus-month-card" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
+      <div class="psplus-month-card" data-month-id="<%= entry.id %>" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
         <div class="psplus-month-cover-wrap">
           <% if (entry.cover_image) { %>
             <img src="<%= entry.cover_image %>" alt="<%= entry.month_name %> <%= year %>" class="psplus-month-cover">
@@ -317,6 +317,16 @@ function openPsplusModal(dataStr) {
   modal.classList.add('active');
 }
 function closePsplusModal() { document.getElementById('psplusModal').classList.remove('active'); }
+
+// Deep link from nav search: ?month=<id> opens that month's card on load.
+(function() {
+  const monthId = new URLSearchParams(location.search).get('month');
+  if (!monthId) return;
+  const card = document.querySelector('[data-month-id="' + monthId + '"]');
+  if (!card) return;
+  card.scrollIntoView({ block: 'center' });
+  card.click();
+})();
 </script>
 </body>
 </html>
