@@ -546,6 +546,8 @@ nav {
   height: 1px;
   background: var(--border);
 }
+/* Homepage only: drop the trailing divider line next to section headers. */
+.home-page .section-title::after { content: none; }
 .section-toggle-btn {
   background: none; border: 1px solid var(--border); color: var(--text-secondary);
   width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center;
@@ -832,6 +834,9 @@ nav {
 .gc-reveal-hint { font-size: 0.68rem; color: #555; transition: opacity 0.2s ease; }
 .game-card:hover .gc-reveal-hint,
 .game-card.gc-price-show .gc-reveal-hint { display: none; }
+/* Homepage only: price/rent info stays visible at all times, no hover/tap needed. */
+.home-page .gc-reveal { max-height: none; opacity: 1; overflow: visible; }
+.home-page .gc-reveal-hint { display: none; }
 .game-platform {
   font-size: 0.72rem;
   color: var(--ps-blue);
