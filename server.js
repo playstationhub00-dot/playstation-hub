@@ -498,6 +498,10 @@ function getSiteSettings() {
     db.set('site_settings.popup', { enabled: false, image_path: '', link_url: '/browse', starts_at: '', ends_at: '', version: 1 }).write();
     s.popup = db.get('site_settings.popup').value();
   }
+  if (s.section_gap === undefined) {
+    db.set('site_settings.section_gap', 4).write();
+    s.section_gap = 4;
+  }
   return s;
 }
 // Every duration a rent promo can apply to, and the % discount for a given duration.
@@ -1341,12 +1345,14 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
     hero_bg = { type: hero_bg_type || existing.hero_bg.type, path: existing.hero_bg.path };
   }
   hero_bg.overlay = Math.min(100, Math.max(0, parseInt(req.body.hero_bg_overlay) || 50));
+  const section_gap = Math.min(7, Math.max(1.5, parseFloat(req.body.section_gap) || 4));
 
   // Preserve hero_text — only update the fields this form controls
   db.set('site_settings.title', (title || 'Playstation Hub').trim()).write();
   db.set('site_settings.logo_path', logo_path).write();
   db.set('site_settings.favicon_path', favicon_path).write();
   db.set('site_settings.hero_bg', hero_bg).write();
+  db.set('site_settings.section_gap', section_gap).write();
   res.redirect('/admin?msg=settings_saved');
 });
 

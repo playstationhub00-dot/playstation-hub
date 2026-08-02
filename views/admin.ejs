@@ -204,6 +204,20 @@
               </div>
             </div>
           </div>
+
+          <!-- Section Spacing -->
+          <div class="form-group full" style="margin-top:0.5rem;">
+            <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+              <span>📏 Homepage Section Spacing <span style="color:#555;font-size:0.75rem;font-weight:400;">(gap between homepage sections)</span></span>
+              <span id="sectionGapVal" style="color:var(--ps-blue);font-weight:700;font-size:0.9rem;"><%= settings.section_gap || 4 %>rem</span>
+            </label>
+            <input type="range" name="section_gap" id="sectionGapSlider" min="1.5" max="7" step="0.25" value="<%= settings.section_gap || 4 %>"
+              oninput="document.getElementById('sectionGapVal').textContent=this.value+'rem'"
+              style="width:100%;accent-color:var(--ps-blue);cursor:pointer;height:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:#555;margin-top:0.3rem;">
+              <span>1.5rem — tight</span><span>7rem — airy</span>
+            </div>
+          </div>
         </div>
         <div class="form-actions" style="margin-top:0.75rem;">
           <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save Settings</button>

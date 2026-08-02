@@ -654,6 +654,11 @@ nav {
 }
 /* Homepage only: drop the trailing divider line next to section headers. */
 .home-page .section-title::after { content: none; }
+/* Homepage only: one variable controls the gap above every section (top-driven, so
+   each section only needs to know its own distance from whatever came before it).
+   Overridable per-request via an inline style on <body> from admin settings. */
+.home-page { --section-gap: 4rem; }
+.home-page .section { padding-top: var(--section-gap); padding-bottom: 0; }
 .section-toggle-btn {
   background: none; border: 1px solid var(--border); color: var(--text-secondary);
   width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center;
@@ -675,7 +680,7 @@ nav {
 .cat-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.2rem 0.65rem; }
 
 /* ── HOMEPAGE: PRICE TIERS ──────────────────────────────────────────────── */
-.tier-section { padding: 4rem 2rem 3.5rem; max-width: 1400px; margin: 0 auto; }
+.tier-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
 .tier-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
@@ -699,7 +704,7 @@ nav {
 }
 
 /* ── HOMEPAGE: SPOTLIGHT ────────────────────────────────────────────────── */
-.spotlight-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.spotlight-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .spotlight-card {
   display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem;
@@ -719,7 +724,7 @@ nav {
 .spotlight-link:hover { text-decoration: underline; }
 
 /* ── HOMEPAGE: PROMO LADDER ─────────────────────────────────────────────── */
-.promo-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.promo-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .promo2 {
   border-radius: 20px; border: 1px solid rgba(240,165,0,0.3);
   background: linear-gradient(100deg, rgba(240,165,0,0.1), transparent 65%), var(--bg-card);
@@ -818,7 +823,7 @@ nav {
 }
 
 /* ── HOMEPAGE: WHY RENT FROM US ─────────────────────────────────────────── */
-.why-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
+.why-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
 .why-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem 1.5rem; }
 .why-icon {
