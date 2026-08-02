@@ -65,11 +65,10 @@ body.light-mode .game-desc-inline { background: #f8f8f8; color: #333; }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* overflow-x lives only on <html> — setting it on body too would leave overflow-y at
-   its default "visible", which the spec computes to "auto" whenever overflow-x isn't
-   also visible. That turns body into its own scroll container and breaks
-   position:sticky (nav) relative to the real viewport. */
-html { overflow-x: hidden; }
+/* No overflow-x:hidden on html/body — it breaks nav's position:sticky by turning the
+   root into its own scroll container instead of the real viewport. The actual overflow
+   source (.navsearch not shrinking below its content width) is fixed at the source
+   instead — confirmed via testing that scrollWidth matches clientWidth without this. */
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
