@@ -84,6 +84,7 @@
     const t = term.trim().toLowerCase();
     const matches = index.filter(x => x.t.toLowerCase().includes(t));
     const now = matches.filter(x => x.y === 'now').slice(0, 6);
+    const psplus = matches.filter(x => x.y === 'psplus').slice(0, 3);
     const soon = matches.filter(x => x.y === 'soon').slice(0, 3);
 
     let h = '';
@@ -98,6 +99,16 @@
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span>' + av + '</div></div>' +
           (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') + '</a>';
+      });
+    }
+    if (psplus.length) {
+      h += '<div class="navsearch-head">PS Plus Deluxe</div>';
+      psplus.forEach(x => {
+        const psThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '➕';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + psThumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.p + '</span></div></div>' +
+          '<span class="navsearch-badge-psplus">PS PLUS</span></a>';
       });
     }
     if (soon.length) {
@@ -119,7 +130,7 @@
         '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn">Message Us</a>' +
         '<a href="/browse" class="navsearch-empty-btn2">Browse All Games</a>' +
         '</div></div>';
-    } else if (matches.length > now.length + soon.length) {
+    } else if (matches.length > now.length + psplus.length + soon.length) {
       h += '<a class="navsearch-all" href="/browse?search=' + encodeURIComponent(term.trim()) + '">See all ' + matches.length + ' results →</a>';
     }
     box.innerHTML = h;

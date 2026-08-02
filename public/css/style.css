@@ -211,6 +211,10 @@ nav {
   background: linear-gradient(135deg,#7b2ff7,#f107a3); color: #fff; font-size: 0.6rem;
   font-weight: 900; padding: 0.14rem 0.45rem; border-radius: 20px; letter-spacing: 0.05em; flex-shrink: 0;
 }
+.navsearch-badge-psplus {
+  background: linear-gradient(135deg,#856200,#FFD700); color: #000; font-size: 0.6rem;
+  font-weight: 900; padding: 0.14rem 0.45rem; border-radius: 20px; letter-spacing: 0.05em; flex-shrink: 0;
+}
 .navsearch-all {
   display: block; text-align: center; padding: 0.7rem; font-size: 0.78rem; color: var(--ps-blue);
   text-decoration: none; border-top: 1px solid #1e1e1e; font-weight: 600;

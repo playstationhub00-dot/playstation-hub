@@ -806,7 +806,14 @@ app.get('/api/search-index', (req, res) => {
     t: g.title, p: g.platform, d: g.release_date || 'TBA',
     u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: g.cover_image || ''
   }));
-  res.json([...available, ...soon]);
+  // "Most Played in PS Plus" titles aren't individually rentable — they're all played
+  // through the one PS Plus Deluxe subscription game, same as the homepage cards.
+  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
+  const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
+  const psplus = getPsplusPopular().map(g => ({
+    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: g.cover_image || ''
+  }));
+  res.json([...available, ...soon, ...psplus]);
 });
 
 app.get('/game/:slug', (req, res) => {
