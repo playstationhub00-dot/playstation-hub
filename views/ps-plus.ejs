@@ -148,7 +148,7 @@
     <a href="<%= rentTarget %>" class="game-card psplus-popular-card game-card-link">
       <div style="position:relative;">
         <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
         <% } else { %>
           <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0a0800,#1a1400);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -202,7 +202,7 @@
       <div class="psplus-month-card" data-month-id="<%= entry.id %>" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
         <div class="psplus-month-cover-wrap">
           <% if (entry.cover_image) { %>
-            <img src="<%= entry.cover_image %>" alt="<%= entry.month_name %> <%= year %>" class="psplus-month-cover">
+            <img src="<%= entry.cover_image %>" alt="<%= entry.month_name %> <%= year %>" class="psplus-month-cover" loading="lazy" decoding="async">
           <% } else { %>
             <div class="psplus-month-cover-placeholder">
               <div class="psplus-month-placeholder-icon">🎮</div>

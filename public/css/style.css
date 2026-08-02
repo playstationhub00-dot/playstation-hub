@@ -65,11 +65,15 @@ body.light-mode .game-desc-inline { background: #f8f8f8; color: #333; }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html { overflow-x: hidden; }
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* ANNOUNCEMENT BAR */
@@ -158,7 +162,7 @@ nav {
 .nav-links .nav-cta:hover { background: #FFD700; color: #000; }
 
 /* ── NAV SEARCH ─────────────────────────────────────────────────────────── */
-.navsearch { position: relative; flex: 1; max-width: 420px; margin: 0 1.5rem; }
+.navsearch { position: relative; flex: 1; min-width: 0; max-width: 420px; margin: 0 1.5rem; }
 .navsearch-box {
   display: flex; align-items: center; gap: 0.55rem; background: #111; border: 1px solid #262626;
   border-radius: 10px; padding: 0 0.8rem; height: 38px; transition: border-color 0.15s; color: #666;

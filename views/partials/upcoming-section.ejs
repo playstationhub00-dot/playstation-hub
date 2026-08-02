@@ -16,7 +16,7 @@
     <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
       <div style="position:relative;overflow:visible;">
         <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" style="filter:brightness(0.75);">
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" loading="lazy" decoding="async" style="filter:brightness(0.75);">
         <% } else { %>
           <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0d0015,#1a0030);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
