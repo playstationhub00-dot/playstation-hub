@@ -211,11 +211,13 @@
     %>
     <a href="/browse#cat-section-<%= t.id %>" class="tier-card">
       <div>
-        <div class="tier-card-icon"><%= tierIcon %></div>
-        <div class="tier-card-name"><%= t.name %></div>
+        <div class="tier-card-head">
+          <div class="tier-card-icon"><%= tierIcon %></div>
+          <div class="tier-card-name"><%= t.name %></div>
+        </div>
         <div class="tier-card-count"><%= t.count %> title<%= t.count !== 1 ? 's' : '' %></div>
       </div>
-      <% if (t.min) { %><div class="tier-card-price">From ₱<%= t.min %></div><% } %>
+      <% if (t.min) { %><div class="tier-card-price">Price Starts at<br>₱<%= t.min %></div><% } %>
       <div class="tier-card-go">→</div>
     </a>
     <% }) %>

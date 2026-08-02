@@ -563,13 +563,14 @@ nav {
   min-height: 148px; position: relative; transition: border-color 0.15s, transform 0.15s;
 }
 .tier-card:hover { border-color: rgba(240,165,0,0.4); transform: translateY(-2px); }
+.tier-card-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
 .tier-card-icon {
   width: 40px; height: 40px; border-radius: 11px; background: rgba(240,165,0,0.1);
-  display: flex; align-items: center; justify-content: center; font-size: 1.15rem; margin-bottom: 0.9rem;
+  display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;
 }
 .tier-card-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
-.tier-card-count { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.3rem; }
-.tier-card-price { font-size: 0.85rem; color: var(--ps-blue); font-weight: 700; margin-top: 1.5rem; }
+.tier-card-count { font-size: 0.78rem; color: var(--text-secondary); margin-left: calc(40px + 0.75rem); }
+.tier-card-price { font-size: 1.3rem; line-height: 1.25; color: var(--ps-blue); font-weight: 800; margin-top: 1.25rem; }
 .tier-card-go {
   position: absolute; right: 1.25rem; bottom: 1.25rem; width: 30px; height: 30px;
   border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center;
