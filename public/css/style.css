@@ -1379,18 +1379,38 @@ select.ss-native {
 .how-section { background: #111; padding: 4rem 2rem; }
 .how-inner { max-width: 900px; margin: 0 auto; text-align: center; }
 .how-inner h2 { font-size: 1.75rem; font-weight: 900; margin-bottom: 3rem; }
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; }
-.step { padding: 1.5rem; }
+/* Steps connect via a horizontal track running through the circle centers, like a
+   checkout progress bar. Each segment is anchored to its own step's center and
+   spans exactly one column width plus the grid gap, so it lands precisely on the
+   next circle's center regardless of container width — a single bar sized by
+   percentage would drift off-center once `gap` eats into the column widths.
+   Hidden once .steps wraps to a narrower grid below 900px. */
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; }
+.step { padding: 1.5rem; position: relative; z-index: 1; }
+.step:not(:last-child)::after {
+  content: ''; position: absolute; top: 48px; left: 50%; width: calc(100% + 2rem); height: 2px;
+  background: linear-gradient(90deg, var(--ps-blue), rgba(240,165,0,0.25));
+  z-index: 0;
+}
 .step-num {
   width: 48px; height: 48px;
   background: linear-gradient(135deg, #C47F00, #F0A500);
+  border: 3px solid #111;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-weight: 900; font-size: 1.2rem;
   margin: 0 auto 1rem;
+  box-shadow: 0 0 0 1px rgba(240,165,0,0.4);
 }
 .step h3 { font-size: 1rem; margin-bottom: 0.5rem; }
 .step p { font-size: 0.875rem; color: var(--text-secondary); }
+@media (max-width: 900px) {
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .step::after { display: none; }
+}
+@media (max-width: 480px) {
+  .steps { grid-template-columns: 1fr; }
+}
 
 /* FOOTER */
 footer {
