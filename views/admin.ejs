@@ -292,7 +292,7 @@
       <div class="settings-accordion-body">
     <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
       <h2 style="display:none;">🎉 Promo & Pricing Rules</h2>
-      <form method="POST" action="/admin/promo">
+      <form method="POST" action="/admin/promo" enctype="multipart/form-data">
         <div class="form-grid">
           <!-- RENT PROMO -->
           <div class="form-group full" style="margin-bottom:0;">
@@ -323,6 +323,29 @@
             <label>Trophy Account Security Deposit (₱) <span style="color:#555;font-size:0.75rem;">(refundable, added to Trophy rentals)</span></label>
             <input type="number" name="deposit" value="<%= adminPromo.deposit %>" min="0" placeholder="100">
           </div>
+          <div class="form-group">
+            <label>Promo Ends At <span style="color:#555;font-size:0.75rem;">(optional — shows a countdown &amp; auto-hides the section after)</span></label>
+            <input type="datetime-local" name="ends_at" value="<%= adminPromo.ends_at || '' %>">
+          </div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label>Promo Poster / Video <span style="color:#555;font-size:0.75rem;">(shown next to the discount ladder on the homepage — image or short video, up to 20MB)</span></label>
+            <input type="file" name="promo_media" accept="image/*,video/mp4,video/webm,video/ogg">
+          </div>
+          <% if (adminPromo.media_path) { %>
+          <div class="form-group full" style="margin-bottom:0;">
+            <div style="display:flex;align-items:center;gap:1rem;background:#0d0d0d;border:1px solid #222;border-radius:10px;padding:0.75rem;">
+              <% if (adminPromo.media_type === 'video') { %>
+              <video src="<%= adminPromo.media_path %>" style="width:70px;height:88px;object-fit:cover;border-radius:6px;" muted></video>
+              <% } else { %>
+              <img src="<%= adminPromo.media_path %>" style="width:70px;height:88px;object-fit:cover;border-radius:6px;">
+              <% } %>
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:#e74c3c;font-size:0.85rem;">
+                <input type="checkbox" name="remove_media" style="width:16px;height:16px;accent-color:#e74c3c;">
+                <span>Remove current media</span>
+              </label>
+            </div>
+          </div>
+          <% } %>
 
           <!-- BUY PROMO -->
           <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">

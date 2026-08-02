@@ -148,6 +148,12 @@ const uploadPosterBg = multer({
   fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
   limits: { fileSize: 20 * 1024 * 1024 }
 });
+// Promo media (homepage promo poster/video) — accepts images or short video clips.
+const uploadPromoMedia = multer({
+  storage,
+  fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp|mp4|webm|ogg/.test(file.mimetype)),
+  limits: { fileSize: 20 * 1024 * 1024 }
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -472,7 +478,7 @@ function getSiteSettings() {
     s.hero_slides = [];
   }
   if (!s.promo) {
-    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 }).write();
+    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0, media_path: '', media_type: '', ends_at: '' }).write();
     s.promo = db.get('site_settings.promo').value();
   } else if (!s.promo.discounts) {
     // Migrate legacy single-duration promo (discount_pct + apply_on_days) to the
@@ -483,6 +489,10 @@ function getSiteSettings() {
     }
     db.set('site_settings.promo.discounts', discounts).write();
     s.promo.discounts = discounts;
+  }
+  if (s.promo && s.promo.media_path === undefined) {
+    db.set('site_settings.promo.media_path', '').set('site_settings.promo.media_type', '').set('site_settings.promo.ends_at', '').write();
+    s.promo.media_path = ''; s.promo.media_type = ''; s.promo.ends_at = '';
   }
   return s;
 }
@@ -786,20 +796,39 @@ app.get('/game/:slug', (req, res) => {
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
-app.post('/admin/promo', requireAuth, (req, res) => {
+app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), (req, res) => {
   const { enabled, discount_10, discount_15, discount_30, deposit,
-          buy_promo_enabled, buy_promo_pct } = req.body;
+          buy_promo_enabled, buy_promo_pct, ends_at, remove_media } = req.body;
   const discounts = {
     10: Math.min(100, Math.max(0, parseInt(discount_10) || 0)),
     15: Math.min(100, Math.max(0, parseInt(discount_15) || 0)),
     30: Math.min(100, Math.max(0, parseInt(discount_30) || 0))
   };
+  const existing = db.get('site_settings.promo').value() || {};
+  let media_path = existing.media_path || '';
+  let media_type = existing.media_type || '';
+  if (remove_media === 'on') {
+    if (media_path) {
+      const fp = path.join(uploadsDir, path.basename(media_path));
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    }
+    media_path = ''; media_type = '';
+  } else if (req.file) {
+    if (existing.media_path) {
+      const oldFp = path.join(uploadsDir, path.basename(existing.media_path));
+      if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
+    }
+    media_path = '/uploads/' + req.file.filename;
+    media_type = /^video\//.test(req.file.mimetype) ? 'video' : 'image';
+  }
   db.set('site_settings.promo', {
     enabled: enabled === 'on',
     discounts,
     deposit: Math.max(0, parseInt(deposit) || 100),
     buy_promo_enabled: buy_promo_enabled === 'on',
-    buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0))
+    buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0)),
+    media_path, media_type,
+    ends_at: (ends_at || '').trim()
   }).write();
   res.redirect('/admin?msg=promo_saved');
 });

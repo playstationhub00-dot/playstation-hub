@@ -612,15 +612,59 @@ nav {
 .spotlight-link { font-size: 0.85rem; color: var(--ps-blue); font-weight: 600; text-decoration: none; }
 .spotlight-link:hover { text-decoration: underline; }
 
-/* ── HOMEPAGE: PROMO BAND ───────────────────────────────────────────────── */
+/* ── HOMEPAGE: PROMO LADDER ─────────────────────────────────────────────── */
 .promo-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
-.promo-band {
-  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
-  border-radius: 20px; padding: 2.25rem 2.5rem; border: 1px solid rgba(240,165,0,0.3);
+.promo2 {
+  border-radius: 20px; border: 1px solid rgba(240,165,0,0.3);
   background: linear-gradient(100deg, rgba(240,165,0,0.1), transparent 65%), var(--bg-card);
+  padding: 2.25rem 2.5rem;
 }
-.promo-band-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.015em; margin: 0 0 0.5rem; }
-.promo-band-sub { font-size: 0.85rem; color: var(--text-secondary); margin: 0; max-width: 46ch; }
+.promo2-head { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.promo2-flag {
+  background: var(--ps-blue); color: #000; font-size: 0.68rem; font-weight: 900;
+  letter-spacing: 0.09em; padding: 0.3rem 0.75rem; border-radius: 20px;
+}
+.promo2-count { font-size: 0.78rem; color: #8a8a8a; font-weight: 600; }
+.promo2-grid { display: grid; grid-template-columns: minmax(0,0.8fr) minmax(0,1.2fr); gap: 2rem; align-items: center; }
+.promo2-grid.nomedia { grid-template-columns: 1fr; }
+.promo2-media {
+  border-radius: 14px; overflow: hidden; background: #0e0e0e; aspect-ratio: 4/5;
+  display: flex; align-items: center; justify-content: center;
+}
+.promo2-media img, .promo2-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.promo2-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.35rem; line-height: 1.15; }
+.promo2-sub { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 1.4rem; }
+.ladder { display: flex; flex-direction: column; gap: 0.6rem; }
+.rung {
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  background: var(--bg-dark); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1.15rem;
+}
+.rung .days { font-size: 0.8rem; color: #9a9a9a; font-weight: 700; width: 72px; flex-shrink: 0; }
+.rung .pct { font-size: 1.25rem; font-weight: 900; color: var(--ps-blue); width: 92px; flex-shrink: 0; letter-spacing: -0.02em; }
+.rung .price { font-size: 0.8rem; color: #5f5f5f; }
+.rung .price s { opacity: 0.8; }
+.rung .price b { color: var(--text-primary); font-size: 1rem; font-weight: 800; margin-left: 0.3rem; }
+.rung.best {
+  background: linear-gradient(100deg, rgba(240,165,0,0.13), transparent 70%), var(--bg-dark);
+  border: 2px solid var(--ps-blue);
+}
+.rung.best .days { color: #c9a54a; }
+.best-tag {
+  margin-left: auto; background: var(--ps-blue); color: #000; font-size: 0.62rem; font-weight: 900;
+  letter-spacing: 0.07em; padding: 0.25rem 0.65rem; border-radius: 20px; white-space: nowrap;
+}
+.promo2-cta { display: flex; gap: 0.6rem; margin-top: 1.5rem; flex-wrap: wrap; }
+.btn-ghost {
+  border: 1px solid #3a3a3a; color: #ccc; font-weight: 600; font-size: 0.9rem;
+  padding: 0.8rem 1.6rem; border-radius: 10px; text-decoration: none; display: inline-block;
+}
+.btn-ghost:hover { background: var(--bg-card-hover); }
+@media (max-width: 700px) {
+  .promo2-grid { grid-template-columns: 1fr; }
+  .promo2-media { aspect-ratio: 16/9; }
+  .promo2 { padding: 1.75rem; }
+  .rung .pct { width: 74px; font-size: 1.1rem; }
+}
 
 /* ── HOMEPAGE: WHY RENT FROM US ─────────────────────────────────────────── */
 .why-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }
