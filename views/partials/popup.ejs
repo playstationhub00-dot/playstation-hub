@@ -1,0 +1,66 @@
+<%
+  // Homepage-only promo popup. Renders nothing unless it's enabled, has artwork, and
+  // the current time falls inside the optional start/end window.
+  const pop = settings.popup || {};
+  const popNow = Date.now();
+  const popStarted = !pop.starts_at || new Date(pop.starts_at).getTime() <= popNow;
+  const popNotEnded = !pop.ends_at || new Date(pop.ends_at).getTime() > popNow;
+  const popShow = pop.enabled && pop.image_path && popStarted && popNotEnded;
+%>
+<% if (popShow) { %>
+<div class="popup-overlay" id="sitePopup" role="dialog" aria-modal="true" aria-label="Promotion">
+  <div class="popup-card">
+    <button type="button" class="popup-close" onclick="closeSitePopup('session')" aria-label="Close">&#10005;</button>
+    <a href="<%= pop.link_url %>" class="popup-img-link" onclick="closeSitePopup('click')">
+      <img src="<%= pop.image_path %>" alt="Promotion" class="popup-img">
+    </a>
+    <div class="popup-foot">
+      <a href="<%= pop.link_url %>" class="popup-cta" onclick="closeSitePopup('click')">See All Games →</a>
+      <button type="button" class="popup-skip" onclick="closeSitePopup('today')">Don't show this again today</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  // Key embeds the popup version so uploading new artwork re-shows it to everyone,
+  // including customers who dismissed the previous one for the day.
+  const KEY = 'pshPopup_v<%= pop.version || 1 %>';
+  const overlay = document.getElementById('sitePopup');
+  if (!overlay) return;
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  window.closeSitePopup = function(how) {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    try {
+      // "Today" persists past the tab closing; every other exit is session-only.
+      if (how === 'today') localStorage.setItem(KEY, todayStr());
+      else sessionStorage.setItem(KEY, '1');
+    } catch (e) {}
+  };
+
+  let dismissed = false;
+  try {
+    dismissed = sessionStorage.getItem(KEY) === '1' || localStorage.getItem(KEY) === todayStr();
+  } catch (e) {}
+  if (dismissed) return;
+
+  // Let the homepage paint before interrupting it.
+  setTimeout(function() {
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }, 1000);
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeSitePopup('session');
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.classList.contains('active')) closeSitePopup('session');
+  });
+})();
+</script>
+<% } %>

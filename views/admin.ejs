@@ -370,6 +370,70 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion promo -->
 
+    <!-- HOMEPAGE POPUP -->
+    <% const adminPopup = settings.popup || { enabled: false, image_path: '', link_url: '/browse', starts_at: '', ends_at: '' }; %>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #ec4899;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(236,72,153,0.15);">🪧</div>
+          <div>
+            <div class="sa-title">Homepage Popup</div>
+            <div class="sa-desc">Pop-out promo image shown once per visit on the homepage</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(236,72,153,0.3);background:linear-gradient(135deg,#12040c,#1a0714);">
+      <form method="POST" action="/admin/popup" enctype="multipart/form-data">
+        <div class="form-grid">
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+              <input type="checkbox" name="enabled" <%= adminPopup.enabled ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#ec4899;">
+              <span>Enable Homepage Popup</span>
+            </label>
+          </div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label>Popup Image <span style="color:#555;font-size:0.75rem;">(4:5 portrait works best — e.g. 800×1000px. Up to 20MB)</span></label>
+            <input type="file" name="popup_image" accept="image/*">
+          </div>
+          <% if (adminPopup.image_path) { %>
+          <div class="form-group full" style="margin-bottom:0;">
+            <div style="display:flex;align-items:center;gap:1rem;background:#0d0d0d;border:1px solid #222;border-radius:10px;padding:0.75rem;">
+              <img src="<%= adminPopup.image_path %>" style="width:70px;height:88px;object-fit:cover;border-radius:6px;">
+              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;color:#e74c3c;font-size:0.85rem;">
+                <input type="checkbox" name="remove_image" style="width:16px;height:16px;accent-color:#e74c3c;">
+                <span>Remove current image</span>
+              </label>
+            </div>
+          </div>
+          <% } %>
+          <div class="form-group full">
+            <label>Click Destination <span style="color:#555;font-size:0.75rem;">(where the image and button send them)</span></label>
+            <input type="text" name="link_url" value="<%= adminPopup.link_url || '/browse' %>" placeholder="/browse">
+          </div>
+          <div class="form-group">
+            <label>Start Showing <span style="color:#555;font-size:0.75rem;">(optional)</span></label>
+            <input type="datetime-local" name="starts_at" value="<%= adminPopup.starts_at || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Stop Showing <span style="color:#555;font-size:0.75rem;">(optional)</span></label>
+            <input type="datetime-local" name="ends_at" value="<%= adminPopup.ends_at || '' %>">
+          </div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <div style="font-size:0.78rem;color:#666;background:#0d0d0d;border:1px dashed #2a2a2a;border-radius:8px;padding:0.75rem;line-height:1.6;">
+              Customers who close it see it again next visit. Those who tap <b style="color:#999;">Don't show this again today</b> won't see it until tomorrow — but uploading a new image resets everyone so your next promo always lands.
+            </div>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:0.75rem;">
+          <button type="submit" class="btn btn-primary" style="background:#ec4899;color:#000;">Save Popup Settings</button>
+        </div>
+      </form>
+    </div><!-- /popup inner -->
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion popup -->
+
     <!-- HERO TEXT EDITOR -->
     <div class="settings-accordion">
       <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
@@ -2612,7 +2676,7 @@ function switchTab(name) {
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
     month_log_saved:'customers', month_log_deleted:'customers',
-    settings_saved:'settings', password_changed:'security',
+    settings_saved:'settings', promo_saved:'settings', popup_saved:'settings', password_changed:'security',
     wrong_password:'security', password_mismatch:'security', password_too_short:'security'
   };
 
@@ -2621,7 +2685,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', promo_saved:'🎉 Promo settings saved!', popup_saved:'🪧 Popup settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');

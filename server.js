@@ -494,6 +494,10 @@ function getSiteSettings() {
     db.set('site_settings.promo.media_path', '').set('site_settings.promo.media_type', '').set('site_settings.promo.ends_at', '').write();
     s.promo.media_path = ''; s.promo.media_type = ''; s.promo.ends_at = '';
   }
+  if (!s.popup) {
+    db.set('site_settings.popup', { enabled: false, image_path: '', link_url: '/browse', starts_at: '', ends_at: '', version: 1 }).write();
+    s.popup = db.get('site_settings.popup').value();
+  }
   return s;
 }
 // Every duration a rent promo can apply to, and the % discount for a given duration.
@@ -831,6 +835,41 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), (r
     ends_at: (ends_at || '').trim()
   }).write();
   res.redirect('/admin?msg=promo_saved');
+});
+
+// ── Homepage Popup ────────────────────────────────────────────────────────────
+// Reuses uploadPosterBg (images only, 20MB) — promo artwork is the same shape of file.
+app.post('/admin/popup', requireAuth, uploadPosterBg.single('popup_image'), (req, res) => {
+  const { enabled, link_url, starts_at, ends_at, remove_image } = req.body;
+  const existing = db.get('site_settings.popup').value() || {};
+  let image_path = existing.image_path || '';
+  // Bumped whenever the artwork changes. The dismissal key on the client embeds this
+  // version, so a "don't show today" click on the old popup can't suppress the new one.
+  let version = existing.version || 1;
+  if (remove_image === 'on') {
+    if (image_path) {
+      const fp = path.join(uploadsDir, path.basename(image_path));
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    }
+    image_path = '';
+    version++;
+  } else if (req.file) {
+    if (existing.image_path) {
+      const oldFp = path.join(uploadsDir, path.basename(existing.image_path));
+      if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
+    }
+    image_path = '/uploads/' + req.file.filename;
+    version++;
+  }
+  db.set('site_settings.popup', {
+    enabled: enabled === 'on',
+    image_path,
+    link_url: (link_url || '').trim() || '/browse',
+    starts_at: (starts_at || '').trim(),
+    ends_at: (ends_at || '').trim(),
+    version
+  }).write();
+  res.redirect('/admin?msg=popup_saved');
 });
 
 // ── Mobile Admin App ──────────────────────────────────────────────────────────
