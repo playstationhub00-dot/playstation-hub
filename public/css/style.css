@@ -570,7 +570,7 @@ nav {
 }
 .tier-card-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
 .tier-card-count { font-size: 0.78rem; color: var(--text-secondary); margin-left: calc(40px + 0.75rem); }
-.tier-card-price { font-size: 1.3rem; line-height: 1.25; color: var(--ps-blue); font-weight: 800; margin-top: 1.25rem; }
+.tier-card-price { font-size: 0.98rem; white-space: nowrap; color: var(--ps-blue); font-weight: 800; margin-top: 1.25rem; }
 .tier-card-go {
   position: absolute; right: 1.25rem; bottom: 1.25rem; width: 30px; height: 30px;
   border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center;
