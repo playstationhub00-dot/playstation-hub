@@ -984,17 +984,25 @@
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
-            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
+            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🆕 Added</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <% if (games.length === 0) { %>
-            <tr><td colspan="12" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
+            <tr><td colspan="13" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
             <% } %>
             <% games.forEach(game => {
               const gameTotalEarned = customers.filter(c => c.game_id === game.id).reduce((s,c) => s+(c.price||0), 0);
               const gameRentalCount = customers.filter(c => c.game_id === game.id).length;
               const gameCost = game.cost || 0;
               const gameProfit = gameTotalEarned - gameCost;
+              // Same "added this calendar month" window as the site-wide NEW badge — the
+              // days-left count is how much runway is left to see if the game gets any
+              // renters before deciding whether to keep restocking it.
+              const gAddedDate = game.created_at ? new Date(game.created_at) : null;
+              const gNow = new Date();
+              const gIsNewThisMonth = gAddedDate && gAddedDate.getFullYear() === gNow.getFullYear() && gAddedDate.getMonth() === gNow.getMonth();
+              const gDaysLeft = gIsNewThisMonth ? Math.max(0, Math.ceil((new Date(gNow.getFullYear(), gNow.getMonth() + 1, 1) - gNow) / 86400000)) : null;
+              const gAddedLabel = gAddedDate ? gAddedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
             %>
             <tr>
               <td>
@@ -1007,6 +1015,17 @@
                 <% } %>
               </td>
               <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
+              <td>
+                <% if (gIsNewThisMonth) { %>
+                  <div style="font-size:0.72rem;color:#aaa;"><%= gAddedLabel %></div>
+                  <div style="font-size:0.72rem;font-weight:700;color:<%= gDaysLeft <= 3 ? '#ef4444' : 'var(--ps-blue)' %>;"><%= gDaysLeft %>d left</div>
+                  <% if (gameRentalCount === 0) { %>
+                    <div style="font-size:0.66rem;color:#ef4444;font-weight:700;margin-top:0.15rem;">⚠️ 0 renters</div>
+                  <% } %>
+                <% } else { %>
+                  <span style="color:#333;font-size:0.8rem;">—</span>
+                <% } %>
+              </td>
               <td>
                 <% const ntS = game.non_trophy_slots || 0; %>
                 <% if (ntS > 0) { %><span class="badge badge-available"><%= ntS %></span><% } else { %><span class="badge badge-unavailable">0</span><% } %>
