@@ -594,6 +594,8 @@ nav {
 .spotlight-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin: 0 0 1.25rem; }
 .spotlight-price { font-size: 1.9rem; font-weight: 800; color: var(--ps-blue); letter-spacing: -0.02em; }
 .spotlight-avail { font-size: 0.78rem; color: #22c55e; font-weight: 600; margin: 0.4rem 0 1.5rem; }
+.spotlight-link { font-size: 0.85rem; color: var(--ps-blue); font-weight: 600; text-decoration: none; }
+.spotlight-link:hover { text-decoration: underline; }
 
 /* ── HOMEPAGE: PROMO BAND ───────────────────────────────────────────────── */
 .promo-section { padding: 0 2rem 4rem; max-width: 1400px; margin: 0 auto; }

@@ -210,6 +210,14 @@
           <label>Description</label>
           <textarea name="description"><%= game.description || '' %></textarea>
         </div>
+        <div class="form-group">
+          <label>🔗 Custom Link Label <span style="color:#555;font-weight:500;">(optional)</span></label>
+          <input type="text" name="link_label" value="<%= game.link_label || '' %>" placeholder="e.g. Visit PS Plus website">
+        </div>
+        <div class="form-group">
+          <label>🔗 Custom Link URL <span style="color:#555;font-weight:500;">(optional)</span></label>
+          <input type="url" name="link_url" value="<%= game.link_url || '' %>" placeholder="https://...">
+        </div>
       </div>
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save Changes</button>

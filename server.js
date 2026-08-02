@@ -1041,7 +1041,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     buy_nt_price, buy_tr_price,
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
-    price_category_id, price_mode, cost } = req.body;
+    price_category_id, price_mode, cost, link_label, link_url } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? '/uploads/' + coverFile.filename : '';
@@ -1068,6 +1068,8 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     tr_price_30d: cat ? cat.tr_price_30d : (parseInt(tr_price_30d) || 399),
     genre: genre || '',
     description: description || '',
+    link_label: (link_label || '').trim(),
+    link_url: (link_url || '').trim(),
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 1) : 0,
     trophy_account: trophy_account === 'on',
@@ -1094,7 +1096,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     genre, description, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     remove_gallery, cover_focal_x, cover_focal_y,
-    price_category_id, price_mode, cost } = req.body;
+    price_category_id, price_mode, cost, link_label, link_url } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
@@ -1137,6 +1139,8 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     tr_price_30d: cat ? cat.tr_price_30d : parseInt(tr_price_30d),
     genre: genre || '',
     description: description || '',
+    link_label: (link_label || '').trim(),
+    link_url: (link_url || '').trim(),
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 0) : 0,
     trophy_account: trophy_account === 'on',

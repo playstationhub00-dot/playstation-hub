@@ -255,7 +255,12 @@
       <% } else { %>
       <div class="spotlight-avail" style="color:#ef4444;">No open slots right now</div>
       <% } %>
-      <a href="/game/<%= spotSlug %>" class="btn btn-primary">Rent This Game</a>
+      <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+        <a href="/game/<%= spotSlug %>" class="btn btn-primary">Rent This Game</a>
+        <% if (spotGame.link_url) { %>
+        <a href="<%= spotGame.link_url %>" target="_blank" rel="noopener" class="spotlight-link">🔗 <%= spotGame.link_label || 'Learn More' %> →</a>
+        <% } %>
+      </div>
     </div>
   </div>
 </div>

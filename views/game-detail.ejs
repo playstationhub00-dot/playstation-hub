@@ -107,6 +107,7 @@
       <% } %>
       <h1 class="gd-title"><%= game.title %></h1>
       <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
+      <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-bottom:1.25rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
