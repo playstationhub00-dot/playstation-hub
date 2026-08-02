@@ -919,10 +919,15 @@ nav {
   50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
 }
 .gc-new-days-left {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #ff8a3d;
-  margin-bottom: 0.3rem;
+  display: block;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.55rem 0.75rem;
 }
 .gc-genre {
   font-size: 0.62rem;

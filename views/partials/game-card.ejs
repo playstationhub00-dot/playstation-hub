@@ -65,10 +65,11 @@
     </div>
   </a>
 
+  <% if (gcIsNew && gcNeverRented) { %>
+    <div class="gc-new-days-left">⏳ <%= gcNewDaysLeft %> Day<%= gcNewDaysLeft !== 1 ? 's' : '' %> Left!</div>
+  <% } %>
+
   <div class="game-info">
-    <% if (gcIsNew && gcNeverRented) { %>
-      <div class="gc-new-days-left">⏳ <%= gcNewDaysLeft %> day<%= gcNewDaysLeft !== 1 ? 's' : '' %> left as NEW</div>
-    <% } %>
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>
     <% if (typeof showPriceStart !== 'undefined' && showPriceStart && gcStartPrice) { %>
       <div class="gc-price-start">Price Starts at ₱<%= gcStartPrice %></div>
