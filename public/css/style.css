@@ -657,7 +657,7 @@ nav {
   background: var(--border);
 }
 /* Homepage only: drop the trailing divider line next to section headers. */
-.home-page .section-title::after { content: none; }
+.home-page .section-title::after, .browse-page .section-title::after { content: none; }
 /* Homepage only: one variable controls the gap above every section (top-driven, so
    each section only needs to know its own distance from whatever came before it).
    Overridable per-request via an inline style on <body> from admin settings. */
