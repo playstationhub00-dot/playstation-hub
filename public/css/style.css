@@ -578,8 +578,8 @@ nav {
   display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem;
 }
-.spotlight-cover { border-radius: 14px; overflow: hidden; aspect-ratio: 16/10; background: #111; }
-.spotlight-cover img { width: 100%; height: 100%; object-fit: cover; }
+.spotlight-cover { border-radius: 14px; overflow: hidden; aspect-ratio: 4/3; background: #111; display: flex; align-items: center; justify-content: center; }
+.spotlight-cover img { width: 100%; height: 100%; object-fit: contain; }
 .spotlight-tag {
   display: inline-block; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--ps-blue); background: rgba(240,165,0,0.1);
