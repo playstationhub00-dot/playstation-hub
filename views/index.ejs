@@ -205,9 +205,13 @@
 <div class="tier-section">
   <h2 class="section-title">Browse by Price Tier</h2>
   <div class="tier-grid">
-    <% tierData.forEach(t => { %>
+    <% tierData.forEach(t => {
+      const n = t.name.toLowerCase();
+      const tierIcon = n.includes('new') ? '✨' : n.includes('deluxe') ? '👑' : n.includes('special') ? '⭐' : n.includes('regular') ? '🎮' : n.includes('budget') || n.includes('value') ? '💸' : '🕹️';
+    %>
     <a href="/browse#cat-section-<%= t.id %>" class="tier-card">
       <div>
+        <div class="tier-card-icon"><%= tierIcon %></div>
         <div class="tier-card-name"><%= t.name %></div>
         <div class="tier-card-count"><%= t.count %> title<%= t.count !== 1 ? 's' : '' %></div>
       </div>
