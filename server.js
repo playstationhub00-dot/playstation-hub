@@ -189,9 +189,11 @@ app.use((req, res, next) => {
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
   db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip }).write();
-  // Keep only last 5000 entries to avoid bloat
+  // Cap well above realistic traffic volume so All-Time visits actually reflects all
+  // time instead of silently plateauing — lowdb rewrites the whole file per write, so
+  // some ceiling is still needed to avoid unbounded growth over years of uptime.
   const all = db.get('visitors').value();
-  if (all.length > 5000) db.set('visitors', all.slice(all.length - 5000)).write();
+  if (all.length > 200000) db.set('visitors', all.slice(all.length - 200000)).write();
   next();
 });
 
@@ -993,6 +995,15 @@ app.get('/admin', requireAuth, (req, res) => {
   }));
   const monthLogs = getMonthLogs();
   res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
+});
+
+// Recent Visits only renders the 100 most recent rows server-side — clicking an older
+// day in the 14-day chart needs the full matching set, not just whatever of that day
+// survived the top-100 cutoff.
+app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
+  const date = req.query.date || '';
+  const matches = db.get('visitors').value().filter(v => v.date === date).reverse().slice(0, 500);
+  res.json(matches);
 });
 
 // Upcoming CRUD

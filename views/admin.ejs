@@ -2450,15 +2450,22 @@ Message us anytime to reserve your slot! 😊</textarea>
 
   <!-- ═══════════════ VISITORS TAB ═══════════════ -->
   <div class="tab-panel" id="tab-visitors">
+    <style>
+      .vis-day-bar:hover > div:nth-child(2) { background: rgba(96,165,250,0.4) !important; }
+      .vis-day-bar.vis-day-active > div:nth-child(2) { background: #60a5fa !important; }
+      .vis-day-bar.vis-day-active > div:last-child { color: #60a5fa !important; font-weight: 700; }
+    </style>
     <%
       const vNow = new Date();
       const vTodayStr = vNow.toISOString().slice(0, 10);
       const vWeekAgo  = new Date(vNow - 7 * 86400000).toISOString().slice(0, 10);
       const vMonthAgo = new Date(vNow - 30 * 86400000).toISOString().slice(0, 10);
+      const vYearAgo  = new Date(vNow - 365 * 86400000).toISOString().slice(0, 10);
 
       const visToday = visitors.filter(v => v.date === vTodayStr);
       const visWeek  = visitors.filter(v => v.date >= vWeekAgo);
       const visMonth = visitors.filter(v => v.date >= vMonthAgo);
+      const visYear  = visitors.filter(v => v.date >= vYearAgo);
 
       const uniqueToday = new Set(visToday.map(v => v.ip)).size;
       const uniqueWeek  = new Set(visWeek.map(v => v.ip)).size;
@@ -2467,14 +2474,14 @@ Message us anytime to reserve your slot! 😊</textarea>
 
       // topPages removed — per-period top pages computed below
 
-      const vLast7 = [];
-      for (let i = 6; i >= 0; i--) {
+      const vLast14 = [];
+      for (let i = 13; i >= 0; i--) {
         const vd = new Date(vNow - i * 86400000);
         const vds = vd.toISOString().slice(0, 10);
         const vlabel = vd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        vLast7.push({ date: vds, label: vlabel, count: visitors.filter(v => v.date === vds).length });
+        vLast14.push({ date: vds, label: vlabel, count: visitors.filter(v => v.date === vds).length });
       }
-      const vMaxBar = Math.max(...vLast7.map(d => d.count), 1);
+      const vMaxBar = Math.max(...vLast14.map(d => d.count), 1);
 
       const recentVisitors = [...visitors].reverse().slice(0, 100);
 
@@ -2482,10 +2489,12 @@ Message us anytime to reserve your slot! 😊</textarea>
       const vPageToday = {}; visToday.forEach(v => { vPageToday[v.page||v.path] = (vPageToday[v.page||v.path]||0)+1; });
       const vPageWeek  = {}; visWeek.forEach(v  => { vPageWeek[v.page||v.path]  = (vPageWeek[v.page||v.path] ||0)+1; });
       const vPageMonth = {}; visMonth.forEach(v => { vPageMonth[v.page||v.path] = (vPageMonth[v.page||v.path]||0)+1; });
+      const vPageYear  = {}; visYear.forEach(v  => { vPageYear[v.page||v.path]  = (vPageYear[v.page||v.path] ||0)+1; });
       const vPageAll   = {}; visitors.forEach(v => { vPageAll[v.page||v.path]   = (vPageAll[v.page||v.path]  ||0)+1; });
       const topPagesToday = Object.entries(vPageToday).sort((a,b)=>b[1]-a[1]).slice(0,5);
       const topPagesWeek  = Object.entries(vPageWeek).sort((a,b)=>b[1]-a[1]).slice(0,5);
       const topPagesMonth = Object.entries(vPageMonth).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const topPagesYear  = Object.entries(vPageYear).sort((a,b)=>b[1]-a[1]).slice(0,5);
       const topPagesAll   = Object.entries(vPageAll).sort((a,b)=>b[1]-a[1]).slice(0,5);
     %>
 
@@ -2515,15 +2524,16 @@ Message us anytime to reserve your slot! 😊</textarea>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
 
-      <!-- Last 7 Days Bar Chart -->
+      <!-- Last 14 Days Bar Chart -->
       <div class="table-card" style="border-color:rgba(96,165,250,0.2);">
-        <h2 style="border-color:rgba(96,165,250,0.1);margin-bottom:1.25rem;">📈 Visits — Last 7 Days</h2>
-        <div style="display:flex;align-items:flex-end;gap:0.4rem;height:120px;">
-          <% vLast7.forEach(day => { %>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;height:100%;">
-            <div style="font-size:0.65rem;color:#555;"><%= day.count %></div>
-            <div style="width:100%;background:rgba(96,165,250,0.15);border-radius:4px 4px 0 0;border-top:2px solid #60a5fa;height:<%= day.count > 0 ? Math.round((day.count/vMaxBar)*85) : 2 %>px;min-height:2px;"></div>
-            <div style="font-size:0.6rem;color:#555;text-align:center;line-height:1.2;"><%= day.label %></div>
+        <h2 style="border-color:rgba(96,165,250,0.1);margin-bottom:0.4rem;">📈 Visits — Last 14 Days</h2>
+        <div style="font-size:0.72rem;color:#555;margin-bottom:0.85rem;">Click a bar to see that day's visits below</div>
+        <div style="display:flex;align-items:flex-end;gap:0.25rem;height:120px;">
+          <% vLast14.forEach(day => { %>
+          <div class="vis-day-bar" data-date="<%= day.date %>" data-label="<%= day.label %>" onclick="filterVisitsByDate('<%= day.date %>','<%= day.label %>')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;height:100%;cursor:pointer;" title="View visits for <%= day.label %>">
+            <div style="font-size:0.6rem;color:#555;"><%= day.count %></div>
+            <div style="width:100%;background:rgba(96,165,250,0.15);border-radius:4px 4px 0 0;border-top:2px solid #60a5fa;height:<%= day.count > 0 ? Math.round((day.count/vMaxBar)*85) : 2 %>px;min-height:2px;transition:background 0.15s;"></div>
+            <div style="font-size:0.56rem;color:#555;text-align:center;line-height:1.2;"><%= day.label %></div>
           </div>
           <% }) %>
         </div>
@@ -2537,6 +2547,7 @@ Message us anytime to reserve your slot! 😊</textarea>
             <button onclick="setTopFilter('today')" id="tpBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
             <button onclick="setTopFilter('week')"  id="tpBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
             <button onclick="setTopFilter('month')" id="tpBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
+            <button onclick="setTopFilter('year')"  id="tpBtn-year"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Yearly</button>
             <button onclick="setTopFilter('all')"   id="tpBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
           </div>
         </div>
@@ -2548,11 +2559,15 @@ Message us anytime to reserve your slot! 😊</textarea>
     <div class="table-card" style="border-color:rgba(34,197,94,0.15);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="border:none;margin:0;padding:0;">🕐 Recent Visits</h2>
-        <div style="display:flex;gap:0.35rem;">
-          <button onclick="setVisFilter('today')" id="rvBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
-          <button onclick="setVisFilter('week')"  id="rvBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
-          <button onclick="setVisFilter('month')" id="rvBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
-          <button onclick="setVisFilter('all')"   id="rvBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <span id="rvDayLabel" style="display:none;font-size:0.72rem;color:#60a5fa;font-weight:700;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);border-radius:20px;padding:0.2rem 0.65rem;"></span>
+          <div style="display:flex;gap:0.35rem;">
+            <button onclick="setVisFilter('today')" id="rvBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
+            <button onclick="setVisFilter('week')"  id="rvBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
+            <button onclick="setVisFilter('month')" id="rvBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
+            <button onclick="setVisFilter('year')"  id="rvBtn-year"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Yearly</button>
+            <button onclick="setVisFilter('all')"   id="rvBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
+          </div>
         </div>
       </div>
       <% if (recentVisitors.length === 0) { %>
@@ -2589,6 +2604,7 @@ Message us anytime to reserve your slot! 😊</textarea>
       today: <%- JSON.stringify(topPagesToday) %>,
       week:  <%- JSON.stringify(topPagesWeek) %>,
       month: <%- JSON.stringify(topPagesMonth) %>,
+      year:  <%- JSON.stringify(topPagesYear) %>,
       all:   <%- JSON.stringify(topPagesAll) %>
     };
 
@@ -2613,7 +2629,7 @@ Message us anytime to reserve your slot! 😊</textarea>
     let tpFilter = 'today';
     function setTopFilter(f) {
       tpFilter = f;
-      ['today','week','month','all'].forEach(k => {
+      ['today','week','month','year','all'].forEach(k => {
         document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
       });
       renderTopPages(TP_DATA[f]);
@@ -2624,11 +2640,19 @@ Message us anytime to reserve your slot! 😊</textarea>
     const vTodayStr = '<%= new Date().toISOString().slice(0,10) %>';
     const vWeekAgo  = '<%= new Date(Date.now()-7*86400000).toISOString().slice(0,10) %>';
     const vMonthAgo = '<%= new Date(Date.now()-30*86400000).toISOString().slice(0,10) %>';
+    const vYearAgo  = '<%= new Date(Date.now()-365*86400000).toISOString().slice(0,10) %>';
+    // Kept so the day-drill-down (which replaces the table body with a fetched day's
+    // full results) can restore the original server-rendered rows afterward.
+    const ORIGINAL_TBODY_HTML = document.getElementById('recentVisitsBody') ? document.getElementById('recentVisitsBody').innerHTML : '';
 
     let rvFilter = 'today';
     function setVisFilter(f) {
       rvFilter = f;
-      ['today','week','month','all'].forEach(k => {
+      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
+      document.getElementById('rvDayLabel').style.display = 'none';
+      const tbody = document.getElementById('recentVisitsBody');
+      if (tbody) tbody.innerHTML = ORIGINAL_TBODY_HTML;
+      ['today','week','month','year','all'].forEach(k => {
         document.getElementById('rvBtn-'+k).classList.toggle('vis-filter-active', k === f);
       });
       const rows = document.querySelectorAll('#recentVisitsBody tr');
@@ -2638,10 +2662,39 @@ Message us anytime to reserve your slot! 😊</textarea>
         if (f === 'today') show = d === vTodayStr;
         else if (f === 'week')  show = d >= vWeekAgo;
         else if (f === 'month') show = d >= vMonthAgo;
+        else if (f === 'year')  show = d >= vYearAgo;
         row.style.display = show ? '' : 'none';
       });
     }
     setVisFilter('today');
+
+    // Clicking a bar in the 14-day chart fetches that day's full visit list (the
+    // server-rendered table only has the 100 most recent rows overall, which may not
+    // include an older day at all once daily traffic exceeds that).
+    function filterVisitsByDate(date, label) {
+      document.querySelectorAll('.vis-filter-btn').forEach(b => b.classList.remove('vis-filter-active'));
+      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.toggle('vis-day-active', bar.dataset.date === date));
+      const dayLabel = document.getElementById('rvDayLabel');
+      dayLabel.textContent = '📅 ' + label + ' — click a filter button above to clear';
+      dayLabel.style.display = '';
+      const tbody = document.getElementById('recentVisitsBody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:1.5rem;">Loading…</td></tr>';
+      fetch('/admin/api/visitors-by-date?date=' + encodeURIComponent(date))
+        .then(r => r.json())
+        .then(rows => {
+          if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:1.5rem;">No visits on ' + label + '.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = rows.map(v => `<tr data-date="${v.date}">
+            <td><span style="color:#22c55e;font-weight:600;">${v.page || v.path}</span></td>
+            <td style="color:#aaa;font-size:0.8rem;">${v.date}</td>
+            <td style="color:#aaa;font-size:0.8rem;">${v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : ''}</td>
+            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.ip ? v.ip.replace(/^::ffff:/, '').slice(0,15) : '—'}</td>
+          </tr>`).join('');
+        })
+        .catch(() => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:1.5rem;">Failed to load visits.</td></tr>'; });
+    }
     </script>
   </div><!-- /tab-visitors -->
 
