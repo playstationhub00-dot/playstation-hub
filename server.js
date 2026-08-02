@@ -105,6 +105,9 @@ db.get('games').value().forEach(g => {
   if (g.tr_price_10d === undefined) patch.tr_price_10d = (g.price_10d || g.price_per_week || 149) + 50;
   if (g.tr_price_15d === undefined) patch.tr_price_15d = (g.price_15d || Math.round((g.price_per_week || 149) * 1.5)) + 50;
   if (g.tr_price_30d === undefined) patch.tr_price_30d = (g.price_30d || Math.round((g.price_per_week || 149) * 2.5)) + 50;
+  // Backfill with a date well outside the "added this month" window so pre-existing
+  // catalog games don't retroactively show a NEW badge.
+  if (g.created_at === undefined) patch.created_at = '2020-01-01T00:00:00.000Z';
   if (Object.keys(patch).length) {
     db.get('games').find({ id: g.id }).assign(patch).write();
   }

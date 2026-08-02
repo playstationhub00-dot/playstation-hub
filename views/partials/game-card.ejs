@@ -28,6 +28,11 @@
     ...(hasTrophy ? [[game.tr_price_10d,10],[game.tr_price_15d,15],[game.tr_price_30d,30]] : [])]
     .filter(([base]) => base > 0).map(([base, d]) => gcFinal(base, d));
   const gcStartPrice = gcAllPrices.length ? Math.min(...gcAllPrices) : null;
+  // "Added this month" — same calendar month and year as today, not a rolling 30 days,
+  // so the badge clears itself automatically on the 1st without any cleanup job.
+  const gcAddedDate = game.created_at ? new Date(game.created_at) : null;
+  const gcNow = new Date();
+  const gcIsNew = gcAddedDate && gcAddedDate.getFullYear() === gcNow.getFullYear() && gcAddedDate.getMonth() === gcNow.getMonth();
 %>
 <div class="game-card" style="cursor:default;">
 
@@ -52,6 +57,9 @@
       <% } %>
       <% if (hasBuy) { %>
         <div style="position:absolute;bottom:6px;left:6px;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;font-size:0.58rem;font-weight:800;padding:0.18rem 0.45rem;border-radius:20px;letter-spacing:0.3px;">♾️ BUY</div>
+      <% } %>
+      <% if (gcIsNew) { %>
+        <div class="gc-new-badge">✨ NEW</div>
       <% } %>
     </div>
   </a>
