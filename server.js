@@ -757,7 +757,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/browse', (req, res) => {
-  const { search, platform, genre, unit } = req.query;
+  const { search, platform, genre, unit, newOnly } = req.query;
   const accountSummaryMap = buildAccountSummaryMap();
   let games = getGames().map(resolveGamePrices).map(resolveSlotDays);
   if (search) {
@@ -777,6 +777,8 @@ app.get('/browse', (req, res) => {
       return unit === 'ps4' ? (avail.showPs4 && avail.ps4Avail) : (avail.trAvail || avail.ntAvail);
     });
   }
+  // Same 11-day "new" window as the site-wide NEW badge (isAddedThisMonth, server.js).
+  if (newOnly === '1') games = games.filter(isAddedThisMonth);
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
   const upcoming = sortUpcoming(getUpcoming());
@@ -784,7 +786,7 @@ app.get('/browse', (req, res) => {
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
   const browseSettings = getSiteSettings();
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', unit: unit || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: browseSettings, promo: browseSettings.promo, accountSummaryMap });
+  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', unit: unit || '', newOnly: newOnly || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: browseSettings, promo: browseSettings.promo, accountSummaryMap });
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────

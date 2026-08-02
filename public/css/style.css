@@ -1177,30 +1177,6 @@ nav {
   align-items: center;
   margin-bottom: 2rem;
 }
-.search-box {
-  flex: 1;
-  min-width: 200px;
-  position: relative;
-}
-.search-box input {
-  width: 100%;
-  padding: 0.65rem 1rem 0.65rem 2.5rem;
-  background: #111;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: #fff;
-  font-size: 0.9rem;
-}
-.search-box input:focus { outline: none; border-color: #F0A500; }
-.search-box svg {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #555;
-  width: 16px;
-  height: 16px;
-}
 .filter-select {
   padding: 0.65rem 1rem;
   background: #111;

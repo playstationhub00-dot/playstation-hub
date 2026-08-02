@@ -16,14 +16,7 @@
 <div class="browse-header">
   <h1>Browse Games</h1>
   <form class="filters" method="GET" action="/browse">
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
-      <input type="text" id="liveSearch" name="search" placeholder="Search games..." value="<%= search %>" autocomplete="off"
-        oninput="liveFilterGames(this.value)"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();liveFilterGames(this.value);}">
-    </div>
+    <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
     <select class="filter-select" name="platform" onchange="this.form.submit()">
       <option value="">All Platforms</option>
       <option value="PS5" <%= platform === 'PS5' ? 'selected' : '' %>>PS5</option>
@@ -41,8 +34,12 @@
       <option value="ps4" <%= unit === 'ps4' ? 'selected' : '' %>>🕹️ PS4 Primary Available</option>
       <option value="ps5" <%= unit === 'ps5' ? 'selected' : '' %>>🏆 PS5 Trophy/Non-Trophy Available</option>
     </select>
+    <select class="filter-select" name="newOnly" onchange="this.form.submit()">
+      <option value="">All Games</option>
+      <option value="1" <%= newOnly === '1' ? 'selected' : '' %>>🆕 Newly Added Only</option>
+    </select>
     <button type="submit" class="filter-btn">Search</button>
-    <% if (search || platform || genre || unit) { %>
+    <% if (search || platform || genre || unit || newOnly) { %>
       <a href="/browse" class="btn-outline btn" style="padding:0.65rem 1rem;font-size:0.875rem;">Clear</a>
     <% } %>
   </form>
@@ -50,7 +47,7 @@
 </div>
 
 <!-- UPCOMING GAMES — hidden when searching/filtering -->
-<% if (!search && !platform && !genre && !unit) { %>
+<% if (!search && !platform && !genre && !unit && !newOnly) { %>
 <%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
 <% } %>
 
@@ -198,74 +195,6 @@
 <%- include('partials/rent-modal') %>
 
 <script>
-function liveFilterGames(query) {
-  const q = query.trim().toLowerCase();
-  // If the page was server-filtered and user clears box, reload to show all
-  const wasServerFiltered = '<%= search ? "1" : "" %>' === '1';
-  if (wasServerFiltered && !q) {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('search');
-    window.location.href = url.toString();
-    return;
-  }
-
-  // ── Rental games (grouped by category) ──
-  let rentalVisible = 0;
-  document.querySelectorAll('.cat-section').forEach(section => {
-    let sectionVisible = 0;
-    section.querySelectorAll('.game-card').forEach(card => {
-      const title = (card.querySelector('.game-title') || {}).textContent || '';
-      const platform = (card.querySelector('.game-platform') || {}).textContent || '';
-      const desc = (card.querySelector('.game-desc-inline') || {}).textContent || '';
-      const match = !q || title.toLowerCase().includes(q) || platform.toLowerCase().includes(q) || desc.toLowerCase().includes(q);
-      card.style.display = match ? '' : 'none';
-      if (match) { sectionVisible++; rentalVisible++; }
-    });
-    section.style.display = (q && sectionVisible === 0) ? 'none' : '';
-  });
-  const rentalSection = document.getElementById('section-rentals');
-  if (rentalSection) rentalSection.style.display = (q && rentalVisible === 0) ? 'none' : '';
-
-  // ── Upcoming / Coming Soon ──
-  let upcomingVisible = 0;
-  document.querySelectorAll('.section[data-upcoming] .game-card').forEach(card => {
-    const title = card.dataset.title || '';
-    const genre = card.dataset.genre || '';
-    const nameEl = card.querySelector('.game-title');
-    const nameText = nameEl ? nameEl.textContent.toLowerCase() : '';
-    const match = !q || title.includes(q) || genre.includes(q) || nameText.includes(q);
-    card.style.display = match ? '' : 'none';
-    if (match) upcomingVisible++;
-  });
-  const upcomingSection = document.querySelector('.section[data-upcoming]');
-  if (upcomingSection) upcomingSection.style.display = (q && upcomingVisible === 0) ? 'none' : '';
-
-  // ── PS Plus monthly ──
-  let psplusVisible = 0;
-  document.querySelectorAll('.psplus-browse-entry').forEach(entry => {
-    const games = entry.dataset.games || '';
-    const month = entry.dataset.month || '';
-    const match = !q || games.includes(q) || month.includes(q);
-    entry.style.display = match ? '' : 'none';
-    if (match) psplusVisible++;
-  });
-  const psplusSection = document.getElementById('section-psplus');
-  if (psplusSection) psplusSection.style.display = (q && psplusVisible === 0) ? 'none' : '';
-  const noPsplus = document.getElementById('no-psplus-msg');
-  if (noPsplus) noPsplus.style.display = (q && psplusVisible === 0) ? '' : 'none';
-
-  const counter = document.getElementById('resultsCount');
-  if (counter) {
-    const total = rentalVisible + upcomingVisible + psplusVisible;
-    counter.textContent = q
-      ? total + ' result' + (total !== 1 ? 's' : '') + ' found'
-      : '<%= games.length %> game' + (<%= games.length %> !== 1 ? 's' : '') + ' found';
-  }
-}
-
-// Run on page load in case the field has a pre-filled value
-(function(){ const s = document.getElementById('liveSearch'); if (s && s.value) liveFilterGames(s.value); })();
-
 function openReserveModal(title) {
   document.getElementById('reserveGameTitle').textContent = title;
   document.getElementById('reserveModal').classList.add('active');
