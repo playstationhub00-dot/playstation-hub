@@ -28,11 +28,9 @@
     ...(hasTrophy ? [[game.tr_price_10d,10],[game.tr_price_15d,15],[game.tr_price_30d,30]] : [])]
     .filter(([base]) => base > 0).map(([base, d]) => gcFinal(base, d));
   const gcStartPrice = gcAllPrices.length ? Math.min(...gcAllPrices) : null;
-  // "Added this month" — same calendar month and year as today, not a rolling 30 days,
-  // so the badge clears itself automatically on the 1st without any cleanup job.
-  const gcAddedDate = game.created_at ? new Date(game.created_at) : null;
-  const gcNow = new Date();
-  const gcIsNew = gcAddedDate && gcAddedDate.getFullYear() === gcNow.getFullYear() && gcAddedDate.getMonth() === gcNow.getMonth();
+  // NEW badge lasts a fixed 11 days from created_at — same window used by the Admin
+  // "Added" column and the New Arrivals poster group (server.js NEW_GAME_WINDOW_DAYS).
+  const gcIsNew = game.created_at && Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000) < 11;
 %>
 <div class="game-card" style="cursor:default;">
 

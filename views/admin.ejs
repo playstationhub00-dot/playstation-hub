@@ -995,13 +995,14 @@
               const gameRentalCount = customers.filter(c => c.game_id === game.id).length;
               const gameCost = game.cost || 0;
               const gameProfit = gameTotalEarned - gameCost;
-              // Same "added this calendar month" window as the site-wide NEW badge — the
-              // days-left count is how much runway is left to see if the game gets any
-              // renters before deciding whether to keep restocking it.
+              // Fixed 11-day "new" window from created_at — same rule as the site-wide
+              // NEW badge and New Arrivals poster group (server.js NEW_GAME_WINDOW_DAYS).
+              // Days-left is how much runway remains to see if the game gets any renters
+              // before deciding whether to keep restocking it.
               const gAddedDate = game.created_at ? new Date(game.created_at) : null;
-              const gNow = new Date();
-              const gIsNewThisMonth = gAddedDate && gAddedDate.getFullYear() === gNow.getFullYear() && gAddedDate.getMonth() === gNow.getMonth();
-              const gDaysLeft = gIsNewThisMonth ? Math.max(0, Math.ceil((new Date(gNow.getFullYear(), gNow.getMonth() + 1, 1) - gNow) / 86400000)) : null;
+              const gDaysSinceAdded = gAddedDate ? Math.floor((Date.now() - gAddedDate.getTime()) / 86400000) : null;
+              const gIsNewThisMonth = gDaysSinceAdded !== null && gDaysSinceAdded < 11;
+              const gDaysLeft = gIsNewThisMonth ? 11 - gDaysSinceAdded : null;
               const gAddedLabel = gAddedDate ? gAddedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
             %>
             <tr>

@@ -1775,13 +1775,15 @@ function sortCategoryNames(names) {
   });
 }
 
-// Same "added this calendar month" rule as the homepage/Browse NEW badge (see
-// partials/game-card.ejs) — kept in one place so both stay in sync.
+// A game counts as "new" for a fixed 11 days after created_at — not tied to calendar
+// month boundaries, so a game added on the 28th still gets the full window instead of
+// losing its NEW badge two days later at month-end. Same rule duplicated (with this
+// comment) in partials/game-card.ejs and admin.ejs's Added column — keep all three in sync.
+const NEW_GAME_WINDOW_DAYS = 11;
 function isAddedThisMonth(game) {
   if (!game.created_at) return false;
-  const d = new Date(game.created_at);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  const daysSinceAdded = Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000);
+  return daysSinceAdded < NEW_GAME_WINDOW_DAYS;
 }
 
 // Groups every catalog game by its price category (New Games/Deluxe/Special/Regular/Uncategorized),
