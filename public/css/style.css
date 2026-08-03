@@ -395,9 +395,19 @@ nav {
 .hero-showcase-title { font-size: 0.92rem; font-weight: 700; color: #fff; }
 .hero-showcase-meta { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem; }
 .hero-showcase-price { margin-left: auto; font-size: 1.1rem; font-weight: 800; color: var(--ps-blue); white-space: nowrap; }
-.hero-showcase-dots { position: absolute; top: 16px; right: 16px; display: flex; gap: 5px; z-index: 2; }
-.hero-showcase-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.35); }
-.hero-showcase-dot.active { background: var(--ps-blue); }
+.hero-showcase-thumbs { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; gap: 6px; }
+.hero-showcase-thumb {
+  width: 34px; height: 46px; padding: 0; border-radius: 7px; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.3); background: #111; transition: border-color 0.2s, transform 0.2s;
+}
+.hero-showcase-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-showcase-thumb:hover { border-color: rgba(255,255,255,0.7); transform: translateY(-2px); }
+.hero-showcase-thumb.active { border-color: var(--ps-blue); box-shadow: 0 0 0 2px rgba(0,112,209,0.35); }
+
+@media (max-width: 480px) {
+  .hero-showcase-thumb { width: 26px; height: 35px; }
+  .hero-showcase-thumbs { top: 8px; right: 8px; gap: 4px; }
+}
 
 @media (max-width: 860px) {
   .hero-grid { grid-template-columns: 1fr; text-align: center; gap: 2rem; }

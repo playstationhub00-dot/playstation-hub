@@ -109,11 +109,6 @@
     </div>
     <% if (heroGames.length) { %>
     <div class="hero-showcase" id="heroShowcase">
-      <% if (heroGames.length > 1) { %>
-      <div class="hero-showcase-dots">
-        <% heroGames.forEach((g, i) => { %><div class="hero-showcase-dot<%= i === 0 ? ' active' : '' %>"></div><% }) %>
-      </div>
-      <% } %>
       <% heroGames.forEach((g, i) => { %>
       <div class="hero-showcase-card<%= i === 0 ? ' active' : '' %>">
         <img src="<%= g.cover %>" alt="<%= g.title %>" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
@@ -126,20 +121,38 @@
         </div>
       </div>
       <% }) %>
+      <% if (heroGames.length > 1) { %>
+      <div class="hero-showcase-thumbs" id="heroShowcaseThumbs">
+        <% heroGames.forEach((g, i) => { %>
+        <button type="button" class="hero-showcase-thumb<%= i === 0 ? ' active' : '' %>" data-idx="<%= i %>" aria-label="Show <%= g.title %>">
+          <img src="<%= g.cover %>" alt="" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
+        </button>
+        <% }) %>
+      </div>
+      <% } %>
     </div>
     <script>
     (function(){
       const cards = document.querySelectorAll('#heroShowcase .hero-showcase-card');
-      const dots = document.querySelectorAll('#heroShowcase .hero-showcase-dot');
+      const thumbs = document.querySelectorAll('#heroShowcase .hero-showcase-thumb');
       if (cards.length < 2) return;
-      let cur = 0;
-      setInterval(function(){
+      let cur = 0, timer;
+      function goTo(n) {
         cards[cur].classList.remove('active');
-        if (dots[cur]) dots[cur].classList.remove('active');
-        cur = (cur + 1) % cards.length;
+        if (thumbs[cur]) thumbs[cur].classList.remove('active');
+        cur = n;
         cards[cur].classList.add('active');
-        if (dots[cur]) dots[cur].classList.add('active');
-      }, 3500);
+        if (thumbs[cur]) thumbs[cur].classList.add('active');
+      }
+      function start() { timer = setInterval(function(){ goTo((cur + 1) % cards.length); }, 3500); }
+      function restart() { clearInterval(timer); start(); }
+      thumbs.forEach(function(t){
+        t.addEventListener('click', function(){
+          goTo(parseInt(t.dataset.idx, 10));
+          restart();
+        });
+      });
+      start();
     })();
     </script>
     <% } %>
