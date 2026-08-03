@@ -897,6 +897,29 @@ nav {
   .tier-card-price { margin-top: 0.5rem; }
 }
 
+/* ── HOMEPAGE (PHONE ONLY): reorder so the game grid appears right after the hero,
+   instead of after the price-tier grid and PS Plus spotlight. Every homepage section
+   is a direct child of <body> with no shared wrapper, so this reorders via flex
+   `order` rather than moving markup — desktop/tablet keep the original source order
+   untouched (this query only applies <=600px), and elements that render nothing
+   (inline <script> tags between sections, position:fixed overlays) are unaffected
+   since order only affects elements that actually take up visual space. ──────────── */
+@media (max-width: 600px) {
+  body.home-page { display: flex; flex-direction: column; }
+  .home-page #heroSlideshow,
+  .home-page .hero { order: 10; }
+  .home-page #mostPopularSection { order: 20; }
+  .home-page .tier-section { order: 30; }
+  .home-page .spotlight-section { order: 40; }
+  .home-page .section[data-upcoming] { order: 50; }
+  .home-page #mostPlayedPsplusSection { order: 60; }
+  .home-page .promo-section { order: 70; }
+  .home-page .why-section { order: 80; }
+  .home-page .how-section { order: 90; }
+  .home-page #reviewsSection { order: 100; }
+  .home-page footer { order: 110; }
+}
+
 /* GAME GRID */
 .games-grid {
   display: grid;

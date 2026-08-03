@@ -259,7 +259,7 @@
 <% } %>
 
 <!-- MOST POPULAR SLIDER -->
-<div class="section">
+<div class="section" id="mostPopularSection">
   <h2 class="section-title">Most Popular <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
@@ -275,7 +275,7 @@
 
 <!-- MOST PLAYED IN PS PLUS SLIDER -->
 <% if (psplusPopular.length > 0) { %>
-<div class="section">
+<div class="section" id="mostPlayedPsplusSection">
   <h2 class="section-title">
     <span style="background:linear-gradient(135deg,#FFD700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">★</span>
     Most Played in PS Plus
@@ -463,7 +463,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 
 <!-- Reviews Section -->
 <% if (reviews && reviews.length > 0) { %>
-<section class="section" style="padding-bottom:var(--section-gap);">
+<section class="section" id="reviewsSection" style="padding-bottom:var(--section-gap);">
   <h2 class="section-title" style="color:#fff;margin-bottom:1.75rem;">
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">
       <span style="background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1em;">⭐</span>
