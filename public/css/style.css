@@ -174,14 +174,26 @@ nav {
 }
 .nav-links .nav-cta:hover { background: #FFD700; color: #000; }
 
-/* ── NAV SEARCH ─────────────────────────────────────────────────────────── */
-.navsearch { position: relative; flex: 1; min-width: 0; max-width: 420px; margin: 0 1.5rem; }
-.navsearch-toggle {
-  display: none; background: none; border: none; color: #ccc; cursor: pointer;
-  width: 36px; height: 36px; align-items: center; justify-content: center; flex-shrink: 0;
-  border-radius: 50%;
+/* ── NAV ICONS (search toggle, admin, message pill) ───────────────────────── */
+.navicons { display: flex; align-items: center; gap: 1.1rem; flex-shrink: 0; }
+.navicon-btn {
+  background: none; border: none; color: #ccc; cursor: pointer; text-decoration: none;
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border-radius: 50%; transition: background 0.15s, color 0.15s;
 }
-.navsearch-toggle:hover { background: rgba(255,255,255,0.08); }
+.navicon-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.navicon-btn svg { width: 19px; height: 19px; }
+
+/* ── NAV SEARCH ─────────────────────────────────────────────────────────── */
+/* Collapsed to an icon at all sizes; clicking it drops this box down as a
+   full-width dropdown instead of it permanently eating nav space. */
+.navsearch {
+  display: none; position: absolute; left: 0; right: 0; top: 100%;
+  background: #0a0a0a; border-bottom: 1px solid #222; padding: 0.7rem 2rem; z-index: 130;
+}
+.navsearch.navsearch-active { display: block; }
+.navsearch.navsearch-active .navsearch-box { max-width: 520px; margin: 0 auto; width: 100%; }
+.navsearch.navsearch-active .navsearch-results { max-width: 520px; margin: 0.5rem auto 0; position: static; }
 .navsearch-box {
   display: flex; align-items: center; gap: 0.55rem; background: #111; border: 1px solid #262626;
   border-radius: 10px; padding: 0 0.8rem; height: 38px; transition: border-color 0.15s; color: #666;
@@ -294,16 +306,10 @@ nav {
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
   .mobile-fab { display: flex; }
-  /* Search collapses to an icon; tapping it drops the real search box down as a
-     full-width panel instead of it permanently eating nav space next to the logo. */
-  .navsearch-toggle { display: flex; margin-left: auto; }
-  .navsearch { display: none; flex: none; margin: 0; max-width: none; }
-  .navsearch.navsearch-active {
-    display: block; position: absolute; left: 0; right: 0; top: 100%;
-    background: #0a0a0a; border-bottom: 1px solid #222; padding: 0.7rem 1rem; z-index: 130;
-  }
-  .navsearch.navsearch-active .navsearch-box { width: 100%; }
-  .navsearch.navsearch-active .navsearch-results { position: static; margin-top: 0.5rem; }
+  .navicons .nav-cta, .navicons .navicon-btn[href="/admin"] { display: none; }
+  .navsearch { padding: 0.7rem 1rem; }
+  .navsearch.navsearch-active .navsearch-box { max-width: none; }
+  .navsearch.navsearch-active .navsearch-results { max-width: none; margin-top: 0.5rem; }
 }
 
 /* Hero trust strip — sits under either hero variant (default or slideshow) */

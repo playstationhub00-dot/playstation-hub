@@ -6,6 +6,25 @@
 <nav>
   <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
 
+  <div class="nav-links" id="navLinks">
+    <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
+    <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Browse Games</a>
+    <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus Deluxe</a>
+    <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
+  </div>
+
+  <div class="navicons">
+    <!-- Search collapses to this icon; tapping it reveals the box below as a
+         full-width dropdown instead of permanently occupying nav space. -->
+    <button type="button" class="navicon-btn" id="navSearchToggle" aria-label="Search" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    </button>
+    <a href="/admin" class="navicon-btn" aria-label="Admin Panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    </a>
+    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
+  </div>
+
   <div class="navsearch" id="navSearch">
     <div class="navsearch-box">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;flex-shrink:0;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -15,26 +34,13 @@
     <div class="navsearch-results" id="navSearchResults"></div>
   </div>
 
-  <!-- Mobile only: search collapses to this icon; tapping it reveals the box above
-       as a full-width dropdown instead of permanently occupying nav space. -->
-  <button type="button" class="navsearch-toggle" id="navSearchToggle" aria-label="Search" aria-expanded="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-  </button>
-
-  <div class="nav-links" id="navLinks">
-    <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Browse Games</a>
-    <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus Deluxe</a>
-    <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
-    <a href="/admin">Admin Panel</a>
-    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
-  </div>
-
   <button type="button" class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
 </nav>
 <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
 <div class="nav-drawer" id="navDrawer">
+  <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
   <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Browse Games</a>
   <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus Deluxe</a>
   <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
