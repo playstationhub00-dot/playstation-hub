@@ -927,13 +927,14 @@ nav {
    (inline <script> tags between sections, position:fixed overlays) are unaffected
    since order only affects elements that actually take up visual space. ──────────── */
 @media (max-width: 600px) {
-  /* Flex items default to min-width:auto, meaning their minimum size is based on
-     their CONTENT's natural width — any section containing a horizontal-scroll strip
-     (tier chips, sliders, reviews) was forcing itself wider than the screen instead of
-     scrolling within its own bounds, causing page-wide horizontal overflow. min-width:0
-     makes every section respect 100% width and let its own overflow-x:auto do the job. */
+  /* In a column flex container, cross-axis (width) stretch doesn't reliably override
+     a child's content-based intrinsic width — any section containing a horizontal-
+     scroll strip (tier chips, sliders, reviews) was sizing itself to fit ALL of that
+     content instead of clipping to the viewport, causing page-wide horizontal
+     overflow (measured 988px). Forcing width:100% (verified live) makes every section
+     respect the viewport width so its own overflow-x:auto can actually do its job. */
   body.home-page { display: flex; flex-direction: column; }
-  body.home-page > * { min-width: 0; }
+  body.home-page > * { min-width: 0; width: 100%; }
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
   .home-page #mostPopularSection { order: 20; }
