@@ -927,7 +927,13 @@ nav {
    (inline <script> tags between sections, position:fixed overlays) are unaffected
    since order only affects elements that actually take up visual space. ──────────── */
 @media (max-width: 600px) {
+  /* Flex items default to min-width:auto, meaning their minimum size is based on
+     their CONTENT's natural width — any section containing a horizontal-scroll strip
+     (tier chips, sliders, reviews) was forcing itself wider than the screen instead of
+     scrolling within its own bounds, causing page-wide horizontal overflow. min-width:0
+     makes every section respect 100% width and let its own overflow-x:auto do the job. */
   body.home-page { display: flex; flex-direction: column; }
+  body.home-page > * { min-width: 0; }
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
   .home-page #mostPopularSection { order: 20; }
@@ -1551,9 +1557,10 @@ select.ss-native {
     overflow-x: auto; gap: 0.75rem; padding-bottom: 0.4rem; scrollbar-width: none;
   }
   .home-page .steps::-webkit-scrollbar { display: none; }
-  .home-page .step { flex: 0 0 auto; width: 130px; padding: 0.9rem 0.75rem; text-align: center; }
+  .home-page .step { flex: 0 0 auto; width: 92px; padding: 0.6rem 0.4rem; text-align: center; }
   .home-page .step p { display: none; }
-  .home-page .step h3 { font-size: 0.85rem; }
+  .home-page .step h3 { font-size: 0.72rem; line-height: 1.2; margin: 0; }
+  .home-page .step .step-num { width: 32px; height: 32px; font-size: 0.85rem; border-width: 2px; margin: 0 auto 0.4rem; }
 }
 
 /* FOOTER */
