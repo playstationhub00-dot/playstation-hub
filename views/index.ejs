@@ -78,17 +78,15 @@
     return { title: g.title, cover: g.cover_image, focalX: g.cover_focal_x, focalY: g.cover_focal_y, price: final, meta: typeLabel + ' · ' + slotLabel };
   });
 %>
-<section class="hero<%= settings.hero_bg.type !== 'default' ? ' hero-custom-bg' : '' %>">
-  <% if (settings.hero_bg.type === 'image' && settings.hero_bg.path) { %>
+<% if (settings.hero_bg.type !== 'default' && settings.hero_bg.path) { %>
+<section class="hero hero-custom-bg">
+  <% if (settings.hero_bg.type === 'image') { %>
     <div class="hero-bg-media" style="background-image:url('<%= settings.hero_bg.path %>');background-size:cover;background-position:center;"></div>
-    <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
-  <% } else if (settings.hero_bg.type === 'video' && settings.hero_bg.path) { %>
-    <video class="hero-bg-media" autoplay muted loop playsinline>
-      <source src="<%= settings.hero_bg.path %>">
-    </video>
-    <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
+  <% } else { %>
+    <video class="hero-bg-media" autoplay muted loop playsinline><source src="<%= settings.hero_bg.path %>"></video>
   <% } %>
-  <div class="hero-grid<%= heroGames.length ? '' : ' no-showcase' %>">
+  <div class="hero-bg-overlay" style="opacity:<%= (settings.hero_bg.overlay || 50) / 100 %>;"></div>
+  <div class="hero-grid no-showcase">
     <div class="hero-content">
       <div class="hero-trust-tag">🎮 3-Hour Free Trial</div>
       <% const ht = settings.hero_text; %>
@@ -107,34 +105,52 @@
         <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
       </div>
     </div>
-    <% if (heroGames.length) { %>
-    <div class="hero-showcase" id="heroShowcase">
-      <% heroGames.forEach((g, i) => { %>
-      <div class="hero-showcase-card<%= i === 0 ? ' active' : '' %>">
-        <img src="<%= g.cover %>" alt="<%= g.title %>" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
-        <div class="hero-showcase-info">
-          <div>
-            <div class="hero-showcase-title"><%= g.title %></div>
-            <div class="hero-showcase-meta"><%= g.meta %></div>
-          </div>
-          <div class="hero-showcase-price">₱<%= g.price %></div>
-        </div>
+  </div>
+</section>
+<% } else { %>
+<section class="hero hero-v2">
+  <% if (heroGames.length) { %>
+  <div class="hero-photo" id="heroPhoto">
+    <% heroGames.forEach((g, i) => { %>
+    <img class="<%= i === 0 ? 'active' : '' %>" data-idx="<%= i %>" src="<%= g.cover %>" alt="<%= g.title %>" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
+    <% }) %>
+  </div>
+  <div class="hero-glow"></div>
+  <% if (heroGames.length > 1) { %>
+  <div class="hero-cover-picker" id="heroCoverPicker">
+    <% heroGames.forEach((g, i) => { %>
+    <button type="button" class="hero-cover-thumb<%= i === 0 ? ' active' : '' %>" data-idx="<%= i %>" aria-label="Show <%= g.title %>">
+      <img src="<%= g.cover %>" alt="" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
+    </button>
+    <% }) %>
+  </div>
+  <% } %>
+  <% } %>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-trust-tag">🎮 3-Hour Free Trial</div>
+      <% const ht = settings.hero_text; %>
+      <h1 style="font-size:<%= ht.title_size %>px;">
+        <%= ht.line1 %><% if (ht.line1 && ht.line2) { %><br><% } %><span style="color:<%= ht.highlight_color %>;"><%= ht.highlight %></span><% if (ht.line2) { %> <%= ht.line2 %><% } %>
+      </h1>
+      <p style="color:<%= ht.subtitle_color %>;"><%= ht.subtitle %></p>
+      <div class="hero-actions">
+        <a href="/browse" class="btn btn-primary">Browse All Games</a>
+        <a href="#how" class="btn btn-outline">How It Works</a>
       </div>
-      <% }) %>
-      <% if (heroGames.length > 1) { %>
-      <div class="hero-showcase-thumbs" id="heroShowcaseThumbs">
-        <% heroGames.forEach((g, i) => { %>
-        <button type="button" class="hero-showcase-thumb<%= i === 0 ? ' active' : '' %>" data-idx="<%= i %>" aria-label="Show <%= g.title %>">
-          <img src="<%= g.cover %>" alt="" style="object-position: <%= g.focalX != null ? g.focalX : 50 %>% <%= g.focalY != null ? g.focalY : 50 %>%;">
-        </button>
-        <% }) %>
+      <div class="hero-trust-row">
+        <div class="hero-trust-item"><b>Instant Setup</b>Delivered in minutes</div>
+        <div class="hero-trust-item"><b>Try Before You Rent</b>3 free hours</div>
+        <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
+        <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
       </div>
-      <% } %>
     </div>
+  </div>
+  <% if (heroGames.length > 1) { %>
     <script>
     (function(){
-      const cards = document.querySelectorAll('#heroShowcase .hero-showcase-card');
-      const thumbs = document.querySelectorAll('#heroShowcase .hero-showcase-thumb');
+      const cards = document.querySelectorAll('#heroPhoto img');
+      const thumbs = document.querySelectorAll('#heroCoverPicker .hero-cover-thumb');
       if (cards.length < 2) return;
       let cur = 0, timer;
       function goTo(n) {
@@ -156,7 +172,6 @@
     })();
     </script>
     <% } %>
-  </div>
 </section>
 <% } %>
 

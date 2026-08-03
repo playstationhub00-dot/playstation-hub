@@ -364,7 +364,72 @@ nav {
 }
 .hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
-/* Two-column hero: text box left, auto-rotating real-game showcase right */
+/* ── Proposed hero redesign: edge-to-edge game photo on the right half,
+   faded into the dark text half via a mask + gradient so it reads as one
+   continuous surface instead of a framed panel. Cover picker sits directly
+   on the photo. Falls back to the boxed .hero-grid layout when an admin has
+   configured a custom hero background image/video. ── */
+.hero-v2 { min-height: 560px; padding: 0; display: flex; align-items: center; text-align: left; }
+.hero-photo {
+  position: absolute; inset: 0; left: 50%; width: 50%; z-index: 0;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.5) 18%, #000 40%);
+  mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,.5) 18%, #000 40%);
+}
+.hero-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transition: opacity 1s ease;
+}
+.hero-photo img.active { opacity: 1; }
+.hero-photo::after {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(to right, #000 0%, rgba(0,0,0,.55) 22%, transparent 55%),
+              linear-gradient(to top, rgba(0,0,0,.5), transparent 30%, transparent 70%, rgba(0,0,0,.35));
+}
+.hero-v2 .hero-glow {
+  position: absolute; left: 50%; top: 50%; width: 60%; height: 70%; transform: translate(-30%,-50%);
+  background: radial-gradient(ellipse, rgba(240,165,0,.16), transparent 65%); pointer-events: none; z-index: 0;
+}
+.hero-cover-picker { position: absolute; z-index: 3; right: 2.5rem; bottom: 1.75rem; display: flex; gap: .55rem; }
+.hero-cover-thumb {
+  width: 52px; height: 70px; border-radius: 8px; overflow: hidden; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.25); padding: 0; background: #111;
+  transition: border-color .2s, transform .2s;
+}
+.hero-cover-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-cover-thumb:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.6); }
+.hero-cover-thumb.active { border-color: var(--ps-blue); box-shadow: 0 0 0 2px rgba(240,165,0,.35); }
+.hero-v2 .hero-inner { position: relative; z-index: 2; max-width: 1300px; margin: 0 auto; padding: 4.5rem 2rem; width: 100%; }
+.hero-v2 .hero-content { max-width: 560px; }
+.hero-v2 .hero-content p { margin: 0 0 1.75rem; max-width: 48ch; }
+.hero-v2 .hero-actions { justify-content: flex-start; margin-bottom: 1.85rem; }
+.hero-v2:not(:has(.hero-photo)) .hero-content { max-width: 640px; margin: 0 auto; }
+.hero-v2:not(:has(.hero-photo)) .hero-content p { margin: 0 auto 1.75rem; }
+.hero-v2:not(:has(.hero-photo)) .hero-actions { justify-content: center; }
+.hero-v2:not(:has(.hero-photo)) { text-align: center; }
+
+@media (max-width: 900px) {
+  .hero-v2 { min-height: 0; }
+  .hero-photo {
+    position: relative; left: 0; width: 100%; height: 280px;
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, #000 45%);
+    mask-image: linear-gradient(to top, transparent 0%, #000 45%);
+  }
+  .hero-photo::after { background: linear-gradient(to top, #000 0%, transparent 60%); }
+  .hero-v2 { flex-direction: column; }
+  .hero-v2 .hero-inner { padding: 0 1.25rem 2.5rem; }
+  .hero-v2 .hero-content { max-width: 100%; text-align: center; margin: -2.5rem auto 0; position: relative; z-index: 3; }
+  .hero-v2 .hero-content p { margin-left: auto; margin-right: auto; }
+  .hero-v2 .hero-actions { justify-content: center; }
+  .hero-cover-picker { right: 1rem; bottom: .9rem; gap: .4rem; }
+  .hero-cover-thumb { width: 40px; height: 54px; }
+}
+@media (max-width: 480px) {
+  .hero-v2 .hero-content p { display: block; }
+  .hero-cover-picker { right: .6rem; bottom: .6rem; gap: .3rem; }
+  .hero-cover-thumb { width: 32px; height: 43px; }
+}
+
+/* Two-column hero: text box left, auto-rotating real-game showcase right (custom hero-bg fallback) */
 .hero-grid {
   position: relative; z-index: 1; max-width: 1300px; margin: 0 auto;
   display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 3rem; align-items: center; text-align: left;
