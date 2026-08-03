@@ -268,10 +268,17 @@ nav {
   background: var(--ps-blue); color: #000; border-radius: 10px; text-align: center;
   margin-top: 0.75rem; border-bottom: none; font-weight: 700;
 }
+.mobile-fab {
+  display: none; position: fixed; right: 16px; bottom: 16px; z-index: 140;
+  background: linear-gradient(135deg, #0099ff, #a033ff); color: #fff; text-decoration: none;
+  font-size: 0.82rem; font-weight: 800; padding: 0.75rem 1.1rem; border-radius: 30px;
+  align-items: center; gap: 0.4rem; box-shadow: 0 8px 24px rgba(0,140,255,0.45);
+}
 @media (max-width: 820px) {
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
   .navsearch { margin: 0 0 0 1rem; max-width: none; }
+  .mobile-fab { display: flex; }
 }
 
 /* Hero trust strip — sits under either hero variant (default or slideshow) */
@@ -384,6 +391,30 @@ nav {
   .hero-grid .hero-actions { justify-content: center; }
   .hero-trust-row { margin: 0 auto; }
   .hero-showcase { max-width: 420px; margin: 0 auto; }
+}
+/* Compact phone hero — the two-column layout above still stacks fine down to ~860px,
+   but on an actual phone the rotating showcase panel and full trust-item grid push
+   games several screens down. Below 480px: drop the showcase, shrink the headline,
+   and turn the trust row into a horizontal-scrolling strip of small chips instead of
+   a 2x2 grid, so the hero clears in well under one screen. */
+@media (max-width: 480px) {
+  .hero, .hero-custom-bg { padding: 1.75rem 1.25rem 1.5rem; }
+  .hero-grid { gap: 0.9rem; }
+  .hero h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+  .hero-grid .hero-content p { font-size: 0.85rem; margin: 0 auto 0.9rem; }
+  .hero-actions { display: none; }
+  .hero-showcase { display: none; }
+  .hero-trust-row {
+    display: flex; grid-template-columns: none; overflow-x: auto; gap: 0.5rem;
+    max-width: 100%; padding-bottom: 2px; scrollbar-width: none;
+  }
+  .hero-trust-row::-webkit-scrollbar { display: none; }
+  .hero-trust-item {
+    flex: 0 0 auto; font-size: 0.68rem; white-space: nowrap;
+    background: rgba(240,165,0,0.08); border: 1px solid rgba(240,165,0,0.25);
+    border-radius: 20px; padding: 0.35rem 0.75rem; display: flex; gap: 0.3rem; align-items: baseline;
+  }
+  .hero-trust-item b { font-size: inherit; }
 }
 
 /* ── Game Detail Page ─────────────────────────────────────── */
@@ -849,10 +880,21 @@ nav {
   .spotlight-card { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
-  .tier-grid, .why-grid { grid-template-columns: 1fr; gap: 0.85rem; }
+  .why-grid { grid-template-columns: 1fr; gap: 0.85rem; }
   .tier-section, .spotlight-section, .promo-section, .why-section { padding-left: 1rem; padding-right: 1rem; }
   .spotlight-card { padding: 1.5rem; }
   .promo-band { padding: 1.75rem; flex-direction: column; align-items: flex-start; }
+  /* Price tiers as a horizontal-scrolling chip strip instead of 4 stacked full-width
+     cards (~790px of scroll) — same tap targets, a fraction of the height. */
+  .tier-grid {
+    display: flex; grid-template-columns: none; overflow-x: auto; gap: 0.6rem;
+    padding-bottom: 0.3rem; scrollbar-width: none;
+  }
+  .tier-grid::-webkit-scrollbar { display: none; }
+  .tier-card { flex: 0 0 auto; min-width: 160px; padding: 0.85rem 1rem; }
+  .tier-card-count { display: none; }
+  .tier-card-go { display: none; }
+  .tier-card-price { margin-top: 0.5rem; }
 }
 
 /* GAME GRID */
