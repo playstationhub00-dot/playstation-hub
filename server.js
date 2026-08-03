@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
+const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
 
@@ -157,6 +158,31 @@ const uploadPromoMedia = multer({
   fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp|mp4|webm|ogg/.test(file.mimetype)),
   limits: { fileSize: 20 * 1024 * 1024 }
 });
+
+// Every uploaded cover/gallery image gets downsized and re-encoded as WebP right after
+// multer saves it — nothing on this site displays a cover wider than ~400px (cards) or
+// ~380px (game detail), so the original phone-camera-sized uploads (often 1-2MB+) were
+// pure waste being shipped to every visitor. maxDim is generous (900px) to stay sharp
+// on retina displays while still cutting most uploads by 80%+.
+async function processUploadedImage(file, maxDim = 900) {
+  if (!file) return '';
+  if (!/^image\//.test(file.mimetype)) return '/uploads/' + file.filename; // video etc. — leave alone
+  const outName = path.basename(file.filename, path.extname(file.filename)) + '.webp';
+  const outPath = path.join(uploadsDir, outName);
+  try {
+    await sharp(file.path)
+      .rotate() // respect EXIF orientation before resizing
+      .resize({ width: maxDim, height: maxDim, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toFile(outPath);
+    fs.unlinkSync(file.path);
+    return '/uploads/' + outName;
+  } catch (e) {
+    // Corrupt/unsupported image — fall back to the untouched original rather than 500ing.
+    console.error('Image processing failed for', file.filename, e.message);
+    return '/uploads/' + file.filename;
+  }
+}
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -580,10 +606,10 @@ app.get('/ps-plus/rent', (req, res) => {
 });
 
 // PS Plus admin CRUD
-app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   if (!year || !month) return res.redirect('/admin?msg=error');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const cover_image = req.file ? await processUploadedImage(req.file) : '';
   db.get('psplus').push({
     id: newPsplusId(),
     year: parseInt(year),
@@ -605,11 +631,11 @@ app.get('/admin/psplus/edit/:id', requireAuth, (req, res) => {
   res.render('edit-psplus', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   const existing = getPsplusEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const cover_image = req.file ? await processUploadedImage(req.file) : existing.cover_image;
   db.get('psplus').find({ id: parseInt(req.params.id) }).assign({
     year: parseInt(year),
     month: parseInt(month),
@@ -634,10 +660,10 @@ app.post('/admin/psplus/delete/:id', requireAuth, (req, res) => {
 });
 
 // PS Plus Popular CRUD
-app.post('/admin/psplus/popular/add', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/psplus/popular/add', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, description, rank } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const cover_image = req.file ? await processUploadedImage(req.file) : '';
   db.get('psplus_popular').push({
     id: newPsplusPopularId(),
     title: title.trim(),
@@ -659,11 +685,11 @@ app.get('/admin/psplus/popular/edit/:id', requireAuth, (req, res) => {
   res.render('edit-psplus-popular', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, description, rank, cover_focal_x, cover_focal_y } = req.body;
   const existing = getPsplusPopularEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const cover_image = req.file ? await processUploadedImage(req.file) : existing.cover_image;
   // A freshly uploaded cover resets the focal point — the old point won't line up with the new image.
   const focalX = req.file ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_x)));
   const focalY = req.file ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_y)));
@@ -854,7 +880,7 @@ app.get('/game/:slug', (req, res) => {
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
-app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), (req, res) => {
+app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), async (req, res) => {
   const { enabled, discount_10, discount_15, discount_30, deposit,
           buy_promo_enabled, buy_promo_pct, ends_at, remove_media } = req.body;
   const discounts = {
@@ -876,8 +902,8 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), (r
       const oldFp = path.join(uploadsDir, path.basename(existing.media_path));
       if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
     }
-    media_path = '/uploads/' + req.file.filename;
     media_type = /^video\//.test(req.file.mimetype) ? 'video' : 'image';
+    media_path = await processUploadedImage(req.file);
   }
   db.set('site_settings.promo', {
     enabled: enabled === 'on',
@@ -893,7 +919,7 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), (r
 
 // ── Homepage Popup ────────────────────────────────────────────────────────────
 // Reuses uploadPosterBg (images only, 20MB) — promo artwork is the same shape of file.
-app.post('/admin/popup', requireAuth, uploadPosterBg.single('popup_image'), (req, res) => {
+app.post('/admin/popup', requireAuth, uploadPosterBg.single('popup_image'), async (req, res) => {
   const { enabled, link_url, starts_at, ends_at, remove_image } = req.body;
   const existing = db.get('site_settings.popup').value() || {};
   let image_path = existing.image_path || '';
@@ -912,7 +938,7 @@ app.post('/admin/popup', requireAuth, uploadPosterBg.single('popup_image'), (req
       const oldFp = path.join(uploadsDir, path.basename(existing.image_path));
       if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
     }
-    image_path = '/uploads/' + req.file.filename;
+    image_path = await processUploadedImage(req.file);
     version++;
   }
   db.set('site_settings.popup', {
@@ -1039,13 +1065,13 @@ app.get('/upcoming/:slug', (req, res) => {
   res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
-app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_10d, nt_price_15d, nt_price_30d,
           tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : '';
+  const cover_image = req.file ? await processUploadedImage(req.file) : '';
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').push({
     id: newUpcomingId(),
@@ -1075,14 +1101,14 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
   res.render('edit-upcoming', { game, settings: getSiteSettings() });
 });
 
-app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, (req, res) => {
+app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_10d, nt_price_15d, nt_price_30d,
           tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
-  const cover_image = req.file ? '/uploads/' + req.file.filename : existing.cover_image;
+  const cover_image = req.file ? await processUploadedImage(req.file) : existing.cover_image;
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
@@ -1165,7 +1191,7 @@ app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
   res.redirect('/admin?msg=announcement');
 });
 
-app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, (req, res) => {
+app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
@@ -1175,9 +1201,9 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     price_category_id, price_mode, cost, link_label, link_url } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
-  const cover_image = coverFile ? '/uploads/' + coverFile.filename : '';
+  const cover_image = coverFile ? await processUploadedImage(coverFile) : '';
   const cover_focal_x = 50, cover_focal_y = 50; // fine-tuned later via Edit, once the cover is visible
-  const gallery = (req.files && req.files.gallery ? req.files.gallery : []).map(f => '/uploads/' + f.filename);
+  const gallery = await Promise.all((req.files && req.files.gallery ? req.files.gallery : []).map(f => processUploadedImage(f)));
   const useCategory = price_mode === 'category' && price_category_id;
   const cat = useCategory ? getPriceCategory(price_category_id) : null;
   db.get('games').push({
@@ -1219,7 +1245,7 @@ app.get('/admin/edit/:id', requireAuth, (req, res) => {
   res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories() });
 });
 
-app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, (req, res) => {
+app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
   const { title, platform, available_slots, renters,
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
@@ -1231,7 +1257,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
-  const cover_image = coverFile ? '/uploads/' + coverFile.filename : existing.cover_image;
+  const cover_image = coverFile ? await processUploadedImage(coverFile) : existing.cover_image;
   // A freshly uploaded cover resets the focal point — the old point was picked for
   // the old image and won't line up with the new one until re-adjusted.
   const focalX = coverFile ? 50 : Math.min(100, Math.max(0, parseInt(cover_focal_x)));
@@ -1250,7 +1276,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     const fp = path.join(uploadsDir, path.basename(img));
     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
   });
-  const newGallery = (req.files && req.files.gallery ? req.files.gallery : []).map(f => '/uploads/' + f.filename);
+  const newGallery = await Promise.all((req.files && req.files.gallery ? req.files.gallery : []).map(f => processUploadedImage(f)));
   gallery = gallery.concat(newGallery);
 
   const useCategory = price_mode === 'category' && price_category_id;
@@ -1315,6 +1341,69 @@ app.post('/admin/delete/:id', requireAuth, (req, res) => {
     }
   });
   res.redirect('/admin?msg=deleted');
+});
+
+// One-time (re-runnable) migration: shrinks every pre-existing cover/gallery/popup/promo
+// upload down to the same WebP treatment new uploads get automatically. Safe to run
+// more than once — anything already .webp or already resized is skipped.
+async function migrateImageFile(relPath, maxDim = 900) {
+  if (!relPath || !relPath.startsWith('/uploads/')) return { path: relPath, changed: false };
+  if (/\.webp$/i.test(relPath)) return { path: relPath, changed: false };
+  const fileName = path.basename(relPath);
+  const filePath = path.join(uploadsDir, fileName);
+  if (!fs.existsSync(filePath)) return { path: relPath, changed: false };
+  const outName = path.basename(fileName, path.extname(fileName)) + '.webp';
+  const outPath = path.join(uploadsDir, outName);
+  try {
+    await sharp(filePath).rotate().resize({ width: maxDim, height: maxDim, fit: 'inside', withoutEnlargement: true }).webp({ quality: 82 }).toFile(outPath);
+    fs.unlinkSync(filePath);
+    return { path: '/uploads/' + outName, changed: true };
+  } catch (e) {
+    console.error('Backfill failed for', relPath, e.message);
+    return { path: relPath, changed: false, error: true };
+  }
+}
+app.post('/admin/backfill-images', requireAuth, async (req, res) => {
+  const stats = { processed: 0, skipped: 0, errors: 0 };
+  const tally = (r) => { if (r.error) stats.errors++; else if (r.changed) stats.processed++; else stats.skipped++; };
+
+  for (const g of db.get('games').value()) {
+    const patch = {};
+    if (g.cover_image) { const r = await migrateImageFile(g.cover_image); tally(r); if (r.changed) patch.cover_image = r.path; }
+    if (g.gallery && g.gallery.length) {
+      const newGallery = [];
+      let galleryChanged = false;
+      for (const img of g.gallery) { const r = await migrateImageFile(img); tally(r); newGallery.push(r.path); if (r.changed) galleryChanged = true; }
+      if (galleryChanged) patch.gallery = newGallery;
+    }
+    if (Object.keys(patch).length) db.get('games').find({ id: g.id }).assign(patch).write();
+  }
+  for (const g of db.get('upcoming').value()) {
+    if (!g.cover_image) continue;
+    const r = await migrateImageFile(g.cover_image); tally(r);
+    if (r.changed) db.get('upcoming').find({ id: g.id }).assign({ cover_image: r.path }).write();
+  }
+  for (const e of db.get('psplus').value()) {
+    if (!e.cover_image) continue;
+    const r = await migrateImageFile(e.cover_image); tally(r);
+    if (r.changed) db.get('psplus').find({ id: e.id }).assign({ cover_image: r.path }).write();
+  }
+  for (const e of db.get('psplus_popular').value()) {
+    if (!e.cover_image) continue;
+    const r = await migrateImageFile(e.cover_image); tally(r);
+    if (r.changed) db.get('psplus_popular').find({ id: e.id }).assign({ cover_image: r.path }).write();
+  }
+  const settings = db.get('site_settings').value() || {};
+  if (settings.popup && settings.popup.image_path) {
+    const r = await migrateImageFile(settings.popup.image_path); tally(r);
+    if (r.changed) db.set('site_settings.popup.image_path', r.path).write();
+  }
+  if (settings.promo && settings.promo.media_path && settings.promo.media_type === 'image') {
+    const r = await migrateImageFile(settings.promo.media_path); tally(r);
+    if (r.changed) db.set('site_settings.promo.media_path', r.path).write();
+  }
+
+  res.json(stats);
 });
 
 app.post('/admin/hero-text', requireAuth, (req, res) => {
