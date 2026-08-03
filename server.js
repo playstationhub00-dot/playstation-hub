@@ -2259,9 +2259,11 @@ app.post('/admin/customers/import', requireAuth, importUpload.single('import_fil
 });
 
 // Price category CRUD
-app.post('/admin/price-categories/add', requireAuth, (req, res) => {
-  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+app.post('/admin/price-categories/add', upload.single('image'), requireAuth, async (req, res) => {
+  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d,
+    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size } = req.body;
   if (!name || !name.trim()) return res.redirect('/admin?msg=error');
+  const image = req.file ? await processUploadedImage(req.file) : '';
   db.get('price_categories').push({
     id: newPriceCategoryId(),
     name: name.trim(),
@@ -2271,14 +2273,24 @@ app.post('/admin/price-categories/add', requireAuth, (req, res) => {
     tr_price_10d: parseInt(tr_price_10d) || 199,
     tr_price_15d: parseInt(tr_price_15d) || 249,
     tr_price_30d: parseInt(tr_price_30d) || 399,
+    image,
+    image_width: Math.min(150, Math.max(10, parseInt(image_width) || 70)),
+    image_height: Math.min(150, Math.max(10, parseInt(image_height) || 90)),
+    image_opacity: Math.min(100, Math.max(0, parseInt(image_opacity) != null && !isNaN(parseInt(image_opacity)) ? parseInt(image_opacity) : 100)),
+    image_blend: image_blend === 'on',
+    bg_color: /^#[0-9a-fA-F]{6}$/.test(bg_color) ? bg_color : '#F0A500',
+    title_color: /^#[0-9a-fA-F]{6}$/.test(title_color) ? title_color : '#ffffff',
+    title_size: Math.min(40, Math.max(10, parseInt(title_size) || 18)),
   }).write();
   res.redirect('/admin?msg=cat_added');
 });
 
-app.post('/admin/price-categories/edit/:id', requireAuth, (req, res) => {
-  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+app.post('/admin/price-categories/edit/:id', upload.single('image'), requireAuth, async (req, res) => {
+  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d,
+    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size, remove_image } = req.body;
   const cat = getPriceCategory(req.params.id);
   if (!cat) return res.redirect('/admin?msg=error');
+  const image = req.file ? await processUploadedImage(req.file) : (remove_image === 'on' ? '' : cat.image || '');
   db.get('price_categories').find({ id: parseInt(req.params.id) }).assign({
     name: (name || cat.name).trim(),
     nt_price_10d: parseInt(nt_price_10d) || cat.nt_price_10d,
@@ -2287,6 +2299,14 @@ app.post('/admin/price-categories/edit/:id', requireAuth, (req, res) => {
     tr_price_10d: parseInt(tr_price_10d) || cat.tr_price_10d,
     tr_price_15d: parseInt(tr_price_15d) || cat.tr_price_15d,
     tr_price_30d: parseInt(tr_price_30d) || cat.tr_price_30d,
+    image,
+    image_width: Math.min(150, Math.max(10, parseInt(image_width) || cat.image_width || 70)),
+    image_height: Math.min(150, Math.max(10, parseInt(image_height) || cat.image_height || 90)),
+    image_opacity: Math.min(100, Math.max(0, !isNaN(parseInt(image_opacity)) ? parseInt(image_opacity) : (cat.image_opacity != null ? cat.image_opacity : 100))),
+    image_blend: image_blend === 'on',
+    bg_color: /^#[0-9a-fA-F]{6}$/.test(bg_color) ? bg_color : (cat.bg_color || '#F0A500'),
+    title_color: /^#[0-9a-fA-F]{6}$/.test(title_color) ? title_color : (cat.title_color || '#ffffff'),
+    title_size: Math.min(40, Math.max(10, parseInt(title_size) || cat.title_size || 18)),
   }).write();
   res.redirect('/admin?msg=cat_updated');
 });

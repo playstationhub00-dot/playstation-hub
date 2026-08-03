@@ -859,7 +859,7 @@
             <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
           </summary>
           <div style="padding:1rem;border-top:1px solid #1a2a1a;">
-            <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>">
+            <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>" enctype="multipart/form-data">
               <div class="form-grid">
                 <div class="form-group full"><label>Category Name</label><input type="text" name="name" value="<%= cat.name %>" required></div>
                 <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
@@ -870,6 +870,31 @@
                 <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="<%= cat.tr_price_10d %>" min="1"></div>
                 <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="<%= cat.tr_price_15d %>" min="1"></div>
                 <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
+
+                <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
+                <div class="form-group full">
+                  <label>Card Picture</label>
+                  <% if (cat.image) { %>
+                  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
+                    <img src="<%= cat.image %>" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #222;">
+                    <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#ef4444;font-weight:600;">
+                      <input type="checkbox" name="remove_image"> Remove current picture
+                    </label>
+                  </div>
+                  <% } %>
+                  <input type="file" name="image" accept="image/*">
+                </div>
+                <div class="form-group"><label>Picture Width (%)</label><input type="number" name="image_width" value="<%= cat.image_width != null ? cat.image_width : 70 %>" min="10" max="150"></div>
+                <div class="form-group"><label>Picture Max Height (%)</label><input type="number" name="image_height" value="<%= cat.image_height != null ? cat.image_height : 90 %>" min="10" max="150"></div>
+                <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="<%= cat.image_opacity != null ? cat.image_opacity : 100 %>" min="0" max="100"></div>
+                <div class="form-group" style="display:flex;align-items:flex-end;">
+                  <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;">
+                    <input type="checkbox" name="image_blend" <%= cat.image_blend !== false ? 'checked' : '' %>> Blend picture into card color
+                  </label>
+                </div>
+                <div class="form-group"><label>Card Color</label><input type="color" name="bg_color" value="<%= cat.bg_color || '#F0A500' %>" style="height:38px;padding:0.2rem;"></div>
+                <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="<%= cat.title_color || '#ffffff' %>" style="height:38px;padding:0.2rem;"></div>
+                <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="<%= cat.title_size != null ? cat.title_size : 18 %>" min="10" max="40"></div>
               </div>
               <div class="form-actions" style="margin-top:0.75rem;">
                 <button type="submit" class="btn btn-primary" style="background:#166534;">Save Category</button>
@@ -887,7 +912,7 @@
       <details style="background:#050f05;border:1px dashed #1a3a1a;border-radius:10px;overflow:hidden;">
         <summary style="padding:0.85rem 1rem;cursor:pointer;color:#22c55e;font-weight:700;font-size:0.9rem;list-style:none;">+ Add New Price Category</summary>
         <div style="padding:1rem;border-top:1px dashed #1a3a1a;">
-          <form method="POST" action="/admin/price-categories/add">
+          <form method="POST" action="/admin/price-categories/add" enctype="multipart/form-data">
             <div class="form-grid">
               <div class="form-group full"><label>Category Name *</label><input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required></div>
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
@@ -898,6 +923,20 @@
               <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="199" min="1"></div>
               <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="249" min="1"></div>
               <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
+
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
+              <div class="form-group full"><label>Card Picture</label><input type="file" name="image" accept="image/*"></div>
+              <div class="form-group"><label>Picture Width (%)</label><input type="number" name="image_width" value="70" min="10" max="150"></div>
+              <div class="form-group"><label>Picture Max Height (%)</label><input type="number" name="image_height" value="90" min="10" max="150"></div>
+              <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="100" min="0" max="100"></div>
+              <div class="form-group" style="display:flex;align-items:flex-end;">
+                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;">
+                  <input type="checkbox" name="image_blend" checked> Blend picture into card color
+                </label>
+              </div>
+              <div class="form-group"><label>Card Color</label><input type="color" name="bg_color" value="#F0A500" style="height:38px;padding:0.2rem;"></div>
+              <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="#ffffff" style="height:38px;padding:0.2rem;"></div>
+              <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="18" min="10" max="40"></div>
             </div>
             <div class="form-actions" style="margin-top:0.75rem;">
               <button type="submit" class="btn btn-primary" style="background:#166534;">Create Category</button>

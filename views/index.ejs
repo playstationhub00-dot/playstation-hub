@@ -262,7 +262,7 @@
         });
       });
     });
-    return { id: cat.id, name: cat.name, count: catGames.length, min };
+    return { id: cat.id, name: cat.name, count: catGames.length, min, cat };
   }).filter(t => t.count > 0);
 %>
 <% if (tierData.length) { %>
@@ -270,19 +270,27 @@
   <h2 class="section-title">Browse by Price Tier</h2>
   <div class="tier-grid">
     <% tierData.forEach(t => {
+      const cat = t.cat;
       const n = t.name.toLowerCase();
       const tierIcon = n.includes('new') ? '✨' : n.includes('deluxe') ? '👑' : n.includes('special') ? '⭐' : n.includes('regular') ? '🎮' : n.includes('budget') || n.includes('value') ? '💸' : '🕹️';
+      const bgColor = cat.bg_color || '#F0A500';
+      const titleColor = cat.title_color || '#ffffff';
+      const titleSize = cat.title_size != null ? cat.title_size : 18;
     %>
-    <a href="/browse#cat-section-<%= t.id %>" class="tier-card">
-      <div>
-        <div class="tier-card-head">
-          <div class="tier-card-icon"><%= tierIcon %></div>
-          <div class="tier-card-name"><%= t.name %></div>
-        </div>
+    <a href="/browse#cat-section-<%= t.id %>" class="tier-card" style="background:linear-gradient(155deg, color-mix(in srgb, <%= bgColor %> 75%, white) 0%, <%= bgColor %> 55%, color-mix(in srgb, <%= bgColor %> 70%, black) 100%);">
+      <div class="tier-card-top">
+        <div class="tier-card-name" style="color:<%= titleColor %>;font-size:<%= titleSize %>px;"><%= t.name %></div>
         <div class="tier-card-count"><%= t.count %> title<%= t.count !== 1 ? 's' : '' %></div>
       </div>
+      <% if (cat.image) { %>
+      <div class="tier-card-art">
+        <img src="<%= cat.image %>" style="width:<%= cat.image_width != null ? cat.image_width : 70 %>%;max-height:<%= cat.image_height != null ? cat.image_height : 90 %>%;opacity:<%= (cat.image_opacity != null ? cat.image_opacity : 100) / 100 %>;<%= cat.image_blend !== false ? 'mix-blend-mode:multiply;' : '' %>" alt="">
+      </div>
+      <% } else { %>
+      <div class="tier-card-art tier-card-art-fallback"><%= tierIcon %></div>
+      <% } %>
       <% if (t.min) { %><div class="tier-card-price">Price Starts at ₱<%= t.min %></div><% } %>
-      <div class="tier-card-go">→</div>
+      <div class="tier-card-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
     </a>
     <% }) %>
   </div>
