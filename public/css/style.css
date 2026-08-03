@@ -825,6 +825,16 @@ nav {
 }
 /* Homepage only: drop the trailing divider line next to section headers. */
 .home-page .section-title::after, .browse-page .section-title::after { content: none; }
+
+.section-viewall {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: #191919; color: #fff; text-decoration: none;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.01em;
+  padding: 0.4rem 0.9rem; border-radius: 20px; border: 1px solid #2a2a2a;
+  transition: background 0.15s, border-color 0.15s;
+}
+.section-viewall:hover { background: #242424; border-color: #3a3a3a; }
+.section-viewall svg { width: 13px; height: 13px; flex-shrink: 0; }
 /* Homepage only: one variable controls the gap above every section (top-driven, so
    each section only needs to know its own distance from whatever came before it).
    Overridable per-request via an inline style on <body> from admin settings. */
