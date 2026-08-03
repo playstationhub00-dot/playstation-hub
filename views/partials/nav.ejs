@@ -15,6 +15,12 @@
     <div class="navsearch-results" id="navSearchResults"></div>
   </div>
 
+  <!-- Mobile only: search collapses to this icon; tapping it reveals the box above
+       as a full-width dropdown instead of permanently occupying nav space. -->
+  <button type="button" class="navsearch-toggle" id="navSearchToggle" aria-label="Search" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+  </button>
+
   <div class="nav-links" id="navLinks">
     <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Browse Games</a>
     <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus Deluxe</a>
@@ -169,5 +175,24 @@
     if (!e.target.closest('.navsearch')) box.classList.remove('show');
   });
   input.addEventListener('focus', () => { if (input.value.trim()) render(input.value); });
+
+  // Mobile search icon: toggles the box open/closed instead of it always occupying
+  // nav width. Desktop never shows the toggle button, so this is inert there.
+  const toggle = document.getElementById('navSearchToggle');
+  function closeMobileSearch() {
+    wrap.classList.remove('navsearch-active');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    const opening = !wrap.classList.contains('navsearch-active');
+    wrap.classList.toggle('navsearch-active', opening);
+    toggle.setAttribute('aria-expanded', String(opening));
+    if (opening) { loadIndex(); input.focus(); }
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.navsearch') && !e.target.closest('.navsearch-toggle')) closeMobileSearch();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileSearch(); });
 })();
 </script>

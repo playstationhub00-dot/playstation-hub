@@ -166,6 +166,12 @@ nav {
 
 /* ── NAV SEARCH ─────────────────────────────────────────────────────────── */
 .navsearch { position: relative; flex: 1; min-width: 0; max-width: 420px; margin: 0 1.5rem; }
+.navsearch-toggle {
+  display: none; background: none; border: none; color: #ccc; cursor: pointer;
+  width: 36px; height: 36px; align-items: center; justify-content: center; flex-shrink: 0;
+  border-radius: 50%;
+}
+.navsearch-toggle:hover { background: rgba(255,255,255,0.08); }
 .navsearch-box {
   display: flex; align-items: center; gap: 0.55rem; background: #111; border: 1px solid #262626;
   border-radius: 10px; padding: 0 0.8rem; height: 38px; transition: border-color 0.15s; color: #666;
@@ -277,8 +283,17 @@ nav {
 @media (max-width: 820px) {
   .nav-links { display: none; }
   .nav-hamburger { display: flex; }
-  .navsearch { margin: 0 0 0 1rem; max-width: none; }
   .mobile-fab { display: flex; }
+  /* Search collapses to an icon; tapping it drops the real search box down as a
+     full-width panel instead of it permanently eating nav space next to the logo. */
+  .navsearch-toggle { display: flex; margin-left: auto; }
+  .navsearch { display: none; flex: none; margin: 0; max-width: none; }
+  .navsearch.navsearch-active {
+    display: block; position: absolute; left: 0; right: 0; top: 100%;
+    background: #0a0a0a; border-bottom: 1px solid #222; padding: 0.7rem 1rem; z-index: 130;
+  }
+  .navsearch.navsearch-active .navsearch-box { width: 100%; }
+  .navsearch.navsearch-active .navsearch-results { position: static; margin-top: 0.5rem; }
 }
 
 /* Hero trust strip — sits under either hero variant (default or slideshow) */
@@ -415,6 +430,13 @@ nav {
     border-radius: 20px; padding: 0.35rem 0.75rem; display: flex; gap: 0.3rem; align-items: baseline;
   }
   .hero-trust-item b { font-size: inherit; }
+}
+/* Homepage only, phones: remove the hero entirely rather than just compact it — the
+   nav (with search) is the new top of page, straight into Most Popular below it. The
+   480px compaction rules above become moot once this hides the whole section, which
+   is fine — they still apply harmlessly between 480-600px if this threshold changes. */
+@media (max-width: 600px) {
+  .home-page .hero, .home-page #heroSlideshow { display: none; }
 }
 
 /* ── Game Detail Page ─────────────────────────────────────── */
@@ -1520,6 +1542,19 @@ select.ss-native {
 @media (max-width: 480px) {
   .steps { grid-template-columns: 1fr; }
 }
+@media (max-width: 600px) {
+  /* Homepage only: all 4 steps condensed onto one horizontally-scrollable line
+     instead of stacking into 4 separate rows — description text drops so each
+     step is just a number + short title. */
+  .home-page .steps {
+    display: flex; grid-template-columns: none; flex-wrap: nowrap;
+    overflow-x: auto; gap: 0.75rem; padding-bottom: 0.4rem; scrollbar-width: none;
+  }
+  .home-page .steps::-webkit-scrollbar { display: none; }
+  .home-page .step { flex: 0 0 auto; width: 130px; padding: 0.9rem 0.75rem; text-align: center; }
+  .home-page .step p { display: none; }
+  .home-page .step h3 { font-size: 0.85rem; }
+}
 
 /* FOOTER */
 footer {
@@ -2066,6 +2101,14 @@ footer {
 .review-fb-badge { margin-left: auto; display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; color: #1877F2; font-weight: 600; background: rgba(24,119,242,0.1); border: 1px solid rgba(24,119,242,0.2); border-radius: 20px; padding: 0.2rem 0.6rem; flex-shrink: 0; }
 @media (max-width: 600px) {
   .reviews-grid { grid-template-columns: 1fr; gap: 0.75rem; padding: 0 0.5rem; }
+  /* Homepage only: reviews scroll horizontally like Coming Soon / Most Played,
+     instead of stacking into a tall vertical list. */
+  .home-page .reviews-grid {
+    display: flex; grid-template-columns: none; overflow-x: auto; gap: 0.75rem;
+    padding: 0 1rem 0.4rem; scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .home-page .reviews-grid::-webkit-scrollbar { display: none; }
+  .home-page .review-card { flex: 0 0 auto; width: 78vw; max-width: 300px; scroll-snap-align: start; }
 }
 
 /* Visitor / filter buttons */
