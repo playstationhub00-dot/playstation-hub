@@ -155,24 +155,16 @@ nav {
 }
 .nav-links a[href="/admin"] { color: #888; font-size: 0.82rem; }
 .nav-links a[href="/admin"]:hover { color: #ccc; }
-.nav-links .admin-btn {
-  background: var(--ps-blue);
-  color: #000;
-  padding: 0.4rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-.nav-links .admin-btn:hover { background: #FFD700; color: #000; }
-.nav-links .nav-cta {
+.nav-cta {
   background: var(--ps-blue);
   color: #000;
   padding: 0.5rem 1.15rem;
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 700;
+  text-decoration: none;
 }
-.nav-links .nav-cta:hover { background: #FFD700; color: #000; }
+.nav-cta:hover { background: #FFD700; color: #000; }
 
 /* ── NAV ICONS (search toggle, admin, message pill) ───────────────────────── */
 .navicons { display: flex; align-items: center; gap: 1.1rem; flex-shrink: 0; }
