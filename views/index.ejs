@@ -232,6 +232,18 @@
 <% } %>
 <% } %>
 
+<!-- MOST POPULAR SLIDER -->
+<div class="section" id="mostPopularSection">
+  <h2 class="section-title">Most Popular <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="popularSlider">
+      <% featured.forEach(game => { %><div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
+  </div>
+</div>
+
 <!-- PRICE TIERS -->
 <% if (priceCategories && priceCategories.length) { %>
 <%
@@ -317,18 +329,6 @@
   </div>
 </div>
 <% } %>
-
-<!-- MOST POPULAR SLIDER -->
-<div class="section" id="mostPopularSection">
-  <h2 class="section-title">Most Popular <a href="/browse" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View All →</a></h2>
-  <div class="upcoming-slider-wrap">
-    <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
-    <div class="upcoming-slider" id="popularSlider">
-      <% featured.forEach(game => { %><div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
-    </div>
-    <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
-  </div>
-</div>
 
 <!-- UPCOMING GAMES (COMING SOON) -->
 <%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true }) %>
