@@ -428,6 +428,8 @@ nav {
   .hero-v2 .hero-content { max-width: 100%; text-align: center; margin: -2.5rem auto 0; position: relative; z-index: 3; }
   .hero-v2 .hero-content p { margin-left: auto; margin-right: auto; }
   .hero-v2 .hero-actions { justify-content: center; }
+  .hero-v2 .hero-pay-methods { justify-content: center; }
+  .hero-v2 .hero-stats { justify-content: center; }
   .hero-cover-picker { right: 1rem; bottom: .9rem; gap: .4rem; }
   .hero-cover-thumb { width: 40px; height: 54px; }
 }
@@ -452,6 +454,27 @@ nav {
 .hero-trust-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.75rem; max-width: 420px; }
 .hero-grid.no-showcase .hero-trust-row { max-width: 480px; margin: 0 auto; }
 .hero-trust-row .hero-trust-item { font-size: 0.75rem; }
+
+/* Payment method badges — sits right under the GCash/Maya trust item */
+.hero-pay-methods { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1.1rem; }
+.hero-grid.no-showcase .hero-pay-methods { justify-content: center; }
+.pay-badge {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.75rem; font-weight: 700; color: #fff;
+  padding: 0.4rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+}
+.pay-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
+.pay-gcash { background: rgba(0,133,242,0.15); border-color: rgba(0,133,242,0.4); color: #4fa8ff; }
+.pay-maya { background: rgba(0,199,120,0.15); border-color: rgba(0,199,120,0.4); color: #3fd68f; }
+.pay-qrph { background: rgba(240,165,0,0.15); border-color: rgba(240,165,0,0.4); color: var(--ps-blue); }
+.pay-bank { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: #ddd; }
+
+/* Real-site stats — moved into the hero, below the payment badges */
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1); }
+.hero-grid.no-showcase .hero-stats { justify-content: center; }
+.hero-stat-num { font-size: 1.5rem; font-weight: 800; color: var(--ps-blue); }
+.hero-stat-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.15rem; }
 
 .hero-showcase { position: relative; aspect-ratio: 4/3.4; border-radius: 20px; overflow: hidden; }
 .hero-showcase-card {

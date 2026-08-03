@@ -104,6 +104,35 @@
         <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
         <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
       </div>
+      <div class="hero-pay-methods">
+        <span class="pay-badge pay-gcash">GCash</span>
+        <span class="pay-badge pay-maya">Maya</span>
+        <span class="pay-badge pay-qrph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>QR Ph</span>
+        <span class="pay-badge pay-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 10v9M16 10v9M2 21h20"/></svg>Bank Transfer</span>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= games.length %>+</div>
+          <div class="hero-stat-label">Games Available</div>
+        </div>
+        <div class="hero-stat">
+          <% const allPricesCb = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPriceCb = allPricesCb.length ? Math.min(...allPricesCb) : 99; %>
+          <div class="hero-stat-num">₱<%= lowestPriceCb %></div>
+          <div class="hero-stat-label">Starting Price</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= activeRenters %>+</div>
+          <div class="hero-stat-label">Active Renters</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= gamesPurchased %>+</div>
+          <div class="hero-stat-label">Games Purchased</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">100%</div>
+          <div class="hero-stat-label">Digital Games</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -144,6 +173,35 @@
         <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
         <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
       </div>
+      <div class="hero-pay-methods">
+        <span class="pay-badge pay-gcash">GCash</span>
+        <span class="pay-badge pay-maya">Maya</span>
+        <span class="pay-badge pay-qrph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>QR Ph</span>
+        <span class="pay-badge pay-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 10v9M16 10v9M2 21h20"/></svg>Bank Transfer</span>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= games.length %>+</div>
+          <div class="hero-stat-label">Games Available</div>
+        </div>
+        <div class="hero-stat">
+          <% const allPrices = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
+          <div class="hero-stat-num">₱<%= lowestPrice %></div>
+          <div class="hero-stat-label">Starting Price</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= activeRenters %>+</div>
+          <div class="hero-stat-label">Active Renters</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num"><%= gamesPurchased %>+</div>
+          <div class="hero-stat-label">Games Purchased</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">100%</div>
+          <div class="hero-stat-label">Digital Games</div>
+        </div>
+      </div>
     </div>
   </div>
   <% if (heroGames.length > 1) { %>
@@ -175,30 +233,6 @@
 </section>
 <% } %>
 <% } %>
-
-<div class="stats-bar">
-  <div class="stat">
-    <div class="stat-num"><%= games.length %>+</div>
-    <div class="stat-label">Games Available</div>
-  </div>
-  <div class="stat">
-    <% const allPrices = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
-    <div class="stat-num">₱<%= lowestPrice %></div>
-    <div class="stat-label">Starting Price</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num"><%= activeRenters %>+</div>
-    <div class="stat-label">Active Renters</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num"><%= gamesPurchased %>+</div>
-    <div class="stat-label">Games Purchased</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">100%</div>
-    <div class="stat-label">Digital Games</div>
-  </div>
-</div>
 
 <!-- PRICE TIERS -->
 <% if (priceCategories && priceCategories.length) { %>
