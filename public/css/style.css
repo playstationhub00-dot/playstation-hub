@@ -918,6 +918,24 @@ nav {
   .home-page .how-section { order: 90; }
   .home-page #reviewsSection { order: 100; }
   .home-page footer { order: 110; }
+
+  /* Stats bar (63+ Games / ₱249 Starting Price / etc.) is desktop trust-signal
+     clutter that eats a full row above the fold on a phone — drop it here. */
+  .home-page .stats-bar { display: none; }
+
+  /* Most Popular becomes the immediate 2-column grid a customer sees after the hero,
+     instead of a horizontal slider — bigger cards, no arrows to discover, everything
+     visible without a sideways swipe. Scoped to this one section only; Coming Soon and
+     Most Played in PS Plus keep their slider treatment. */
+  #mostPopularSection .upcoming-slider-wrap { display: block; }
+  #mostPopularSection .slider-arrow { display: none; }
+  #mostPopularSection .upcoming-slider {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
+    overflow: visible; padding: 0;
+  }
+  #mostPopularSection .slider-card-wrap {
+    min-width: 0 !important; max-width: none !important; width: 100%;
+  }
 }
 
 /* GAME GRID */
@@ -1136,6 +1154,17 @@ nav {
 .game-card:hover .gc-reveal,
 .game-card.gc-price-show .gc-reveal { max-height: 500px; opacity: 1; }
 .gc-reveal-hint { font-size: 0.75rem; color: #555; transition: opacity 0.2s ease; }
+.gc-mobile-cta { display: none; }
+@media (max-width: 600px) {
+  .home-page .gc-mobile-cta { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.4rem; }
+  .home-page .gc-mobile-slots { font-size: 0.72rem; font-weight: 600; color: #3f9e6a; }
+  .home-page .gc-mobile-slots-out { color: #c9605d; }
+  .home-page .gc-mobile-rent-btn {
+    display: block; text-align: center; text-decoration: none;
+    background: linear-gradient(135deg, #0099ff, #a033ff); color: #fff;
+    font-size: 0.75rem; font-weight: 800; padding: 0.5rem; border-radius: 7px;
+  }
+}
 .game-card:hover .gc-reveal-hint,
 .game-card.gc-price-show .gc-reveal-hint { display: none; }
 /* Homepage only: hide the price table/rent buttons entirely — cards show just cover,

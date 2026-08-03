@@ -76,6 +76,19 @@
     <% } %>
     <div class="gc-reveal-hint">👆 Tap to see price &amp; rent</div>
 
+    <!-- Homepage-mobile only: gc-reveal (full price table + rent/buy links) is hidden
+         site-wide on the homepage, so without this a card has no visible action at
+         all on a phone. Routes to the game page like every other card link — not a
+         direct Messenger link, so the trophy/duration picker still runs first. -->
+    <div class="gc-mobile-cta">
+      <% if (totalSlots > 0) { %>
+        <div class="gc-mobile-slots">🟢 <%= totalSlots %> slot<%= totalSlots !== 1 ? 's' : '' %> left</div>
+      <% } else { %>
+        <div class="gc-mobile-slots gc-mobile-slots-out">Fully booked</div>
+      <% } %>
+      <a href="/game/<%= gameSlug %>" class="gc-mobile-rent-btn"><%= totalSlots > 0 ? '⏱️ Rent Now' : '🔔 Reserve Slot' %></a>
+    </div>
+
     <!-- Hidden by default — hover (desktop) or tap the card (mobile) to reveal price/availability + Rent/Buy -->
     <div class="gc-reveal">
     <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
