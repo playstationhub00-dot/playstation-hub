@@ -932,9 +932,26 @@ nav {
      scroll strip (tier chips, sliders, reviews) was sizing itself to fit ALL of that
      content instead of clipping to the viewport, causing page-wide horizontal
      overflow (measured 988px). Forcing width:100% (verified live) makes every section
-     respect the viewport width so its own overflow-x:auto can actually do its job. */
+     respect the viewport width so its own overflow-x:auto can actually do its job.
+     Scoped to a named list of the actual content sections rather than `> *` — the
+     mobile-fab, popup overlay, and nav drawer are ALSO direct children of body and
+     are position:fixed with their own intentional widths; the earlier `> *` version
+     stretched the fab into a full-width bar that covered the cards behind it. */
   body.home-page { display: flex; flex-direction: column; }
-  body.home-page > * { min-width: 0; width: 100%; }
+  .home-page .hero,
+  .home-page #heroSlideshow,
+  .home-page #mostPopularSection,
+  .home-page .tier-section,
+  .home-page .spotlight-section,
+  .home-page .section[data-upcoming],
+  .home-page #mostPlayedPsplusSection,
+  .home-page .promo-section,
+  .home-page .why-section,
+  .home-page .how-section,
+  .home-page #reviewsSection,
+  .home-page footer {
+    min-width: 0; width: 100%;
+  }
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
   .home-page #mostPopularSection { order: 20; }
