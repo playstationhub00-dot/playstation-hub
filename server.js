@@ -781,7 +781,13 @@ app.get('/', (req, res) => {
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
   const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const s = getSiteSettings();
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap() });
+  // Real counts from actual customer records, not the manually-editable per-game
+  // "renters" popularity field (which the homepage stat used to sum — that number
+  // reflects nothing about who's currently renting).
+  const homeCustomers = getCustomers();
+  const activeRenters = homeCustomers.filter(c => c.status === 'renting').length;
+  const gamesPurchased = homeCustomers.filter(c => c.status === 'bought').length;
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased });
 });
 
 app.get('/browse', (req, res) => {

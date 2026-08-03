@@ -158,13 +158,12 @@
     <div class="stat-label">Starting Price</div>
   </div>
   <div class="stat">
-    <% const totalRenters = games.reduce((sum, g) => sum + (g.renters || 0), 0); %>
-    <div class="stat-num"><%= totalRenters %>+</div>
+    <div class="stat-num"><%= activeRenters %>+</div>
     <div class="stat-label">Active Renters</div>
   </div>
   <div class="stat">
-    <div class="stat-num">3</div>
-    <div class="stat-label">Rental Durations</div>
+    <div class="stat-num"><%= gamesPurchased %>+</div>
+    <div class="stat-label">Games Purchased</div>
   </div>
   <div class="stat">
     <div class="stat-num">100%</div>
