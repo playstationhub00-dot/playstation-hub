@@ -451,9 +451,10 @@ nav {
 .hero-grid.no-showcase .hero-content p { margin: 0 auto 1.75rem; }
 .hero-grid .hero-actions { justify-content: flex-start; margin-bottom: 1.85rem; }
 .hero-grid.no-showcase .hero-actions { justify-content: center; }
-.hero-trust-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.75rem; max-width: 420px; }
-.hero-grid.no-showcase .hero-trust-row { max-width: 480px; margin: 0 auto; }
+.hero-trust-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.75rem; max-width: 480px; }
+.hero-grid.no-showcase .hero-trust-row { max-width: 540px; margin: 0 auto; }
 .hero-trust-row .hero-trust-item { font-size: 0.75rem; }
+.hero-trust-row .hero-trust-item:last-child { grid-column: 1 / -1; }
 
 /* Payment method badges — sits right under the GCash/Maya trust item */
 .hero-pay-methods { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.9rem; }
