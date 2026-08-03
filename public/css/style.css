@@ -965,6 +965,13 @@ nav {
   #mostPopularSection .slider-card-wrap {
     min-width: 0 !important; max-width: none !important; width: 100%;
   }
+  /* A later rule (.upcoming-slider .game-card, further down this file) fixes every
+     slider card to calc(50vw - 1px) regardless of section — that's correct for the
+     2-per-screen Coming Soon/Most Played sliders but overflows this grid's actual
+     185px columns by 20px per card, which is what was causing the overlap. */
+  #mostPopularSection .game-card {
+    min-width: 0 !important; max-width: none !important; width: 100% !important;
+  }
 }
 
 /* GAME GRID */
