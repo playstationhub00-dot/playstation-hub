@@ -1236,35 +1236,35 @@ nav {
 .gc-pth-dur, .gc-ptd-dur { width: 30%; }
 .gc-pth {
   background: #111; border: 1px solid #222; border-bottom: none;
-  padding: 0.4rem 0.35rem; text-align: center; vertical-align: top;
+  padding: 0.32rem 0.25rem; text-align: center; vertical-align: top;
 }
 .gc-pth-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
 .gc-pth-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
 .gc-pth-label {
-  font-size: 0.75rem; font-weight: 800; color: #999;
-  letter-spacing: 0.2px; margin-bottom: 0.3rem;
+  font-size: 0.66rem; font-weight: 800; color: #999;
+  letter-spacing: 0.2px; margin-bottom: 0.2rem;
 }
 .gc-pth-tr .gc-pth-label { color: #ffc400; }
 .gc-pth-ps4 .gc-pth-label { color: #60a5fa; }
 .gc-pill {
-  font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.35rem;
+  font-size: 0.62rem; font-weight: 700; padding: 0.08rem 0.28rem;
   border-radius: 4px; display: inline-block; white-space: nowrap;
 }
 .gc-pill-yes { background: rgba(34,197,94,0.15); color: #22c55e; }
 .gc-pill-tr  { background: rgba(255,196,0,0.15); color: #ffc400; }
 .gc-pill-ps4 { background: rgba(96,165,250,0.15); color: #60a5fa; }
 .gc-pill-no  { background: rgba(239,68,68,0.12); color: #ef4444; }
-.gc-pth-days { font-size: 0.7rem; font-weight: 700; color: #f59e0b; margin-top: 0.2rem; }
+.gc-pth-days { font-size: 0.6rem; font-weight: 700; color: #f59e0b; margin-top: 0.15rem; }
 .gc-pth-tr .gc-pth-days { color: #ffc400; }
 .gc-pth-ps4 .gc-pth-days { color: #60a5fa; }
 .gc-ptd-dur {
   background: #0a0a0a; border: 1px solid #1c1c1c; border-right: none;
-  font-size: 0.75rem; color: #666; font-weight: 700; text-align: left;
-  padding: 0.35rem 0 0.35rem 0.5rem;
+  font-size: 0.66rem; color: #666; font-weight: 700; text-align: left;
+  padding: 0.3rem 0 0.3rem 0.4rem;
 }
 .gc-ptd {
   background: #111; border: 1px solid #1c1c1c;
-  padding: 0.35rem 0.3rem; text-align: center;
+  padding: 0.3rem 0.25rem; text-align: center;
 }
 /* Old vs. new price stack vertically rather than sitting side by side on one
    line — on a narrow card (any of the 2-per-row mobile grids) two prices
@@ -1274,8 +1274,8 @@ nav {
 .gc-price { display: block; }
 .gc-ptd-tr { background: #0d0a00; border-color: rgba(255,196,0,0.12); }
 .gc-ptd-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.12); color: #3a3a3a; }
-.gc-price-orig { font-size: 0.7rem; color: #555; text-decoration: line-through; margin-right: 0.2rem; }
-.gc-price      { font-size: 0.78rem; font-weight: 600; color: #fff; }
+.gc-price-orig { font-size: 0.6rem; color: #555; text-decoration: line-through; margin-right: 0.2rem; }
+.gc-price      { font-size: 0.68rem; font-weight: 600; color: #fff; }
 .gc-price-tr   { color: #ffc400; }
 .gc-price-ps4  { color: #60a5fa; }
 
@@ -2182,11 +2182,11 @@ footer {
   .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
   /* 2-per-row cards here are as narrow as the slider ones, so the price table
      needs the same compact sizing or the header labels wrap more than needed. */
-  .gc-pth-label { font-size: 0.7rem; margin-bottom: 0.2rem; }
-  .gc-pill { font-size: 0.66rem; padding: 0.08rem 0.28rem; }
-  .gc-ptd-dur { font-size: 0.7rem; }
-  .gc-price { font-size: 0.7rem; }
-  .gc-price-orig { font-size: 0.62rem; }
+  .gc-pth-label { font-size: 0.6rem; margin-bottom: 0.15rem; }
+  .gc-pill { font-size: 0.56rem; padding: 0.06rem 0.22rem; }
+  .gc-ptd-dur { font-size: 0.6rem; }
+  .gc-price { font-size: 0.6rem; }
+  .gc-price-orig { font-size: 0.54rem; }
   .psplus-months-grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .psplus-month-cover { aspect-ratio: 16/9; }
   .psplus-month-cover-placeholder { aspect-ratio: 16/9; }
@@ -2233,13 +2233,13 @@ footer {
      its own already-compact base sizing. */
   .slider-card-wrap .gc-ptable { margin-top: 0.3rem; }
   .slider-card-wrap .gc-pth { padding: 0.25rem 0.2rem; }
-  .slider-card-wrap .gc-pth-label { font-size: 0.68rem; margin-bottom: 0.15rem; }
-  .slider-card-wrap .gc-pill { font-size: 0.62rem; padding: 0.06rem 0.25rem; }
-  .slider-card-wrap .gc-pth-days { font-size: 0.6rem; }
-  .slider-card-wrap .gc-ptd-dur { font-size: 0.68rem; padding: 0.25rem 0 0.25rem 0.35rem; }
-  .slider-card-wrap .gc-ptd { padding: 0.25rem 0.15rem; }
-  .slider-card-wrap .gc-price { font-size: 0.68rem; }
-  .slider-card-wrap .gc-price-orig { font-size: 0.6rem; }
+  .slider-card-wrap .gc-pth-label { font-size: 0.58rem; margin-bottom: 0.1rem; }
+  .slider-card-wrap .gc-pill { font-size: 0.52rem; padding: 0.05rem 0.2rem; }
+  .slider-card-wrap .gc-pth-days { font-size: 0.52rem; }
+  .slider-card-wrap .gc-ptd-dur { font-size: 0.58rem; padding: 0.22rem 0 0.22rem 0.3rem; }
+  .slider-card-wrap .gc-ptd { padding: 0.22rem 0.12rem; }
+  .slider-card-wrap .gc-price { font-size: 0.58rem; }
+  .slider-card-wrap .gc-price-orig { font-size: 0.5rem; }
   .slider-card-wrap .gc-price-start { font-size: 0.75rem; }
   .slider-card-wrap .rent-btn { font-size: 0.75rem; padding: 0.35rem 0.4rem; margin-top: 0.35rem; border-radius: 7px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.75rem; padding: 0.18rem 0.4rem; }
