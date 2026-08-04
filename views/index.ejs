@@ -280,7 +280,7 @@
       const artWidth = cat.image_width != null ? cat.image_width : 52;
       const artOpacity = cat.image_opacity != null ? cat.image_opacity : 100;
     %>
-    <a href="/browse#cat-section-<%= t.id %>" class="tier-card">
+    <a href="/browse#cat-section-<%= t.id %>" class="tier-card" style="--tier-accent:<%= accentColor %>;">
       <% if (cat.image) { %>
       <div class="tier-card-art" style="width:<%= artWidth %>%;">
         <img src="<%= cat.image %>" alt="" loading="lazy" decoding="async"<% if (artOpacity !== 100) { %> style="opacity:<%= artOpacity / 100 %>;"<% } %>>
@@ -288,6 +288,7 @@
       <% } else { %>
       <div class="tier-card-art-fallback"><%= tierIcon %></div>
       <% } %>
+      <div class="tier-card-glow"></div>
       <div class="tier-card-top">
         <div class="tier-card-name" style="color:<%= titleColor %>;font-size:<%= titleSize %>px;"><%= t.name %></div>
         <div class="tier-card-count"><%= t.count %> title<%= t.count !== 1 ? 's' : '' %></div>

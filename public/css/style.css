@@ -868,13 +868,27 @@ nav {
 .tier-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; }
 .tier-card {
   --tier-bg: #101010;
+  --tier-accent: #F0A500;
   position: relative; overflow: hidden; border-radius: 16px;
   background: var(--tier-bg); border: 1px solid #1e1e1e;
   padding: 1.15rem 1.1rem; text-decoration: none; color: inherit;
   display: flex; align-items: center; min-height: 210px;
-  transition: transform 0.15s, border-color 0.15s;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.25s;
 }
-.tier-card:hover { transform: translateY(-2px); border-color: #2e2e2e; }
+.tier-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--tier-accent) 45%, #2e2e2e);
+  box-shadow: 0 10px 28px -8px color-mix(in srgb, var(--tier-accent) 35%, transparent);
+}
+/* A soft glow in the tier's own accent colour, washing in from behind the text
+   on hover — z-index sits above the background but below the art/text so it
+   reads as ambient light rather than a flat overlay. */
+.tier-card-glow {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse 70% 90% at 0% 50%, color-mix(in srgb, var(--tier-accent) 22%, transparent), transparent 70%);
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.tier-card:hover .tier-card-glow { opacity: 1; }
 /* overflow:hidden matters — on hover the image scales 5% and would otherwise
    spill past this panel's left edge, where the ::after fade below cannot reach
    it, leaving a hard vertical seam down the middle of the card. */
