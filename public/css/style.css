@@ -854,9 +854,6 @@ nav {
 }
 .collapsible-body.collapsed { max-height: 0; opacity: 0; margin-top: 0; }
 
-/* "From ₱X" shown under the title on homepage cards only (Browse shows this per-category instead) */
-.gc-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; }
-
 /* Per-category "Price Starts at" pill next to the game-count badge on Browse Games */
 .cat-price-start { font-size: 0.78rem; font-weight: 700; color: #F0A500; background: rgba(240,165,0,0.12); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.2rem 0.65rem; }
 
@@ -1136,9 +1133,8 @@ nav {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
-  /* Grid items stretch to the row's tallest cell by default — without this, expanding
-     one card's .gc-reveal on hover/tap stretches every other card in that row to match,
-     showing empty space below their still-collapsed titles. */
+  /* Grid items stretch to the row's tallest cell by default — this keeps each card
+     sized to its own content instead of matching its tallest row-mate. */
   align-items: start;
 }
 
@@ -1224,60 +1220,33 @@ nav {
   letter-spacing: 0.8px;
   margin-bottom: -0.2rem;
 }
-/* ── Shared-duration price table ──────────────────────────────────────────
-   Replaces the old side-by-side Non-Trophy/Trophy blocks, which each
-   repeated "10D/15D/30D" in their own ~120px-wide column — on a phone card
-   that starved the column label down to "NON-TR…" and squeezed each price
-   row into ~100px. Duration is now written once per row on the left, and
-   the RENTED/slots-left status sits inside each column's own header cell,
-   directly above that column's prices, instead of a separate line above
-   the table. */
-.gc-ptable { width: 100%; border-collapse: collapse; margin-top: 0.5rem; table-layout: fixed; }
-.gc-pth-dur, .gc-ptd-dur { width: 30%; }
-.gc-pth {
-  background: #111; border: 1px solid #222; border-bottom: none;
-  padding: 0.32rem 0.25rem; text-align: center; vertical-align: top;
+/* ── Summary price ──────────────────────────────────────────────────────
+   Replaces the full Non-Trophy/Trophy × 10/15/30-day table with one
+   "Starts at ₱X" number plus availability pills — that table was the
+   source of every mobile clipping/overflow bug on this card. The full
+   table now lives on the game page. Always visible; no hover/tap reveal. */
+.gc-summary {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 0.5rem; background: #111; border: 1px solid #222; border-radius: 8px;
+  padding: 0.5rem 0.6rem; margin-top: 0.5rem;
 }
-.gc-pth-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
-.gc-pth-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
-.gc-pth-label {
-  font-size: 0.66rem; font-weight: 800; color: #999;
-  letter-spacing: 0.2px; margin-bottom: 0.2rem;
-}
-.gc-pth-tr .gc-pth-label { color: #ffc400; }
-.gc-pth-ps4 .gc-pth-label { color: #60a5fa; }
+.gc-summary-label { font-size: 0.62rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.3px; }
+.gc-summary-amount { font-size: 1.05rem; font-weight: 800; color: #F0A500; line-height: 1.15; }
+.gc-summary-was { font-size: 0.68rem; color: #555; text-decoration: line-through; }
+.gc-summary-status { display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; }
 .gc-pill {
-  font-size: 0.62rem; font-weight: 700; padding: 0.08rem 0.28rem;
+  font-size: 0.66rem; font-weight: 700; padding: 0.1rem 0.32rem;
   border-radius: 4px; display: inline-block; white-space: nowrap;
 }
 .gc-pill-yes { background: rgba(34,197,94,0.15); color: #22c55e; }
 .gc-pill-tr  { background: rgba(255,196,0,0.15); color: #ffc400; }
 .gc-pill-ps4 { background: rgba(96,165,250,0.15); color: #60a5fa; }
 .gc-pill-no  { background: rgba(239,68,68,0.12); color: #ef4444; }
-.gc-pth-days { font-size: 0.6rem; font-weight: 700; color: #f59e0b; margin-top: 0.15rem; }
-.gc-pth-tr .gc-pth-days { color: #ffc400; }
-.gc-pth-ps4 .gc-pth-days { color: #60a5fa; }
-.gc-ptd-dur {
-  background: #0a0a0a; border: 1px solid #1c1c1c; border-right: none;
-  font-size: 0.66rem; color: #666; font-weight: 700; text-align: left;
-  padding: 0.3rem 0 0.3rem 0.4rem;
+.gc-summary-more {
+  display: block; font-size: 0.72rem; font-weight: 600; color: var(--ps-blue);
+  text-decoration: none; margin-top: 0.35rem;
 }
-.gc-ptd {
-  background: #111; border: 1px solid #1c1c1c;
-  padding: 0.3rem 0.25rem; text-align: center;
-}
-/* Old vs. new price stack vertically rather than sitting side by side on one
-   line — on a narrow card (any of the 2-per-row mobile grids) two prices
-   side by side is exactly the kind of "10D ₱399 ₱379 crammed into ~100px"
-   overflow this table was built to get away from. */
-.gc-price-orig { display: block; margin-right: 0; }
-.gc-price { display: block; }
-.gc-ptd-tr { background: #0d0a00; border-color: rgba(255,196,0,0.12); }
-.gc-ptd-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.12); color: #3a3a3a; }
-.gc-price-orig { font-size: 0.6rem; color: #555; text-decoration: line-through; margin-right: 0.2rem; }
-.gc-price      { font-size: 0.68rem; font-weight: 600; color: #fff; }
-.gc-price-tr   { color: #ffc400; }
-.gc-price-ps4  { color: #60a5fa; }
+.gc-summary-more:hover { text-decoration: underline; }
 
 .game-card {
   background: var(--bg-card);
@@ -1287,9 +1256,6 @@ nav {
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  /* No fixed height — the card shrinks to just cover + title while collapsed,
-     and grows when .gc-reveal opens (hover/tap), instead of leaving dead space
-     below the title in the collapsed state. */
   height: auto;
 }
 .game-card:hover {
@@ -1324,34 +1290,6 @@ nav {
 
 .game-info { padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
 .game-title { font-weight: 700; font-size: 0.95rem; line-height: 1.3; height: 1.24rem; overflow: hidden; white-space: nowrap; flex-shrink: 0; }
-/* Card shows only the title by default — hover (desktop) or tap the card (mobile,
-   toggled via .gc-price-show, since :hover doesn't apply on touch) reveals genre,
-   price, availability, and the Rent/Buy buttons underneath. */
-.gc-reveal {
-  max-height: 0; opacity: 0; overflow: hidden;
-  display: flex; flex-direction: column; gap: 0.5rem;
-  transition: max-height 0.3s ease, opacity 0.25s ease;
-}
-.game-card:hover .gc-reveal,
-.game-card.gc-price-show .gc-reveal { max-height: 500px; opacity: 1; }
-.gc-reveal-hint { font-size: 0.75rem; color: #555; transition: opacity 0.2s ease; }
-.gc-mobile-cta { display: none; }
-@media (max-width: 600px) {
-  .home-page .gc-mobile-cta { display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.4rem; }
-  .home-page .gc-mobile-slots { font-size: 0.72rem; font-weight: 600; color: #3f9e6a; }
-  .home-page .gc-mobile-slots-out { color: #c9605d; }
-  .home-page .gc-mobile-rent-btn {
-    display: block; text-align: center; text-decoration: none;
-    background: linear-gradient(135deg, #0099ff, #a033ff); color: #fff;
-    font-size: 0.75rem; font-weight: 800; padding: 0.5rem; border-radius: 7px;
-  }
-}
-.game-card:hover .gc-reveal-hint,
-.game-card.gc-price-show .gc-reveal-hint { display: none; }
-/* Homepage only: hide the price table/rent buttons entirely — cards show just cover,
-   title, and "Price Starts at" for a cleaner grid. Full details live on the game page. */
-.home-page .gc-reveal { display: none; }
-.home-page .gc-reveal-hint { display: none; }
 .game-platform {
   font-size: 0.75rem;
   color: var(--ps-blue);
@@ -2020,7 +1958,7 @@ footer {
 /* UPCOMING GAMES SLIDER */
 .upcoming-slider-wrap { position: relative; display: flex; align-items: center; gap: 0.5rem; }
 /* align-items: flex-start — otherwise flex stretches every card in the row to
-   match whichever one has its .gc-reveal open on hover/tap. */
+   match the tallest card's height. */
 .upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; padding-top: 18px; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
 .upcoming-slider .game-card { min-width: 240px; max-width: 240px; scroll-snap-align: start; flex-shrink: 0; }
@@ -2180,13 +2118,9 @@ footer {
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
   .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-  /* 2-per-row cards here are as narrow as the slider ones, so the price table
-     needs the same compact sizing or the header labels wrap more than needed. */
-  .gc-pth-label { font-size: 0.6rem; margin-bottom: 0.15rem; }
-  .gc-pill { font-size: 0.56rem; padding: 0.06rem 0.22rem; }
-  .gc-ptd-dur { font-size: 0.6rem; }
-  .gc-price { font-size: 0.6rem; }
-  .gc-price-orig { font-size: 0.54rem; }
+  .gc-summary { padding: 0.4rem 0.5rem; }
+  .gc-summary-amount { font-size: 0.92rem; }
+  .gc-pill { font-size: 0.6rem; padding: 0.08rem 0.26rem; }
   .psplus-months-grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .psplus-month-cover { aspect-ratio: 16/9; }
   .psplus-month-cover-placeholder { aspect-ratio: 16/9; }
@@ -2228,19 +2162,13 @@ footer {
   .slider-card-wrap .game-info { padding: 0.5rem 0.5rem 0.6rem; }
   .slider-card-wrap .gc-genre { font-size: 0.75rem; }
   .slider-card-wrap .game-title { font-size: 0.8rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.3rem; }
-  /* Compact shared-duration price table — these cards run ~50vw wide, tighter
-     than a full-width card, so the table needs smaller type/padding on top of
-     its own already-compact base sizing. */
-  .slider-card-wrap .gc-ptable { margin-top: 0.3rem; }
-  .slider-card-wrap .gc-pth { padding: 0.25rem 0.2rem; }
-  .slider-card-wrap .gc-pth-label { font-size: 0.58rem; margin-bottom: 0.1rem; }
-  .slider-card-wrap .gc-pill { font-size: 0.52rem; padding: 0.05rem 0.2rem; }
-  .slider-card-wrap .gc-pth-days { font-size: 0.52rem; }
-  .slider-card-wrap .gc-ptd-dur { font-size: 0.58rem; padding: 0.22rem 0 0.22rem 0.3rem; }
-  .slider-card-wrap .gc-ptd { padding: 0.22rem 0.12rem; }
-  .slider-card-wrap .gc-price { font-size: 0.58rem; }
-  .slider-card-wrap .gc-price-orig { font-size: 0.5rem; }
-  .slider-card-wrap .gc-price-start { font-size: 0.75rem; }
+  /* Compact summary price — these cards run ~50vw wide, tighter than a full-width card. */
+  .slider-card-wrap .gc-summary { padding: 0.35rem 0.45rem; margin-top: 0.3rem; }
+  .slider-card-wrap .gc-summary-label { font-size: 0.56rem; }
+  .slider-card-wrap .gc-summary-amount { font-size: 0.85rem; }
+  .slider-card-wrap .gc-summary-was { font-size: 0.58rem; }
+  .slider-card-wrap .gc-pill { font-size: 0.54rem; padding: 0.06rem 0.22rem; }
+  .slider-card-wrap .gc-summary-more { font-size: 0.62rem; margin-top: 0.25rem; }
   .slider-card-wrap .rent-btn { font-size: 0.75rem; padding: 0.35rem 0.4rem; margin-top: 0.35rem; border-radius: 7px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.75rem; padding: 0.18rem 0.4rem; }
   /* PS Plus cards */
