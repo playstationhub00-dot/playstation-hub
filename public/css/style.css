@@ -1264,8 +1264,14 @@ nav {
 }
 .gc-ptd {
   background: #111; border: 1px solid #1c1c1c;
-  padding: 0.35rem 0.3rem; text-align: center; white-space: nowrap;
+  padding: 0.35rem 0.3rem; text-align: center;
 }
+/* Old vs. new price stack vertically rather than sitting side by side on one
+   line — on a narrow card (any of the 2-per-row mobile grids) two prices
+   side by side is exactly the kind of "10D ₱399 ₱379 crammed into ~100px"
+   overflow this table was built to get away from. */
+.gc-price-orig { display: block; margin-right: 0; }
+.gc-price { display: block; }
 .gc-ptd-tr { background: #0d0a00; border-color: rgba(255,196,0,0.12); }
 .gc-ptd-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.12); color: #3a3a3a; }
 .gc-price-orig { font-size: 0.7rem; color: #555; text-decoration: line-through; margin-right: 0.2rem; }
@@ -2174,6 +2180,13 @@ footer {
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
   .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+  /* 2-per-row cards here are as narrow as the slider ones, so the price table
+     needs the same compact sizing or the header labels wrap more than needed. */
+  .gc-pth-label { font-size: 0.7rem; margin-bottom: 0.2rem; }
+  .gc-pill { font-size: 0.66rem; padding: 0.08rem 0.28rem; }
+  .gc-ptd-dur { font-size: 0.7rem; }
+  .gc-price { font-size: 0.7rem; }
+  .gc-price-orig { font-size: 0.62rem; }
   .psplus-months-grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .psplus-month-cover { aspect-ratio: 16/9; }
   .psplus-month-cover-placeholder { aspect-ratio: 16/9; }
