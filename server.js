@@ -2274,8 +2274,11 @@ app.post('/admin/price-categories/add', upload.single('image'), requireAuth, asy
     tr_price_15d: parseInt(tr_price_15d) || 249,
     tr_price_30d: parseInt(tr_price_30d) || 399,
     image,
-    image_width: Math.min(150, Math.max(10, parseInt(image_width) || 70)),
-    image_height: Math.min(150, Math.max(10, parseInt(image_height) || 90)),
+    // image_width is how far the picture reaches across the card in the Split Art
+    // layout. image_height / image_blend are kept for older records but that layout
+    // always bleeds the art full-height, so they no longer affect rendering.
+    image_width: Math.min(90, Math.max(20, parseInt(image_width) || 52)),
+    image_height: Math.min(150, Math.max(10, parseInt(image_height) || 100)),
     image_opacity: Math.min(100, Math.max(0, parseInt(image_opacity) != null && !isNaN(parseInt(image_opacity)) ? parseInt(image_opacity) : 100)),
     image_blend: image_blend === 'on',
     bg_color: /^#[0-9a-fA-F]{6}$/.test(bg_color) ? bg_color : '#F0A500',
@@ -2300,7 +2303,7 @@ app.post('/admin/price-categories/edit/:id', upload.single('image'), requireAuth
     tr_price_15d: parseInt(tr_price_15d) || cat.tr_price_15d,
     tr_price_30d: parseInt(tr_price_30d) || cat.tr_price_30d,
     image,
-    image_width: Math.min(150, Math.max(10, parseInt(image_width) || cat.image_width || 70)),
+    image_width: Math.min(90, Math.max(20, parseInt(image_width) || cat.image_width || 52)),
     image_height: Math.min(150, Math.max(10, parseInt(image_height) || cat.image_height || 90)),
     image_opacity: Math.min(100, Math.max(0, !isNaN(parseInt(image_opacity)) ? parseInt(image_opacity) : (cat.image_opacity != null ? cat.image_opacity : 100))),
     image_blend: image_blend === 'on',

@@ -884,15 +884,9 @@
                   <% } %>
                   <input type="file" name="image" accept="image/*">
                 </div>
-                <div class="form-group"><label>Picture Width (%)</label><input type="number" name="image_width" value="<%= cat.image_width != null ? cat.image_width : 70 %>" min="10" max="150"></div>
-                <div class="form-group"><label>Picture Max Height (%)</label><input type="number" name="image_height" value="<%= cat.image_height != null ? cat.image_height : 90 %>" min="10" max="150"></div>
+                <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="<%= cat.image_width != null ? cat.image_width : 52 %>" min="20" max="90"></div>
                 <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="<%= cat.image_opacity != null ? cat.image_opacity : 100 %>" min="0" max="100"></div>
-                <div class="form-group" style="display:flex;align-items:flex-end;">
-                  <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;">
-                    <input type="checkbox" name="image_blend" <%= cat.image_blend !== false ? 'checked' : '' %>> Blend picture into card color
-                  </label>
-                </div>
-                <div class="form-group"><label>Card Color</label><input type="color" name="bg_color" value="<%= cat.bg_color || '#F0A500' %>" style="height:38px;padding:0.2rem;"></div>
+                <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="<%= cat.bg_color || '#F0A500' %>" style="height:38px;padding:0.2rem;"></div>
                 <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="<%= cat.title_color || '#ffffff' %>" style="height:38px;padding:0.2rem;"></div>
                 <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="<%= cat.title_size != null ? cat.title_size : 18 %>" min="10" max="40"></div>
               </div>
@@ -926,15 +920,9 @@
 
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
               <div class="form-group full"><label>Card Picture</label><input type="file" name="image" accept="image/*"></div>
-              <div class="form-group"><label>Picture Width (%)</label><input type="number" name="image_width" value="70" min="10" max="150"></div>
-              <div class="form-group"><label>Picture Max Height (%)</label><input type="number" name="image_height" value="90" min="10" max="150"></div>
+              <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="52" min="20" max="90"></div>
               <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="100" min="0" max="100"></div>
-              <div class="form-group" style="display:flex;align-items:flex-end;">
-                <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.85rem;">
-                  <input type="checkbox" name="image_blend" checked> Blend picture into card color
-                </label>
-              </div>
-              <div class="form-group"><label>Card Color</label><input type="color" name="bg_color" value="#F0A500" style="height:38px;padding:0.2rem;"></div>
+              <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="#F0A500" style="height:38px;padding:0.2rem;"></div>
               <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="#ffffff" style="height:38px;padding:0.2rem;"></div>
               <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="18" min="10" max="40"></div>
             </div>
