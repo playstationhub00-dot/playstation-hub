@@ -878,7 +878,10 @@ nav {
   transition: transform 0.15s, border-color 0.15s;
 }
 .tier-card:hover { transform: translateY(-2px); border-color: #2e2e2e; }
-.tier-card-art { position: absolute; right: 0; top: 0; bottom: 0; z-index: 1; }
+/* overflow:hidden matters — on hover the image scales 5% and would otherwise
+   spill past this panel's left edge, where the ::after fade below cannot reach
+   it, leaving a hard vertical seam down the middle of the card. */
+.tier-card-art { position: absolute; right: 0; top: 0; bottom: 0; z-index: 1; overflow: hidden; }
 .tier-card-art img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s ease; }
 .tier-card:hover .tier-card-art img { transform: scale(1.05); }
 .tier-card-art::after {
