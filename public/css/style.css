@@ -1224,70 +1224,52 @@ nav {
   letter-spacing: 0.8px;
   margin-bottom: -0.2rem;
 }
-.gc-price-table {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  align-items: stretch;
+/* ── Shared-duration price table ──────────────────────────────────────────
+   Replaces the old side-by-side Non-Trophy/Trophy blocks, which each
+   repeated "10D/15D/30D" in their own ~120px-wide column — on a phone card
+   that starved the column label down to "NON-TR…" and squeezed each price
+   row into ~100px. Duration is now written once per row on the left, and
+   the RENTED/slots-left status sits inside each column's own header cell,
+   directly above that column's prices, instead of a separate line above
+   the table. */
+.gc-ptable { width: 100%; border-collapse: collapse; margin-top: 0.5rem; table-layout: fixed; }
+.gc-pth-dur, .gc-ptd-dur { width: 30%; }
+.gc-pth {
+  background: #111; border: 1px solid #222; border-bottom: none;
+  padding: 0.4rem 0.35rem; text-align: center; vertical-align: top;
 }
-.gc-col {
-  flex: 1;
-  height: 100%;
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 8px;
-  padding: 0.45rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-width: 0;
-  box-sizing: border-box;
+.gc-pth-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
+.gc-pth-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
+.gc-pth-label {
+  font-size: 0.75rem; font-weight: 800; color: #999;
+  letter-spacing: 0.2px; margin-bottom: 0.3rem;
 }
-.gc-col-tr { background: #100c00; border-color: rgba(255,196,0,0.2); }
-.gc-col-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.2); }
-.gc-col-head {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-bottom: 0.1rem;
+.gc-pth-tr .gc-pth-label { color: #ffc400; }
+.gc-pth-ps4 .gc-pth-label { color: #60a5fa; }
+.gc-pill {
+  font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.35rem;
+  border-radius: 4px; display: inline-block; white-space: nowrap;
 }
-.gc-col-icon { font-size: 0.75rem; }
-.gc-col-label {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #666;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.gc-pill-yes { background: rgba(34,197,94,0.15); color: #22c55e; }
+.gc-pill-tr  { background: rgba(255,196,0,0.15); color: #ffc400; }
+.gc-pill-ps4 { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.gc-pill-no  { background: rgba(239,68,68,0.12); color: #ef4444; }
+.gc-pth-days { font-size: 0.7rem; font-weight: 700; color: #f59e0b; margin-top: 0.2rem; }
+.gc-pth-tr .gc-pth-days { color: #ffc400; }
+.gc-pth-ps4 .gc-pth-days { color: #60a5fa; }
+.gc-ptd-dur {
+  background: #0a0a0a; border: 1px solid #1c1c1c; border-right: none;
+  font-size: 0.75rem; color: #666; font-weight: 700; text-align: left;
+  padding: 0.35rem 0 0.35rem 0.5rem;
 }
-.gc-avail-row { margin-bottom: 0.15rem; }
-.gc-avail {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  display: inline-block;
+.gc-ptd {
+  background: #111; border: 1px solid #1c1c1c;
+  padding: 0.35rem 0.3rem; text-align: center; white-space: nowrap;
 }
-.gc-avail-yes  { background: rgba(34,197,94,0.15); color: #22c55e; }
-.gc-avail-tr   { background: rgba(255,196,0,0.15); color: #ffc400; }
-.gc-avail-ps4  { background: rgba(96,165,250,0.15); color: #60a5fa; }
-.gc-avail-no   { background: rgba(239,68,68,0.12); color: #ef4444; }
-.gc-slot-count { display: flex; align-items: center; gap: 0.25rem; flex-wrap: wrap; margin-bottom: 0.1rem; }
-.gc-slot-type-label { font-size: 0.75rem; font-weight: 700; color: #60a5fa; background: rgba(96,165,250,0.1); border-radius: 3px; padding: 0.1rem 0.3rem; }
-.gc-col-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; align-items: stretch; }
-.gc-col-wrap .gc-col { flex: 1; }
-.gc-days-left-spacer { height: 1.1rem; display: flex; align-items: center; margin-bottom: 0.25rem; }
-.gc-days-left { font-size: 0.75rem; font-weight: 700; color: #f59e0b; white-space: nowrap; }
-.gc-days-left-tr { color: #ffc400; }
-.gc-days-left-ps4 { color: #60a5fa; }
-.gc-price-rows { display: flex; flex-direction: column; gap: 0.15rem; margin-top: auto; padding-top: 0.3rem; }
-.gc-price-row  { display: flex; justify-content: space-between; align-items: center; }
-.gc-dur        { font-size: 0.75rem; color: #555; font-weight: 600; }
-.gc-price-wrap { display: flex; align-items: center; gap: 0.3rem; }
-.gc-price-orig { font-size: 0.75rem; color: #555; text-decoration: line-through; }
-.gc-price      { font-size: 0.75rem; font-weight: 400; color: #fff; }
+.gc-ptd-tr { background: #0d0a00; border-color: rgba(255,196,0,0.12); }
+.gc-ptd-ps4 { background: #060d1a; border-color: rgba(96,165,250,0.12); color: #3a3a3a; }
+.gc-price-orig { font-size: 0.7rem; color: #555; text-decoration: line-through; margin-right: 0.2rem; }
+.gc-price      { font-size: 0.78rem; font-weight: 600; color: #fff; }
 .gc-price-tr   { color: #ffc400; }
 .gc-price-ps4  { color: #60a5fa; }
 
@@ -2233,22 +2215,18 @@ footer {
   .slider-card-wrap .game-info { padding: 0.5rem 0.5rem 0.6rem; }
   .slider-card-wrap .gc-genre { font-size: 0.75rem; }
   .slider-card-wrap .game-title { font-size: 0.8rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.3rem; }
-  .slider-card-wrap .gc-days-left-spacer { display: none; }
-  /* Compact 2-col price table */
-  .slider-card-wrap .gc-price-table { display: flex; gap: 0.3rem; margin-top: 0.3rem; }
-  .slider-card-wrap .gc-col-wrap { flex: 1; min-width: 0; }
-  .slider-card-wrap .gc-col { padding: 0.3rem; border-radius: 6px; }
-  .slider-card-wrap .gc-col-head { margin-bottom: 0.15rem; gap: 0.15rem; }
-  .slider-card-wrap .gc-col-icon { font-size: 0.75rem; }
-  .slider-card-wrap .gc-col-label { font-size: 0.75rem; }
-  .slider-card-wrap .gc-slot-count { margin-bottom: 0.15rem; }
-  .slider-card-wrap .gc-avail { font-size: 0.75rem; padding: 0.1rem 0.25rem; }
-  .slider-card-wrap .gc-price-rows { display: flex; flex-direction: column; gap: 0.05rem; }
-  .slider-card-wrap .gc-price-row { font-size: 0.75rem; gap: 0.15rem; }
-  .slider-card-wrap .gc-dur { font-size: 0.75rem; }
-  .slider-card-wrap .gc-price { font-size: 0.75rem; }
-  .slider-card-wrap .gc-price-orig { font-size: 0.75rem; }
-  .slider-card-wrap .gc-price-wrap { gap: 0.2rem; }
+  /* Compact shared-duration price table — these cards run ~50vw wide, tighter
+     than a full-width card, so the table needs smaller type/padding on top of
+     its own already-compact base sizing. */
+  .slider-card-wrap .gc-ptable { margin-top: 0.3rem; }
+  .slider-card-wrap .gc-pth { padding: 0.25rem 0.2rem; }
+  .slider-card-wrap .gc-pth-label { font-size: 0.68rem; margin-bottom: 0.15rem; }
+  .slider-card-wrap .gc-pill { font-size: 0.62rem; padding: 0.06rem 0.25rem; }
+  .slider-card-wrap .gc-pth-days { font-size: 0.6rem; }
+  .slider-card-wrap .gc-ptd-dur { font-size: 0.68rem; padding: 0.25rem 0 0.25rem 0.35rem; }
+  .slider-card-wrap .gc-ptd { padding: 0.25rem 0.15rem; }
+  .slider-card-wrap .gc-price { font-size: 0.68rem; }
+  .slider-card-wrap .gc-price-orig { font-size: 0.6rem; }
   .slider-card-wrap .gc-price-start { font-size: 0.75rem; }
   .slider-card-wrap .rent-btn { font-size: 0.75rem; padding: 0.35rem 0.4rem; margin-top: 0.35rem; border-radius: 7px; }
   .slider-card-wrap .gc-platform-badge { font-size: 0.75rem; padding: 0.18rem 0.4rem; }

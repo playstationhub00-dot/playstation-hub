@@ -93,94 +93,68 @@
     <div class="gc-reveal">
     <% if (game.genre) { %><div class="gc-genre"><%= game.genre.toUpperCase() %></div><% } %>
 
-    <!-- Pricing columns side by side -->
-    <div class="gc-price-table">
-
-      <!-- Non-Trophy column wrapper -->
-      <div class="gc-col-wrap">
-        <div class="gc-days-left-spacer">
-          <% if (ntSlots <= 0 && ntDaysLeft != null && ntDaysLeft > 0) { %>
-          <span class="gc-days-left">🎮 Available in <%= ntDaysLeft %>d</span>
-          <% } %>
-        </div>
-        <div class="gc-col gc-col-nt">
-          <div class="gc-col-head">
-            <span class="gc-col-icon">🎮</span>
-            <span class="gc-col-label">NON-TROPHY</span>
-          </div>
-          <div class="gc-slot-count">
+    <!-- Shared-duration price table: duration is written once per row (left column)
+         instead of being repeated inside two separate Non-Trophy/Trophy blocks side by
+         side. That duplication was what starved the old layout of width on a phone
+         card (~290px), forcing "NON-TROPHY" to clip to "NON-TR…" and each price row to
+         cram "10D ₱399 ₱379" into ~100px. Status (RENTED / N slots left) now lives in
+         the column header, directly above its own prices, instead of a separate row. -->
+    <table class="gc-ptable">
+      <thead>
+        <tr>
+          <th class="gc-pth-dur"></th>
+          <th class="gc-pth gc-pth-nt">
+            <div class="gc-pth-label">🎮 No Trophy</div>
             <% if (ntSlots > 0) { %>
-              <span class="gc-avail gc-avail-yes"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span>
+              <span class="gc-pill gc-pill-yes"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span>
             <% } else { %>
-              <span class="gc-avail gc-avail-no">RENTED</span>
+              <span class="gc-pill gc-pill-no">RENTED</span>
             <% } %>
-          </div>
-          <div class="gc-price-rows">
-            <% [[10, game.nt_price_10d], [15, game.nt_price_15d], [30, game.nt_price_30d]].forEach(([d, base]) => { const pct = gcPromoPct(d); %>
-            <div class="gc-price-row">
-              <span class="gc-dur"><%= d %>D</span>
-              <span class="gc-price-wrap">
-                <% if (pct > 0) { %><span class="gc-price-orig">₱<%= base %></span><% } %>
-                <span class="gc-price">₱<%= gcFinal(base, d) %></span>
-              </span>
-            </div>
-            <% }) %>
-          </div>
-        </div>
-      </div>
-
-      <!-- Trophy / PS4 Primary column wrapper -->
-      <% if (hasTrophy || showPs4) { %>
-      <div class="gc-col-wrap">
-        <div class="gc-days-left-spacer">
-          <% if (hasTrophy && trSlots <= 0 && trDaysLeft != null && trDaysLeft > 0) { %>
-          <span class="gc-days-left gc-days-left-tr">🏆 Available in <%= trDaysLeft %>d</span>
-          <% } else if (showPs4 && ps4Slots <= 0 && ps4DaysLeft != null && ps4DaysLeft > 0) { %>
-          <span class="gc-days-left gc-days-left-ps4">🕹️ PS4 in <%= ps4DaysLeft %>d</span>
-          <% } %>
-        </div>
-        <div class="gc-col gc-col-tr">
-          <div class="gc-col-head">
-            <span class="gc-col-icon">🏆</span>
-            <span class="gc-col-label">TROPHY</span>
-          </div>
+            <% if (ntSlots <= 0 && ntDaysLeft != null && ntDaysLeft > 0) { %><div class="gc-pth-days">Avail <%= ntDaysLeft %>d</div><% } %>
+          </th>
           <% if (hasTrophy) { %>
-          <div class="gc-slot-count">
+          <th class="gc-pth gc-pth-tr">
+            <div class="gc-pth-label">🏆 Trophy</div>
             <% if (trSlots > 0) { %>
-              <span class="gc-avail gc-avail-tr"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %></span>
+              <span class="gc-pill gc-pill-tr"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span>
             <% } else { %>
-              <span class="gc-avail gc-avail-no">RENTED</span>
+              <span class="gc-pill gc-pill-no">RENTED</span>
             <% } %>
-          </div>
-          <% } %>
-          <% if (showPs4) { %>
-          <div class="gc-slot-count">
-            <span class="gc-slot-type-label">PS4</span>
+            <% if (trSlots <= 0 && trDaysLeft != null && trDaysLeft > 0) { %><div class="gc-pth-days">Avail <%= trDaysLeft %>d</div><% } %>
+          </th>
+          <% } else if (showPs4) { %>
+          <th class="gc-pth gc-pth-ps4">
+            <div class="gc-pth-label">🕹️ PS4</div>
             <% if (ps4Slots > 0) { %>
-              <span class="gc-avail gc-avail-ps4"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %></span>
+              <span class="gc-pill gc-pill-ps4"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %> left</span>
             <% } else { %>
-              <span class="gc-avail gc-avail-no">RENTED</span>
+              <span class="gc-pill gc-pill-no">RENTED</span>
             <% } %>
-          </div>
+            <% if (ps4Slots <= 0 && ps4DaysLeft != null && ps4DaysLeft > 0) { %><div class="gc-pth-days">Avail <%= ps4DaysLeft %>d</div><% } %>
+          </th>
           <% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% [[10, game.nt_price_10d, game.tr_price_10d], [15, game.nt_price_15d, game.tr_price_15d], [30, game.nt_price_30d, game.tr_price_30d]].forEach(([d, ntBase, trBase]) => { const pct = gcPromoPct(d); %>
+        <tr>
+          <td class="gc-ptd-dur"><%= d %>D</td>
+          <td class="gc-ptd">
+            <% if (pct > 0) { %><span class="gc-price-orig">₱<%= ntBase %></span><% } %>
+            <span class="gc-price">₱<%= gcFinal(ntBase, d) %></span>
+          </td>
           <% if (hasTrophy) { %>
-          <div class="gc-price-rows">
-            <% [[10, game.tr_price_10d], [15, game.tr_price_15d], [30, game.tr_price_30d]].forEach(([d, base]) => { const pct = gcPromoPct(d); %>
-            <div class="gc-price-row">
-              <span class="gc-dur"><%= d %>D</span>
-              <span class="gc-price-wrap">
-                <% if (pct > 0) { %><span class="gc-price-orig">₱<%= base %></span><% } %>
-                <span class="gc-price gc-price-tr">₱<%= gcFinal(base, d) %></span>
-              </span>
-            </div>
-            <% }) %>
-          </div>
+          <td class="gc-ptd gc-ptd-tr">
+            <% if (pct > 0) { %><span class="gc-price-orig">₱<%= trBase %></span><% } %>
+            <span class="gc-price gc-price-tr">₱<%= gcFinal(trBase, d) %></span>
+          </td>
+          <% } else if (showPs4) { %>
+          <td class="gc-ptd gc-ptd-ps4">—</td>
           <% } %>
-        </div>
-      </div>
-      <% } %>
-
-    </div>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
 
     <!-- Action buttons -->
     <% if (allUnavail) { %>
