@@ -952,7 +952,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
   });
 
   if (skippedNoImage) console.log(`[meta-feed] skipped ${skippedNoImage} game(s) with no cover image`);
-  const csv = [HEADERS.join(','), ...rows.map(r => r.map(metaCsvCell).join(','))].join('\n');
+  const csv = [HEADERS.join(','), ...rows.map(r => r.map(metaCsvCell).join(','))].join('\n') + '\n';
   res.set('Content-Type', 'text/csv; charset=utf-8');
   res.set('Cache-Control', 'public, max-age=300');
   res.send(csv);
