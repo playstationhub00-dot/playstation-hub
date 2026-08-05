@@ -871,8 +871,12 @@ function gameSlug(title) {
 // and permanent follows `round(base*(1-pct/100))` (matching buyPrice()).
 const SITE_URL = (process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app').replace(/\/+$/, '');
 
+// Admin-entered descriptions contain hard line breaks. A quoted newline is legal
+// RFC4180, but it splits the row for stricter parsers (and for the Google Sheets
+// IMPORTDATA mirror), so flatten all whitespace runs to single spaces.
 function metaCsvCell(v) {
-  return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const s = String(v == null ? '' : v).replace(/\s*[\r\n]+\s*/g, ' ').trim();
+  return '"' + s.replace(/"/g, '""') + '"';
 }
 function metaPrice(n) { return Number(n).toFixed(2) + ' PHP'; }
 // Meta wants "start/end". Promo end is stored from a datetime-local input (naive
