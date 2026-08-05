@@ -193,6 +193,36 @@ app.locals.computeAvailability = computeAvailability;
 // Expose promo discount lookup so game cards can show the final discounted price, not just the badge
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 app.use(express.static(path.join(__dirname, 'public')));
+
+// ── JPEG renditions for the Meta catalog feed ────────────────────────────────
+// processUploadedImage() stores every cover as .webp, which keeps the site fast
+// on mobile, but Meta's product catalog expects JPEG/PNG. Rather than change the
+// upload pipeline, convert on demand and cache the result next to the original.
+// Registered before the /uploads static handler so this virtual path is matched
+// before a filesystem miss (the /uploads/jpg directory doesn't exist on disk).
+const jpgCacheDir = path.join(uploadsDir, '_jpg');
+app.get('/uploads/jpg/:name', async (req, res) => {
+  const base = path.basename(String(req.params.name)).replace(/\.[^.]+$/, '');
+  if (!base || base.startsWith('.')) return res.status(400).send('Bad request');
+  const cached = path.resolve(jpgCacheDir, base + '.jpg');
+  try {
+    if (!fs.existsSync(cached)) {
+      const src = ['.webp', '.jpg', '.jpeg', '.png', '.gif']
+        .map(ext => path.resolve(uploadsDir, base + ext))
+        .find(p => fs.existsSync(p));
+      if (!src) return res.status(404).send('Not found');
+      if (!fs.existsSync(jpgCacheDir)) fs.mkdirSync(jpgCacheDir, { recursive: true });
+      // WebP may carry alpha; JPEG can't, so flatten onto the site's dark backdrop.
+      await sharp(src).flatten({ background: '#101010' }).jpeg({ quality: 85 }).toFile(cached);
+    }
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.sendFile(cached);
+  } catch (e) {
+    console.error('[jpg-rendition]', base, e.message);
+    res.status(500).send('Conversion failed');
+  }
+});
+
 // Serve uploads from persistent data directory
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.urlencoded({ extended: true }));
@@ -827,6 +857,102 @@ app.get('/browse', (req, res) => {
 function gameSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
+
+// ── Meta / Facebook product catalog feed ─────────────────────────────────────
+// One row per purchasable option (each rental duration x account type, plus each
+// permanent-buy option), grouped under its game via item_group_id. Modelled this
+// way rather than one row per game so a Meta AI agent can answer "how much for 30
+// days trophy?" with the exact figure instead of inferring it from a "starts at"
+// range. Public by design — every number here is already on the game pages.
+//
+// Prices are recomputed here from the same helpers the cards use, so the catalog
+// can't drift from the site. Note the two promos round differently and that is
+// deliberate: rentals follow `base - round(base*pct/100)` (matching game-card.ejs)
+// and permanent follows `round(base*(1-pct/100))` (matching buyPrice()).
+const SITE_URL = (process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app').replace(/\/+$/, '');
+
+function metaCsvCell(v) {
+  return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+}
+function metaPrice(n) { return Number(n).toFixed(2) + ' PHP'; }
+// Meta wants "start/end". Promo end is stored from a datetime-local input (naive
+// PH wall-clock), so emit it as +0800 and stamp the start in the server's UTC.
+function metaSaleWindow(endsAt) {
+  const m = String(endsAt || '').match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  if (!m) return '';
+  const now = new Date(), pad = n => String(n).padStart(2, '0');
+  const start = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())}` +
+                `T${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}+0000`;
+  return `${start}/${m[1]}T${m[2]}+0800`;
+}
+
+app.get('/feed/meta-catalog.csv', (req, res) => {
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const summaryMap = buildAccountSummaryMap();
+  const cats = getPriceCategories();
+  const catName = id => (cats.find(c => c.id === id) || {}).name || '';
+
+  const HEADERS = ['id', 'item_group_id', 'title', 'description', 'availability', 'condition',
+    'price', 'sale_price', 'sale_price_effective_date', 'link', 'image_link', 'brand',
+    'product_type', 'custom_label_0', 'custom_label_1', 'custom_label_2'];
+
+  const rows = [];
+  let skippedNoImage = 0;
+
+  getGames().forEach(g => {
+    // image_link is required by Meta, so a game with no cover can't be listed.
+    if (!g.cover_image) { skippedNoImage++; return; }
+
+    const avail = computeAvailability(g, summaryMap[g.id],
+      { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
+    const group = `ph-${g.id}`;
+    const link = `${SITE_URL}/game/${gameSlug(g.title)}`;
+    const imgBase = path.basename(String(g.cover_image)).replace(/\.[^.]+$/, '');
+    const image = `${SITE_URL}/uploads/jpg/${imgBase}.jpg`;
+    const desc = (g.description && g.description.trim())
+      ? g.description.trim()
+      : `${g.title} for ${g.platform || 'PS5'} — rent or buy permanent access from Playstation Hub.`;
+    const ptype = catName(g.price_category_id);
+
+    const push = (suffix, label, base, final, inStock, durLabel, typeLabel) => {
+      if (!(base > 0)) return;
+      const onSale = final < base;
+      rows.push([`${group}-${suffix}`, group, `${g.title} — ${label}`, desc,
+        inStock ? 'in stock' : 'out of stock', 'new',
+        metaPrice(base), onSale ? metaPrice(final) : '',
+        onSale ? metaSaleWindow(promo.ends_at) : '',
+        link, image, 'Playstation Hub',
+        ptype, g.platform || '', durLabel, typeLabel]);
+    };
+
+    // Rentals — one row per duration per account type.
+    [10, 15, 30].forEach(d => {
+      const pct = getPromoDiscountPct(promo, d);
+      const cut = v => pct > 0 ? v - Math.round(v * pct / 100) : v;
+      const nt = g[`nt_price_${d}d`];
+      if (nt > 0) push(`nt-${d}d`, `${d} Days (Non-Trophy)`, nt, cut(nt), avail.ntSlots > 0, `${d} Days`, 'Non-Trophy');
+      if (avail.hasTrophy) {
+        const tr = g[`tr_price_${d}d`];
+        if (tr > 0) push(`tr-${d}d`, `${d} Days (Trophy)`, tr, cut(tr), avail.trSlots > 0, `${d} Days`, 'Trophy');
+      }
+    });
+
+    // Permanent purchase. Mirrors the card, which hides Buy only when every slot
+    // type is unavailable — so the feed never advertises what the site is hiding.
+    const bpct = (promo.buy_promo_enabled && promo.buy_promo_pct > 0) ? promo.buy_promo_pct : 0;
+    const buyCut = v => bpct ? Math.round(v * (1 - bpct / 100)) : v;
+    const buyInStock = !avail.allUnavail;
+    if (g.buy_nt_price > 0) push('buy-nt', 'Permanent (Non-Trophy)', g.buy_nt_price, buyCut(g.buy_nt_price), buyInStock, 'Permanent', 'Non-Trophy');
+    if (g.buy_tr_price > 0) push('buy-tr', 'Permanent (Trophy)', g.buy_tr_price, buyCut(g.buy_tr_price), buyInStock, 'Permanent', 'Trophy');
+  });
+
+  if (skippedNoImage) console.log(`[meta-feed] skipped ${skippedNoImage} game(s) with no cover image`);
+  const csv = [HEADERS.join(','), ...rows.map(r => r.map(metaCsvCell).join(','))].join('\n');
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.send(csv);
+});
 
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
