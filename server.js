@@ -1003,14 +1003,14 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
     };
 
     // Rentals — one row per duration per account type.
-    [10, 15, 30].forEach(d => {
+    RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => {
       const pct = getPromoDiscountPct(promo, d);
       const cut = v => pct > 0 ? v - Math.round(v * pct / 100) : v;
       const nt = g[`nt_price_${d}d`];
-      if (nt > 0) push(`nt-${d}d`, `${d} Days (Non-Trophy)`, nt, cut(nt), avail.ntSlots > 0, `${d} Days`, 'Non-Trophy');
+      if (nt > 0) push(`nt-${d}d`, `${durLabel} (Non-Trophy)`, nt, cut(nt), avail.ntSlots > 0, durLabel, 'Non-Trophy');
       if (avail.hasTrophy) {
         const tr = g[`tr_price_${d}d`];
-        if (tr > 0) push(`tr-${d}d`, `${d} Days (Trophy)`, tr, cut(tr), avail.trSlots > 0, `${d} Days`, 'Trophy');
+        if (tr > 0) push(`tr-${d}d`, `${durLabel} (Trophy)`, tr, cut(tr), avail.trSlots > 0, durLabel, 'Trophy');
       }
     });
 
