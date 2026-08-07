@@ -224,6 +224,7 @@ function renderDurButtons() {
   const p = getPrices();
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
+  const durLabelMap = { 7: 'Weekly', 30: 'Monthly' };
   RENTAL_DURATIONS.forEach(({ days: d }) => {
     if (!p[d]) return; // skip days with no price
     const btn = document.createElement('button');
@@ -231,7 +232,7 @@ function renderDurButtons() {
     btn.className = 'gd-dur-btn';
     btn.dataset.days = d;
     btn.onclick = () => selectDur(d);
-    btn.innerHTML = `<span class="gd-dur-days">${d}</span><span class="gd-dur-label">DAYS</span><span class="gd-dur-price">₱${p[d]}</span>`;
+    btn.innerHTML = `<span class="gd-dur-days">${durLabelMap[d] || d}</span><span class="gd-dur-price">₱${p[d]}</span>`;
     grid.appendChild(btn);
   });
 }

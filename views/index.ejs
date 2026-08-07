@@ -642,14 +642,12 @@ function switchModalTab(tab) {
   document.getElementById('modalTabBuy').style.color       = isRent ? '#555' : '#000';
 }
 
-function openRentModal(title, nt10, nt15, nt30, tr10, tr15, tr30, hasTrophy, hasNt, buyNt, buyTr) {
+function openRentModal(title, nt7, nt30, tr7, tr30, hasTrophy, hasNt, buyNt, buyTr) {
   document.getElementById('modalGameTitle').textContent = title;
   // Rent prices
-  document.getElementById('modalNtP10').textContent = '₱' + nt10;
-  document.getElementById('modalNtP15').textContent = '₱' + nt15;
+  document.getElementById('modalNtP10').textContent = '₱' + nt7;
   document.getElementById('modalNtP30').textContent = '₱' + nt30;
-  document.getElementById('modalTrP10').textContent = '₱' + tr10;
-  document.getElementById('modalTrP15').textContent = '₱' + tr15;
+  document.getElementById('modalTrP10').textContent = '₱' + tr7;
   document.getElementById('modalTrP30').textContent = '₱' + tr30;
   document.getElementById('modalNtSection').style.display = hasNt ? 'block' : 'none';
   document.getElementById('modalTrophySection').style.display = hasTrophy ? 'block' : 'none';

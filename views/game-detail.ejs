@@ -372,14 +372,14 @@
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 const PRICES = {
-  nt: { 10: <%= game.nt_price_10d %>, 15: <%= game.nt_price_15d %>, 30: <%= game.nt_price_30d %> },
-  tr: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> },
-  ps4: { 10: <%= game.tr_price_10d || game.nt_price_10d %>, 15: <%= game.tr_price_15d || game.nt_price_15d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
+  nt: { 7: <%= game.nt_price_7d %>, 30: <%= game.nt_price_30d %> },
+  tr: { 7: <%= game.tr_price_7d || game.nt_price_7d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> },
+  ps4: { 7: <%= game.tr_price_7d || game.nt_price_7d %>, 30: <%= game.tr_price_30d || game.nt_price_30d %> }
 };
 const BUY_PRICES = { nt: <%= buyNtFinal %>, tr: <%= buyTrFinal %> };
 const PROMO = {
   enabled: <%= promo.enabled ? 'true' : 'false' %>,
-  discounts: { 10: <%= (promo.discounts && promo.discounts[10]) || 0 %>, 15: <%= (promo.discounts && promo.discounts[15]) || 0 %>, 30: <%= (promo.discounts && promo.discounts[30]) || 0 %> },
+  discounts: { 7: <%= (promo.discounts && promo.discounts[7]) || 0 %>, 30: <%= (promo.discounts && promo.discounts[30]) || 0 %> },
   deposit: <%= promo.deposit %>
 };
 function promoPctFor(days) { return PROMO.enabled ? (PROMO.discounts[days] || 0) : 0; }
