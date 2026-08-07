@@ -12,6 +12,18 @@ const computeAvailability = require('./lib/availability');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// The two rental durations the whole site offers. Every duration-driven loop,
+// form, and price lookup reads from this — changing durations again later is a
+// one-line edit here instead of a repo-wide hunt. `days` also drives the
+// `{type}_price_{days}d` field names on games/price_categories/psplus_prices/
+// upcoming (e.g. nt_price_7d, tr_price_30d).
+const RENTAL_DURATIONS = [
+  { days: 7,  label: 'Weekly',  sub: '1 Week'  },
+  { days: 30, label: 'Monthly', sub: '1 Month' },
+];
+const PROMO_DURATIONS = RENTAL_DURATIONS.map(d => d.days); // [7, 30]
+app.locals.RENTAL_DURATIONS = RENTAL_DURATIONS;
+
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
 const dataDir = process.env.DATA_DIR || __dirname;
@@ -50,7 +62,7 @@ db.defaults({
       line1: 'Rent the Latest',
       highlight: 'PS5 & PS4',
       line2: 'Games',
-      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.',
+      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose Weekly or Monthly.',
       title_size: 55,
       highlight_color: '#F0A500',
       subtitle_color: '#aaaaaa'
@@ -109,8 +121,43 @@ db.get('games').value().forEach(g => {
   // Backfill with a date well outside the "added this month" window so pre-existing
   // catalog games don't retroactively show a NEW badge.
   if (g.created_at === undefined) patch.created_at = '2020-01-01T00:00:00.000Z';
+  // Weekly/Monthly migration: Monthly reuses the existing (already-correct)
+  // 30-day price as-is. Weekly seeds from the old 10-day price — same number,
+  // shorter period, a deliberate per-day price increase (spec decision).
+  if (g.nt_price_7d === undefined) patch.nt_price_7d = g.nt_price_10d !== undefined ? g.nt_price_10d : (patch.nt_price_10d || 149);
+  if (g.tr_price_7d === undefined) patch.tr_price_7d = g.tr_price_10d !== undefined ? g.tr_price_10d : (patch.tr_price_10d || 199);
   if (Object.keys(patch).length) {
     db.get('games').find({ id: g.id }).assign(patch).write();
+  }
+});
+
+// Weekly/Monthly migration for price categories — same rule as games above.
+db.get('price_categories').value().forEach(cat => {
+  const patch = {};
+  if (cat.nt_price_7d === undefined) patch.nt_price_7d = cat.nt_price_10d || 149;
+  if (cat.tr_price_7d === undefined) patch.tr_price_7d = cat.tr_price_10d || 199;
+  if (Object.keys(patch).length) {
+    db.get('price_categories').find({ id: cat.id }).assign(patch).write();
+  }
+});
+
+// Weekly/Monthly migration for PS Plus rental prices (single object, not an array).
+(function migratePsplusPricesWeeklyMonthly() {
+  const pp = db.get('psplus_prices').value();
+  if (!pp) return;
+  const patch = {};
+  if (pp.nt_price_7d === undefined) patch.nt_price_7d = pp.nt_price_10d || 349;
+  if (pp.tr_price_7d === undefined) patch.tr_price_7d = pp.tr_price_10d || 399;
+  if (Object.keys(patch).length) db.set('psplus_prices', { ...pp, ...patch }).write();
+})();
+
+// Weekly/Monthly migration for Coming Soon (upcoming) entries.
+db.get('upcoming').value().forEach(u => {
+  const patch = {};
+  if (u.nt_price_7d === undefined) patch.nt_price_7d = u.nt_price_10d || 0;
+  if (u.tr_price_7d === undefined) patch.tr_price_7d = u.tr_price_10d || 0;
+  if (Object.keys(patch).length) {
+    db.get('upcoming').find({ id: u.id }).assign(patch).write();
   }
 });
 
@@ -518,10 +565,19 @@ function getSiteSettings() {
   if (!s.hero_text) {
     db.set('site_settings.hero_text', {
       line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games',
-      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.',
+      subtitle: 'Play more, pay less. Rent top titles starting at ₱99 — choose Weekly or Monthly.',
       title_size: 55, highlight_color: '#F0A500', subtitle_color: '#aaaaaa'
     }).write();
     s.hero_text = db.get('site_settings.hero_text').value();
+  }
+  // Weekly/Monthly migration: the hero subtitle is admin-editable, so only rewrite
+  // it if it still exactly matches the old auto-generated default — never
+  // overwrite a subtitle an admin customized.
+  const OLD_HERO_SUBTITLE = 'Play more, pay less. Rent top titles starting at ₱99 — choose 10, 15, or 30 days.';
+  const NEW_HERO_SUBTITLE = 'Play more, pay less. Rent top titles starting at ₱99 — choose Weekly or Monthly.';
+  if (s.hero_text && s.hero_text.subtitle === OLD_HERO_SUBTITLE) {
+    db.set('site_settings.hero_text.subtitle', NEW_HERO_SUBTITLE).write();
+    s.hero_text.subtitle = NEW_HERO_SUBTITLE;
   }
   if (!s.favicon_path) {
     db.set('site_settings.favicon_path', '/favicon.svg').write();
@@ -563,10 +619,18 @@ function getSiteSettings() {
     db.set('site_settings.section_gap', 4).write();
     s.section_gap = 4;
   }
+  // Weekly/Monthly migration: promo discount keys move from {10,15,30} to {7,30}.
+  // Seed the new "7" key from the old "10" key so an existing promo's Weekly
+  // discount isn't silently lost; leave "10"/"15"/"30" in place (unread) for a
+  // clean rollback.
+  if (s.promo && s.promo.discounts && s.promo.discounts[7] === undefined) {
+    const migratedDiscounts = { ...s.promo.discounts, 7: s.promo.discounts[10] || 0 };
+    db.set('site_settings.promo.discounts', migratedDiscounts).write();
+    s.promo.discounts = migratedDiscounts;
+  }
   return s;
 }
 // Every duration a rent promo can apply to, and the % discount for a given duration.
-const PROMO_DURATIONS = [10, 15, 30];
 function getPromoDiscountPct(promo, days) {
   if (!promo || !promo.enabled || !promo.discounts) return 0;
   return promo.discounts[days] || 0;
