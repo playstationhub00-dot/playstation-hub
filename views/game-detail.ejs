@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
-<body>
+<body class="gd-page-booking-v2">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
 
@@ -48,7 +48,7 @@
   const gdFromPrice = gdPricePairs.length ? gdPricePairs.reduce((a, b) => b.final < a.final ? b : a).final : 0;
 %>
 
-<div class="gd-page gd-page-booking-v2">
+<div class="gd-page">
   <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
 
   <div class="gd-layout">
