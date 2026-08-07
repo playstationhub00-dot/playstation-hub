@@ -27,6 +27,19 @@
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
   const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;
   const buyTrFinal = buyPromo ? Math.round(buyTr * (1 - promo.buy_promo_pct / 100)) : buyTr;
+  // Cheapest live rent price across every available type/duration combo — the
+  // "From ₱X" the price header shows before a type+duration are both picked.
+  // Same base data and discount math as game-card.ejs's gcAllPricePairs, kept
+  // in sync deliberately: this header must never show a different number
+  // than the card that linked here.
+  const gdPricePairs = [
+    [game.nt_price_7d, 7], [game.nt_price_30d, 30],
+    ...(hasTrophy ? [[game.tr_price_7d, 7], [game.tr_price_30d, 30]] : [])
+  ].filter(([base]) => base > 0).map(([base, d]) => {
+    const pct = getPromoDiscountPct(promo, d);
+    return { base, final: pct > 0 ? base - Math.round(base * pct / 100) : base };
+  });
+  const gdFromPrice = gdPricePairs.length ? gdPricePairs.reduce((a, b) => b.final < a.final ? b : a).final : 0;
 %>
 
 <div class="gd-page">
@@ -116,6 +129,20 @@
           ♾️ Buy Permanent
         </button>
         <% } %>
+      </div>
+
+      <!-- ══ PRICE HEADER: shared by rent and buy modes ══ -->
+      <div class="gd-price-header">
+        <div>
+          <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
+          <div class="gd-ph-amount">
+            <span id="phAmount" data-default-amount="<%= gdFromPrice %>">₱<%= gdFromPrice %></span>
+          </div>
+        </div>
+        <div class="gd-ph-save-wrap">
+          <span class="gd-ph-was" id="phWas" style="display:none;"></span>
+          <span class="gd-ph-save" id="phSave" style="display:none;"></span>
+        </div>
       </div>
 
       <!-- ════════════════════════════════
@@ -401,6 +428,7 @@ function setMode(mode) {
   document.getElementById('toggleRent').style.color = isRent ? '#000' : '#555';
   const tb = document.getElementById('toggleBuy');
   if (tb) { tb.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)'; tb.style.color = isRent ? '#555' : '#fff'; }
+  if (isRent) { updateTotal(); } else { updateBuyPriceHeader(); }
 }
 
 // ── Buy type selection ──
@@ -415,6 +443,7 @@ function selectBuyType(type) {
   if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
   if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
   updateBuyLink();
+  updateBuyPriceHeader();
 }
 
 function updateBuyLink() {
@@ -430,6 +459,37 @@ function updateBuyLink() {
     'Price: ₱' + price
   ].join('\n');
   btn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+}
+
+// Shared by both modes — writes the same 4 DOM nodes the price header owns.
+// Called with `null` for was/save to reset to the plain "From ₱X" state.
+function setPriceHeader(kicker, amount, was, save) {
+  const kEl = document.getElementById('phKicker');
+  const amtEl = document.getElementById('phAmount');
+  const wasEl = document.getElementById('phWas');
+  const saveEl = document.getElementById('phSave');
+  if (!kEl) return;
+  kEl.textContent = kicker;
+  amtEl.textContent = '₱' + amount;
+  if (was != null && save != null) {
+    wasEl.textContent = '₱' + was; wasEl.style.display = '';
+    saveEl.textContent = 'Save ₱' + save; saveEl.style.display = '';
+  } else {
+    wasEl.style.display = 'none'; saveEl.style.display = 'none';
+  }
+}
+
+function resetPriceHeader() {
+  const kEl = document.getElementById('phKicker');
+  const amtEl = document.getElementById('phAmount');
+  if (!kEl) return;
+  setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultAmount, null, null);
+}
+
+function updateBuyPriceHeader() {
+  if (!selectedBuyType) { resetPriceHeader(); return; }
+  const typeName = selectedBuyType === 'tr' ? 'trophy · permanent' : 'non-trophy · permanent';
+  setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null);
 }
 
 function handleBuyClick(e) {

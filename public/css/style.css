@@ -580,6 +580,12 @@ nav {
 .gd-title { font-size: 1.6rem; font-weight: 900; line-height: 1.2; margin: 0 0 0.5rem; }
 .gd-desc { font-size: 0.85rem; color: #888; margin: 0 0 1rem; line-height: 1.6; }
 .gd-section-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.2px; color: #555; text-transform: uppercase; margin-bottom: 0.75rem; }
+.gd-price-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.8rem 0.95rem; margin-bottom: 1.25rem; }
+.gd-ph-kicker { font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 0.15rem; }
+.gd-ph-amount { font-size: 1.55rem; font-weight: 900; color: var(--ps-blue); letter-spacing: -0.01em; line-height: 1; }
+.gd-ph-save-wrap { text-align: right; }
+.gd-ph-was { display: block; font-size: 0.78rem; color: #555; text-decoration: line-through; margin-bottom: 0.2rem; }
+.gd-ph-save { display: inline-block; font-size: 0.7rem; font-weight: 800; color: #22c55e; background: rgba(34,197,94,0.13); padding: 0.15rem 0.4rem; border-radius: 5px; }
 .gd-type-options { display: flex; flex-direction: column; gap: 0.6rem; }
 .gd-type-card { display: flex; align-items: flex-start; gap: 0.75rem; background: #111; border: 1.5px solid #222; border-radius: 12px; padding: 0.85rem 1rem; cursor: pointer; transition: border-color 0.15s; }
 .gd-type-card:hover:not(.gd-type-disabled) { border-color: #444; }
