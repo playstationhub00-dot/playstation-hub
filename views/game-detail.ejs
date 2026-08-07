@@ -27,6 +27,12 @@
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
   const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;
   const buyTrFinal = buyPromo ? Math.round(buyTr * (1 - promo.buy_promo_pct / 100)) : buyTr;
+  // Cheapest live BUY price (permanent access), for the price header / sticky
+  // bar to show before a buy type is picked — must never fall back to the
+  // rent "From" price, which is a different (and usually much lower) figure.
+  const gdBuyFromPrice = [buyNtFinal, buyTrFinal].filter(p => p > 0).length
+    ? Math.min(...[buyNtFinal, buyTrFinal].filter(p => p > 0))
+    : 0;
   // Cheapest live rent price across every available type/duration combo — the
   // "From ₱X" the price header shows before a type+duration are both picked.
   // Same base data and discount math as game-card.ejs's gcAllPricePairs, kept
@@ -136,7 +142,7 @@
         <div>
           <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
           <div class="gd-ph-amount">
-            <span id="phAmount" data-default-amount="<%= gdFromPrice %>">₱<%= gdFromPrice %></span>
+            <span id="phAmount" data-default-amount="<%= gdFromPrice %>" data-default-buy-amount="<%= gdBuyFromPrice %>">₱<%= gdFromPrice %></span>
           </div>
         </div>
         <div class="gd-ph-save-wrap">
@@ -301,6 +307,7 @@
         </div>
         <% } else { %>
         <!-- All unavail: reservation options shown directly -->
+        <div id="reserveSectionAll">
         <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
         <div class="gd-reserve-options">
           <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
@@ -320,6 +327,7 @@
           </a>
         </div>
         <div id="reserveValidationMsg1" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        </div>
         <% } %>
 
         <!-- Free trial note -->
@@ -438,6 +446,17 @@ const PROMO = {
   deposit: <%= promo.deposit %>
 };
 function promoPctFor(days) { return PROMO.enabled ? (PROMO.discounts[days] || 0) : 0; }
+
+// Single source of truth for the rent total, used by the order summary,
+// the sticky bar, and the reserve-link message builder so they can never
+// independently drift on the deposit/discount rule.
+function computeRentTotal(type, days) {
+  const base = PRICES[type][days];
+  const pct = promoPctFor(days);
+  const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
+  const deposit = (type === 'tr' || type === 'ps4') ? PROMO.deposit : 0;
+  return { base, discount, deposit, pct, total: base - discount + deposit };
+}
 const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %>, ps4: <%= ps4Avail ? 'true' : 'false' %> };
 
 let selectedType = null;
@@ -456,7 +475,7 @@ function setMode(mode) {
   document.getElementById('toggleRent').style.color = isRent ? '#000' : '#555';
   const tb = document.getElementById('toggleBuy');
   if (tb) { tb.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)'; tb.style.color = isRent ? '#555' : '#fff'; }
-  if (isRent) { updateTotal(); } else { updateBuyPriceHeader(); }
+  if (isRent) { updateTotal(); updateCtaState(); } else { updateBuyPriceHeader(); }
   syncStickyBar();
 }
 
@@ -517,7 +536,13 @@ function resetPriceHeader() {
 }
 
 function updateBuyPriceHeader() {
-  if (!selectedBuyType) { resetPriceHeader(); return; }
+  if (!selectedBuyType) {
+    const kEl = document.getElementById('phKicker');
+    const amtEl = document.getElementById('phAmount');
+    if (!kEl) return;
+    setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultBuyAmount, null, null);
+    return;
+  }
   const typeName = selectedBuyType === 'tr' ? 'trophy · permanent' : 'non-trophy · permanent';
   setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null);
 }
@@ -602,12 +627,14 @@ function updateTotal() {
   let base, discount = 0, deposit = 0, pct = 0, baseLabel = 'Base';
 
   if (selectedType && selectedDays) {
-    base = PRICES[selectedType][selectedDays];
-    pct = promoPctFor(selectedDays);
-    discount = pct > 0 ? Math.round(base * pct / 100) : 0;
-    deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+    const rt = computeRentTotal(selectedType, selectedDays);
+    base = rt.base; discount = rt.discount; deposit = rt.deposit; pct = rt.pct;
     baseLabel = 'Base (' + selectedDays + ' days)';
     updatePriceHeaderFromSelection(base, discount);
+  } else if (selectedType) {
+    base = RENTAL_DURATIONS.map(d => PRICES[selectedType][d]).reduce((a, b) => Math.min(a, b));
+    deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+    resetPriceHeader();
   } else {
     const amtEl = document.getElementById('phAmount');
     base = amtEl ? parseInt(amtEl.dataset.defaultAmount, 10) : 0;
@@ -684,7 +711,7 @@ function syncStickyBar() {
     if (!selectedBuyType) {
       const amtEl = document.getElementById('phAmount');
       kEl.textContent = 'From';
-      aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
+      aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultBuyAmount : '0');
       bEl.textContent = 'Pick a type';
       bEl.classList.add('gd-cta-wait');
     } else {
@@ -718,12 +745,9 @@ function syncStickyBar() {
     bEl.textContent = 'Pick a duration';
     bEl.classList.add('gd-cta-wait');
   } else {
-    const base = PRICES[selectedType][selectedDays];
-    const pct = promoPctFor(selectedDays);
-    const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
-    const deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+    const rt = computeRentTotal(selectedType, selectedDays);
     kEl.textContent = 'Total';
-    aEl.textContent = '₱' + (base - discount + deposit);
+    aEl.textContent = '₱' + rt.total;
     bEl.textContent = 'Message us';
     bEl.classList.remove('gd-cta-wait');
   }
@@ -740,12 +764,17 @@ function handleStickyBarClick() {
   }
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
-    document.getElementById('reserveSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    (document.getElementById('reserveSection') || document.getElementById('reserveSectionAll'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
-  if (!selectedType || !selectedDays) {
-    const target = !selectedType ? document.getElementById('typeOptions') : document.getElementById('durationGrid');
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (!selectedType) {
+    const el = document.getElementById('typeOptions');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el?.classList.add('gd-dur-grid-shake');
+    setTimeout(() => el?.classList.remove('gd-dur-grid-shake'), 600);
+    return;
+  } else if (!selectedDays) {
+    document.getElementById('durationGrid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     highlightDurationGrid();
     return;
   }
@@ -758,13 +787,10 @@ function updateReserveLinks() {
   const daysLabel = selectedDays ? selectedDays + ' Days' : '';
   let totalLine = '';
   if (selectedType && selectedDays) {
-    const base = PRICES[selectedType][selectedDays];
-    const pct = promoPctFor(selectedDays);
-    const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
-    const deposit  = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
-    totalLine = 'Total: ₱' + (base - discount + deposit);
-    if (discount > 0) totalLine += ' (incl. ' + pct + '% promo discount)';
-    if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
+    const rt = computeRentTotal(selectedType, selectedDays);
+    totalLine = 'Total: ₱' + rt.total;
+    if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
+    if (rt.deposit  > 0) totalLine += ' + ₱' + rt.deposit + ' refundable deposit';
   }
   const ctaBtn = document.getElementById('ctaBtn');
   if (ctaBtn) {
