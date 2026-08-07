@@ -197,8 +197,8 @@
 
 <script>
 const GAME_TITLE = '<%= game.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") %>';
-const NT_PRICES  = { 10: <%= game.nt_price_10d||0 %>, 15: <%= game.nt_price_15d||0 %>, 30: <%= game.nt_price_30d||0 %> };
-const TR_PRICES  = { 10: <%= game.tr_price_10d||0 %>, 15: <%= game.tr_price_15d||0 %>, 30: <%= game.tr_price_30d||0 %> };
+const NT_PRICES  = { 7: <%= game.nt_price_7d||0 %>, 30: <%= game.nt_price_30d||0 %> };
+const TR_PRICES  = { 7: <%= game.tr_price_7d||0 %>, 30: <%= game.tr_price_30d||0 %> };
 const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;
 const TR_SLOTS   = <%= game.trophy_slots||0 %>;
 
