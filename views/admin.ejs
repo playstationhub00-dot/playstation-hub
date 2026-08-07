@@ -955,6 +955,7 @@
             <select name="platform"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
           </div>
           <div class="form-group"><label>Genre</label><input type="text" name="genre" placeholder="e.g. Action, RPG, Horror"></div>
+          <div class="form-group"><label>📅 Release Date <span style="color:#555;font-size:0.7rem;">(when the game launched — powers "New Releases")</span></label><input type="date" name="release_date"></div>
           <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
           <div class="form-group"><label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label><input type="number" name="available_slots" value="1" min="0"></div>
           <div class="form-group"><label>Current Renters</label><input type="number" name="renters" value="0" min="0"></div>
@@ -1049,11 +1050,11 @@
       <div style="overflow-x:auto;">
         <table class="games-table">
           <thead>
-            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🆕 Added</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
+            <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🆕 Added</th><th>📅 Released</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
           </thead>
           <tbody>
             <% if (games.length === 0) { %>
-            <tr><td colspan="13" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
+            <tr><td colspan="14" style="text-align:center;color:var(--text-secondary);padding:2rem;">No games yet. Add one above!</td></tr>
             <% } %>
             <% games.forEach(game => {
               const gameTotalEarned = customers.filter(c => c.game_id === game.id).reduce((s,c) => s+(c.price||0), 0);
@@ -1090,6 +1091,13 @@
                   <% } %>
                 <% } else { %>
                   <span style="color:#333;font-size:0.8rem;">—</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (game.release_date && game.release_date !== 'TBA') { %>
+                  <span style="color:#aaa;font-size:0.75rem;"><%= new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                <% } else { %>
+                  <span style="color:#333;font-size:0.8rem;" title="Set a release date to include this game in New Releases">—</span>
                 <% } %>
               </td>
               <td>

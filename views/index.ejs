@@ -232,6 +232,24 @@
 <% } %>
 <% } %>
 
+<!-- NEW RELEASES SLIDER —————————————————————————————————————————————————
+     Most recently released games, by publisher release_date. Deliberately not
+     the same as the ✨ NEW badge, which marks what we stocked in the last 11
+     days (created_at). Hidden entirely until at least 4 games have a
+     release_date set, so a half-backfilled field never shows a thin section. -->
+<% if (newReleases && newReleases.length >= 4) { %>
+<div class="section" id="newReleasesSection">
+  <h2 class="section-title">New Releases <a href="/browse" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></h2>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('newReleasesSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="newReleasesSlider">
+      <% newReleases.forEach(game => { %><div class="slider-card-wrap" style="min-width:240px;max-width:240px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('newReleasesSlider',1)" aria-label="Next">&#8250;</button>
+  </div>
+</div>
+<% } %>
+
 <!-- MOST POPULAR SLIDER -->
 <div class="section" id="mostPopularSection">
   <h2 class="section-title">Most Popular <a href="/browse" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></h2>

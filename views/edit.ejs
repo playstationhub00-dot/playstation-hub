@@ -41,6 +41,10 @@
           <input type="text" name="genre" value="<%= game.genre || '' %>">
         </div>
         <div class="form-group">
+          <label>📅 Release Date <span style="color:#555;font-size:0.7rem;">(when the game launched — powers "New Releases")</span></label>
+          <input type="date" name="release_date" value="<%= (game.release_date && game.release_date !== 'TBA') ? game.release_date : '' %>">
+        </div>
+        <div class="form-group">
           <label>🎮 Non-Trophy Slots</label>
           <input type="number" name="non_trophy_slots" value="<%= game.non_trophy_slots || 0 %>" min="0">
         </div>

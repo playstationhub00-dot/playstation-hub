@@ -817,7 +817,17 @@ app.get('/', (req, res) => {
   const homeCustomers = getCustomers();
   const activeRenters = homeCustomers.filter(c => c.status === 'renting').length;
   const gamesPurchased = homeCustomers.filter(c => c.status === 'bought').length;
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased });
+  // "New Releases" — the 10 most recently *released* games, which is a different
+  // question from the NEW badge (11 days since we stocked it, created_at). Only
+  // games with a real release_date qualify, so the section stays accurate while
+  // the field is being backfilled instead of silently falling back to created_at.
+  // Future-dated games belong in Coming Soon, so they're excluded here.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const newReleases = all
+    .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
+    .sort((a, b) => b.release_date.localeCompare(a.release_date))
+    .slice(0, 10);
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
 app.get('/browse', (req, res) => {
@@ -1293,6 +1303,10 @@ app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
     tr_price_30d: game.tr_price_30d || 0,
     featured: false,
     renters: 0,
+    // Carry the announced date over so a game promoted from Coming Soon lands in
+    // "New Releases" without re-typing it. 'TBA' means it was never announced, so
+    // it becomes blank here and the admin can fill in the real date.
+    release_date: (game.release_date && game.release_date !== 'TBA') ? game.release_date : '',
     created_at: new Date().toISOString()
   }).write();
   // Remove from upcoming
@@ -1332,7 +1346,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
     buy_nt_price, buy_tr_price,
-    genre, description, trophy_account, trophy_slots,
+    genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     price_category_id, price_mode, cost, link_label, link_url } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
@@ -1370,6 +1384,10 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     buy_nt_price: parseInt(buy_nt_price) || 0,
     buy_tr_price: parseInt(buy_tr_price) || 0,
     cost: parseInt(cost) || 0,
+    // Publisher release date (YYYY-MM-DD), optional. Drives the homepage "New
+    // Releases" section, which skips any game where this is unset — distinct
+    // from created_at, which is when we started stocking it (the NEW badge).
+    release_date: (release_date || '').trim(),
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=added');
@@ -1386,7 +1404,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     nt_price_10d, nt_price_15d, nt_price_30d,
     tr_price_10d, tr_price_15d, tr_price_30d,
     buy_nt_price, buy_tr_price,
-    genre, description, trophy_account, trophy_slots,
+    genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     remove_gallery, cover_focal_x, cover_focal_y,
     price_category_id, price_mode, cost, link_label, link_url } = req.body;
@@ -1440,7 +1458,8 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
     buy_nt_price: parseInt(buy_nt_price) || 0,
     buy_tr_price: parseInt(buy_tr_price) || 0,
-    cost: parseInt(cost) || 0
+    cost: parseInt(cost) || 0,
+    release_date: (release_date || '').trim()
   }).write();
   res.redirect('/admin?msg=updated');
 });

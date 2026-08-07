@@ -1091,6 +1091,7 @@ nav {
   body.home-page { display: flex; flex-direction: column; }
   .home-page .hero,
   .home-page #heroSlideshow,
+  .home-page #newReleasesSection,
   .home-page #mostPopularSection,
   .home-page .tier-section,
   .home-page .spotlight-section,
@@ -1105,6 +1106,7 @@ nav {
   }
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
+  .home-page #newReleasesSection { order: 15; }
   .home-page #mostPopularSection { order: 20; }
   .home-page .tier-section { order: 30; }
   .home-page .spotlight-section { order: 40; }
