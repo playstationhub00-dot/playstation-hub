@@ -357,18 +357,14 @@
             </label>
           </div>
           <div class="form-group full" style="margin-bottom:0;">
-            <label style="color:#888;font-size:0.78rem;">Discount % per duration <span style="color:#555;">(0 = no discount for that duration — set any combination of 10/15/30 days)</span></label>
+            <label style="color:#888;font-size:0.78rem;">Discount % per duration <span style="color:#555;">(0 = no discount for that duration — set either or both of Weekly/Monthly)</span></label>
           </div>
           <div class="form-group">
-            <label>10-Day Discount %</label>
-            <input type="number" name="discount_10" value="<%= adminDiscounts[10] || 0 %>" min="0" max="100" placeholder="0">
+            <label>Weekly Discount %</label>
+            <input type="number" name="discount_7" value="<%= adminDiscounts[7] || 0 %>" min="0" max="100" placeholder="0">
           </div>
           <div class="form-group">
-            <label>15-Day Discount %</label>
-            <input type="number" name="discount_15" value="<%= adminDiscounts[15] || 0 %>" min="0" max="100" placeholder="0">
-          </div>
-          <div class="form-group">
-            <label>30-Day Discount %</label>
+            <label>Monthly Discount %</label>
             <input type="number" name="discount_30" value="<%= adminDiscounts[30] || 0 %>" min="0" max="100" placeholder="10">
           </div>
           <div class="form-group">
@@ -855,7 +851,7 @@
           <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none;">
             <span style="font-size:1rem;">🏷️</span>
             <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %></span>
-            <span style="font-size:0.75rem;color:#555;">NT: ₱<%= cat.nt_price_10d %>/₱<%= cat.nt_price_15d %>/₱<%= cat.nt_price_30d %> &nbsp;|&nbsp; TR: ₱<%= cat.tr_price_10d %>/₱<%= cat.tr_price_15d %>/₱<%= cat.tr_price_30d %></span>
+            <span style="font-size:0.75rem;color:#555;">NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %> &nbsp;|&nbsp; TR: ₱<%= cat.tr_price_7d %>/₱<%= cat.tr_price_30d %></span>
             <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
           </summary>
           <div style="padding:1rem;border-top:1px solid #1a2a1a;">
@@ -863,13 +859,11 @@
               <div class="form-grid">
                 <div class="form-group full"><label>Category Name</label><input type="text" name="name" value="<%= cat.name %>" required></div>
                 <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-                <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="<%= cat.nt_price_10d %>" min="1"></div>
-                <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="<%= cat.nt_price_15d %>" min="1"></div>
-                <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
+                <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= cat.nt_price_7d %>" min="1"></div>
+                <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
                 <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
-                <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="<%= cat.tr_price_10d %>" min="1"></div>
-                <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="<%= cat.tr_price_15d %>" min="1"></div>
-                <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
+                <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="<%= cat.tr_price_7d %>" min="1"></div>
+                <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
 
                 <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
                 <div class="form-group full">
@@ -910,13 +904,11 @@
             <div class="form-grid">
               <div class="form-group full"><label>Category Name *</label><input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required></div>
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-              <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="149" min="1"></div>
-              <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="199" min="1"></div>
-              <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
+              <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
+              <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
-              <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="199" min="1"></div>
-              <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="249" min="1"></div>
-              <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
+              <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
+              <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
 
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
               <div class="form-group full"><label>Card Picture</label><input type="file" name="image" accept="image/*"></div>
@@ -979,20 +971,18 @@
               <select name="price_category_id" style="width:100%;">
                 <option value="">— Select a category —</option>
                 <% priceCategories.forEach(cat => { %>
-                <option value="<%= cat.id %>"><%= cat.name %> (NT: ₱<%= cat.nt_price_10d %>/₱<%= cat.nt_price_15d %>/₱<%= cat.nt_price_30d %>)</option>
+                <option value="<%= cat.id %>"><%= cat.name %> (NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %>)</option>
                 <% }) %>
               </select>
             </div>
           </div>
           <div id="add_custom_prices">
             <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-            <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="149" min="1"></div>
-            <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="199" min="1"></div>
-            <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
+            <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
+            <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
             <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label></div>
-            <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="199" min="1"></div>
-            <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="249" min="1"></div>
-            <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
+            <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
+            <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
           </div>
           <script>
           function toggleAddPriceMode(v) {
@@ -1121,8 +1111,8 @@
                   <span style="color:#333;font-size:0.8rem;">—</span>
                 <% } %>
               </td>
-              <td style="font-size:0.8rem;color:#aaa;line-height:1.7;">₱<%= game.nt_price_10d %> / ₱<%= game.nt_price_15d %> / ₱<%= game.nt_price_30d %></td>
-              <td style="font-size:0.8rem;color:#ffc400;line-height:1.7;"><%= game.trophy_account ? '₱'+game.tr_price_10d+' / ₱'+game.tr_price_15d+' / ₱'+game.tr_price_30d : '—' %></td>
+              <td style="font-size:0.8rem;color:#aaa;line-height:1.7;">₱<%= game.nt_price_7d %> / ₱<%= game.nt_price_30d %></td>
+              <td style="font-size:0.8rem;color:#ffc400;line-height:1.7;"><%= game.trophy_account ? '₱'+game.tr_price_7d+' / ₱'+game.tr_price_30d : '—' %></td>
               <td>
                 <div style="font-weight:700;color:#f59e0b;font-size:0.9rem;">₱<%= gameCost.toLocaleString() %></div>
               </td>
@@ -1200,9 +1190,8 @@
             <div style="font-weight:700;font-size:0.82rem;color:#ccc;margin-bottom:0.75rem;">🎮 Non-Trophy</div>
             <div class="form-grid" style="gap:0.6rem;">
               <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="non_trophy_slots" min="0" value="1" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 10 Days (₱)</label><input type="number" name="nt_price_10d" min="0" placeholder="e.g. 149" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 15 Days (₱)</label><input type="number" name="nt_price_15d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 30 Days (₱)</label><input type="number" name="nt_price_30d" min="0" placeholder="e.g. 299" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Weekly Price (₱)</label><input type="number" name="nt_price_7d" min="0" placeholder="e.g. 149" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Monthly Price (₱)</label><input type="number" name="nt_price_30d" min="0" placeholder="e.g. 299" style="width:100%;"></div>
             </div>
           </div>
           <!-- Trophy -->
@@ -1210,9 +1199,8 @@
             <div style="font-weight:700;font-size:0.82rem;color:#ffc400;margin-bottom:0.75rem;">🏆 Trophy</div>
             <div class="form-grid" style="gap:0.6rem;">
               <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="trophy_slots" min="0" value="0" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 10 Days (₱)</label><input type="number" name="tr_price_10d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 15 Days (₱)</label><input type="number" name="tr_price_15d" min="0" placeholder="e.g. 249" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Price 30 Days (₱)</label><input type="number" name="tr_price_30d" min="0" placeholder="e.g. 349" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Weekly Price (₱)</label><input type="number" name="tr_price_7d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
+              <div class="form-group"><label style="font-size:0.75rem;">Monthly Price (₱)</label><input type="number" name="tr_price_30d" min="0" placeholder="e.g. 349" style="width:100%;"></div>
             </div>
           </div>
         </div>
@@ -1229,7 +1217,7 @@
       <h2 style="border-color:#2a1a3a;">🔜 Upcoming Games (<%= upcoming.length %>)</h2>
       <div style="overflow-x:auto;">
         <table class="games-table">
-          <thead><tr><th>Cover</th><th>Title</th><th>Platform</th><th>Release Date</th><th>🎮 NT Slots</th><th>🏆 TR Slots</th><th>Prices (10/15/30d)</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Cover</th><th>Title</th><th>Platform</th><th>Release Date</th><th>🎮 NT Slots</th><th>🏆 TR Slots</th><th>Prices (Weekly/Monthly)</th><th>Actions</th></tr></thead>
           <tbody>
             <% upcoming.forEach(game => { %>
             <tr>
@@ -1247,13 +1235,13 @@
                 <span style="font-weight:700;color:<%= (game.trophy_slots||0) > 0 ? '#ffc400' : '#555' %>"><%= game.trophy_slots || 0 %></span>
               </td>
               <td style="font-size:0.75rem;line-height:1.8;">
-                <% if (game.nt_price_10d || game.nt_price_15d || game.nt_price_30d) { %>
-                <div style="color:#ccc;">🎮 ₱<%= game.nt_price_10d||'—' %> / ₱<%= game.nt_price_15d||'—' %> / ₱<%= game.nt_price_30d||'—' %></div>
+                <% if (game.nt_price_7d || game.nt_price_30d) { %>
+                <div style="color:#ccc;">🎮 ₱<%= game.nt_price_7d||'—' %> / ₱<%= game.nt_price_30d||'—' %></div>
                 <% } %>
-                <% if (game.tr_price_10d || game.tr_price_15d || game.tr_price_30d) { %>
-                <div style="color:#ffc400;">🏆 ₱<%= game.tr_price_10d||'—' %> / ₱<%= game.tr_price_15d||'—' %> / ₱<%= game.tr_price_30d||'—' %></div>
+                <% if (game.tr_price_7d || game.tr_price_30d) { %>
+                <div style="color:#ffc400;">🏆 ₱<%= game.tr_price_7d||'—' %> / ₱<%= game.tr_price_30d||'—' %></div>
                 <% } %>
-                <% if (!game.nt_price_10d && !game.tr_price_10d) { %><span style="color:#444;">—</span><% } %>
+                <% if (!game.nt_price_7d && !game.tr_price_7d) { %><span style="color:#444;">—</span><% } %>
               </td>
               <td>
                 <div class="action-btns" style="flex-direction:column;align-items:flex-start;gap:0.4rem;">
@@ -1336,13 +1324,11 @@
       <form method="POST" action="/admin/psplus/prices">
         <div class="form-grid">
           <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-          <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="<%= psplusPrices.nt_price_10d %>" min="1"></div>
-          <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="<%= psplusPrices.nt_price_15d %>" min="1"></div>
-          <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="<%= psplusPrices.nt_price_30d %>" min="1"></div>
+          <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= psplusPrices.nt_price_7d %>" min="1"></div>
+          <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= psplusPrices.nt_price_30d %>" min="1"></div>
           <div class="form-group full" style="margin-bottom:0;"><label style="color:#FFD700;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included</span></label></div>
-          <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="<%= psplusPrices.tr_price_10d %>" min="1"></div>
-          <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="<%= psplusPrices.tr_price_15d %>" min="1"></div>
-          <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= psplusPrices.tr_price_30d %>" min="1"></div>
+          <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="<%= psplusPrices.tr_price_7d %>" min="1"></div>
+          <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="<%= psplusPrices.tr_price_30d %>" min="1"></div>
         </div>
         <div class="form-actions" style="margin-top:0.75rem;">
           <button type="submit" class="btn" style="background:#FFD700;color:#000;font-weight:800;padding:0.65rem 1.5rem;border-radius:8px;border:none;cursor:pointer;">Save Prices</button>
@@ -2210,8 +2196,8 @@ Message us anytime to reserve your slot! 😊</textarea>
               <optgroup label="Available Games" id="cust_optgroup_regular">
                 <% games.forEach(g => { %>
                 <option value="<%= g.id %>" data-type="regular"
-                  data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
-                  data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                  data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
+                  data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
                   data-slots="<%= g.available_slots %>">
                   <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
                 </option>
@@ -2221,8 +2207,8 @@ Message us anytime to reserve your slot! 😊</textarea>
               <optgroup label="Coming Soon Games" id="cust_optgroup_upcoming" style="display:none;">
                 <% upcoming.forEach(g => { %>
                 <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>"
-                  data-nt10="<%= g.nt_price_10d||0 %>" data-nt15="<%= g.nt_price_15d||0 %>" data-nt30="<%= g.nt_price_30d||0 %>"
-                  data-tr10="<%= g.tr_price_10d||0 %>" data-tr15="<%= g.tr_price_15d||0 %>" data-tr30="<%= g.tr_price_30d||0 %>">
+                  data-nt7="<%= g.nt_price_7d||0 %>" data-nt30="<%= g.nt_price_30d||0 %>"
+                  data-tr7="<%= g.tr_price_7d||0 %>" data-tr30="<%= g.tr_price_30d||0 %>">
                   🔜 <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
                 </option>
                 <% }) %>
@@ -2233,9 +2219,8 @@ Message us anytime to reserve your slot! 😊</textarea>
           <div class="form-group" id="cust_days_group">
             <label>Rental Duration</label>
             <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
-              <option value="10">10 Days</option>
-              <option value="15">15 Days</option>
-              <option value="30">30 Days</option>
+              <option value="7">Weekly</option>
+              <option value="30">Monthly</option>
               <option value="custom">✏️ Custom...</option>
             </select>
             <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365" placeholder="Enter number of days"
