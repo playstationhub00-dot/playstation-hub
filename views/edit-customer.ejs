@@ -37,8 +37,8 @@
               <% games.forEach(g => { %>
               <option value="<%= g.id %>"
                 data-title="<%= g.title.replace(/"/g,'&quot;') %>"
-                data-nt10="<%= g.nt_price_10d %>" data-nt15="<%= g.nt_price_15d %>" data-nt30="<%= g.nt_price_30d %>"
-                data-tr10="<%= g.tr_price_10d %>" data-tr15="<%= g.tr_price_15d %>" data-tr30="<%= g.tr_price_30d %>"
+                data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
+                data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
                 data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
                 <%= g.id === customer.game_id ? 'selected' : '' %>>
                 <%= g.title %> (<%= g.platform %>)

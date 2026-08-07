@@ -13,12 +13,9 @@
 <%- include('partials/nav', { active: 'browse' }) %>
 
 <%
-  const hasNt = !!(game.nt_price_10d || game.nt_price_15d || game.nt_price_30d);
-  const hasTr = !!(game.tr_price_10d || game.tr_price_15d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
+  const hasNt = !!(game.nt_price_7d || game.nt_price_30d);
+  const hasTr = !!(game.tr_price_7d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
   const showTr = hasTr;
-
-  const ntPrices = { 10: game.nt_price_10d||0, 15: game.nt_price_15d||0, 30: game.nt_price_30d||0 };
-  const trPrices = { 10: game.tr_price_10d||0, 15: game.tr_price_15d||0, 30: game.tr_price_30d||0 };
 
   let displayDate = 'TBA';
   if (game.release_date && game.release_date !== 'TBA') {
@@ -201,6 +198,9 @@ const NT_PRICES  = { 7: <%= game.nt_price_7d||0 %>, 30: <%= game.nt_price_30d||0
 const TR_PRICES  = { 7: <%= game.tr_price_7d||0 %>, 30: <%= game.tr_price_30d||0 %> };
 const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;
 const TR_SLOTS   = <%= game.trophy_slots||0 %>;
+</script>
+<script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
+<script>
 
 let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
 let selectedDays = null;
@@ -225,7 +225,7 @@ function renderDurButtons() {
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
   const durLabelMap = { 7: 'Weekly', 30: 'Monthly' };
-  RENTAL_DURATIONS.forEach(({ days: d }) => {
+  RENTAL_DURATIONS.forEach(d => {
     if (!p[d]) return; // skip days with no price
     const btn = document.createElement('button');
     btn.type = 'button';

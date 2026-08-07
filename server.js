@@ -525,8 +525,8 @@ function resolveGamePrices(game) {
     const cat = getPriceCategory(game.price_category_id);
     if (cat) {
       return { ...game,
-        nt_price_10d: cat.nt_price_10d, nt_price_15d: cat.nt_price_15d, nt_price_30d: cat.nt_price_30d,
-        tr_price_10d: cat.tr_price_10d, tr_price_15d: cat.tr_price_15d, tr_price_30d: cat.tr_price_30d,
+        nt_price_7d: cat.nt_price_7d, nt_price_10d: cat.nt_price_10d, nt_price_15d: cat.nt_price_15d, nt_price_30d: cat.nt_price_30d,
+        tr_price_7d: cat.tr_price_7d, tr_price_10d: cat.tr_price_10d, tr_price_15d: cat.tr_price_15d, tr_price_30d: cat.tr_price_30d,
         _category_name: cat.name
       };
     }
@@ -1037,7 +1037,7 @@ app.get('/api/search-index', (req, res) => {
   const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {
     const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const slots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
-    const prices = [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(p => p > 0);
+    const prices = [g.nt_price_7d, g.nt_price_30d, g.tr_price_7d, g.tr_price_30d].filter(p => p > 0);
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || ''
@@ -2123,7 +2123,7 @@ function buildPosterGroup(name, games, discount10) {
   const density = games.length <= 4 ? 'large' : 'compact';
   const perPage = density === 'large' ? 4 : 12;
   const gamesWithFromPrice = games.map(game => {
-    const prices = [game.nt_price_10d, game.tr_price_10d].filter(p => p > 0);
+    const prices = [game.nt_price_7d, game.tr_price_7d].filter(p => p > 0);
     const rawFrom = prices.length ? Math.min(...prices) : null;
     const fromPrice = rawFrom != null && discount10 > 0 ? Math.round(rawFrom * (1 - discount10 / 100)) : rawFrom;
     return { ...game, fromPrice };
@@ -2136,9 +2136,9 @@ function buildPosterGroup(name, games, discount10) {
 app.get('/admin/posters', requireAuth, (req, res) => {
   const settings = getSiteSettings();
   const promo = settings.promo;
-  // 10 days is always the cheapest tier, so it's what "From ₱X" shows —
+  // Weekly is always the cheapest tier, so it's what "From ₱X" shows —
   // apply that duration's promo discount (if any) so the poster stays accurate.
-  const discount10 = getPromoDiscountPct(promo, 10);
+  const discount10 = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
   // Games added this month get pulled into their own "New Arrivals" poster instead of
   // sitting mixed into their price-category poster — same "added this month" rule as
   // the site-wide NEW badge, so the two stay consistent.
@@ -2541,9 +2541,11 @@ app.get('/api/games-export', requireAuth, (req, res) => {
     const cat = catMap[g.price_category_id];
     if (!cat) return g;
     return Object.assign({}, g, {
+      nt_price_7d: cat.nt_price_7d || g.nt_price_7d,
       nt_price_10d: cat.nt_price_10d || g.nt_price_10d,
       nt_price_15d: cat.nt_price_15d || g.nt_price_15d,
       nt_price_30d: cat.nt_price_30d || g.nt_price_30d,
+      tr_price_7d: cat.tr_price_7d || g.tr_price_7d,
       tr_price_10d: cat.tr_price_10d || g.tr_price_10d,
       tr_price_15d: cat.tr_price_15d || g.tr_price_15d,
       tr_price_30d: cat.tr_price_30d || g.tr_price_30d,
@@ -2773,20 +2775,20 @@ async function handleMessage(senderId, text) {
 
   // ── PRICES GUIDE ─────────────────────────────────────────────────────────
   if (/price|magkano|how much|pricelist|presyo|halaga|cost/.test(text)) {
-    const sample = games.filter(g => g.nt_price_10d).slice(0, 4);
+    const sample = games.filter(g => g.nt_price_7d).slice(0, 4);
     let msg = '💰 PlayStation Hub Pricing\n\n';
     msg += '━━━━━━━━━━━━━━━━━━━\n';
     msg += '🎮 NON-TROPHY ACCOUNT\n';
-    msg += '  10D / 15D / 30D\n';
+    msg += '  Weekly / Monthly\n';
     if (sample.length) {
       sample.forEach(g => {
-        msg += `  ${g.title.slice(0,18)}: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d}\n`;
+        msg += `  ${g.title.slice(0,18)}: ₱${g.nt_price_7d}/₱${g.nt_price_30d}\n`;
       });
     }
     msg += '\n🏆 TROPHY ACCOUNT (+₱50)\n';
     if (sample.length) {
       sample.forEach(g => {
-        if (g.tr_price_10d) msg += `  ${g.title.slice(0,18)}: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d}\n`;
+        if (g.tr_price_7d) msg += `  ${g.title.slice(0,18)}: ₱${g.tr_price_7d}/₱${g.tr_price_30d}\n`;
       });
     }
     msg += '\n✨ FREE 3-hour trial available!\n';
@@ -2867,10 +2869,10 @@ async function handleMessage(senderId, text) {
     const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     let msg = `🎮 ${g.title} (${g.platform})\n\n`;
     msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
-    if (g.tr_price_10d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
+    if (g.tr_price_7d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
     msg += `\n💰 PRICING:\n`;
-    msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d}\n`;
-    if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d}\n`;
+    msg += `🎮 Non-Trophy: ₱${g.nt_price_7d} / ₱${g.nt_price_30d}\n`;
+    if (g.tr_price_7d) msg += `🏆 Trophy: ₱${g.tr_price_7d} / ₱${g.tr_price_30d}\n`;
     msg += `(Weekly / Monthly)\n`;
     msg += `\n✨ FREE 3-hour trial available!\n`;
     msg += `\n📄 View game: ${SITE}/game/${slug}`;
@@ -2902,7 +2904,7 @@ async function handleMessage(senderId, text) {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic.default({ apiKey });
       const gameList = games.slice(0, 20).map(g =>
-        `${g.title} (${g.platform}) — NT: ₱${g.nt_price_10d}/₱${g.nt_price_15d}/₱${g.nt_price_30d}${g.tr_price_10d ? `, TR: ₱${g.tr_price_10d}/₱${g.tr_price_15d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
+        `${g.title} (${g.platform}) — NT: ₱${g.nt_price_7d}/₱${g.nt_price_30d}${g.tr_price_7d ? `, TR: ₱${g.tr_price_7d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
       ).join('\n');
       const trainingExamples = (db.get('bot_training').value() || []).slice(0, 30);
       const examplesText = trainingExamples.length > 0

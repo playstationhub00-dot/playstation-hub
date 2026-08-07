@@ -73,8 +73,8 @@
     const sum = accountSummaryMap[g.id] || null;
     const avail = computeAvailability(g, sum, { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const openSlots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
-    const pct = getPromoDiscountPct(promo, 10);
-    const base = g.nt_price_10d || g.tr_price_10d || 0;
+    const pct = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
+    const base = g.nt_price_7d || g.tr_price_7d || 0;
     const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
     const typeLabel = (avail.hasTrophy && avail.trSlots > 0) ? 'Trophy' : (avail.ntSlots > 0 ? 'Non-Trophy' : (avail.showPs4 && avail.ps4Slots > 0 ? 'PS4 Primary' : 'Trophy'));
     const slotLabel = openSlots > 0 ? openSlots + ' slot' + (openSlots !== 1 ? 's' : '') + ' left' : 'Fully booked';
@@ -118,7 +118,7 @@
           <div class="hero-stat-label">Games Available</div>
         </div>
         <div class="hero-stat">
-          <% const allPricesCb = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPriceCb = allPricesCb.length ? Math.min(...allPricesCb) : 99; %>
+          <% const allPricesCb = games.flatMap(g => [g.nt_price_7d, g.nt_price_30d, g.tr_price_7d, g.tr_price_30d].filter(Boolean)); const lowestPriceCb = allPricesCb.length ? Math.min(...allPricesCb) : 99; %>
           <div class="hero-stat-num">₱<%= lowestPriceCb %></div>
           <div class="hero-stat-label">Starting Price</div>
         </div>
@@ -186,7 +186,7 @@
           <div class="hero-stat-label">Games Available</div>
         </div>
         <div class="hero-stat">
-          <% const allPrices = games.flatMap(g => [g.nt_price_10d, g.nt_price_15d, g.nt_price_30d, g.tr_price_10d, g.tr_price_15d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
+          <% const allPrices = games.flatMap(g => [g.nt_price_7d, g.nt_price_30d, g.tr_price_7d, g.tr_price_30d].filter(Boolean)); const lowestPrice = allPrices.length ? Math.min(...allPrices) : 99; %>
           <div class="hero-stat-num">₱<%= lowestPrice %></div>
           <div class="hero-stat-label">Starting Price</div>
         </div>
@@ -330,8 +330,8 @@
   const spotSum = accountSummaryMap[spotGame.id] || null;
   const spotAvail = computeAvailability(spotGame, spotSum, { nt: spotGame.nt_days_left, tr: spotGame.tr_days_left, ps4: spotGame.ps4_days_left });
   const spotOpenSlots = spotAvail.ntSlots + spotAvail.trSlots + (spotAvail.showPs4 ? spotAvail.ps4Slots : 0);
-  const spotPct = getPromoDiscountPct(promo, 10);
-  const spotBase = spotGame.nt_price_10d || spotGame.tr_price_10d || 0;
+  const spotPct = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
+  const spotBase = spotGame.nt_price_7d || spotGame.tr_price_7d || 0;
   const spotFinal = spotPct > 0 ? spotBase - Math.round(spotBase * spotPct / 100) : spotBase;
   const spotSlug = spotGame.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 %>
