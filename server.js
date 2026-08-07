@@ -808,18 +808,16 @@ app.post('/admin/psplus/popular/delete/:id', requireAuth, (req, res) => {
 
 // Update PS Plus global prices + slots
 app.post('/admin/psplus/prices', requireAuth, (req, res) => {
-  const { nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d, nt_slots, tr_slots, ps4_slots } = req.body;
+  const { nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d, nt_slots, tr_slots, ps4_slots } = req.body;
   db.set('psplus_slots', {
     nt_slots: parseInt(nt_slots) || 0,
     tr_slots: parseInt(tr_slots) || 0,
     ps4_slots: parseInt(ps4_slots) || 0
   }).write();
   db.set('psplus_prices', {
-    nt_price_10d: parseInt(nt_price_10d) || 349,
-    nt_price_15d: parseInt(nt_price_15d) || 449,
+    nt_price_7d: parseInt(nt_price_7d) || 349,
     nt_price_30d: parseInt(nt_price_30d) || 599,
-    tr_price_10d: parseInt(tr_price_10d) || 399,
-    tr_price_15d: parseInt(tr_price_15d) || 499,
+    tr_price_7d: parseInt(tr_price_7d) || 399,
     tr_price_30d: parseInt(tr_price_30d) || 699
   }).write();
   res.redirect('/admin?msg=psplus_prices');
@@ -1091,11 +1089,10 @@ app.get('/game/:slug', (req, res) => {
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), async (req, res) => {
-  const { enabled, discount_10, discount_15, discount_30, deposit,
+  const { enabled, discount_7, discount_30, deposit,
           buy_promo_enabled, buy_promo_pct, ends_at, remove_media } = req.body;
   const discounts = {
-    10: Math.min(100, Math.max(0, parseInt(discount_10) || 0)),
-    15: Math.min(100, Math.max(0, parseInt(discount_15) || 0)),
+    7: Math.min(100, Math.max(0, parseInt(discount_7) || 0)),
     30: Math.min(100, Math.max(0, parseInt(discount_30) || 0))
   };
   const existing = db.get('site_settings.promo').value() || {};
@@ -1278,8 +1275,8 @@ app.get('/upcoming/:slug', (req, res) => {
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
-          nt_price_10d, nt_price_15d, nt_price_30d,
-          tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+          nt_price_7d, nt_price_30d,
+          tr_price_7d, tr_price_30d } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? await processUploadedImage(req.file) : '';
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
@@ -1294,11 +1291,9 @@ app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, async
     rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
-    nt_price_10d: parseInt(nt_price_10d) || 0,
-    nt_price_15d: parseInt(nt_price_15d) || 0,
+    nt_price_7d: parseInt(nt_price_7d) || 0,
     nt_price_30d: parseInt(nt_price_30d) || 0,
-    tr_price_10d: parseInt(tr_price_10d) || 0,
-    tr_price_15d: parseInt(tr_price_15d) || 0,
+    tr_price_7d: parseInt(tr_price_7d) || 0,
     tr_price_30d: parseInt(tr_price_30d) || 0,
     created_at: new Date().toISOString()
   }).write();
@@ -1314,8 +1309,8 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
 app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
-          nt_price_10d, nt_price_15d, nt_price_30d,
-          tr_price_10d, tr_price_15d, tr_price_30d } = req.body;
+          nt_price_7d, nt_price_30d,
+          tr_price_7d, tr_price_30d } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const cover_image = req.file ? await processUploadedImage(req.file) : existing.cover_image;
@@ -1326,11 +1321,9 @@ app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, 
     rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
-    nt_price_10d: parseInt(nt_price_10d) || 0,
-    nt_price_15d: parseInt(nt_price_15d) || 0,
+    nt_price_7d: parseInt(nt_price_7d) || 0,
     nt_price_30d: parseInt(nt_price_30d) || 0,
-    tr_price_10d: parseInt(tr_price_10d) || 0,
-    tr_price_15d: parseInt(tr_price_15d) || 0,
+    tr_price_7d: parseInt(tr_price_7d) || 0,
     tr_price_30d: parseInt(tr_price_30d) || 0,
   }).write();
   res.redirect('/admin?msg=upcoming_updated');
@@ -1359,11 +1352,9 @@ app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
     cover_image: game.cover_image || '',
     non_trophy_slots: game.non_trophy_slots || 0,
     trophy_slots: game.trophy_slots || 0,
-    nt_price_10d: game.nt_price_10d || 0,
-    nt_price_15d: game.nt_price_15d || 0,
+    nt_price_7d: game.nt_price_7d || 0,
     nt_price_30d: game.nt_price_30d || 0,
-    tr_price_10d: game.tr_price_10d || 0,
-    tr_price_15d: game.tr_price_15d || 0,
+    tr_price_7d: game.tr_price_7d || 0,
     tr_price_30d: game.tr_price_30d || 0,
     featured: false,
     renters: 0,
@@ -1407,8 +1398,8 @@ app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
 
 app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
   const { title, platform, available_slots, renters,
-    nt_price_10d, nt_price_15d, nt_price_30d,
-    tr_price_10d, tr_price_15d, tr_price_30d,
+    nt_price_7d, nt_price_30d,
+    tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
     genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
@@ -1431,11 +1422,9 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     available_slots: parseInt(available_slots) || 1,
     renters: parseInt(renters) || 0,
     price_category_id: cat ? parseInt(price_category_id) : null,
-    nt_price_10d: cat ? cat.nt_price_10d : (parseInt(nt_price_10d) || 149),
-    nt_price_15d: cat ? cat.nt_price_15d : (parseInt(nt_price_15d) || 199),
+    nt_price_7d: cat ? cat.nt_price_7d : (parseInt(nt_price_7d) || 149),
     nt_price_30d: cat ? cat.nt_price_30d : (parseInt(nt_price_30d) || 349),
-    tr_price_10d: cat ? cat.tr_price_10d : (parseInt(tr_price_10d) || 199),
-    tr_price_15d: cat ? cat.tr_price_15d : (parseInt(tr_price_15d) || 249),
+    tr_price_7d: cat ? cat.tr_price_7d : (parseInt(tr_price_7d) || 199),
     tr_price_30d: cat ? cat.tr_price_30d : (parseInt(tr_price_30d) || 399),
     genre: genre || '',
     description: description || '',
@@ -1465,8 +1454,8 @@ app.get('/admin/edit/:id', requireAuth, (req, res) => {
 
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
   const { title, platform, available_slots, renters,
-    nt_price_10d, nt_price_15d, nt_price_30d,
-    tr_price_10d, tr_price_15d, tr_price_30d,
+    nt_price_7d, nt_price_30d,
+    tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
     genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
@@ -1506,11 +1495,9 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     available_slots: parseInt(available_slots),
     renters: parseInt(renters),
     price_category_id: cat ? parseInt(price_category_id) : null,
-    nt_price_10d: cat ? cat.nt_price_10d : parseInt(nt_price_10d),
-    nt_price_15d: cat ? cat.nt_price_15d : parseInt(nt_price_15d),
+    nt_price_7d: cat ? cat.nt_price_7d : parseInt(nt_price_7d),
     nt_price_30d: cat ? cat.nt_price_30d : parseInt(nt_price_30d),
-    tr_price_10d: cat ? cat.tr_price_10d : parseInt(tr_price_10d),
-    tr_price_15d: cat ? cat.tr_price_15d : parseInt(tr_price_15d),
+    tr_price_7d: cat ? cat.tr_price_7d : parseInt(tr_price_7d),
     tr_price_30d: cat ? cat.tr_price_30d : parseInt(tr_price_30d),
     genre: genre || '',
     description: description || '',
@@ -1800,7 +1787,7 @@ function refreshAccountAssignment(assignStr, { customerName, endDate, status }) 
 
 app.post('/admin/customers/add', requireAuth, (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
-  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
+  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 7);
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
   // Reservation uses upcoming game (prefixed id), others use regular game
   const isReservation = (status || 'renting') === 'reservation';
@@ -1868,7 +1855,7 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
 
 app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
-  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 10);
+  const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 7);
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');
   const wasActive = existing.status === 'renting' || existing.status === 'bought';
@@ -2473,18 +2460,16 @@ app.post('/admin/customers/import', requireAuth, importUpload.single('import_fil
 
 // Price category CRUD
 app.post('/admin/price-categories/add', upload.single('image'), requireAuth, async (req, res) => {
-  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d,
+  const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
     image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size } = req.body;
   if (!name || !name.trim()) return res.redirect('/admin?msg=error');
   const image = req.file ? await processUploadedImage(req.file) : '';
   db.get('price_categories').push({
     id: newPriceCategoryId(),
     name: name.trim(),
-    nt_price_10d: parseInt(nt_price_10d) || 149,
-    nt_price_15d: parseInt(nt_price_15d) || 199,
+    nt_price_7d: parseInt(nt_price_7d) || 149,
     nt_price_30d: parseInt(nt_price_30d) || 349,
-    tr_price_10d: parseInt(tr_price_10d) || 199,
-    tr_price_15d: parseInt(tr_price_15d) || 249,
+    tr_price_7d: parseInt(tr_price_7d) || 199,
     tr_price_30d: parseInt(tr_price_30d) || 399,
     image,
     // image_width is how far the picture reaches across the card in the Split Art
@@ -2502,18 +2487,16 @@ app.post('/admin/price-categories/add', upload.single('image'), requireAuth, asy
 });
 
 app.post('/admin/price-categories/edit/:id', upload.single('image'), requireAuth, async (req, res) => {
-  const { name, nt_price_10d, nt_price_15d, nt_price_30d, tr_price_10d, tr_price_15d, tr_price_30d,
+  const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
     image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size, remove_image } = req.body;
   const cat = getPriceCategory(req.params.id);
   if (!cat) return res.redirect('/admin?msg=error');
   const image = req.file ? await processUploadedImage(req.file) : (remove_image === 'on' ? '' : cat.image || '');
   db.get('price_categories').find({ id: parseInt(req.params.id) }).assign({
     name: (name || cat.name).trim(),
-    nt_price_10d: parseInt(nt_price_10d) || cat.nt_price_10d,
-    nt_price_15d: parseInt(nt_price_15d) || cat.nt_price_15d,
+    nt_price_7d: parseInt(nt_price_7d) || cat.nt_price_7d,
     nt_price_30d: parseInt(nt_price_30d) || cat.nt_price_30d,
-    tr_price_10d: parseInt(tr_price_10d) || cat.tr_price_10d,
-    tr_price_15d: parseInt(tr_price_15d) || cat.tr_price_15d,
+    tr_price_7d: parseInt(tr_price_7d) || cat.tr_price_7d,
     tr_price_30d: parseInt(tr_price_30d) || cat.tr_price_30d,
     image,
     image_width: Math.min(90, Math.max(20, parseInt(image_width) || cat.image_width || 52)),
