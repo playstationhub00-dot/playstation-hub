@@ -634,8 +634,10 @@ nav {
 .gd-total-disc { color: #22c55e; }
 .gd-total-dep { color: #f59e0b; }
 .gd-total-final { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; color: #fff; }
+.gd-total-hint { font-size: 0.75rem; color: #555; margin-top: 0.6rem; text-align: center; }
 .gd-cta-btn { display: block; width: 100%; text-align: center; background: var(--ps-blue); color: #fff; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 1rem; text-decoration: none; margin-top: 1.25rem; transition: opacity 0.15s; }
 .gd-cta-btn:hover { opacity: 0.85; }
+.gd-cta-btn.gd-cta-wait { background: #1a1a1a; color: #666; }
 .gd-cta-hint { text-align: center; font-size: 0.75rem; color: #444; margin-top: 0.5rem; }
 
 /* No-slot reservation options */

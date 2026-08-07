@@ -252,19 +252,20 @@
         </div>
 
         <!-- TOTAL BREAKDOWN -->
-        <div class="gd-total-box" id="totalBox" style="display:none;">
+        <div class="gd-total-box" id="totalBox">
           <div class="gd-total-label">ORDER SUMMARY</div>
           <div class="gd-total-rows" id="totalRows"></div>
           <div class="gd-total-final">
             <span>Total</span>
             <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
           </div>
+          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
         </div>
 
         <% if (!allUnavail) { %>
         <!-- CTA: Message Us (available slot) -->
-        <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
-          📘 Message Us on Facebook
+        <a href="#" class="gd-cta-btn gd-cta-wait" id="ctaBtn" onclick="return handleMessageUs(event)">
+          Pick an account type
         </a>
         <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
@@ -547,13 +548,7 @@ function onTypeChange(radio) {
   updatePrices();
   updateTotal();
   updateReserveLinks();
-  const hasSlot = AVAIL[selectedType] !== false;
-  const ctaBtn = document.getElementById('ctaBtn');
-  const ctaHint = document.getElementById('ctaHint');
-  const reserveSection = document.getElementById('reserveSection');
-  if (ctaBtn) ctaBtn.style.display = hasSlot ? '' : 'none';
-  if (ctaHint) ctaHint.style.display = hasSlot ? '' : 'none';
-  if (reserveSection) reserveSection.style.display = hasSlot ? 'none' : '';
+  updateCtaState();
 }
 
 function onDurChange(btn) {
@@ -562,6 +557,7 @@ function onDurChange(btn) {
   btn.classList.add('active');
   updateTotal();
   updateReserveLinks();
+  updateCtaState();
 }
 
 function updatePrices() {
@@ -580,20 +576,85 @@ function updatePrices() {
   });
 }
 
+// Order summary is always visible now — this fills it with the exact
+// selection once both are picked, or the cheapest "from" figure plus a
+// hint line while incomplete, so the box never pops in/out or resizes
+// beyond its own row content changing.
 function updateTotal() {
-  const box = document.getElementById('totalBox');
-  if (!selectedType || !selectedDays) { if(box) box.style.display = 'none'; return; }
-  const base = PRICES[selectedType][selectedDays];
-  const pct = promoPctFor(selectedDays);
-  const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
-  const deposit  = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
-  const total    = base - discount + deposit;
-  let rows = `<div class="gd-total-row"><span>Base (${selectedDays} days)</span><span>₱${base}</span></div>`;
-  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF (${selectedDays}-day promo)</span><span>-₱${discount}</span></div>`;
-  if (deposit  > 0) rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
-  document.getElementById('totalRows').innerHTML = rows;
-  document.getElementById('totalFinal').textContent = '₱' + total;
-  box.style.display = 'block';
+  const rowsEl = document.getElementById('totalRows');
+  const finalEl = document.getElementById('totalFinal');
+  const hintEl = document.getElementById('totalHint');
+  if (!rowsEl || !finalEl) return;
+
+  let base, discount = 0, deposit = 0, pct = 0, baseLabel = 'Base';
+
+  if (selectedType && selectedDays) {
+    base = PRICES[selectedType][selectedDays];
+    pct = promoPctFor(selectedDays);
+    discount = pct > 0 ? Math.round(base * pct / 100) : 0;
+    deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+    baseLabel = 'Base (' + selectedDays + ' days)';
+    updatePriceHeaderFromSelection(base, discount);
+  } else {
+    const amtEl = document.getElementById('phAmount');
+    base = amtEl ? parseInt(amtEl.dataset.defaultAmount, 10) : 0;
+    resetPriceHeader();
+  }
+
+  const total = base - discount + deposit;
+  let rows = `<div class="gd-total-row"><span>${baseLabel}</span><span>₱${base}</span></div>`;
+  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
+  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
+  rowsEl.innerHTML = rows;
+  finalEl.textContent = '₱' + total;
+
+  if (hintEl) {
+    if (!selectedType) { hintEl.textContent = 'Pick an account type to see your exact total.'; hintEl.style.display = ''; }
+    else if (!selectedDays) { hintEl.textContent = 'Pick a duration to see your exact total.'; hintEl.style.display = ''; }
+    else { hintEl.style.display = 'none'; }
+  }
+}
+
+// Small bridge to Task 1's setPriceHeader(), kept separate from updateTotal
+// so this task doesn't need to know Task 1's exact signature inline twice.
+function updatePriceHeaderFromSelection(base, discount) {
+  const durName = selectedDays === 7 ? 'Weekly' : 'Monthly';
+  const typeName = selectedType === 'tr' ? 'trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'non-trophy';
+  const final = base - discount;
+  setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null);
+}
+
+// CTA label tracks how much is left to pick. Never disabled — an incomplete
+// click scrolls to and shakes the first missing step (see handleMessageUs).
+function updateCtaState() {
+  const ctaBtn = document.getElementById('ctaBtn');
+  const ctaHint = document.getElementById('ctaHint');
+  const reserveSection = document.getElementById('reserveSection');
+  if (!ctaBtn) return;
+
+  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
+  if (selectedType && !hasSlot) {
+    ctaBtn.style.display = 'none';
+    if (ctaHint) ctaHint.style.display = 'none';
+    if (reserveSection) reserveSection.style.display = '';
+    return;
+  }
+  ctaBtn.style.display = '';
+  if (reserveSection) reserveSection.style.display = 'none';
+
+  if (!selectedType) {
+    ctaBtn.textContent = 'Pick an account type';
+    ctaBtn.classList.add('gd-cta-wait');
+    if (ctaHint) ctaHint.style.display = 'none';
+  } else if (!selectedDays) {
+    ctaBtn.textContent = 'Pick a duration';
+    ctaBtn.classList.add('gd-cta-wait');
+    if (ctaHint) ctaHint.style.display = 'none';
+  } else {
+    ctaBtn.textContent = '📘 Message Us on Facebook';
+    ctaBtn.classList.remove('gd-cta-wait');
+    if (ctaHint) ctaHint.style.display = '';
+  }
 }
 
 function updateReserveLinks() {
