@@ -304,6 +304,27 @@ nav {
   .navsearch.navsearch-active .navsearch-results { max-width: none; margin-top: 0.5rem; }
 }
 
+.gd-sticky-bar { display: none; }
+@media (max-width: 820px) {
+  .gd-page-booking-v2.gd-page-booking-v2 .mobile-fab { display: none; }
+  .gd-page-booking-v2 { padding-bottom: 78px; }
+  .gd-sticky-bar {
+    display: flex; align-items: center; gap: 0.85rem;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 145;
+    background: rgba(10,10,12,0.97); backdrop-filter: blur(12px);
+    border-top: 1px solid #222; padding: 0.7rem 0.9rem;
+  }
+  .gd-sb-info { flex: 1; min-width: 0; }
+  .gd-sb-kicker { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #555; }
+  .gd-sb-amount { font-size: 1.05rem; font-weight: 900; color: var(--ps-blue); line-height: 1.25; }
+  .gd-sb-btn {
+    background: var(--ps-blue); color: #fff; border: 0; border-radius: 10px;
+    padding: 0.7rem 0.95rem; font-weight: 800; font-size: 0.85rem; white-space: nowrap;
+    cursor: pointer; font-family: inherit;
+  }
+  .gd-sb-btn.gd-cta-wait { background: #1a1a1a; color: #666; }
+}
+
 /* Hero trust strip — sits under either hero variant (default or slideshow) */
 .hero-trust-tag {
   display: inline-flex; align-items: center; gap: 0.4rem;

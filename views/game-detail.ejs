@@ -42,7 +42,7 @@
   const gdFromPrice = gdPricePairs.length ? gdPricePairs.reduce((a, b) => b.final < a.final ? b : a).final : 0;
 %>
 
-<div class="gd-page">
+<div class="gd-page gd-page-booking-v2">
   <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
 
   <div class="gd-layout">
@@ -411,6 +411,15 @@
 
     </div>
   </div>
+
+  <!-- ══ MOBILE STICKY BAR (≤820px) ══ -->
+  <div class="gd-sticky-bar" id="gdStickyBar">
+    <div class="gd-sb-info">
+      <div class="gd-sb-kicker" id="gdSbKicker">From</div>
+      <div class="gd-sb-amount" id="gdSbAmount">₱<%= gdFromPrice %></div>
+    </div>
+    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()">Pick a type</button>
+  </div>
 </div>
 
 <%- include('partials/footer') %>
@@ -448,6 +457,7 @@ function setMode(mode) {
   const tb = document.getElementById('toggleBuy');
   if (tb) { tb.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)'; tb.style.color = isRent ? '#555' : '#fff'; }
   if (isRent) { updateTotal(); } else { updateBuyPriceHeader(); }
+  syncStickyBar();
 }
 
 // ── Buy type selection ──
@@ -463,6 +473,7 @@ function selectBuyType(type) {
   if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
   updateBuyLink();
   updateBuyPriceHeader();
+  syncStickyBar();
 }
 
 function updateBuyLink() {
@@ -549,6 +560,7 @@ function onTypeChange(radio) {
   updateTotal();
   updateReserveLinks();
   updateCtaState();
+  syncStickyBar();
 }
 
 function onDurChange(btn) {
@@ -558,6 +570,7 @@ function onDurChange(btn) {
   updateTotal();
   updateReserveLinks();
   updateCtaState();
+  syncStickyBar();
 }
 
 function updatePrices() {
@@ -657,6 +670,88 @@ function updateCtaState() {
   }
 }
 
+// Mirrors whichever mode is active (rent or buy) into the fixed bottom bar.
+// Kept independent from updateCtaState()/updateBuyPriceHeader() because its
+// button copy is shorter ("Message us" vs "📘 Message Us on Facebook") and
+// it has to represent both modes, not just rent.
+function syncStickyBar() {
+  const kEl = document.getElementById('gdSbKicker');
+  const aEl = document.getElementById('gdSbAmount');
+  const bEl = document.getElementById('gdSbBtn');
+  if (!kEl) return;
+
+  if (currentMode === 'buy') {
+    if (!selectedBuyType) {
+      const amtEl = document.getElementById('phAmount');
+      kEl.textContent = 'From';
+      aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
+      bEl.textContent = 'Pick a type';
+      bEl.classList.add('gd-cta-wait');
+    } else {
+      const typeName = selectedBuyType === 'tr' ? 'Trophy · permanent' : 'Non-trophy · permanent';
+      kEl.textContent = typeName;
+      aEl.textContent = '₱' + BUY_PRICES[selectedBuyType];
+      bEl.textContent = 'Message us';
+      bEl.classList.remove('gd-cta-wait');
+    }
+    return;
+  }
+
+  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
+  if (selectedType && !hasSlot) {
+    kEl.textContent = 'No slot right now';
+    const amtEl = document.getElementById('phAmount');
+    aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
+    bEl.textContent = 'Reserve a slot';
+    bEl.classList.remove('gd-cta-wait');
+    return;
+  }
+  if (!selectedType) {
+    const amtEl = document.getElementById('phAmount');
+    kEl.textContent = 'From';
+    aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
+    bEl.textContent = 'Pick a type';
+    bEl.classList.add('gd-cta-wait');
+  } else if (!selectedDays) {
+    kEl.textContent = 'Pick a duration';
+    aEl.textContent = '';
+    bEl.textContent = 'Pick a duration';
+    bEl.classList.add('gd-cta-wait');
+  } else {
+    const base = PRICES[selectedType][selectedDays];
+    const pct = promoPctFor(selectedDays);
+    const discount = pct > 0 ? Math.round(base * pct / 100) : 0;
+    const deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+    kEl.textContent = 'Total';
+    aEl.textContent = '₱' + (base - discount + deposit);
+    bEl.textContent = 'Message us';
+    bEl.classList.remove('gd-cta-wait');
+  }
+}
+
+function handleStickyBarClick() {
+  if (currentMode === 'buy') {
+    if (!selectedBuyType) {
+      document.getElementById('buyNtCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    document.getElementById('buyCtaBtn')?.click();
+    return;
+  }
+  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
+  if (selectedType && !hasSlot) {
+    document.getElementById('reserveSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  if (!selectedType || !selectedDays) {
+    const target = !selectedType ? document.getElementById('typeOptions') : document.getElementById('durationGrid');
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightDurationGrid();
+    return;
+  }
+  document.getElementById('ctaBtn')?.click();
+}
+
 function updateReserveLinks() {
   const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
   const typeLabel = selectedType === 'tr' ? 'Trophy Account' : selectedType === 'ps4' ? 'PS4 Primary Account' : selectedType === 'nt' ? 'Non-Trophy Account' : '';
@@ -724,6 +819,7 @@ window.addEventListener('DOMContentLoaded', () => {
     || (AVAIL.ps4 ? document.querySelector('input[name="rentalType"][value="ps4"]') : null)
     || document.querySelector('input[name="rentalType"]');
   if (preferred) { preferred.checked = true; onTypeChange(preferred); }
+  else { syncStickyBar(); }
   updateReserveLinks();
   // Auto-switch to buy tab if ?mode=buy
   if (new URLSearchParams(window.location.search).get('mode') === 'buy') {
