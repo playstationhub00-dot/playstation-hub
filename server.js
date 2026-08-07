@@ -2685,7 +2685,7 @@ async function handleMessage(senderId, text) {
       '   🎮 Non-Trophy — play on our account\n' +
       '   🏆 Trophy — earn trophies on your own PSN\n\n' +
       '𝟯. Choose rental duration\n' +
-      '   ⏱ 10 days | 15 days | 30 days\n\n' +
+      '   ⏱ Weekly | Monthly\n\n' +
       '𝟰. Message us here to confirm\n' +
       '   We\'ll set up your account access!\n\n' +
       '𝟱. Pay via GCash & enjoy! 🎉\n\n' +
@@ -2871,7 +2871,7 @@ async function handleMessage(senderId, text) {
     msg += `\n💰 PRICING:\n`;
     msg += `🎮 Non-Trophy: ₱${g.nt_price_10d} / ₱${g.nt_price_15d} / ₱${g.nt_price_30d}\n`;
     if (g.tr_price_10d) msg += `🏆 Trophy: ₱${g.tr_price_10d} / ₱${g.tr_price_15d} / ₱${g.tr_price_30d}\n`;
-    msg += `(10 / 15 / 30 days)\n`;
+    msg += `(Weekly / Monthly)\n`;
     msg += `\n✨ FREE 3-hour trial available!\n`;
     msg += `\n📄 View game: ${SITE}/game/${slug}`;
     if (matches.length > 1) msg += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
@@ -2917,7 +2917,7 @@ async function handleMessage(senderId, text) {
           content: `You are the Messenger bot for PlayStation Hub — a PS5/PS4 digital game rental shop in the Philippines run by a young Filipino owner. Reply EXACTLY in the owner's communication style based on the examples below. Match their tone, vocabulary, Taglish mix, and friendliness. Keep replies short and conversational.
 
 Business info:
-- Rent PS5/PS4 games for 10, 15, or 30 days
+- Rent PS5/PS4 games for Weekly or Monthly durations
 - Non-Trophy account (play on our account) and Trophy account (earn trophies on your own PSN)
 - Payment via GCash
 - FREE 3-hour trial before renting or buying
