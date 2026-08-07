@@ -65,8 +65,11 @@
 </div>
 <% } else { %>
 <%
-  // Real games for the auto-rotating showcase panel — top-rented first, cover art required.
-  const heroGames = featured.filter(g => g.cover_image).slice(0, 6).map(g => {
+  // Real games for the auto-rotating showcase panel — newest releases first, cover
+  // art required. Falls back to Most Popular (featured) if no game has a release
+  // date set yet, so the hero never goes empty while release_date is backfilling.
+  const heroSource = (newReleases && newReleases.length) ? newReleases : featured;
+  const heroGames = heroSource.filter(g => g.cover_image).slice(0, 6).map(g => {
     const sum = accountSummaryMap[g.id] || null;
     const avail = computeAvailability(g, sum, { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const openSlots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
