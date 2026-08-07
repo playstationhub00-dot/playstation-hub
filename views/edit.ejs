@@ -83,7 +83,7 @@
             <select name="price_category_id" style="width:100%;">
               <option value="">— Select a category —</option>
               <% priceCategories.forEach(cat => { %>
-              <option value="<%= cat.id %>" <%= game.price_category_id === cat.id ? 'selected' : '' %>><%= cat.name %> (NT: ₱<%= cat.nt_price_10d %>/₱<%= cat.nt_price_15d %>/₱<%= cat.nt_price_30d %>)</option>
+              <option value="<%= cat.id %>" <%= game.price_category_id === cat.id ? 'selected' : '' %>><%= cat.name %> (NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %>)</option>
               <% }) %>
             </select>
           </div>
@@ -93,15 +93,13 @@
           <div class="form-group full" style="margin-bottom:0;">
             <label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label>
           </div>
-          <div class="form-group"><label>10 Days</label><input type="number" name="nt_price_10d" value="<%= game.nt_price_10d || 149 %>" min="1"></div>
-          <div class="form-group"><label>15 Days</label><input type="number" name="nt_price_15d" value="<%= game.nt_price_15d || 199 %>" min="1"></div>
-          <div class="form-group"><label>30 Days</label><input type="number" name="nt_price_30d" value="<%= game.nt_price_30d || 349 %>" min="1"></div>
+          <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= game.nt_price_7d || 149 %>" min="1"></div>
+          <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= game.nt_price_30d || 349 %>" min="1"></div>
           <div class="form-group full" style="margin-bottom:0;">
             <label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label>
           </div>
-          <div class="form-group"><label>10 Days</label><input type="number" name="tr_price_10d" value="<%= game.tr_price_10d || 199 %>" min="1"></div>
-          <div class="form-group"><label>15 Days</label><input type="number" name="tr_price_15d" value="<%= game.tr_price_15d || 249 %>" min="1"></div>
-          <div class="form-group"><label>30 Days</label><input type="number" name="tr_price_30d" value="<%= game.tr_price_30d || 399 %>" min="1"></div>
+          <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="<%= game.tr_price_7d || 199 %>" min="1"></div>
+          <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="<%= game.tr_price_30d || 399 %>" min="1"></div>
         </div>
         <script>
         function toggleEditPriceMode(v) {

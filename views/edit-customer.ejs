@@ -70,15 +70,14 @@
         <div class="form-group" id="cust_days_group" <%= (customer.status === 'bought' || customer.status === 'reservation') ? 'hidden' : '' %>>
           <label>Rental Duration</label>
           <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
-            <option value="10" <%= customer.days === 10 ? 'selected' : '' %>>10 Days</option>
-            <option value="15" <%= customer.days === 15 ? 'selected' : '' %>>15 Days</option>
-            <option value="30" <%= customer.days === 30 ? 'selected' : '' %>>30 Days</option>
-            <option value="custom" <%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? 'selected' : '' %>>✏️ Custom...</option>
+            <option value="7" <%= customer.days === 7 ? 'selected' : '' %>>Weekly</option>
+            <option value="30" <%= customer.days === 30 ? 'selected' : '' %>>Monthly</option>
+            <option value="custom" <%= (customer.days !== 7 && customer.days !== 30) ? 'selected' : '' %>>✏️ Custom...</option>
           </select>
           <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365"
             placeholder="Enter number of days"
-            value="<%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? customer.days : '' %>"
-            <%= (customer.days !== 10 && customer.days !== 15 && customer.days !== 30) ? '' : 'hidden' %>
+            value="<%= (customer.days !== 7 && customer.days !== 30) ? customer.days : '' %>"
+            <%= (customer.days !== 7 && customer.days !== 30) ? '' : 'hidden' %>
             oninput="updateCustEndDate()">
         </div>
 
