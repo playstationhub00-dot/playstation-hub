@@ -92,9 +92,12 @@
     <div class="gd-detail-col">
 
       <!-- Genre + Title -->
-      <% if (game.genre) { %>
+      <% if (game.genre || (game.release_date && game.release_date !== 'TBA')) { %>
       <div class="gd-genres">
-        <% game.genre.split('/').forEach(g => { %><span class="gd-genre-tag"><%= g.trim().toUpperCase() %></span><% }) %>
+        <% if (game.genre) { game.genre.split('/').forEach(g => { %><span class="gd-genre-tag"><%= g.trim().toUpperCase() %></span><% }) } %>
+        <% if (game.release_date && game.release_date !== 'TBA') { %>
+        <span class="gd-release-date">Released <%= new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+        <% } %>
       </div>
       <% } %>
       <h1 class="gd-title"><%= game.title %></h1>
