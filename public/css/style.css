@@ -607,6 +607,7 @@ nav {
 .gd-ph-save-wrap { text-align: right; }
 .gd-ph-was { display: block; font-size: 0.78rem; color: #555; text-decoration: line-through; margin-bottom: 0.2rem; }
 .gd-ph-save { display: inline-block; font-size: 0.7rem; font-weight: 800; color: #22c55e; background: rgba(34,197,94,0.13); padding: 0.15rem 0.4rem; border-radius: 5px; }
+.gd-ph-rider { font-size: 0.72rem; font-weight: 600; color: #f59e0b; margin-top: 0.3rem; }
 .gd-type-options { display: flex; flex-direction: column; gap: 0.6rem; }
 .gd-type-card { background: #111; border: 1.5px solid #222; border-radius: 12px; overflow: hidden; transition: border-color 0.15s; }
 .gd-type-card:hover:not(.gd-type-disabled) { border-color: #444; }
@@ -661,6 +662,7 @@ nav {
 .gd-total-disc { color: #22c55e; }
 .gd-total-dep { color: #f59e0b; }
 .gd-total-final { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; color: #fff; }
+.gd-total-refund { display: flex; gap: 0.3rem; font-size: 0.72rem; color: #22c55e; margin-top: 0.5rem; line-height: 1.4; }
 .gd-total-hint { font-size: 0.75rem; color: #555; margin-top: 0.6rem; text-align: center; }
 .gd-cta-btn { display: block; width: 100%; text-align: center; background: var(--ps-blue); color: #fff; padding: 0.9rem; border-radius: 10px; font-weight: 700; font-size: 1rem; text-decoration: none; margin-top: 1.25rem; transition: opacity 0.15s; }
 .gd-cta-btn:hover { opacity: 0.85; }

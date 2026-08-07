@@ -144,6 +144,7 @@
           <div class="gd-ph-amount">
             <span id="phAmount" data-default-amount="<%= gdFromPrice %>" data-default-buy-amount="<%= gdBuyFromPrice %>">₱<%= gdFromPrice %></span>
           </div>
+          <div class="gd-ph-rider" id="phRider" style="display:none;"></div>
         </div>
         <div class="gd-ph-save-wrap">
           <span class="gd-ph-was" id="phWas" style="display:none;"></span>
@@ -262,9 +263,10 @@
           <div class="gd-total-label">ORDER SUMMARY</div>
           <div class="gd-total-rows" id="totalRows"></div>
           <div class="gd-total-final">
-            <span>Total</span>
+            <span>To send now</span>
             <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
           </div>
+          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
           <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
         </div>
 
@@ -510,13 +512,16 @@ function updateBuyLink() {
   btn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
 }
 
-// Shared by both modes — writes the same 4 DOM nodes the price header owns.
-// Called with `null` for was/save to reset to the plain "From ₱X" state.
-function setPriceHeader(kicker, amount, was, save) {
+// Shared by both modes — writes the DOM nodes the price header owns.
+// `rider` is the small line under the amount ("+ ₱100 refundable deposit")
+// — pass null to hide it. Called with `null` for was/save to skip the
+// crossed-out "was" price and the "Save ₱X" badge.
+function setPriceHeader(kicker, amount, was, save, rider) {
   const kEl = document.getElementById('phKicker');
   const amtEl = document.getElementById('phAmount');
   const wasEl = document.getElementById('phWas');
   const saveEl = document.getElementById('phSave');
+  const riderEl = document.getElementById('phRider');
   if (!kEl) return;
   kEl.textContent = kicker;
   amtEl.textContent = '₱' + amount;
@@ -526,13 +531,17 @@ function setPriceHeader(kicker, amount, was, save) {
   } else {
     wasEl.style.display = 'none'; saveEl.style.display = 'none';
   }
+  if (riderEl) {
+    if (rider) { riderEl.textContent = rider; riderEl.style.display = ''; }
+    else { riderEl.style.display = 'none'; }
+  }
 }
 
 function resetPriceHeader() {
   const kEl = document.getElementById('phKicker');
   const amtEl = document.getElementById('phAmount');
   if (!kEl) return;
-  setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultAmount, null, null);
+  setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultAmount, null, null, null);
 }
 
 function updateBuyPriceHeader() {
@@ -540,11 +549,11 @@ function updateBuyPriceHeader() {
     const kEl = document.getElementById('phKicker');
     const amtEl = document.getElementById('phAmount');
     if (!kEl) return;
-    setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultBuyAmount, null, null);
+    setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultBuyAmount, null, null, null);
     return;
   }
   const typeName = selectedBuyType === 'tr' ? 'trophy · permanent' : 'non-trophy · permanent';
-  setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null);
+  setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null, null);
 }
 
 function handleBuyClick(e) {
@@ -622,6 +631,7 @@ function updateTotal() {
   const rowsEl = document.getElementById('totalRows');
   const finalEl = document.getElementById('totalFinal');
   const hintEl = document.getElementById('totalHint');
+  const refundEl = document.getElementById('totalRefund');
   if (!rowsEl || !finalEl) return;
 
   let base, discount = 0, deposit = 0, pct = 0, baseLabel = 'Base';
@@ -632,9 +642,18 @@ function updateTotal() {
     baseLabel = 'Base (' + selectedDays + ' days)';
     updatePriceHeaderFromSelection(base, discount);
   } else if (selectedType) {
-    base = RENTAL_DURATIONS.map(d => PRICES[selectedType][d]).reduce((a, b) => Math.min(a, b));
-    deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
-    resetPriceHeader();
+    // Cheapest available duration for this type (by final, promo-applied,
+    // price) — must match what the header shows below, so the two never
+    // disagree the way "From ₱332" (every type) vs "Base ₱399" (this type)
+    // used to.
+    const cheapest = RENTAL_DURATIONS
+      .map(d => computeRentTotal(selectedType, d))
+      .reduce((a, b) => b.base - b.discount < a.base - a.discount ? b : a);
+    base = cheapest.base; discount = cheapest.discount; deposit = cheapest.deposit; pct = cheapest.pct;
+    const typeName = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'Non-Trophy';
+    const final = base - discount;
+    const rider = deposit > 0 ? ('+ ₱' + deposit + ' refundable deposit') : null;
+    setPriceHeader(typeName + ' · from', final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
   } else {
     const amtEl = document.getElementById('phAmount');
     base = amtEl ? parseInt(amtEl.dataset.defaultAmount, 10) : 0;
@@ -647,6 +666,11 @@ function updateTotal() {
   rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
   rowsEl.innerHTML = rows;
   finalEl.textContent = '₱' + total;
+
+  if (refundEl) {
+    if (deposit > 0) { refundEl.textContent = '↩ You get ₱' + deposit + ' back when you finish — real cost ₱' + (total - deposit) + '.'; refundEl.style.display = ''; }
+    else { refundEl.style.display = 'none'; }
+  }
 
   if (hintEl) {
     if (!selectedType) { hintEl.textContent = 'Pick an account type to see your exact total.'; hintEl.style.display = ''; }
@@ -661,7 +685,9 @@ function updatePriceHeaderFromSelection(base, discount) {
   const durName = selectedDays === 7 ? 'Weekly' : 'Monthly';
   const typeName = selectedType === 'tr' ? 'trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'non-trophy';
   const final = base - discount;
-  setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null);
+  const deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
+  const rider = deposit > 0 ? ('+ ₱' + deposit + ' refundable deposit') : null;
+  setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
 }
 
 // CTA label tracks how much is left to pick. Never disabled — an incomplete
@@ -746,7 +772,7 @@ function syncStickyBar() {
     bEl.classList.add('gd-cta-wait');
   } else {
     const rt = computeRentTotal(selectedType, selectedDays);
-    kEl.textContent = 'Total';
+    kEl.textContent = 'To send now';
     aEl.textContent = '₱' + rt.total;
     bEl.textContent = 'Message us';
     bEl.classList.remove('gd-cta-wait');
