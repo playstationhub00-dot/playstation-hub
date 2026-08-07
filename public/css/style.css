@@ -1125,22 +1125,28 @@ nav {
 
   /* Most Popular becomes the immediate 2-column grid a customer sees after the hero,
      instead of a horizontal slider — bigger cards, no arrows to discover, everything
-     visible without a sideways swipe. Scoped to this one section only; Coming Soon and
-     Most Played in PS Plus keep their slider treatment. */
-  #mostPopularSection .upcoming-slider-wrap { display: block; }
-  #mostPopularSection .slider-arrow { display: none; }
-  #mostPopularSection .upcoming-slider {
+     visible without a sideways swipe. New Releases gets the same grid treatment (same
+     card spacing) since it sits right above Most Popular; Coming Soon and Most Played
+     in PS Plus keep their slider treatment. */
+  #mostPopularSection .upcoming-slider-wrap,
+  #newReleasesSection .upcoming-slider-wrap { display: block; }
+  #mostPopularSection .slider-arrow,
+  #newReleasesSection .slider-arrow { display: none; }
+  #mostPopularSection .upcoming-slider,
+  #newReleasesSection .upcoming-slider {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
     overflow: visible; padding: 0;
   }
-  #mostPopularSection .slider-card-wrap {
+  #mostPopularSection .slider-card-wrap,
+  #newReleasesSection .slider-card-wrap {
     min-width: 0 !important; max-width: none !important; width: 100%;
   }
   /* A later rule (.upcoming-slider .game-card, further down this file) fixes every
      slider card to calc(50vw - 1px) regardless of section — that's correct for the
      2-per-screen Coming Soon/Most Played sliders but overflows this grid's actual
      185px columns by 20px per card, which is what was causing the overlap. */
-  #mostPopularSection .game-card {
+  #mostPopularSection .game-card,
+  #newReleasesSection .game-card {
     min-width: 0 !important; max-width: none !important; width: 100% !important;
   }
 }
