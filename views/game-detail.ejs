@@ -166,57 +166,75 @@
         <div class="gd-type-options" id="typeOptions">
 
           <% if (hasTrophy) { %>
-          <label class="gd-type-card" id="label-tr">
-            <input type="radio" name="rentalType" value="tr" onchange="onTypeChange(this)">
-            <div class="gd-type-body">
-              <div class="gd-type-header">
+          <div class="gd-type-card" id="label-tr">
+            <div class="gd-type-row">
+              <label class="gd-type-row-label">
+                <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
                 <span class="gd-type-icon">🏆</span>
                 <span class="gd-type-name">Trophy</span>
-                <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
                 <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> slot<%= trLeft !== 1 ? 's' : '' %> left</span><% } %>
-              </div>
-              <div class="gd-type-desc">✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.<br><span style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong></span></div>
+                <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
+              </label>
+              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for Trophy" onclick="toggleTypeSetup('tr')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <div class="gd-type-setup" id="setup-tr" data-open="0">
+              <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
+              <p style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong></p>
               <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
               <% if (!trAvail && trSoon != null && trSoon > 0) { %>
-              <div class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></div>
+              <p class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
               <% } %>
             </div>
-          </label>
+          </div>
           <% } %>
 
-          <label class="gd-type-card" id="label-nt">
-            <input type="radio" name="rentalType" value="nt" onchange="onTypeChange(this)">
-            <div class="gd-type-body">
-              <div class="gd-type-header">
+          <div class="gd-type-card" id="label-nt">
+            <div class="gd-type-row">
+              <label class="gd-type-row-label">
+                <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
                 <span class="gd-type-icon">🎮</span>
                 <span class="gd-type-name">Non-Trophy</span>
-                <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
                 <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> left</span><% } %>
-              </div>
-              <div class="gd-type-desc">🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.<br><span style="color:#888;">Setup: Settings → Account → Other → Console Sharing → <strong>DON'T enable</strong></span></div>
+                <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
+              </label>
+              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for Non-Trophy" onclick="toggleTypeSetup('nt')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <div class="gd-type-setup" id="setup-nt" data-open="0">
+              <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
+              <p style="color:#888;">Setup: Settings → Account → Other → Console Sharing → <strong>DON'T enable</strong></p>
               <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
               <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
-              <div class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></div>
+              <p class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
               <% } %>
             </div>
-          </label>
+          </div>
 
           <% if (showPs4) { %>
-          <label class="gd-type-card" id="label-ps4">
-            <input type="radio" name="rentalType" value="ps4" onchange="onTypeChange(this)">
-            <div class="gd-type-body">
-              <div class="gd-type-header">
+          <div class="gd-type-card" id="label-ps4">
+            <div class="gd-type-row">
+              <label class="gd-type-row-label">
+                <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
                 <span class="gd-type-icon">🕹️</span>
                 <span class="gd-type-name">PS4 Primary</span>
-                <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full Slot' %></span>
                 <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> slot<%= ps4Left !== 1 ? 's' : '' %> left</span><% } %>
-              </div>
-              <div class="gd-type-desc">🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.<br><span style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong> (on PS4)</span></div>
+                <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full Slot' %></span>
+              </label>
+              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for PS4 Primary" onclick="toggleTypeSetup('ps4')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </div>
+            <div class="gd-type-setup" id="setup-ps4" data-open="0">
+              <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
+              <p style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong> (on PS4)</p>
               <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
-              <div class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></div>
+              <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
               <% } %>
             </div>
-          </label>
+          </div>
           <% } %>
 
         </div>
@@ -510,6 +528,18 @@ function handleBuyClick(e) {
 }
 
 // ── Rent flow ──
+// Expand/collapse a type row's setup panel. Independent of selecting that
+// type — the chevron button is a sibling of the <label>, not a descendant,
+// so clicking it never fires the label's native radio-click forwarding.
+function toggleTypeSetup(id) {
+  const panel = document.getElementById('setup-' + id);
+  const chev = panel && panel.previousElementSibling.querySelector('.gd-type-chev');
+  if (!panel || !chev) return;
+  const open = panel.dataset.open === '1';
+  panel.dataset.open = open ? '0' : '1';
+  chev.setAttribute('aria-expanded', String(!open));
+}
+
 function onTypeChange(radio) {
   selectedType = radio.value;
   document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
