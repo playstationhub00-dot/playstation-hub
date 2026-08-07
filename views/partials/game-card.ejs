@@ -37,12 +37,16 @@
   const gcIsNew = gcDaysSinceAdded !== null && gcDaysSinceAdded < 11;
   const gcNewDaysLeft = gcIsNew ? 11 - gcDaysSinceAdded : null;
   const gcNeverRented = (game.renters || 0) === 0;
+  const gcShowDaysLeft = gcIsNew && gcNeverRented;
 %>
 <div class="game-card" style="cursor:default;">
 
   <!-- Clickable cover → game detail page -->
   <a href="/game/<%= gameSlug %>" class="game-card-link" style="display:block;text-decoration:none;">
-    <div class="gc-cover-wrap">
+    <!-- gc-has-days-left lifts the BUY/NEW badges above the days-left strip below,
+         so they don't collide — that strip is the only cover badge tall enough to
+         need the others to make room for it. -->
+    <div class="gc-cover-wrap<%= gcShowDaysLeft ? ' gc-has-days-left' : '' %>">
       <% if (game.cover_image) { %>
         <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
       <% } else { %>
@@ -60,17 +64,16 @@
         <div class="gc-slot-banner gc-slot-banner-none">Sold Out</div>
       <% } %>
       <% if (hasBuy) { %>
-        <div style="position:absolute;bottom:6px;left:6px;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;font-size:0.75rem;font-weight:800;padding:0.18rem 0.45rem;border-radius:20px;letter-spacing:0.3px;">♾️ BUY</div>
+        <div class="gc-buy-badge">♾️ BUY</div>
       <% } %>
       <% if (gcIsNew) { %>
         <div class="gc-new-badge">✨ NEW</div>
       <% } %>
+      <% if (gcShowDaysLeft) { %>
+        <div class="gc-new-days-left">⏳ <%= gcNewDaysLeft %> Day<%= gcNewDaysLeft !== 1 ? 's' : '' %> Left!</div>
+      <% } %>
     </div>
   </a>
-
-  <% if (gcIsNew && gcNeverRented) { %>
-    <div class="gc-new-days-left">⏳ <%= gcNewDaysLeft %> Day<%= gcNewDaysLeft !== 1 ? 's' : '' %> Left!</div>
-  <% } %>
 
   <div class="game-info">
     <a href="/game/<%= gameSlug %>" style="text-decoration:none;color:inherit;"><div class="game-title"><%= game.title %></div></a>

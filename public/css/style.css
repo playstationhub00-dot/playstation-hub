@@ -1198,6 +1198,18 @@ nav {
   color: #bbb;
   border: 1px solid rgba(255,255,255,0.18);
 }
+.gc-buy-badge {
+  position: absolute;
+  bottom: 6px; left: 6px;
+  background: linear-gradient(135deg, #7b2ff7, #f107a3);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.18rem 0.45rem;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  z-index: 2;
+}
 .gc-new-badge {
   position: absolute;
   bottom: 6px; right: 6px;
@@ -1209,6 +1221,7 @@ nav {
   border-radius: 20px;
   letter-spacing: 0.4px;
   box-shadow: 0 2px 8px rgba(240,165,0,0.5);
+  z-index: 2;
 }
 @keyframes gc-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.6); }
@@ -1218,17 +1231,27 @@ nav {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 rgba(220,38,38,0); }
   50% { opacity: 0.8; box-shadow: 0 0 16px rgba(220,38,38,0.65); }
 }
+/* Full-width strip flush with the bottom of the cover, instead of a block below
+   it — that extra block was what made a "days left" card taller than every other
+   card in its row, breaking the grid's uniform height. Lives inside .gc-cover-wrap
+   now so it's just another absolutely-positioned overlay layer, like BUY/NEW. */
 .gc-new-days-left {
-  display: block;
+  position: absolute;
+  left: 0; right: 0; bottom: 0; z-index: 1;
   background: linear-gradient(135deg, #dc2626, #b91c1c);
   color: #fff;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   text-align: center;
-  padding: 0.55rem 0.75rem;
+  padding: 0.4rem 0.5rem;
   animation: gc-breathe 2.4s ease-in-out infinite;
+}
+/* When the strip is present, lift BUY/NEW above it so neither gets covered. */
+.gc-has-days-left .gc-buy-badge,
+.gc-has-days-left .gc-new-badge {
+  bottom: 30px;
 }
 .gc-genre {
   font-size: 0.75rem;
