@@ -83,7 +83,7 @@
       function catMinPrice(gamesArr) {
         let min = null;
         gamesArr.forEach(g => {
-          [10, 15, 30].forEach(d => {
+          RENTAL_DURATIONS.forEach(({ days: d }) => {
             const pct = getPromoDiscountPct(promo, d);
             ['nt_price_', 'tr_price_'].forEach(prefix => {
               const base = g[prefix + d + 'd'];

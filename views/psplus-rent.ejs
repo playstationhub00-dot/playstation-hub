@@ -91,9 +91,9 @@
       <!-- SELECT DURATION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durationGrid">
-        <% [10, 15, 30].forEach(d => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
+        <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
         <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
-          <span class="gd-dur-days"><%= d %></span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-days"><%= durLabel %></span>
           <span class="gd-dur-price" id="price-<%= d %>">—</span>
           <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
         </button>
@@ -163,9 +163,9 @@
       <!-- SELECT DURATION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durationGrid">
-        <% [10, 15, 30].forEach(d => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
+        <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
         <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
-          <span class="gd-dur-days"><%= d %></span><span class="gd-dur-label">DAYS</span>
+          <span class="gd-dur-days"><%= durLabel %></span>
           <span class="gd-dur-price" id="price-<%= d %>">—</span>
           <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
         </button>
@@ -226,6 +226,7 @@
 
 <%- include('partials/footer') %>
 
+<script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 const PRICES = {
   nt: { 10: <%= prices.nt_price_10d %>, 15: <%= prices.nt_price_15d %>, 30: <%= prices.nt_price_30d %> },
@@ -268,7 +269,7 @@ function onDurChange(btn) {
 
 function updatePrices() {
   if (!selectedType) return;
-  [10, 15, 30].forEach(d => {
+  RENTAL_DURATIONS.forEach(d => {
     const el = document.getElementById('price-' + d);
     if (!el) return;
     const base = PRICES[selectedType][d];
@@ -344,7 +345,7 @@ function handleMessageUs(e) {
   if (!selectedDays) {
     e.preventDefault();
     const el = document.getElementById('ctaValidationMsg');
-    if (el) { el.textContent = '⚠️ Please select a rental duration (10, 15, or 30 days) to continue.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+    if (el) { el.textContent = '⚠️ Please select a rental duration (Weekly or Monthly) to continue.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
     highlightDurationGrid();
     return false;
   }

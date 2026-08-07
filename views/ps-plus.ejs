@@ -89,15 +89,11 @@
         <div class="psplus-price-card-sub">Played on our account</div>
         <div class="psplus-price-rows">
           <div class="psplus-price-row">
-            <span class="psplus-price-days">10 Days</span>
-            <span class="psplus-price-amount">₱<%= prices.nt_price_10d %></span>
-          </div>
-          <div class="psplus-price-row">
-            <span class="psplus-price-days">15 Days</span>
-            <span class="psplus-price-amount">₱<%= prices.nt_price_15d %></span>
+            <span class="psplus-price-days">Weekly</span>
+            <span class="psplus-price-amount">₱<%= prices.nt_price_7d %></span>
           </div>
           <div class="psplus-price-row psplus-price-row-highlight">
-            <span class="psplus-price-days">30 Days</span>
+            <span class="psplus-price-days">Monthly</span>
             <span class="psplus-price-amount">₱<%= prices.nt_price_30d %></span>
           </div>
         </div>
@@ -110,15 +106,11 @@
         <div class="psplus-price-card-sub">Play on your own PSN account</div>
         <div class="psplus-price-rows">
           <div class="psplus-price-row">
-            <span class="psplus-price-days" style="color:#886600;">10 Days</span>
-            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_10d %></span>
-          </div>
-          <div class="psplus-price-row">
-            <span class="psplus-price-days" style="color:#886600;">15 Days</span>
-            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_15d %></span>
+            <span class="psplus-price-days" style="color:#886600;">Weekly</span>
+            <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_7d %></span>
           </div>
           <div class="psplus-price-row psplus-price-row-highlight" style="border-color:rgba(255,215,0,0.2);">
-            <span class="psplus-price-days" style="color:#886600;">30 Days</span>
+            <span class="psplus-price-days" style="color:#886600;">Monthly</span>
             <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_30d %></span>
           </div>
         </div>
@@ -197,7 +189,7 @@
         const trSlots = entry.tr_slots || 0;
         const hasSlots = ntSlots > 0 || trSlots > 0;
         const gamesList = (entry.games_list || '').split('\n').map(g=>g.trim()).filter(Boolean);
-        const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots, prices: { nt10: prices.nt_price_10d, nt15: prices.nt_price_15d, nt30: prices.nt_price_30d, tr10: prices.tr_price_10d, tr15: prices.tr_price_15d, tr30: prices.tr_price_30d } }).replace(/'/g,"&#39;");
+        const entryData = JSON.stringify({ cover: entry.cover_image||'', month: entry.month_name, year, games: gamesList, notes: entry.notes||'', ntSlots, trSlots, prices: { nt7: prices.nt_price_7d, nt30: prices.nt_price_30d, tr7: prices.tr_price_7d, tr30: prices.tr_price_30d } }).replace(/'/g,"&#39;");
       %>
       <div class="psplus-month-card" data-month-id="<%= entry.id %>" onclick="openPsplusModal('<%= entryData.replace(/"/g, '&quot;') %>')" style="cursor:pointer;">
         <div class="psplus-month-cover-wrap">
@@ -297,15 +289,13 @@ function openPsplusModal(dataStr) {
   document.getElementById('psplusModalPrices').innerHTML =
     `<div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
        <div style="font-size:0.7rem;color:#aaa;font-weight:700;margin-bottom:0.4rem;">🎮 Non-Trophy</div>
-       <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#22c55e;">₱${p.nt10||0}</b></div>
-       <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#22c55e;">₱${p.nt15||0}</b></div>
-       <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#22c55e;">₱${p.nt30||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">Weekly — <b style="color:#22c55e;">₱${p.nt7||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">Monthly — <b style="color:#22c55e;">₱${p.nt30||0}</b></div>
      </div>
      <div style="background:#111;border:1px solid #222;border-radius:10px;padding:0.65rem 0.85rem;">
        <div style="font-size:0.7rem;color:#ffc400;font-weight:700;margin-bottom:0.4rem;">🏆 Trophy Account</div>
-       <div style="font-size:0.8rem;color:#ddd;">10 Days — <b style="color:#ffc400;">₱${p.tr10||0}</b></div>
-       <div style="font-size:0.8rem;color:#ddd;">15 Days — <b style="color:#ffc400;">₱${p.tr15||0}</b></div>
-       <div style="font-size:0.8rem;color:#ddd;">30 Days — <b style="color:#ffc400;">₱${p.tr30||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">Weekly — <b style="color:#ffc400;">₱${p.tr7||0}</b></div>
+       <div style="font-size:0.8rem;color:#ddd;">Monthly — <b style="color:#ffc400;">₱${p.tr30||0}</b></div>
        <div style="font-size:0.72rem;color:#664d00;margin-top:0.3rem;">+₱100 refundable deposit</div>
      </div>`;
 

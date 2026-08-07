@@ -224,7 +224,7 @@ function renderDurButtons() {
   const p = getPrices();
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
-  [10, 15, 30].forEach(d => {
+  RENTAL_DURATIONS.forEach(({ days: d }) => {
     if (!p[d]) return; // skip days with no price
     const btn = document.createElement('button');
     btn.type = 'button';

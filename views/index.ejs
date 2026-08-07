@@ -272,7 +272,7 @@
     const catGames = games.filter(g => g.price_category_id === cat.id);
     let min = null;
     catGames.forEach(g => {
-      [10, 15, 30].forEach(d => {
+      RENTAL_DURATIONS.forEach(({ days: d }) => {
         const pct = getPromoDiscountPct(promo, d);
         ['nt_price_', 'tr_price_'].forEach(prefix => {
           const base = g[prefix + d + 'd'];
@@ -421,7 +421,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 
 <!-- PROMO LADDER -->
 <%
-  const activeDurations = promo.enabled ? [10, 15, 30].filter(d => getPromoDiscountPct(promo, d) > 0) : [];
+  const activeDurations = promo.enabled ? RENTAL_DURATIONS.map(d => d.days).filter(d => getPromoDiscountPct(promo, d) > 0) : [];
   const bestPromoDuration = activeDurations.length
     ? activeDurations.reduce((best, d) => getPromoDiscountPct(promo, d) > getPromoDiscountPct(promo, best) ? d : best, activeDurations[0])
     : null;
@@ -538,7 +538,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
       <div class="step">
         <div class="step-num">2</div>
         <h3>Choose Duration</h3>
-        <p>Pick 10, 15, or 30 days — flexible pricing to fit your schedule.</p>
+        <p>Pick Weekly or Monthly — flexible pricing to fit your schedule.</p>
       </div>
       <div class="step">
         <div class="step-num">3</div>
