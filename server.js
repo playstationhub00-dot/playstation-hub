@@ -9,6 +9,7 @@ const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
+const templates = require('./lib/templates');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -630,6 +631,23 @@ function getSiteSettings() {
     db.set('site_settings.promo.discounts', migratedDiscounts).write();
     s.promo.discounts = migratedDiscounts;
   }
+  // Seed message templates on first read, and backfill any individual field
+  // added later — an owner who has customised three templates should not lose
+  // them when a fourth is introduced.
+  if (!s.message_templates) {
+    db.set('site_settings.message_templates', Object.assign({}, templates.DEFAULT_TEMPLATES)).write();
+    s.message_templates = db.get('site_settings.message_templates').value();
+  } else {
+    const missing = {};
+    Object.keys(templates.DEFAULT_TEMPLATES).forEach(k => {
+      if (typeof s.message_templates[k] !== 'string') missing[k] = templates.DEFAULT_TEMPLATES[k];
+    });
+    if (Object.keys(missing).length) {
+      const merged = Object.assign({}, s.message_templates, missing);
+      db.set('site_settings.message_templates', merged).write();
+      s.message_templates = merged;
+    }
+  }
   return s;
 }
 // Every duration a rent promo can apply to, and the % discount for a given duration.
@@ -1126,6 +1144,18 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
   res.redirect('/admin?msg=promo_saved');
 });
 
+app.post('/admin/message-templates', requireAuth, (req, res) => {
+  const existing = db.get('site_settings.message_templates').value() || {};
+  const next = Object.assign({}, existing);
+  // Only fields the module defines are writable — an unexpected form field
+  // cannot introduce a key that render() would never read.
+  Object.keys(templates.DEFAULT_TEMPLATES).forEach(k => {
+    if (typeof req.body[k] === 'string') next[k] = req.body[k];
+  });
+  db.set('site_settings.message_templates', next).write();
+  res.redirect('/admin?msg=templates_saved');
+});
+
 // ── Homepage Popup ────────────────────────────────────────────────────────────
 // Reuses uploadPosterBg (images only, 20MB) — promo artwork is the same shape of file.
 app.post('/admin/popup', requireAuth, uploadPosterBg.single('popup_image'), async (req, res) => {
@@ -1236,7 +1266,7 @@ app.get('/admin', requireAuth, (req, res) => {
   // unless ?history=1 is set. Every stat and aggregate still reads the full
   // `customers` array, so nothing reported changes.
   const showHistory = req.query.history === '1';
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
