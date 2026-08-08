@@ -8,6 +8,7 @@ const XLSX = require('xlsx');
 const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
+const { normalizeCustomerPayments } = require('./lib/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -404,6 +405,7 @@ db.write = function() {
 function normalizeCustomer(c) {
   if (!c) return c;
   c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
+  normalizeCustomerPayments(c);
   return c;
 }
 function getCustomers() { return (db.get('customers').value() || []).map(normalizeCustomer); }
