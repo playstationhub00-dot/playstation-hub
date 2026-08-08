@@ -2527,6 +2527,43 @@ Message us anytime to reserve your slot! 😊</textarea>
       <% if (customers.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
       <% } else { %>
+            <%
+              // Pre-render every message server-side so lib/templates.js stays the
+              // single implementation of the substitution rules — the browser only
+              // copies a finished string.
+              const tplDeposit = (settings.promo && settings.promo.deposit) || 100;
+              const renderMsg = (kind, cust) => renderTemplate(kind, cust, messageTemplates, { deposit: tplDeposit });
+            %>
+            <%
+              // Reuses the same day arithmetic the table rows below already do,
+              // rather than introducing a second definition of "due tomorrow".
+              const remToday = new Date(); remToday.setHours(0,0,0,0);
+              const needsReminder = customers.filter(c => {
+                if (c.status !== 'renting' || !c.end_date) return false;
+                const end = new Date(c.end_date + 'T00:00:00');
+                const dl = Math.ceil((end - remToday) / 86400000);
+                return dl === 0 || dl === 1;
+              }).map(c => {
+                const end = new Date(c.end_date + 'T00:00:00');
+                const dl = Math.ceil((end - remToday) / 86400000);
+                return { c, dl, kind: dl === 0 ? 'expiry_today' : 'expiry_tomorrow' };
+              }).sort((a, b) => a.dl - b.dl);
+            %>
+            <% if (needsReminder.length) { %>
+            <div class="rem-panel">
+              <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
+              <% needsReminder.forEach(r => { %>
+              <div class="rem-row">
+                <div class="rem-info">
+                  <span class="rem-name"><%= r.c.customer_name %></span>
+                  <span class="rem-badge <%= r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
+                  <div class="rem-meta"><%= r.c.game_title %> · <%= r.c.account_type === 'tr' ? 'Trophy' : r.c.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %> · <%= r.c.days %> days</div>
+                </div>
+                <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c) %>">📋 Copy reminder</button>
+              </div>
+              <% }) %>
+            </div>
+            <% } %>
       <div style="max-height:520px;overflow-y:auto;overflow-x:auto;border-radius:8px;">
         <table class="games-table" id="customersTable">
           <thead>
@@ -2614,6 +2651,7 @@ Message us anytime to reserve your slot! 😊</textarea>
               </td>
               <td>
                 <div class="action-btns">
+                  <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('confirmation', c) %>" title="Copy confirmation message">📋</button>
                   <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
                   <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
                     <button type="submit" class="btn-delete">🗑</button>
@@ -2650,6 +2688,39 @@ Message us anytime to reserve your slot! 😊</textarea>
         r.style.display = (statusOk && searchOk) ? '' : 'none';
       });
     }
+    </script>
+    <script>
+    (function(){
+      // navigator.clipboard needs a secure context. Production is HTTPS so this
+      // works, but on plain-http localhost the API is absent — fall back to a
+      // visible textarea the owner can copy from manually rather than doing nothing.
+      function fallbackCopy(text, btn) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:1rem;right:1rem;bottom:1rem;height:9rem;z-index:9999;font-size:0.8rem;';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        if (ok) { ta.remove(); flash(btn, '✅ Copied'); }
+        else { flash(btn, '⬇ Copy from the box'); setTimeout(() => ta.remove(), 15000); }
+      }
+      function flash(btn, text) {
+        const original = btn.textContent;
+        btn.textContent = text;
+        setTimeout(() => { btn.textContent = original; }, 1800);
+      }
+      document.addEventListener('click', function(e){
+        const btn = e.target.closest('.rem-copy');
+        if (!btn) return;
+        const msg = btn.dataset.msg || '';
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(msg).then(() => flash(btn, '✅ Copied')).catch(() => fallbackCopy(msg, btn));
+        } else {
+          fallbackCopy(msg, btn);
+        }
+      });
+    })();
     </script>
       </div></div></div><!-- /accordion customers-table -->
 

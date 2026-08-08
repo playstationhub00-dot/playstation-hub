@@ -2298,3 +2298,18 @@ footer {
 .vis-filter-btn { background:#1a1a1a; color:#777; border:1px solid #333; border-radius:20px; cursor:pointer; font-weight:600; transition:all 0.15s; }
 .vis-filter-btn:hover { border-color:#555; color:#ccc; }
 .vis-filter-btn.vis-filter-active { background:rgba(0,112,209,0.15); border-color:var(--ps-blue); color:var(--ps-blue); }
+
+/* Needs-a-reminder panel + copy buttons (message templates) */
+.rem-panel { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+.rem-title { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.85rem; }
+.rem-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0; border-top: 1px solid rgba(245,158,11,0.15); }
+.rem-row:first-of-type { border-top: 0; }
+.rem-info { min-width: 0; }
+.rem-name { font-weight: 700; font-size: 0.9rem; }
+.rem-badge { font-size: 0.68rem; font-weight: 800; padding: 0.12rem 0.45rem; border-radius: 5px; margin-left: 0.5rem; }
+.rem-today { background: rgba(239,68,68,0.15); color: #ef4444; }
+.rem-tomorrow { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.rem-meta { font-size: 0.75rem; color: #777; margin-top: 0.2rem; }
+.rem-copy { background: #1a1a1a; color: #ddd; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
+.rem-copy:hover { border-color: #22c55e; color: #fff; }
+.btn-copy { padding: 0.25rem 0.5rem !important; font-size: 0.8rem !important; }

@@ -241,6 +241,8 @@ app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
 app.locals.computeAvailability = computeAvailability;
 // Expose promo discount lookup so game cards can show the final discounted price, not just the badge
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
+// Expose template rendering so admin views can build filled-in customer messages
+app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── JPEG renditions for the Meta catalog feed ────────────────────────────────
