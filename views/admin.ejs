@@ -733,6 +733,82 @@
       </div>
     </div><!-- /accordion bot-training -->
 
+    <!-- Message Templates -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">💬</div>
+          <div>
+            <div class="sa-title">Message Templates</div>
+            <div class="sa-desc">Ready-to-send replies for confirmations and rental reminders</div>
+          </div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+        <div style="padding:1.25rem;">
+
+          <div style="background:rgba(34,197,94,0.07);border:1px solid #1a3a2a;border-radius:12px;padding:1rem;margin-bottom:1.25rem;font-size:0.8rem;color:#888;line-height:1.6;">
+            <strong style="color:#22c55e;">How it works:</strong> These are copied to your clipboard from the Customers tab, filled in with that customer's details — you paste them into Messenger. Use any placeholder below and it gets swapped for the real value.
+            <div style="margin-top:0.7rem;display:flex;flex-wrap:wrap;gap:0.35rem;">
+              <% templateTokens.forEach(tok => { %><code style="background:#111;border:1px solid #222;border-radius:5px;padding:0.15rem 0.4rem;font-size:0.72rem;color:#22c55e;">{<%= tok %>}</code><% }) %>
+            </div>
+            <div style="margin-top:0.7rem;color:#666;">
+              <code style="color:#f59e0b;">{return_steps}</code> and <code style="color:#f59e0b;">{deposit_line}</code> change automatically with the account type — Non-Trophy rentals get no deposit sentence at all.
+            </div>
+          </div>
+
+          <form method="POST" action="/admin/message-templates">
+            <div class="form-group">
+              <label>✅ Rental confirmation — after they've paid and signed in</label>
+              <textarea name="confirmation" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.confirmation %></textarea>
+            </div>
+            <div class="form-group">
+              <label>⏰ Reminder — due tomorrow</label>
+              <textarea name="expiry_tomorrow" rows="10" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_tomorrow %></textarea>
+            </div>
+            <div class="form-group">
+              <label>🔔 Reminder — due today</label>
+              <textarea name="expiry_today" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_today %></textarea>
+            </div>
+
+            <div style="border-top:1px solid #1a1a1a;margin:1.25rem 0;padding-top:1.25rem;">
+              <div style="font-size:0.75rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.85rem;">Return steps — one per account type</div>
+              <div class="form-group">
+                <label>🏆 Trophy</label>
+                <textarea name="return_steps_tr" rows="5" style="width:100%;font-family:inherit;"><%= messageTemplates.return_steps_tr %></textarea>
+              </div>
+              <div class="form-group">
+                <label>🕹️ PS4 Primary</label>
+                <textarea name="return_steps_ps4" rows="5" style="width:100%;font-family:inherit;"><%= messageTemplates.return_steps_ps4 %></textarea>
+              </div>
+              <div class="form-group">
+                <label>🎮 Non-Trophy</label>
+                <textarea name="return_steps_nt" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.return_steps_nt %></textarea>
+              </div>
+              <div class="form-group">
+                <label>💰 Deposit line — shown only on Trophy and PS4 Primary rentals</label>
+                <textarea name="deposit_line" rows="3" style="width:100%;font-family:inherit;"><%= messageTemplates.deposit_line %></textarea>
+              </div>
+            </div>
+
+            <div style="border-top:1px solid #1a1a1a;margin:1.25rem 0;padding-top:1.25rem;">
+              <div class="form-group">
+                <label>⭐ Facebook reviews link</label>
+                <input type="text" name="reviews_link" value="<%= messageTemplates.reviews_link %>" style="width:100%;">
+              </div>
+              <div class="form-group">
+                <label>🌐 Website link</label>
+                <input type="text" name="website_link" value="<%= messageTemplates.website_link %>" style="width:100%;">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary">💾 Save Templates</button>
+          </form>
+
+        </div>
+      </div>
+    </div><!-- /accordion message templates -->
+
   </div><!-- /tab-settings -->
 
   <!-- ═══════════════ ANNOUNCEMENTS TAB ═══════════════ -->
