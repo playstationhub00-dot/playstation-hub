@@ -188,7 +188,7 @@
             </div>
             <div class="gd-type-setup" id="setup-tr" data-open="0">
               <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
-              <p style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong></p>
+              <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
               <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
               <% if (!trAvail && trSoon != null && trSoon > 0) { %>
               <p class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
@@ -212,7 +212,7 @@
             </div>
             <div class="gd-type-setup" id="setup-nt" data-open="0">
               <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
-              <p style="color:#888;">Setup: Settings → Account → Other → Console Sharing → <strong>DON'T enable</strong></p>
+              <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
               <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
               <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
               <p class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
@@ -236,7 +236,7 @@
             </div>
             <div class="gd-type-setup" id="setup-ps4" data-open="0">
               <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
-              <p style="color:#22c55e;">Setup: Settings → Account → Other → Console Sharing → <strong>ENABLE</strong> (on PS4)</p>
+              <p style="color:#22c55e;">Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
               <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
               <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
               <% } %>
