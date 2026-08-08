@@ -2531,7 +2531,8 @@ Message us anytime to reserve your slot! 😊</textarea>
               // Pre-render every message server-side so lib/templates.js stays the
               // single implementation of the substitution rules — the browser only
               // copies a finished string.
-              const tplDeposit = (settings.promo && settings.promo.deposit) || 100;
+              const p = settings.promo || {};
+              const tplDeposit = p.deposit != null ? p.deposit : 100;
               const renderMsg = (kind, cust) => renderTemplate(kind, cust, messageTemplates, { deposit: tplDeposit });
             %>
             <%
@@ -2651,7 +2652,9 @@ Message us anytime to reserve your slot! 😊</textarea>
               </td>
               <td>
                 <div class="action-btns">
+                  <% if (isRenting || isReservation) { %>
                   <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('confirmation', c) %>" title="Copy confirmation message">📋</button>
+                  <% } %>
                   <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
                   <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
                     <button type="submit" class="btn-delete">🗑</button>
@@ -2706,9 +2709,11 @@ Message us anytime to reserve your slot! 😊</textarea>
         else { flash(btn, '⬇ Copy from the box'); setTimeout(() => ta.remove(), 15000); }
       }
       function flash(btn, text) {
-        const original = btn.textContent;
+        if (!btn.dataset.original) btn.dataset.original = btn.textContent;
+        const original = btn.dataset.original;
         btn.textContent = text;
-        setTimeout(() => { btn.textContent = original; }, 1800);
+        clearTimeout(btn._flashTimer);
+        btn._flashTimer = setTimeout(() => { btn.textContent = original; }, 1800);
       }
       document.addEventListener('click', function(e){
         const btn = e.target.closest('.rem-copy');

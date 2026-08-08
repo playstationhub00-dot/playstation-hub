@@ -89,4 +89,9 @@ check('defaults expose every field the settings form saves', () => {
   });
 });
 
+check('trailing blank line from an empty token is trimmed cleanly', () => {
+  const out = t.render('a\n{deposit_line}', NT, TPL, {});
+  assert.strictEqual(out, 'a');
+});
+
 console.log('\n' + passed + ' assertions passed');
