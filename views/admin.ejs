@@ -2377,8 +2377,18 @@ Message us anytime to reserve your slot! 😊</textarea>
         <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
         <button onclick="filterCustomers('reservation')" id="cf-reservation" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#4a1a6a;color:#c084fc;">🔖 Reservation</button>
         <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
+        <% if (showHistory) { %>
         <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
+        <a href="/admin?tab=customers" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;text-decoration:none;margin-left:auto;">⚡ Hide finished (faster)</a>
+        <% } else { %>
+        <a href="/admin?tab=customers&history=1" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;text-decoration:none;margin-left:auto;">✅ Show finished (<%= customers.filter(c => c.status === 'done').length %>)</a>
+        <% } %>
       </div>
+      <% if (!showHistory) { %>
+      <div style="font-size:0.78rem;color:#555;margin-bottom:0.85rem;">
+        Showing live rentals only. <%= customers.filter(c => c.status === 'done').length %> finished rentals are hidden to keep this page fast — all totals and reports still include them.
+      </div>
+      <% } %>
 
       <% if (customers.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
@@ -2399,7 +2409,12 @@ Message us anytime to reserve your slot! 😊</textarea>
             </tr>
           </thead>
           <tbody>
-            <% customers.forEach(c => {
+            <%
+              // Only the rendered rows are narrowed — `customers` itself stays whole
+              // so every count, total, and dashboard figure above is unaffected.
+              const tableCustomers = showHistory ? customers : customers.filter(c => c.status !== 'done');
+            %>
+            <% tableCustomers.forEach(c => {
               const isRenting = c.status === 'renting';
               const isBought = c.status === 'bought';
               const isReservation = c.status === 'reservation';

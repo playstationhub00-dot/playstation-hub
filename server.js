@@ -1227,7 +1227,13 @@ app.get('/admin', requireAuth, (req, res) => {
     end_date: c.end_date || '', game_title: c.game_title || '', customer_name: c.customer_name || ''
   }));
   const monthLogs = getMonthLogs();
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts() });
+  // Finished rentals are the bulk of the customer list and grow forever — at 431
+  // records they were 1.4MB of the admin page's 1.8MB, re-rendered on every load
+  // regardless of which tab was open. The table now renders only live rentals
+  // unless ?history=1 is set. Every stat and aggregate still reads the full
+  // `customers` array, so nothing reported changes.
+  const showHistory = req.query.history === '1';
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
