@@ -1561,8 +1561,18 @@
         return isNaN(d.getTime()) ? null : d;
       }
       function dashAvailableYears() {
+        // Union of rental-start years and payment years: a year where money
+        // only came in via an extension (no new rental started that year)
+        // still needs to be selectable.
         const years = new Set();
         DASH_DATA.forEach(c => { const d = dashCustDate(c); if (d) years.add(d.getFullYear()); });
+        DASH_DATA.forEach(c => {
+          (c.payments || []).forEach(p => {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (!isNaN(d.getTime())) years.add(d.getFullYear());
+          });
+        });
         return [...years].sort((a, b) => b - a);
       }
       function dashUniqueRenters(list) {
@@ -1603,6 +1613,26 @@
           if (x.c.customer_name) names.add(String(x.c.customer_name).trim().toLowerCase());
         });
         return names.size;
+      }
+      // Same payments-based attribution as dashPaymentsIn/dashRevenueInMonth,
+      // but scoped to a whole year (or all-time when year is null) — used for
+      // the year/all-time totals so they agree with the monthly bars across a
+      // year boundary instead of falling back to price-based, rental-start
+      // attribution.
+      function dashPaymentsInYear(year) {
+        const out = [];
+        DASH_DATA.forEach(function (c) {
+          (c.payments || []).forEach(function (p) {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (isNaN(d.getTime())) return;
+            if (year == null || d.getFullYear() === year) out.push({ c: c, p: p });
+          });
+        });
+        return out;
+      }
+      function dashRevenueInYear(year) {
+        return dashPaymentsInYear(year).reduce(function (s, x) { return s + (x.p.amount || 0); }, 0);
       }
       // "Still renting" = overlapped the month at all: started by month-end, and
       // either has no end date yet (ongoing) or ended on/after month-start.
@@ -1653,11 +1683,12 @@
         const yearNum = raw === 'all' ? null : parseInt(raw);
         const scoped = raw === 'all' ? DASH_DATA : dashFilterYear(yearNum);
 
-        const totalEarned = scoped.reduce((s, c) => s + (c.price || 0), 0);
+        const yearPayments = dashPaymentsInYear(yearNum);
+        const totalEarned = yearPayments.reduce((s, x) => s + (x.p.amount || 0), 0);
         const rentList = scoped.filter(c => c.status !== 'bought');
         const buyList = scoped.filter(c => c.status === 'bought');
-        const rentRevenue = rentList.reduce((s, c) => s + (c.price || 0), 0);
-        const buyRevenue = buyList.reduce((s, c) => s + (c.price || 0), 0);
+        const rentRevenue = yearPayments.filter(x => x.c.status !== 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
+        const buyRevenue = yearPayments.filter(x => x.c.status === 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
 
         document.getElementById('dashTotalEarned').textContent = '₱' + totalEarned.toLocaleString();
         document.getElementById('dashTransactions').textContent = scoped.length + ' transaction' + (scoped.length !== 1 ? 's' : '');
@@ -1828,8 +1859,9 @@
       };
 
       function renderDashInsights(scoped, chartYear) {
-        const rentRevenue = scoped.filter(c => c.status !== 'bought').reduce((s, c) => s + (c.price || 0), 0);
-        const totalEarned = scoped.reduce((s, c) => s + (c.price || 0), 0);
+        const chartYearPayments = dashPaymentsInYear(chartYear);
+        const rentRevenue = chartYearPayments.filter(x => x.c.status !== 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
+        const totalEarned = chartYearPayments.reduce((s, x) => s + (x.p.amount || 0), 0);
         const rentPct = totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0;
         const topGames = dashTopGames(scoped, 1);
 

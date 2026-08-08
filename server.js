@@ -8,7 +8,7 @@ const XLSX = require('xlsx');
 const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
-const { normalizeCustomerPayments } = require('./lib/payments');
+const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1964,15 +1964,9 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   // actually taken. The running `price` still ends up as the sum of payments.
   const prevPrice = existing.price || 0;
   const newPrice = parseInt(finalPrice) || 0;
-  const priceDelta = newPrice - prevPrice;
   const existingPayments = Array.isArray(existing.payments) ? existing.payments.slice() : [];
-  if (priceDelta > 0 && prevPrice > 0) {
-    existingPayments.push({
-      amount: priceDelta,
-      date: new Date().toISOString().slice(0, 10),
-      kind: 'extension'
-    });
-  }
+  const deltaPayment = priceDeltaPayment(prevPrice, newPrice, { startDate: start_date || existing.start_date });
+  if (deltaPayment) existingPayments.push(deltaPayment);
 
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({
     customer_name: (customer_name || existing.customer_name).trim(),

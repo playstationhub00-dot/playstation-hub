@@ -2,7 +2,7 @@
 // project by design — run with `node scripts/test-payments.js`, which exits
 // non-zero on the first failed assertion.
 const assert = require('assert');
-const { normalizeCustomerPayments, sumPaymentsInMonth, rentersInMonth } = require('../lib/payments');
+const { normalizeCustomerPayments, sumPaymentsInMonth, rentersInMonth, priceDeltaPayment } = require('../lib/payments');
 
 let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('  ok - ' + name); }
@@ -62,6 +62,24 @@ check('the same person paying twice in one month counts once', () => {
   ];
   assert.strictEqual(rentersInMonth(list, 2026, 7), 1);
   assert.strictEqual(sumPaymentsInMonth(list, 2026, 7), 200);
+});
+
+check('backfill fallback buckets a late-UTC-evening created_at into the Manila-local month', () => {
+  // 2026-05-31T20:00:00.000Z is 2026-06-01 04:00 in Manila (UTC+8) — the old
+  // dashboard logic (new Date(created_at).getFullYear()/getMonth(), which
+  // reads local time) always bucketed this into June, not May.
+  const c = normalizeCustomerPayments({ price: 250, start_date: '', created_at: '2026-05-31T20:00:00.000Z' });
+  assert.strictEqual(c.payments[0].date, '2026-06-01');
+});
+
+check('a price decrease records a negative adjustment, and payments still sum to the final price', () => {
+  const first = priceDeltaPayment(0, 500, { startDate: '2026-07-01' });
+  assert.deepStrictEqual(first, { amount: 500, date: '2026-07-01', kind: 'rental' });
+  const decrease = priceDeltaPayment(500, 350, { todayDate: '2026-07-10' });
+  assert.deepStrictEqual(decrease, { amount: -150, date: '2026-07-10', kind: 'adjustment' });
+  const payments = [first, decrease];
+  const total = payments.reduce((s, p) => s + p.amount, 0);
+  assert.strictEqual(total, 350); // matches the final price after the decrease
 });
 
 console.log('\n' + passed + ' assertions passed');
