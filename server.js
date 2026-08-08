@@ -1827,7 +1827,12 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
     price: priceVal,
     status: status || 'renting',
     notes: notes || '',
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    // The first payment is dated to the rental's start so a backdated entry
+    // lands in the month it belongs to, matching the backfill rule.
+    payments: priceVal > 0
+      ? [{ amount: priceVal, date: (start_date || new Date().toISOString().slice(0, 10)), kind: 'rental' }]
+      : [],
   }).write();
   // Adjust slots only for renting or bought (not reservation)
   const activeStatus = status || 'renting';
@@ -1952,6 +1957,22 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     }
   }
 
+  // An extension is performed by editing the customer and raising the price,
+  // so a price increase IS the payment event. Record only the delta, dated
+  // today — not the rental's start — so the money counts in the month it was
+  // actually taken. The running `price` still ends up as the sum of payments.
+  const prevPrice = existing.price || 0;
+  const newPrice = parseInt(finalPrice) || 0;
+  const priceDelta = newPrice - prevPrice;
+  const existingPayments = Array.isArray(existing.payments) ? existing.payments.slice() : [];
+  if (priceDelta > 0 && prevPrice > 0) {
+    existingPayments.push({
+      amount: priceDelta,
+      date: new Date().toISOString().slice(0, 10),
+      kind: 'extension'
+    });
+  }
+
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({
     customer_name: (customer_name || existing.customer_name).trim(),
     game_id: finalGameId,
@@ -1962,7 +1983,8 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     end_date: end_date || existing.end_date,
     price: finalPrice,
     status: status || existing.status,
-    notes: notes || ''
+    notes: notes || '',
+    payments: existingPayments,
   }).write();
   res.redirect('/admin?tab=customers&msg=customer_updated');
 });
