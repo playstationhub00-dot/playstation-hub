@@ -1577,6 +1577,33 @@
       function dashFilterMonth(year, month) {
         return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year && d.getMonth() === month; });
       }
+      // Revenue and renter counts come from payments, each carrying its own
+      // date — an extension paid in August counts in August even though the
+      // rental started in June. dashFilterMonth stays as-is: it answers "which
+      // rentals STARTED this month", which is still the right question for
+      // rental-count and top-game figures.
+      function dashPaymentsIn(year, month) {
+        const out = [];
+        DASH_DATA.forEach(function (c) {
+          (c.payments || []).forEach(function (p) {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (isNaN(d.getTime())) return;
+            if (d.getFullYear() === year && d.getMonth() === month) out.push({ c: c, p: p });
+          });
+        });
+        return out;
+      }
+      function dashRevenueInMonth(year, month) {
+        return dashPaymentsIn(year, month).reduce(function (s, x) { return s + (x.p.amount || 0); }, 0);
+      }
+      function dashRentersInMonth(year, month) {
+        const names = new Set();
+        dashPaymentsIn(year, month).forEach(function (x) {
+          if (x.c.customer_name) names.add(String(x.c.customer_name).trim().toLowerCase());
+        });
+        return names.size;
+      }
       // "Still renting" = overlapped the month at all: started by month-end, and
       // either has no end date yet (ongoing) or ended on/after month-start.
       function dashOverlapsMonth(c, year, month) {
@@ -1658,9 +1685,8 @@
         document.getElementById('dashChartYearLabel').textContent = year;
         const revs = [], renters = [];
         for (let m = 0; m < 12; m++) {
-          const list = dashFilterMonth(year, m);
-          revs.push(list.reduce((s, c) => s + (c.price || 0), 0));
-          renters.push(dashUniqueRenters(list));
+          revs.push(dashRevenueInMonth(year, m));
+          renters.push(dashRentersInMonth(year, m));
         }
         const maxRev = Math.max(...revs, 1);
         const now = new Date();
@@ -1707,7 +1733,7 @@
         if (!dashSelectedMonth) return;
         const { year, month } = dashSelectedMonth;
         const list = dashFilterMonth(year, month);
-        const totalEarned = list.reduce((s, c) => s + (c.price || 0), 0);
+        const totalEarned = dashRevenueInMonth(year, month);
         const reservations = list.filter(c => c.status === 'reservation');
         const buys = list.filter(c => c.status === 'bought');
         const stillRenting = DASH_DATA.filter(c => dashOverlapsMonth(c, year, month));
@@ -1715,7 +1741,7 @@
         document.getElementById('dashMonthTitle').textContent = '📅 ' + MONTH_LONG[month] + ' ' + year;
         document.getElementById('dashMonthEarned').textContent = '₱' + totalEarned.toLocaleString();
         document.getElementById('dashMonthTransactions').textContent = list.length;
-        document.getElementById('dashMonthRenters').textContent = dashUniqueRenters(list);
+        document.getElementById('dashMonthRenters').textContent = dashRentersInMonth(year, month);
         document.getElementById('dashMonthReservations').textContent = reservations.length;
         document.getElementById('dashMonthBuys').textContent = buys.length;
         document.getElementById('dashMonthStillRenting').textContent = stillRenting.length;
@@ -1808,7 +1834,7 @@
         const topGames = dashTopGames(scoped, 1);
 
         let revs = [];
-        for (let m = 0; m < 12; m++) revs.push(dashFilterMonth(chartYear, m).reduce((s, c) => s + (c.price || 0), 0));
+        for (let m = 0; m < 12; m++) revs.push(dashRevenueInMonth(chartYear, m));
         const peakVal = Math.max(...revs);
         const peakMonth = MONTH_SHORT[revs.indexOf(peakVal)];
 

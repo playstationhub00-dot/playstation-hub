@@ -1226,7 +1226,8 @@ app.get('/admin', requireAuth, (req, res) => {
   // only the fields it needs, not the full customer records.
   const dashboardData = customers.map(c => ({
     price: c.price || 0, status: c.status, start_date: c.start_date || '', created_at: c.created_at || '',
-    end_date: c.end_date || '', game_title: c.game_title || '', customer_name: c.customer_name || ''
+    end_date: c.end_date || '', game_title: c.game_title || '', customer_name: c.customer_name || '',
+    payments: c.payments || []
   }));
   const monthLogs = getMonthLogs();
   // Finished rentals are the bulk of the customer list and grow forever — at 431
