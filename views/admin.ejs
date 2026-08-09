@@ -2478,7 +2478,12 @@ Message us anytime to reserve your slot! 😊</textarea>
         if (!start || !days) return;
         const d = new Date(start + 'T00:00:00');
         d.setDate(d.getDate() + days);
-        document.getElementById('cust_end').value = d.toISOString().slice(0,10);
+        // toISOString() converts to UTC first — in a positive-offset timezone
+        // (this business runs on Manila time, UTC+8) local midnight becomes
+        // 16:00 the PREVIOUS day in UTC, silently shifting the date back by
+        // one. Format from the Date object's own local fields instead.
+        const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+        document.getElementById('cust_end').value = y + '-' + m + '-' + dd;
       }
       // Set today as default start date
       document.getElementById('cust_start').value = new Date().toISOString().slice(0,10);

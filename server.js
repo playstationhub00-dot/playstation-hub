@@ -1891,6 +1891,44 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
   res.redirect('/admin?tab=customers&msg=customer_added');
 });
 
+// ── One-time fix: end dates computed via updateCustEndDate() were silently
+// shifted a day early by toISOString()'s UTC conversion (this business runs
+// on Manila/UTC+8, where local midnight is the previous day in UTC). Detects
+// exactly the affected records — by recomputing what the buggy formula would
+// have produced from each one's own start_date+days and checking it against
+// the stored end_date — rather than blindly shifting every renting customer,
+// so a manually-typed date that happens to match is never touched twice and
+// this stays safe to load repeatedly.
+function buggyEndDate(startDate, days) {
+  if (!startDate || !days) return null;
+  const d = new Date(startDate + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+function correctEndDate(startDate, days) {
+  const d = new Date(startDate + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+function findEndDateFix() {
+  return getCustomers()
+    .filter(c => c.status === 'renting' && c.start_date && c.end_date && c.days)
+    .map(c => ({ c, shifted: correctEndDate(c.start_date, c.days) }))
+    .filter(({ c, shifted }) => c.end_date === buggyEndDate(c.start_date, c.days) && shifted !== c.end_date);
+}
+app.get('/admin/fix-end-dates', requireAuth, (req, res) => {
+  const affected = findEndDateFix();
+  res.render('fix-end-dates', { affected, settings: getSiteSettings() });
+});
+app.post('/admin/fix-end-dates', requireAuth, (req, res) => {
+  const affected = findEndDateFix();
+  affected.forEach(({ c, shifted }) => {
+    db.get('customers').find({ id: c.id }).assign({ end_date: shifted }).write();
+  });
+  res.redirect('/admin?tab=customers&msg=end_dates_fixed');
+});
+
 app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const customer = getCustomer(req.params.id);
   if (!customer) return res.redirect('/admin?tab=customers');
