@@ -1303,6 +1303,44 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   }
   const r = await orders.transition(order.ref, to, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+
+  // A web order is otherwise invisible to the revenue ledger, the expiry
+  // reminder panel, and top-games — all of which read the customers table,
+  // not the orders collection. order.customer_id makes this idempotent: a
+  // retried or raced advance call must never create a second customer.
+  if (to === 'active' && !order.customer_id) {
+    const game = getGame(order.game_id);
+    const customerId = newCustomerId();
+    db.get('customers').push({
+      id: customerId,
+      customer_name: order.fb_name,
+      game_id: parseInt(order.game_id),
+      game_title: order.game_title,
+      days: order.days,
+      account_type: order.account_type,
+      start_date: patch.start_date,
+      end_date: patch.end_date,
+      // amount_due only — the refundable deposit is not revenue.
+      price: order.amount_due || 0,
+      status: 'renting',
+      notes: 'Web order ' + order.ref,
+      created_at: new Date().toISOString(),
+      payments: order.amount_due > 0
+        ? [{ amount: order.amount_due, date: patch.start_date, kind: 'rental' }]
+        : [],
+    }).write();
+    if (game) {
+      db.get('games').find({ id: game.id }).assign({
+        available_slots: Math.max(0, (game.available_slots || 0) - 1),
+        renters: (game.renters || 0) + 1
+      }).write();
+      if (order.account_type === 'tr') adjustTrophySlots(game.id, -1);
+      else if (order.account_type === 'ps4') adjustPs4Slots(game.id, -1);
+      else adjustNtSlots(game.id, -1);
+    }
+    await orders.setCustomerId(order.ref, customerId);
+  }
+
   res.redirect('/admin?tab=orders&msg=order_advanced');
 });
 
