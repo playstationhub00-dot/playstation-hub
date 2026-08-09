@@ -1190,7 +1190,8 @@ app.post('/order/create', async (req, res) => {
       price_snapshot: snapshot,
       amount_due: amountDue,
       deposit_due: depositDue,
-      fb_name: name
+      fb_name: name,
+      session_id: req.sessionId || null
     });
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
