@@ -1074,6 +1074,62 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
   res.send(csv);
 });
 
+// Creates a rental order from the game page. Deliberately the only entry
+// point — Facebook can carry payment proof later, but never creates an order,
+// so nothing can bypass the owner's queue.
+app.post('/order/create', async (req, res) => {
+  const { game_id, account_type, days, fb_name } = req.body;
+  const game = getGame(game_id);
+  if (!game) return res.redirect('/browse');
+
+  const name = (fb_name || '').trim();
+  const type = ['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null;
+  const d = parseInt(days);
+  if (!name || !type || !PROMO_DURATIONS.includes(d)) {
+    return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+  }
+
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const resolved = resolveGamePrices(game);
+  // PS4 Primary has no price fields of its own and borrows Non-Trophy pricing,
+  // matching computeSwapReferencePrice()'s existing behaviour.
+  const priceType = type === 'ps4' ? 'nt' : type;
+  const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+  if (!base) return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+
+  const pct = getPromoDiscountPct(promo, d);
+  const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+
+  // Freeze the tier's whole price set. A tier's prices can change after an
+  // order is placed; snapshotting means a later swap compares against what the
+  // customer actually paid rather than today's number.
+  const cat = game.price_category_id ? getPriceCategory(game.price_category_id) : null;
+  const snapshot = {
+    nt_price_7d: resolved.nt_price_7d || 0, nt_price_30d: resolved.nt_price_30d || 0,
+    tr_price_7d: resolved.tr_price_7d || 0, tr_price_30d: resolved.tr_price_30d || 0
+  };
+
+  try {
+    const order = await orders.create({
+      game_id: game.id,
+      game_title: game.title,
+      account_type: type,
+      days: d,
+      price_tier_name: cat ? cat.name : '',
+      price_snapshot: snapshot,
+      amount_due: amountDue,
+      deposit_due: depositDue,
+      fb_name: name
+    });
+    res.redirect('/order/' + order.ref);
+  } catch (e) {
+    console.error('[order create]', e.message);
+    res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+  }
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {

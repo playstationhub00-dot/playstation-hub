@@ -276,6 +276,17 @@
           Pick an account type
         </a>
         <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+
+        <!-- Order on the site — runs in parallel with the Messenger CTA above -->
+        <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm">
+          <input type="hidden" name="game_id" value="<%= game.id %>">
+          <input type="hidden" name="account_type" id="orderType" value="">
+          <input type="hidden" name="days" id="orderDays" value="">
+          <div class="gd-order-or">or book on the site</div>
+          <input type="text" name="fb_name" class="gd-order-name" placeholder="Your Facebook name" required>
+          <button type="submit" class="gd-order-btn">Get my order link →</button>
+          <div class="gd-order-note">You'll get a link to track your rental. No account needed.</div>
+        </form>
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
 
         <!-- CTA: Reserve options (no slot) -->
@@ -697,6 +708,11 @@ function updateCtaState() {
   const ctaHint = document.getElementById('ctaHint');
   const reserveSection = document.getElementById('reserveSection');
   if (!ctaBtn) return;
+
+  const oType = document.getElementById('orderType');
+  const oDays = document.getElementById('orderDays');
+  if (oType) oType.value = selectedType || '';
+  if (oDays) oDays.value = selectedDays || '';
 
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
