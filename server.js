@@ -1648,11 +1648,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   // traffic in the same window. The single number the conversion plan's
   // decision rule is measured against.
   const weekAgo = new Date(Date.now() - 7 * 86400000);
-  const allRecentOrders = (await orders.listByStates(orders.STATES))
+  const allRecentOrders = (await orders.listByStates([...orders.STATES, ...orders.TERMINAL]))
     .filter(o => new Date(o.created_at) >= weekAgo);
   const startedCount = allRecentOrders.length;
   const completedCount = allRecentOrders.filter(o =>
-    !['awaiting_payment', 'verifying_payment', 'payment_rejected'].includes(o.state)
+    !['awaiting_payment', 'verifying_payment', 'payment_rejected', 'cancelled'].includes(o.state)
   ).length;
   const abandonedCount = startedCount - completedCount;
   const weekAgoStr = orders.manilaDate(weekAgo);
