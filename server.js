@@ -1338,7 +1338,10 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       else if (order.account_type === 'ps4') adjustPs4Slots(game.id, -1);
       else adjustNtSlots(game.id, -1);
     }
-    await orders.setCustomerId(order.ref, customerId);
+    const linked = await orders.setCustomerId(order.ref, customerId);
+    if (!linked) {
+      console.error('[order->customer] setCustomerId failed for', order.ref, '— customer', customerId, 'created but not linked, re-advance could duplicate it');
+    }
   }
 
   res.redirect('/admin?tab=orders&msg=order_advanced');
