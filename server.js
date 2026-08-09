@@ -1655,7 +1655,10 @@ app.get('/admin', requireAuth, async (req, res) => {
     !['awaiting_payment', 'verifying_payment', 'payment_rejected', 'cancelled'].includes(o.state)
   ).length;
   const abandonedCount = startedCount - completedCount;
-  const weekAgoStr = orders.manilaDate(weekAgo);
+  // Deliberately UTC, not manilaDate() — visitors.date is stamped in UTC by
+  // the tracking middleware, and comparing dates in two different clocks
+  // would silently exclude up to a day of visits from the denominator.
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10);
   const gamePageVisits = (visitors || []).filter(v =>
     v.path && v.path.startsWith('/game/') && v.date >= weekAgoStr
   ).length;
