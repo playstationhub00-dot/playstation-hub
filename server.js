@@ -1892,22 +1892,26 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
 });
 
 // ── One-time fix: end dates computed via updateCustEndDate() were silently
-// shifted a day early by toISOString()'s UTC conversion (this business runs
-// on Manila/UTC+8, where local midnight is the previous day in UTC). Detects
-// exactly the affected records — by recomputing what the buggy formula would
-// have produced from each one's own start_date+days and checking it against
-// the stored end_date — rather than blindly shifting every renting customer,
-// so a manually-typed date that happens to match is never touched twice and
-// this stays safe to load repeatedly.
-function buggyEndDate(startDate, days) {
-  if (!startDate || !days) return null;
-  const d = new Date(startDate + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+// shifted a day early by toISOString()'s UTC conversion — that shift only
+// happens in a positive-UTC-offset timezone (the browsers filling this form
+// run on Manila/UTC+8, where local midnight is the previous day in UTC).
+// This server likely runs in UTC, so replicating the buggy formula HERE
+// would not reproduce the same shift — instead this compares each renting
+// customer's stored end_date against the correct (timezone-agnostic)
+// start_date+days answer, computed purely from the Date object's own
+// calendar fields with no ISO/UTC conversion at any point, and flags only
+// records that are exactly one day short of it. A manually-typed date that
+// happens to already be correct is never touched, and this stays safe to
+// load repeatedly — already-corrected records won't match a second time.
 function correctEndDate(startDate, days) {
   const d = new Date(startDate + 'T00:00:00');
   d.setDate(d.getDate() + days);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+function oneDayBefore(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
   return y + '-' + m + '-' + dd;
 }
@@ -1915,7 +1919,7 @@ function findEndDateFix() {
   return getCustomers()
     .filter(c => c.status === 'renting' && c.start_date && c.end_date && c.days)
     .map(c => ({ c, shifted: correctEndDate(c.start_date, c.days) }))
-    .filter(({ c, shifted }) => c.end_date === buggyEndDate(c.start_date, c.days) && shifted !== c.end_date);
+    .filter(({ c, shifted }) => c.end_date === oneDayBefore(shifted));
 }
 app.get('/admin/fix-end-dates', requireAuth, (req, res) => {
   const affected = findEndDateFix();
