@@ -108,19 +108,40 @@
 <% if (abandonedOrders && abandonedOrders.length) { %>
 <div class="oq-abandoned">
   <div class="oq-abandoned-title">⚠ Started but didn't pay (<%= abandonedOrders.length %>)</div>
-  <% const sortedAbandoned = [...abandonedOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); %>
-  <% sortedAbandoned.forEach(o => { %>
+  <%
+    const enabledMethods = (settings.payment_methods || []).filter(m => m.enabled).map(m => m.label);
+    const payLine = enabledMethods.length
+      ? 'We accept ' + enabledMethods.join(' and ') + ' — just reply here and we\'ll send you the QR and get you set up right away.'
+      : 'Just reply here and we\'ll help you get set up.';
+    const sortedAbandoned = [...abandonedOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  %>
+  <% sortedAbandoned.forEach(o => {
+    const abTypeLabel = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+    const abDurLabel = o.days === 7 ? 'Weekly' : 'Monthly';
+    const abTotal = (o.amount_due || 0) + (o.deposit_due || 0);
+    const firstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
+    const followUpMsg = '👋 Hi ' + firstName + '! Saw you started an order with us —\n\n'
+      + '🎮 ' + o.game_title + ' (' + abTypeLabel + ')\n'
+      + '⏱ ' + abDurLabel + ' rental\n'
+      + '💰 Total: ₱' + abTotal + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
+      + '🔖 Reference: ' + o.ref + '\n\n'
+      + 'Still want it? ' + payLine + '\n\n'
+      + 'No worries if you changed your mind, just let us know!';
+  %>
   <div class="oq-ab-row">
     <div>
       <span class="oq-ref"><%= o.ref %></span>
       <span class="oq-ab-name"><%= o.fb_name %></span>
       <div class="oq-meta">
-        <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
-        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %>
+        <%= o.game_title %> · <%= abTypeLabel %>
+        · <%= abDurLabel %> · ₱<%= abTotal %>
         <% if (o.state === 'payment_rejected') { %>· <span class="oq-ab-rejected">payment rejected</span><% } %>
       </div>
     </div>
-    <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
+    <div class="oq-ab-right">
+      <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
+      <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+    </div>
   </div>
   <% }) %>
 </div>
