@@ -733,6 +733,55 @@
       </div>
     </div><!-- /accordion bot-training -->
 
+    <details class="admin-acc">
+      <summary class="admin-acc-sum">💳 Payment Methods</summary>
+      <div class="admin-acc-body">
+        <form method="POST" action="/admin/payment-methods" enctype="multipart/form-data">
+          <label class="pm-field">
+            <span>Facebook page handle (the part after m.me/)</span>
+            <input type="text" name="fb_page_username" value="<%= settings.fb_page_username || '' %>" placeholder="PlaystationHub00">
+          </label>
+          <p class="pm-note">
+            Order links to Messenger are built as <code>m.me/&lt;handle&gt;?ref=PH-1234</code>.
+            If the handle is wrong the link still opens Messenger, but we never learn
+            which customer the order belongs to.
+          </p>
+
+          <% (settings.payment_methods || []).forEach(m => { %>
+          <div class="pm-card">
+            <div class="pm-card-head">
+              <strong><%= m.label %></strong>
+              <label class="pm-toggle">
+                <input type="checkbox" name="enabled_<%= m.key %>" <%= m.enabled ? 'checked' : '' %>>
+                <span>Show to customers</span>
+              </label>
+            </div>
+            <label class="pm-field">
+              <span>Account name</span>
+              <input type="text" name="name_<%= m.key %>" value="<%= m.account_name %>">
+            </label>
+            <label class="pm-field">
+              <span>Account number</span>
+              <input type="text" name="number_<%= m.key %>" value="<%= m.account_number %>">
+            </label>
+            <label class="pm-field">
+              <span>QR image</span>
+              <input type="file" name="qr_<%= m.key %>" accept="image/*">
+            </label>
+            <% if (m.qr_image) { %>
+            <div class="pm-qr-preview">
+              <img src="<%= m.qr_image %>" alt="<%= m.label %> QR">
+              <label class="pm-remove"><input type="checkbox" name="remove_qr_<%= m.key %>"> Remove this QR</label>
+            </div>
+            <% } %>
+          </div>
+          <% }) %>
+
+          <button type="submit" class="admin-save-btn">Save payment methods</button>
+        </form>
+      </div>
+    </details>
+
     <!-- Message Templates -->
     <div class="settings-accordion">
       <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">

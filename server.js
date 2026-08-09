@@ -655,6 +655,23 @@ function getSiteSettings() {
       s.message_templates = merged;
     }
   }
+  // Payment methods start disabled: until the owner has uploaded a QR and
+  // filled in the account details, showing a customer an empty GCash panel is
+  // worse than showing them nothing at all.
+  if (!s.payment_methods) {
+    db.set('site_settings.payment_methods', [
+      { key: 'gcash', label: 'GCash', account_name: '', account_number: '', qr_image: '', enabled: false },
+      { key: 'maya',  label: 'Maya',  account_name: '', account_number: '', qr_image: '', enabled: false }
+    ]).write();
+    s.payment_methods = db.get('site_settings.payment_methods').value();
+  }
+  // The m.me handle is a setting rather than a constant because the whole
+  // referral link depends on it, and getting it wrong silently breaks PSID
+  // capture with no visible symptom on the page.
+  if (s.fb_page_username === undefined) {
+    db.set('site_settings.fb_page_username', 'PlaystationHub00').write();
+    s.fb_page_username = 'PlaystationHub00';
+  }
   return s;
 }
 // Every duration a rent promo can apply to, and the % discount for a given duration.
@@ -1149,6 +1166,40 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
     ends_at: (ends_at || '').trim()
   }).write();
   res.redirect('/admin?msg=promo_saved');
+});
+
+// Payment method details + QR images. Mirrors /admin/promo: multipart because
+// each method carries a QR image, and an unchanged file input leaves the
+// existing image in place rather than blanking it.
+app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
+  { name: 'qr_gcash', maxCount: 1 },
+  { name: 'qr_maya',  maxCount: 1 }
+]), async (req, res) => {
+  const existing = db.get('site_settings.payment_methods').value() || [];
+  const next = [];
+  for (const m of existing) {
+    const f = (req.files && req.files['qr_' + m.key]) ? req.files['qr_' + m.key][0] : null;
+    let qr = m.qr_image || '';
+    if (req.body['remove_qr_' + m.key] === 'on' && qr) {
+      const fp = path.join(uploadsDir, path.basename(qr));
+      if (fs.existsSync(fp)) fs.unlinkSync(fp);
+      qr = '';
+    }
+    if (f) qr = await processUploadedImage(f, 900);
+    next.push({
+      key: m.key,
+      label: m.label,
+      account_name: (req.body['name_' + m.key] || '').trim(),
+      account_number: (req.body['number_' + m.key] || '').trim(),
+      qr_image: qr,
+      // A method with no QR and no account number cannot be paid to, so it
+      // stays off no matter what the checkbox says.
+      enabled: req.body['enabled_' + m.key] === 'on' && !!(qr || (req.body['number_' + m.key] || '').trim())
+    });
+  }
+  db.set('site_settings.payment_methods', next).write();
+  db.set('site_settings.fb_page_username', (req.body.fb_page_username || '').trim().replace(/^@/, '')).write();
+  res.redirect('/admin?tab=settings&msg=payment_saved');
 });
 
 app.post('/admin/message-templates', requireAuth, (req, res) => {
