@@ -2375,3 +2375,9 @@ footer {
 .ord-alt-label { font-size: 0.76rem; color: #555; margin-bottom: 0.5rem; }
 .ord-upload input[type="file"] { width: 100%; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
 .ord-sent-form { margin-top: 0.4rem; }
+
+.ord-online { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; border-radius: 9px; padding: 0.65rem 0.85rem; font-size: 0.82rem; font-weight: 700; margin-bottom: 0.85rem; }
+/* .ord-offline is already defined in Task 4 — do not redeclare it here. */
+.ord-help { font-size: 0.8rem; color: #777; line-height: 1.6; margin: 0 0 0.9rem; }
+.ord-countdown { font-size: 2.4rem; font-weight: 900; color: var(--ps-blue); text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-bottom: 0.6rem; }
+.ord-countdown-done { color: #ef4444; }

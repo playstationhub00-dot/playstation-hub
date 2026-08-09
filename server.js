@@ -1183,6 +1183,21 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
   res.redirect('/order/' + order.ref + '?msg=payment_submitted');
 });
 
+// QR upload is website-only by design: the countdown is the whole mechanism,
+// and a code sitting in a Messenger thread has no expiry tracking.
+app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/browse');
+  if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+  const qrPath = await processUploadedImage(req.file, 1400);
+  const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS).toISOString();
+  await orders.transition(order.ref, 'qr_pending', {
+    qr_image: qrPath,
+    qr_expires_at: expiresAt
+  });
+  res.redirect('/order/' + order.ref + '?msg=qr_sent');
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {
