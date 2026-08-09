@@ -2878,8 +2878,28 @@ app.post('/webhook', express.json(), (req, res) => {
 
   body.entry?.forEach(entry => {
     entry.messaging?.forEach(event => {
-      if (!event.message || event.message.is_echo) return;
+      if (event.message && event.message.is_echo) return;
       const senderId = event.sender.id;
+
+      // A customer arriving from m.me/<page>?ref=PH-1234 produces a referral —
+      // either a standalone `referral` event on an existing thread, or one
+      // nested in the `postback` when they tap Get Started on a new thread.
+      // This pairing of ref and PSID is the only way the app ever learns which
+      // Facebook thread belongs to which order, and it cannot be recovered
+      // afterwards, so it is recorded even though nothing sends messages yet.
+      const rawRef = event.referral?.ref || event.postback?.referral?.ref;
+      if (rawRef) {
+        const orderRef = orders.parseOrderRef(rawRef);
+        if (orderRef) {
+          orders.linkPsid(orderRef, senderId)
+            .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
+            .catch(e => console.error('[order psid]', e.message));
+        }
+      }
+
+      // Everything below this point is the existing chat bot, which only
+      // handles real inbound text.
+      if (!event.message) return;
       const text = (event.message.text || '').toLowerCase().trim();
       // Save/update PSID so we can blast later
       const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
