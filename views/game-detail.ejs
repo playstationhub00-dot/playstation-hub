@@ -854,9 +854,9 @@ function updateReserveLinks() {
     if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
     if (rt.deposit  > 0) totalLine += ' + ₱' + rt.deposit + ' refundable deposit';
   }
-  const ctaBtn = document.getElementById('ctaBtn');
-  if (ctaBtn) {
-    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to RENT a game 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine].filter(Boolean).join('\n'));
+  const ctaMsgLink = document.getElementById('ctaMsgLink');
+  if (ctaMsgLink) {
+    ctaMsgLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to RENT a game 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine].filter(Boolean).join('\n'));
   }
   const rLink = document.getElementById('reserveLink');
   if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to PRIORITY RESERVE a slot ⭐','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine,'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n'));
