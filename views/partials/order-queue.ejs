@@ -1,0 +1,94 @@
+<%
+  const QUEUE_ACTION = {
+    verifying_payment: 'Payment confirmed',
+    qr_pending: 'Signed them in',
+    verifying_return: 'Return confirmed'
+  };
+  const QUEUE_LABEL = {
+    verifying_payment: 'Check payment',
+    qr_pending: 'Scan QR',
+    verifying_return: 'Check return'
+  };
+  // Live QR windows first — they are the only rows with a deadline.
+  const sortedQueue = [...orderQueue].sort((a, b) => {
+    if (a.state === 'qr_pending' && b.state !== 'qr_pending') return -1;
+    if (b.state === 'qr_pending' && a.state !== 'qr_pending') return 1;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+%>
+
+<form method="POST" action="/admin/online" class="oq-online-form">
+  <label class="oq-online-toggle">
+    <input type="checkbox" name="online" onchange="this.form.submit()" <%= settings.owner_online ? 'checked' : '' %>>
+    <span>I'm online now — show a live banner to customers waiting to send a QR</span>
+  </label>
+</form>
+
+<% if (!sortedQueue.length) { %>
+  <div class="oq-empty">Nothing waiting on you right now.</div>
+<% } else { %>
+  <% sortedQueue.forEach(o => { %>
+  <div class="oq-row oq-<%= o.state %>">
+    <div class="oq-main">
+      <div class="oq-top">
+        <span class="oq-ref"><%= o.ref %></span>
+        <span class="oq-badge"><%= QUEUE_LABEL[o.state] %></span>
+        <% if (o.state === 'qr_pending' && o.qr_expires_at) { %>
+        <span class="oq-timer" data-expires="<%= o.qr_expires_at %>">--:--</span>
+        <% } %>
+      </div>
+      <div class="oq-meta">
+        <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
+        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %>
+      </div>
+      <div class="oq-fb">
+        FB: <strong><%= o.fb_name %></strong>
+        <% if (o.psid) { %>
+          <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a>
+        <% } %>
+      </div>
+      <% if (o.state === 'verifying_payment') { %>
+        <div class="oq-proof">
+          <% if (o.payment_method) { %><span class="oq-method"><%= o.payment_method.toUpperCase() %></span><% } %>
+          <% if (o.payment_proof) { %>
+            <a href="<%= o.payment_proof %>" target="_blank" rel="noopener">View receipt →</a>
+          <% } else { %>
+            <span class="oq-via-fb">Says they sent it on Messenger — check your inbox</span>
+          <% } %>
+        </div>
+      <% } %>
+      <% if (o.state === 'qr_pending' && o.qr_image) { %>
+        <div class="oq-proof"><a href="<%= o.qr_image %>" target="_blank" rel="noopener">Open QR to scan →</a></div>
+      <% } %>
+      <% if (o.state === 'verifying_return' && o.return_proof) { %>
+        <div class="oq-proof"><a href="<%= o.return_proof %>" target="_blank" rel="noopener">View return proof →</a></div>
+      <% } %>
+    </div>
+    <div class="oq-actions">
+      <form method="POST" action="/admin/orders/<%= o.ref %>/advance">
+        <button type="submit" class="oq-btn-go"><%= QUEUE_ACTION[o.state] %></button>
+      </form>
+      <% if (o.state === 'verifying_payment') { %>
+      <form method="POST" action="/admin/orders/<%= o.ref %>/reject">
+        <button type="submit" class="oq-btn-no">Can't find it</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+  <% }) %>
+<% } %>
+
+<script>
+(function(){
+  function tick() {
+    document.querySelectorAll('.oq-timer').forEach(function(el){
+      var left = new Date(el.dataset.expires).getTime() - Date.now();
+      if (left <= 0) { el.textContent = 'expired'; el.classList.add('oq-timer-dead'); return; }
+      var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+      el.textContent = m + ':' + String(s).padStart(2, '0') + ' left';
+    });
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>

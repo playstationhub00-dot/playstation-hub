@@ -1198,6 +1198,59 @@ app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
   res.redirect('/order/' + order.ref + '?msg=qr_sent');
 });
 
+app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/browse');
+  if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+  const proofPath = await processUploadedImage(req.file, 1400);
+  await orders.transition(order.ref, 'verifying_return', { return_proof: proofPath });
+  res.redirect('/order/' + order.ref + '?msg=return_submitted');
+});
+
+// ── Owner queue actions ───────────────────────────────────────────────────
+// One generic advance handler: each of the three owner states has exactly one
+// forward move, so the button never has to say which state it is moving to.
+// Only these three appear in the queue; every other transition is driven by
+// the customer or by the sweeps in lib/orders.
+const ORDER_ADVANCE = {
+  verifying_payment: 'awaiting_qr',
+  qr_pending: 'active',
+  verifying_return: 'closed'
+};
+
+app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  const to = ORDER_ADVANCE[order.state];
+  if (!to) return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const patch = {};
+  if (to === 'active') {
+    // The rental clock starts when the owner actually signs them in, not when
+    // the order was placed — a customer who paid overnight isn't billed for
+    // hours they couldn't play. Both dates are Manila dates: on a UTC server
+    // an ISO slice reports yesterday for the whole Manila morning.
+    const start = new Date();
+    const end = new Date(start.getTime() + order.days * 86400000);
+    patch.start_date = orders.manilaDate(start);
+    patch.end_date = orders.manilaDate(end);
+  }
+  await orders.transition(order.ref, to, patch);
+  res.redirect('/admin?tab=orders&msg=order_advanced');
+});
+
+app.post('/admin/orders/:ref/reject', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  await orders.transition(order.ref, 'payment_rejected', { payment_proof: null, payment_channel: null });
+  res.redirect('/admin?tab=orders&msg=order_rejected');
+});
+
+app.post('/admin/online', requireAuth, (req, res) => {
+  const on = req.body.online === 'on';
+  db.set('site_settings.owner_online', on).write();
+  res.redirect('/admin?tab=orders&msg=' + (on ? 'online_on' : 'online_off'));
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {
@@ -1425,7 +1478,7 @@ app.get('/admin/app', requireAuth, (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.get('/admin', requireAuth, (req, res) => {
+app.get('/admin', requireAuth, async (req, res) => {
   const games = [...getGames()].sort((a, b) => b.id - a.id).map(resolveGamePrices);
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
@@ -1454,7 +1507,14 @@ app.get('/admin', requireAuth, (req, res) => {
   // unless ?history=1 is set. Every stat and aggregate still reads the full
   // `customers` array, so nothing reported changes.
   const showHistory = req.query.history === '1';
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS });
+  try {
+    await orders.expireStaleQrs();
+    await orders.advanceEndedRentals();
+  } catch (e) { console.error('[order sweep]', e.message); }
+  const orderQueue = await orders.listByStates(orders.OWNER_STATES);
+  const refundsOwed = (await orders.listByStates(['closed']))
+    .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

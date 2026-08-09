@@ -2381,3 +2381,29 @@ footer {
 .ord-help { font-size: 0.8rem; color: #777; line-height: 1.6; margin: 0 0 0.9rem; }
 .ord-countdown { font-size: 2.4rem; font-weight: 900; color: var(--ps-blue); text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-bottom: 0.6rem; }
 .ord-countdown-done { color: #ef4444; }
+
+.oq-online-form { margin-bottom: 1.25rem; }
+.oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
+.oq-online-toggle input { accent-color: #22c55e; }
+.oq-empty { color: #555; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+.oq-row { display: flex; gap: 1rem; align-items: flex-start; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 0.7rem; }
+.oq-qr_pending { border-color: rgba(0,112,209,0.4); }
+.oq-main { flex: 1; min-width: 0; }
+.oq-top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
+.oq-ref { font-weight: 900; color: var(--ps-blue); font-size: 0.95rem; }
+.oq-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; background: #1a1a1a; color: #888; padding: 0.15rem 0.5rem; border-radius: 5px; }
+.oq-timer { font-size: 0.75rem; font-weight: 800; color: #f59e0b; font-variant-numeric: tabular-nums; }
+.oq-timer-dead { color: #ef4444; }
+.oq-meta { font-size: 0.82rem; color: #888; margin-bottom: 0.25rem; }
+.oq-fb { font-size: 0.8rem; color: #666; }
+.oq-fb strong { color: #aaa; }
+.oq-thread { color: var(--ps-blue); margin-left: 0.4rem; font-size: 0.76rem; }
+.oq-proof { margin-top: 0.5rem; font-size: 0.8rem; }
+.oq-proof a { color: var(--ps-blue); }
+.oq-method { background: #1a1a1a; color: #aaa; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; padding: 0.1rem 0.4rem; border-radius: 4px; margin-right: 0.4rem; }
+.oq-via-fb { color: #f59e0b; }
+.oq-actions { display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0; }
+.oq-btn-go { background: var(--ps-blue); color: #fff; border: 0; border-radius: 9px; padding: 0.6rem 0.9rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-btn-no { background: transparent; color: #666; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-btn-no:hover { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.oq-count { background: var(--ps-blue); color: #fff; border-radius: 20px; padding: 0.05rem 0.4rem; font-size: 0.7rem; font-weight: 900; margin-left: 0.3rem; }

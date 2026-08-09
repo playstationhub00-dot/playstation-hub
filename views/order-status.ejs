@@ -53,6 +53,7 @@
   <% if (msg === 'payment_submitted') { %><div class="ord-flash">Thanks — we'll confirm your payment shortly.</div><% } %>
   <% if (msg === 'no_file') { %><div class="ord-flash ord-flash-warn">Pick an image first, or use the Messenger option.</div><% } %>
   <% if (msg === 'qr_sent') { %><div class="ord-flash">QR received — hold tight.</div><% } %>
+  <% if (msg === 'return_submitted') { %><div class="ord-flash">Return proof received — we'll confirm shortly.</div><% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -196,6 +197,17 @@
     setInterval(tick, 1000);
   })();
   </script>
+  <% } %>
+
+  <% if (order.state === 'awaiting_return') { %>
+  <div class="ord-step">
+    <div class="ord-step-label">Return the account</div>
+    <p class="ord-help">Sign out of our account on your console, then send us a photo or screenshot showing it. You can also send it on Messenger and we'll tick it off for you.</p>
+    <form method="POST" action="/order/<%= order.ref %>/return-proof" enctype="multipart/form-data" class="ord-upload">
+      <input type="file" name="proof" accept="image/*" required>
+      <button type="submit" class="ord-btn-primary" style="margin-top:0.6rem;">Send return proof</button>
+    </form>
+  </div>
   <% } %>
 </div>
 

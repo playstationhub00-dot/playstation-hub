@@ -96,6 +96,7 @@
     <button class="admin-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Announcements</button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
+    <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')">🧾 Orders <% if (orderQueue.length) { %><span class="oq-count"><%= orderQueue.length %></span><% } %></button>
     <a class="admin-tab" href="/admin/accounts" style="text-decoration:none;line-height:1.2;">🗂️ Accounts</a>
     <a class="admin-tab" href="/admin/posters" style="text-decoration:none;line-height:1.2;">📸 Posters</a>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
@@ -2797,6 +2798,10 @@ Message us anytime to reserve your slot! 😊</textarea>
       </div></div></div><!-- /accordion customers-table -->
 
   </div><!-- /tab-customers -->
+
+  <div class="tab-panel" id="tab-orders">
+    <%- include('partials/order-queue') %>
+  </div>
 
   <!-- ═══════════════ VISITORS TAB ═══════════════ -->
   <div class="tab-panel" id="tab-visitors">
