@@ -99,6 +99,27 @@
 </div>
 <% } %>
 
+<% if (abandonedOrders && abandonedOrders.length) { %>
+<div class="oq-abandoned">
+  <div class="oq-abandoned-title">⚠ Started but didn't pay (<%= abandonedOrders.length %>)</div>
+  <% const sortedAbandoned = [...abandonedOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); %>
+  <% sortedAbandoned.forEach(o => { %>
+  <div class="oq-ab-row">
+    <div>
+      <span class="oq-ref"><%= o.ref %></span>
+      <span class="oq-ab-name"><%= o.fb_name %></span>
+      <div class="oq-meta">
+        <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
+        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %>
+        <% if (o.state === 'payment_rejected') { %>· <span class="oq-ab-rejected">payment rejected</span><% } %>
+      </div>
+    </div>
+    <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
 <script>
 (function(){
   function tick() {
@@ -111,5 +132,17 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  function formatAge() {
+    document.querySelectorAll('.oq-ab-age').forEach(function(el){
+      var ms = Date.now() - new Date(el.dataset.created).getTime();
+      var mins = Math.floor(ms / 60000);
+      if (mins < 60) { el.textContent = mins + 'm ago'; return; }
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) { el.textContent = hrs + 'h ago'; return; }
+      el.textContent = Math.floor(hrs / 24) + 'd ago';
+    });
+  }
+  formatAge();
 })();
 </script>

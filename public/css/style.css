@@ -2412,3 +2412,11 @@ footer {
 .oq-refunds-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.75rem; }
 .oq-refund-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #0d0d0d; border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
 .oq-refund-amt { font-weight: 900; color: #f59e0b; margin-left: 0.5rem; }
+
+
+.oq-abandoned { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1.25rem; }
+.oq-abandoned-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.75rem; }
+.oq-ab-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+.oq-ab-name { font-weight: 700; color: #ddd; margin-left: 0.5rem; }
+.oq-ab-rejected { color: #ef4444; }
+.oq-ab-age { font-size: 0.75rem; color: #666; white-space: nowrap; flex-shrink: 0; }

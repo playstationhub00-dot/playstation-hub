@@ -1639,7 +1639,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   const orderQueue = await orders.listByStates(orders.OWNER_STATES);
   const refundsOwed = (await orders.listByStates(['closed']))
     .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed });
+  // "Started but didn't pay" — every order stuck before payment is verified.
+  // The form captures a Facebook name before payment, so each row is a named
+  // lead the owner can message directly, not just a statistic.
+  const abandonedOrders = await orders.listByStates(['awaiting_payment', 'payment_rejected']);
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
