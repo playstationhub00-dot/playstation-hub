@@ -2879,7 +2879,8 @@ app.post('/webhook', express.json(), (req, res) => {
   body.entry?.forEach(entry => {
     entry.messaging?.forEach(event => {
       if (event.message && event.message.is_echo) return;
-      const senderId = event.sender.id;
+      const senderId = event.sender?.id;
+      if (!senderId) return;
 
       // A customer arriving from m.me/<page>?ref=PH-1234 produces a referral —
       // either a standalone `referral` event on an existing thread, or one
