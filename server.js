@@ -60,6 +60,42 @@ function clientIp(req) {
   return (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
 }
 
+// req.cookies requires the cookie-parser middleware, which this project does
+// not have — reading one cookie by hand is a few lines and doesn't justify
+// adding a dependency. Express's own res.cookie() handles writing without it.
+function getCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  const parts = header.split(';');
+  for (const part of parts) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    const key = part.slice(0, eq).trim();
+    if (key === name) return decodeURIComponent(part.slice(eq + 1).trim());
+  }
+  return null;
+}
+
+const SESSION_COOKIE = 'ph_sid';
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days, rolling
+
+// Identifies a browsing session across page visits, independent of IP —
+// carrier-grade NAT means many unrelated mobile users in the Philippines
+// legitimately share one public IP, so IP was never going to be a valid
+// visitor identity even once correctly captured (see clientIp() above).
+// Re-issues the cookie with a fresh expiry on every call so 30 days counts
+// from the visitor's LAST visit, not their first.
+function sessionId(req, res) {
+  let sid = getCookie(req, SESSION_COOKIE);
+  if (!sid) sid = require('crypto').randomBytes(16).toString('hex');
+  res.cookie(SESSION_COOKIE, sid, {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: SESSION_MAX_AGE_MS
+  });
+  return sid;
+}
+
 const adapter = new FileSync(path.join(dataDir, 'games.json'));
 const db = low(adapter);
 db.defaults({
@@ -318,10 +354,15 @@ app.use((req, res, next) => {
   // Only track public pages, not admin/assets/uploads
   if (reqPath.startsWith('/admin') || reqPath.startsWith('/uploads') || reqPath.startsWith('/css') || reqPath.startsWith('/js') || reqPath.includes('.')) return next();
   const pageLabel = PAGE_LABELS[reqPath] || reqPath;
-  const ip = clientIp(req);
+  const ip = require('crypto').createHash('sha256').update(clientIp(req)).digest('hex');
+  const sid = sessionId(req, res);
+  // Later route handlers in this same request (e.g. POST /order/create in
+  // Task 2) read this instead of calling sessionId() a second time, so
+  // there's exactly one place per request that decides "who is this."
+  req.sessionId = sid;
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
-  db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip }).write();
+  db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid }).write();
   // Cap well above realistic traffic volume so All-Time visits actually reflects all
   // time instead of silently plateauing — lowdb rewrites the whole file per write, so
   // some ceiling is still needed to avoid unbounded growth over years of uptime.

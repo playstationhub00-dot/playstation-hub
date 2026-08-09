@@ -2935,7 +2935,7 @@ Message us anytime to reserve your slot! 😊</textarea>
             <th>Page</th>
             <th>Date</th>
             <th>Time</th>
-            <th>IP</th>
+            <th>Session</th>
           </tr>
         </thead>
         <tbody id="recentVisitsBody">
@@ -2944,7 +2944,7 @@ Message us anytime to reserve your slot! 😊</textarea>
             <td><span style="color:#22c55e;font-weight:600;"><%= v.page || v.path %></span></td>
             <td style="color:#aaa;font-size:0.8rem;"><%= v.date %></td>
             <td style="color:#aaa;font-size:0.8rem;"><%= v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : '' %></td>
-            <td style="color:#555;font-size:0.75rem;font-family:monospace;"><%= v.ip ? v.ip.replace(/^::ffff:/, '').slice(0,15) : '—' %></td>
+            <td style="color:#555;font-size:0.75rem;font-family:monospace;"><%= v.session_id ? v.session_id.slice(0,12) : '—' %></td>
           </tr>
           <% }) %>
         </tbody>
@@ -3045,7 +3045,7 @@ Message us anytime to reserve your slot! 😊</textarea>
             <td><span style="color:#22c55e;font-weight:600;">${v.page || v.path}</span></td>
             <td style="color:#aaa;font-size:0.8rem;">${v.date}</td>
             <td style="color:#aaa;font-size:0.8rem;">${v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : ''}</td>
-            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.ip ? v.ip.replace(/^::ffff:/, '').slice(0,15) : '—'}</td>
+            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.session_id ? v.session_id.slice(0,12) : '—'}</td>
           </tr>`).join('');
         })
         .catch(() => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:1.5rem;">Failed to load visits.</td></tr>'; });
