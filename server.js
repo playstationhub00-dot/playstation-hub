@@ -51,8 +51,13 @@ function rateLimited(bucketKey, ip, max, windowMs) {
   b.count++;
   return b.count > max;
 }
+// Cloudflare sits in front of this app and always sets CF-Connecting-IP to
+// the true client address, overwriting any spoofed value — that must be read
+// first. x-forwarded-for's first hop through Cloudflare's proxy is one of
+// Cloudflare's own edge addresses, not the visitor's, so falling back to it
+// silently records "Cloudflare" as almost every visitor.
 function clientIp(req) {
-  return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+  return (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
 }
 
 const adapter = new FileSync(path.join(dataDir, 'games.json'));
@@ -313,7 +318,7 @@ app.use((req, res, next) => {
   // Only track public pages, not admin/assets/uploads
   if (reqPath.startsWith('/admin') || reqPath.startsWith('/uploads') || reqPath.startsWith('/css') || reqPath.startsWith('/js') || reqPath.includes('.')) return next();
   const pageLabel = PAGE_LABELS[reqPath] || reqPath;
-  const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+  const ip = clientIp(req);
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
   db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip }).write();
