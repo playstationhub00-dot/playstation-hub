@@ -271,23 +271,25 @@
         </div>
 
         <% if (!allUnavail) { %>
-        <!-- CTA: Message Us (available slot) -->
-        <a href="#" class="gd-cta-btn gd-cta-wait" id="ctaBtn" onclick="return handleMessageUs(event)">
-          Pick an account type
-        </a>
-        <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
-
-        <!-- Order on the site — runs in parallel with the Messenger CTA above -->
+        <!-- Primary: order on the site. Runs the name field and the price
+             button as one action — no separate "or" section. -->
         <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm">
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
-          <div class="gd-order-or">or book on the site</div>
-          <input type="text" name="fb_name" class="gd-order-name" placeholder="Your Facebook name" required>
-          <button type="submit" class="gd-order-btn">Get my order link →</button>
-          <div class="gd-order-note">You'll get a link to track your rental. No account needed.</div>
+          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
+          <div class="gd-order-sub" id="ctaSub" style="display:none;">Pay via GCash or Maya · no account needed</div>
         </form>
+
+        <!-- Secondary: Messenger, always one tap away -->
+        <a href="#" class="gd-cta-link" id="ctaMsgLink" onclick="return handleMessageUs(event)">or message us on Facebook instead</a>
+        <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        <% if (order_error === '1') { %>
+        <div class="gd-order-error">⚠️ Please pick an account type and duration, and enter your Facebook name, before continuing.</div>
+        <% } %>
 
         <!-- CTA: Reserve options (no slot) -->
         <div id="reserveSection" style="display:none;">
@@ -705,7 +707,9 @@ function updatePriceHeaderFromSelection(base, discount) {
 // click scrolls to and shakes the first missing step (see handleMessageUs).
 function updateCtaState() {
   const ctaBtn = document.getElementById('ctaBtn');
+  const ctaSub = document.getElementById('ctaSub');
   const ctaHint = document.getElementById('ctaHint');
+  const ctaMsgLink = document.getElementById('ctaMsgLink');
   const reserveSection = document.getElementById('reserveSection');
   if (!ctaBtn) return;
 
@@ -717,24 +721,34 @@ function updateCtaState() {
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
     ctaBtn.style.display = 'none';
+    if (ctaSub) ctaSub.style.display = 'none';
     if (ctaHint) ctaHint.style.display = 'none';
+    if (ctaMsgLink) ctaMsgLink.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
     return;
   }
   ctaBtn.style.display = '';
+  if (ctaMsgLink) ctaMsgLink.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
 
   if (!selectedType) {
     ctaBtn.textContent = 'Pick an account type';
     ctaBtn.classList.add('gd-cta-wait');
+    ctaBtn.disabled = true;
+    if (ctaSub) ctaSub.style.display = 'none';
     if (ctaHint) ctaHint.style.display = 'none';
   } else if (!selectedDays) {
     ctaBtn.textContent = 'Pick a duration';
     ctaBtn.classList.add('gd-cta-wait');
+    ctaBtn.disabled = true;
+    if (ctaSub) ctaSub.style.display = 'none';
     if (ctaHint) ctaHint.style.display = 'none';
   } else {
-    ctaBtn.textContent = '📘 Message Us on Facebook';
+    const rt = computeRentTotal(selectedType, selectedDays);
+    ctaBtn.textContent = '🎮 Rent now — ₱' + rt.total;
     ctaBtn.classList.remove('gd-cta-wait');
+    ctaBtn.disabled = false;
+    if (ctaSub) ctaSub.style.display = '';
     if (ctaHint) ctaHint.style.display = '';
   }
 }
@@ -790,7 +804,7 @@ function syncStickyBar() {
     const rt = computeRentTotal(selectedType, selectedDays);
     kEl.textContent = 'To send now';
     aEl.textContent = '₱' + rt.total;
-    bEl.textContent = 'Message us';
+    bEl.textContent = 'Rent now';
     bEl.classList.remove('gd-cta-wait');
   }
 }
@@ -820,7 +834,13 @@ function handleStickyBarClick() {
     highlightDurationGrid();
     return;
   }
-  document.getElementById('ctaBtn')?.click();
+  const nameField = document.getElementById('orderFbName');
+  if (nameField) {
+    document.getElementById('gdOrderForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nameField.focus();
+  } else {
+    document.getElementById('ctaBtn')?.click();
+  }
 }
 
 function updateReserveLinks() {

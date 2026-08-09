@@ -1389,7 +1389,7 @@ app.get('/game/:slug', (req, res) => {
   if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
   const resolved = resolveGamePrices(resolveSlotDays(game));
   const gdSettings = getSiteSettings();
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id) });
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
