@@ -8,6 +8,7 @@ const XLSX = require('xlsx');
 const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
+const orders = require('./lib/orders');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 
@@ -404,6 +405,10 @@ db.write = function() {
   syncToMongo();
   return r;
 };
+
+// Orders persist as their own MongoDB documents, reusing the connection the
+// blob sync already maintains rather than opening a second pool.
+orders.init(_getMongoDb);
 
 function normalizeCustomer(c) {
   if (!c) return c;
