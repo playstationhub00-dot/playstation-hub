@@ -1185,7 +1185,13 @@ app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
       qr = '';
     }
-    if (f) qr = await processUploadedImage(f, 900);
+    if (f) {
+      if (qr) {
+        const oldFp = path.join(uploadsDir, path.basename(qr));
+        if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
+      }
+      qr = await processUploadedImage(f, 900);
+    }
     next.push({
       key: m.key,
       label: m.label,
