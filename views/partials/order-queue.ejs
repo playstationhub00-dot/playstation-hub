@@ -73,6 +73,9 @@
         <button type="submit" class="oq-btn-no">Can't find it</button>
       </form>
       <% } %>
+      <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Permanently delete order ' + <%= JSON.stringify(o.ref) %> + '? This cannot be undone.');">
+        <button type="submit" class="oq-btn-no">Delete</button>
+      </form>
     </div>
   </div>
   <% }) %>

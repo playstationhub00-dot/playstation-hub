@@ -1328,6 +1328,13 @@ app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
   res.redirect('/admin?tab=orders&msg=refund_marked');
 });
 
+// Owner-initiated cleanup for test, duplicate, or mistaken orders. Not part
+// of the customer-facing lifecycle, so it bypasses transition() entirely.
+app.post('/admin/orders/:ref/delete', requireAuth, async (req, res) => {
+  await orders.deleteOrder(req.params.ref);
+  res.redirect('/admin?tab=orders&msg=order_deleted');
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {
