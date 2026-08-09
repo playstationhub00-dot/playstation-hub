@@ -1695,11 +1695,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   // traffic in the same window. The single number the conversion plan's
   // decision rule is measured against.
   const weekAgo = new Date(Date.now() - 7 * 86400000);
-  const allRecentOrders = (await orders.listByStates([...orders.STATES, ...orders.TERMINAL]))
-    .filter(o => new Date(o.created_at) >= weekAgo);
+  const allOrders = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
+  const allRecentOrders = allOrders.filter(o => new Date(o.created_at) >= weekAgo);
   const startedCount = allRecentOrders.length;
   const completedCount = allRecentOrders.filter(o =>
-    !['awaiting_payment', 'verifying_payment', 'payment_rejected', 'cancelled'].includes(o.state)
+    !orders.PAID_EXCLUDED_STATES.includes(o.state)
   ).length;
   const abandonedCount = startedCount - completedCount;
   // Deliberately UTC, not manilaDate() — visitors.date is stamped in UTC by
@@ -1733,17 +1733,18 @@ app.get('/admin', requireAuth, async (req, res) => {
     sessionsByPath[sid].some(v => v.path.startsWith('/game/'))
   ).length;
 
-  const allOrders = await orders.listByStates(orders.STATES.concat(orders.TERMINAL));
+  // Reuses the same all-states order fetch the weekly funnel readout above
+  // already ran — no need to hit the collection a second time for identical
+  // data.
   const sessionedOrders = allOrders.filter(o => o.session_id);
   const orderedSessionIds = new Set(sessionedOrders.map(o => o.session_id));
   const startedOrderSessionCount = sessionIds.filter(sid => orderedSessionIds.has(sid)).length;
 
   // Matches the weekly funnel readout's "completed" definition exactly —
-  // both answer the same question (did payment get verified) and must not
-  // silently diverge.
-  const PAID_EXCLUDED_STATES = ['awaiting_payment', 'verifying_payment', 'payment_rejected'];
+  // both pull from the same shared orders.PAID_EXCLUDED_STATES constant so
+  // they can never silently diverge.
   const paidSessionIds = new Set(
-    sessionedOrders.filter(o => !PAID_EXCLUDED_STATES.includes(o.state)).map(o => o.session_id)
+    sessionedOrders.filter(o => !orders.PAID_EXCLUDED_STATES.includes(o.state)).map(o => o.session_id)
   );
   const paidSessionCount = sessionIds.filter(sid => paidSessionIds.has(sid)).length;
 

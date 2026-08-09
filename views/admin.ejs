@@ -2882,6 +2882,7 @@ Message us anytime to reserve your slot! 😊</textarea>
       <div class="vf-grid">
         <div class="vf-panel">
           <div class="vf-panel-label">Funnel — sessions since launch</div>
+          <div class="vf-note">Each stage checks whether the session ever did that thing — a visitor can view a game without visiting Browse first, e.g. from a direct link. Stages aren't a strictly sequential path, so a later percentage can exceed 100%.</div>
           <% sessionFunnel.forEach((stage, i) => {
             const widthPct = sessionFunnel[0].count > 0 ? Math.max(2, Math.round((stage.count / sessionFunnel[0].count) * 100)) : 0;
           %>
