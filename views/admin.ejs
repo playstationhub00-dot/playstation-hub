@@ -733,9 +733,19 @@
       </div>
     </div><!-- /accordion bot-training -->
 
-    <details class="admin-acc">
-      <summary class="admin-acc-sum">💳 Payment Methods</summary>
-      <div class="admin-acc-body">
+    <!-- PAYMENT METHODS -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(168,85,247,0.15);">💳</div>
+          <div>
+            <div class="sa-title">Payment Methods</div>
+            <div class="sa-desc">GCash and Maya account details customers see when paying</div>
+          </div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+        <div style="padding:1.25rem;">
         <form method="POST" action="/admin/payment-methods" enctype="multipart/form-data">
           <label class="pm-field">
             <span>Facebook page handle (the part after m.me/)</span>
@@ -777,10 +787,13 @@
           </div>
           <% }) %>
 
-          <button type="submit" class="admin-save-btn">Save payment methods</button>
+          <div class="form-actions" style="margin-top:0.75rem;">
+            <button type="submit" class="btn btn-primary" style="background:#a855f7;">Save payment methods</button>
+          </div>
         </form>
+        </div>
       </div>
-    </details>
+    </div><!-- /accordion payment-methods -->
 
     <!-- Message Templates -->
     <div class="settings-accordion">
