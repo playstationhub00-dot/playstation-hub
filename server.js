@@ -1712,7 +1712,65 @@ app.get('/admin', requireAuth, async (req, res) => {
   const orderStartRate = gamePageVisits > 0
     ? ((startedCount / gamePageVisits) * 100).toFixed(1)
     : null;
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate });
+
+  // Session funnel: derived entirely from visitors[] and orders — no stage is
+  // ever written as a field. Only sessions with a session_id count, which
+  // means only sessions from 2026-08-10 onward (when this shipped); older
+  // rows have none and are correctly excluded, not backfilled.
+  const sessionedVisits = visitors.filter(v => v.session_id);
+  const sessionIds = [...new Set(sessionedVisits.map(v => v.session_id))];
+
+  const sessionsByPath = {};
+  sessionedVisits.forEach(v => {
+    (sessionsByPath[v.session_id] = sessionsByPath[v.session_id] || []).push(v);
+  });
+
+  const landedCount = sessionIds.length;
+  const browsedCount = sessionIds.filter(sid =>
+    sessionsByPath[sid].some(v => v.path === '/browse')
+  ).length;
+  const viewedGameCount = sessionIds.filter(sid =>
+    sessionsByPath[sid].some(v => v.path.startsWith('/game/'))
+  ).length;
+
+  const allOrders = await orders.listByStates(orders.STATES.concat(orders.TERMINAL));
+  const sessionedOrders = allOrders.filter(o => o.session_id);
+  const orderedSessionIds = new Set(sessionedOrders.map(o => o.session_id));
+  const startedOrderSessionCount = sessionIds.filter(sid => orderedSessionIds.has(sid)).length;
+
+  // Matches the weekly funnel readout's "completed" definition exactly —
+  // both answer the same question (did payment get verified) and must not
+  // silently diverge.
+  const PAID_EXCLUDED_STATES = ['awaiting_payment', 'verifying_payment', 'payment_rejected'];
+  const paidSessionIds = new Set(
+    sessionedOrders.filter(o => !PAID_EXCLUDED_STATES.includes(o.state)).map(o => o.session_id)
+  );
+  const paidSessionCount = sessionIds.filter(sid => paidSessionIds.has(sid)).length;
+
+  const sessionFunnel = [
+    { label: 'Landed', count: landedCount, pctOfPrev: null },
+    { label: 'Browsed', count: browsedCount, pctOfPrev: landedCount > 0 ? Math.round((browsedCount / landedCount) * 100) : null },
+    { label: 'Viewed a game', count: viewedGameCount, pctOfPrev: browsedCount > 0 ? Math.round((viewedGameCount / browsedCount) * 100) : null },
+    { label: 'Started order', count: startedOrderSessionCount, pctOfPrev: viewedGameCount > 0 ? Math.round((startedOrderSessionCount / viewedGameCount) * 100) : null },
+    { label: 'Paid', count: paidSessionCount, pctOfPrev: startedOrderSessionCount > 0 ? Math.round((paidSessionCount / startedOrderSessionCount) * 100) : null }
+  ];
+
+  // Top exit pages: the last-recorded path per session stands in for "the
+  // last thing this person looked at" — there is no way to detect a tab
+  // close directly, so this is the closest available proxy, not a precise
+  // measurement.
+  const exitPageCounts = {};
+  sessionIds.forEach(sid => {
+    const rows = sessionsByPath[sid];
+    const last = rows[rows.length - 1];
+    if (last) exitPageCounts[last.path] = (exitPageCounts[last.path] || 0) + 1;
+  });
+  const topExitPages = Object.entries(exitPageCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([path, count]) => ({ path, count }));
+
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, sessionFunnel, topExitPages });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

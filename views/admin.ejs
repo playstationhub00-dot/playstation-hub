@@ -2877,6 +2877,43 @@ Message us anytime to reserve your slot! 😊</textarea>
       </div>
     </div>
 
+    <!-- Session Funnel + Exit Pages -->
+    <div class="vf-section">
+      <div class="vf-grid">
+        <div class="vf-panel">
+          <div class="vf-panel-label">Funnel — sessions since launch</div>
+          <% sessionFunnel.forEach((stage, i) => {
+            const widthPct = sessionFunnel[0].count > 0 ? Math.max(2, Math.round((stage.count / sessionFunnel[0].count) * 100)) : 0;
+          %>
+          <div class="vf-row">
+            <span class="vf-name"><%= stage.label %></span>
+            <div class="vf-bar-track"><div class="vf-bar-fill" style="width:<%= widthPct %>%"></div></div>
+            <span class="vf-n">
+              <strong><%= stage.count %></strong>
+              <% if (stage.pctOfPrev !== null) { %> <span class="vf-pct"><%= stage.pctOfPrev %>%</span><% } %>
+            </span>
+          </div>
+          <% }) %>
+          <% if (sessionFunnel[0].count === 0) { %>
+          <div class="vf-empty">No tracked sessions yet — this fills in as visitors browse after 2026-08-10.</div>
+          <% } %>
+        </div>
+        <div class="vf-panel">
+          <div class="vf-panel-label">Top exit pages</div>
+          <% if (!topExitPages.length) { %>
+          <div class="vf-empty">Nothing to show yet.</div>
+          <% } else { %>
+          <% topExitPages.forEach(ep => { %>
+          <div class="vf-exit-row">
+            <span class="vf-exit-path"><%= ep.path %></span>
+            <span class="vf-exit-n"><strong><%= ep.count %></strong> session<%= ep.count !== 1 ? 's' : '' %></span>
+          </div>
+          <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
 
       <!-- Last 14 Days Bar Chart -->
