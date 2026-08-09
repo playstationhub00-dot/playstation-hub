@@ -1643,7 +1643,26 @@ app.get('/admin', requireAuth, async (req, res) => {
   // The form captures a Facebook name before payment, so each row is a named
   // lead the owner can message directly, not just a statistic.
   const abandonedOrders = await orders.listByStates(['awaiting_payment', 'payment_rejected']);
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders });
+  // Weekly funnel readout: how many orders started, how many completed
+  // (reached active or beyond), and what fraction that is of game-page
+  // traffic in the same window. The single number the conversion plan's
+  // decision rule is measured against.
+  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  const allRecentOrders = (await orders.listByStates(orders.STATES))
+    .filter(o => new Date(o.created_at) >= weekAgo);
+  const startedCount = allRecentOrders.length;
+  const completedCount = allRecentOrders.filter(o =>
+    !['awaiting_payment', 'verifying_payment', 'payment_rejected'].includes(o.state)
+  ).length;
+  const abandonedCount = startedCount - completedCount;
+  const weekAgoStr = orders.manilaDate(weekAgo);
+  const gamePageVisits = (visitors || []).filter(v =>
+    v.path && v.path.startsWith('/game/') && v.date >= weekAgoStr
+  ).length;
+  const orderStartRate = gamePageVisits > 0
+    ? ((startedCount / gamePageVisits) * 100).toFixed(1)
+    : null;
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

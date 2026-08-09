@@ -1,3 +1,9 @@
+<div class="oq-funnel">
+  Last 7 days: <strong><%= startedCount %> started</strong> ·
+  <strong><%= completedCount %> completed</strong> ·
+  <span class="oq-funnel-ab"><%= abandonedCount %> abandoned</span>
+  <% if (orderStartRate !== null) { %> · <span class="oq-funnel-rate"><%= orderStartRate %>%</span> of game-page visits<% } %>
+</div>
 <%
   const QUEUE_ACTION = {
     verifying_payment: 'Payment confirmed',

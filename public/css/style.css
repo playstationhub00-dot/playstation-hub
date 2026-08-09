@@ -2420,3 +2420,8 @@ footer {
 .oq-ab-name { font-weight: 700; color: #ddd; margin-left: 0.5rem; }
 .oq-ab-rejected { color: #ef4444; }
 .oq-ab-age { font-size: 0.75rem; color: #666; white-space: nowrap; flex-shrink: 0; }
+
+.oq-funnel { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.82rem; background: #0d0d0d; border: 1px solid #222; border-radius: 8px; padding: 0.6rem 0.9rem; color: #9aa4b0; margin-bottom: 1.25rem; overflow-x: auto; white-space: nowrap; }
+.oq-funnel strong { color: #ddd; font-weight: 700; }
+.oq-funnel-ab { color: #f59e0b; font-weight: 700; }
+.oq-funnel-rate { color: var(--ps-blue); font-weight: 700; }
