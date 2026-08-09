@@ -51,6 +51,9 @@ function rateLimited(bucketKey, ip, max, windowMs) {
   b.count++;
   return b.count > max;
 }
+function clientIp(req) {
+  return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').split(',')[0].trim();
+}
 
 const adapter = new FileSync(path.join(dataDir, 'games.json'));
 const db = low(adapter);
@@ -1095,7 +1098,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
 // point — Facebook can carry payment proof later, but never creates an order,
 // so nothing can bypass the owner's queue.
 app.post('/order/create', async (req, res) => {
-  if (rateLimited('order_create', req.ip, 10, 10 * 60 * 1000)) {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
   const { game_id, account_type, days, fb_name } = req.body;
@@ -1200,11 +1203,11 @@ function cleanupOrphanedUpload(filePath) {
 }
 
 app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (req, res) => {
-  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
-    return res.redirect('/order/' + req.params.ref + '?msg=stale');
-  }
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
   const channel = req.body.channel === 'messenger' ? 'messenger' : 'upload';
   const method = (req.body.method || '').trim().slice(0, 20) || null;
   let proofPath = null;
@@ -1236,11 +1239,11 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
 // QR upload is website-only by design: the countdown is the whole mechanism,
 // and a code sitting in a Messenger thread has no expiry tracking.
 app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
-  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
-    return res.redirect('/order/' + req.params.ref + '?msg=stale');
-  }
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
   if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
   const qrPath = await processUploadedImage(req.file, 1400);
   const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS).toISOString();
@@ -1256,11 +1259,11 @@ app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
 });
 
 app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), async (req, res) => {
-  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
-    return res.redirect('/order/' + req.params.ref + '?msg=stale');
-  }
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
   if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
   const proofPath = await processUploadedImage(req.file, 1400);
   const r = await orders.transition(order.ref, 'verifying_return', { return_proof: proofPath });
