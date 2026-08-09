@@ -2407,3 +2407,8 @@ footer {
 .oq-btn-no { background: transparent; color: #666; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .oq-btn-no:hover { color: #ef4444; border-color: rgba(239,68,68,0.4); }
 .oq-count { background: var(--ps-blue); color: #fff; border-radius: 20px; padding: 0.05rem 0.4rem; font-size: 0.7rem; font-weight: 900; margin-left: 0.3rem; }
+
+.oq-refunds { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1.25rem; }
+.oq-refunds-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.75rem; }
+.oq-refund-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #0d0d0d; border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+.oq-refund-amt { font-weight: 900; color: #f59e0b; margin-left: 0.5rem; }

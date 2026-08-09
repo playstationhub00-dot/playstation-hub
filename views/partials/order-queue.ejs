@@ -78,6 +78,24 @@
   <% }) %>
 <% } %>
 
+<% if (refundsOwed.length) { %>
+<div class="oq-refunds">
+  <div class="oq-refunds-title">Deposits to refund (<%= refundsOwed.length %>)</div>
+  <% refundsOwed.forEach(o => { %>
+  <div class="oq-refund-row">
+    <div>
+      <span class="oq-ref"><%= o.ref %></span>
+      <span class="oq-refund-amt">₱<%= o.deposit_due %></span>
+      <div class="oq-fb">FB: <strong><%= o.fb_name %></strong> · <%= o.game_title %></div>
+    </div>
+    <form method="POST" action="/admin/orders/<%= o.ref %>/refunded">
+      <button type="submit" class="oq-btn-go">Sent it</button>
+    </form>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
 <script>
 (function(){
   function tick() {

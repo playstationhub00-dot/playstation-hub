@@ -1251,6 +1251,14 @@ app.post('/admin/online', requireAuth, (req, res) => {
   res.redirect('/admin?tab=orders&msg=' + (on ? 'online_on' : 'online_off'));
 });
 
+// The system tracks the debt; the owner still sends the money. A closed order
+// with a deposit stays on the outstanding list until it is explicitly marked
+// paid here.
+app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
+  await orders.markRefunded(req.params.ref);
+  res.redirect('/admin?tab=orders&msg=refund_marked');
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {
