@@ -87,4 +87,12 @@ check('parseOrderRef accepts only the PH-NNNN shape', () => {
   assert.strictEqual(orders.parseOrderRef({ $ne: null }), null);
 });
 
+check('resubmitting after a payment rejection is a valid two-hop path', () => {
+  // The payment-proof route resubmit flow: payment_rejected can't jump
+  // straight to verifying_payment, so the route hops through awaiting_payment
+  // first. Both legs of that hop must be valid transitions.
+  assert.strictEqual(orders.canTransition('payment_rejected', 'awaiting_payment'), true);
+  assert.strictEqual(orders.canTransition('awaiting_payment', 'verifying_payment'), true);
+});
+
 console.log('\n' + passed + ' assertions passed');

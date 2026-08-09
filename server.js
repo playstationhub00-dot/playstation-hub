@@ -35,6 +35,23 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+// Simple in-memory per-IP rate limiter for the open, unauthenticated order
+// routes. No new dependency — a Map is enough given this project's scale.
+// Not perfect (resets on restart, doesn't account for shared IPs), just
+// present so a single abuser can't hammer these routes unbounded.
+const rateBuckets = new Map();
+function rateLimited(bucketKey, ip, max, windowMs) {
+  const key = bucketKey + ':' + ip;
+  const now = Date.now();
+  let b = rateBuckets.get(key);
+  if (!b || now > b.resetAt) {
+    b = { count: 0, resetAt: now + windowMs };
+    rateBuckets.set(key, b);
+  }
+  b.count++;
+  return b.count > max;
+}
+
 const adapter = new FileSync(path.join(dataDir, 'games.json'));
 const db = low(adapter);
 db.defaults({
@@ -1078,6 +1095,9 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
 // point — Facebook can carry payment proof later, but never creates an order,
 // so nothing can bypass the owner's queue.
 app.post('/order/create', async (req, res) => {
+  if (rateLimited('order_create', req.ip, 10, 10 * 60 * 1000)) {
+    return res.redirect('/browse?order_error=rate');
+  }
   const { game_id, account_type, days, fb_name } = req.body;
   const game = getGame(game_id);
   if (!game) return res.redirect('/browse');
@@ -1123,7 +1143,7 @@ app.post('/order/create', async (req, res) => {
       deposit_due: depositDue,
       fb_name: name
     });
-    res.redirect('/order/' + order.ref);
+    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order create]', e.message);
     res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
@@ -1151,7 +1171,11 @@ app.get('/order/:ref', async (req, res) => {
     await orders.advanceEndedRentals();
   } catch (e) { console.error('[order sweep]', e.message); }
   const order = await orders.getByRef(req.params.ref);
-  if (!order) return res.redirect('/browse');
+  // The ref alone is not authorization (refs are sequential and guessable) —
+  // the url_key query param must match too. Redirect exactly as the
+  // order-not-found case does, so a wrong key can't be used to confirm a ref
+  // exists.
+  if (!order || !order.url_key || req.query.k !== order.url_key) return res.redirect('/browse');
   const s = getSiteSettings();
   res.render('order-status', {
     order,
@@ -1165,46 +1189,86 @@ app.get('/order/:ref', async (req, res) => {
   });
 });
 
+// Unlinks a just-processed upload when the transition it was meant for didn't
+// actually apply, so a failed/stale submission doesn't leave an orphaned file
+// behind in uploadsDir. Matches the fs.existsSync + fs.unlinkSync pattern used
+// elsewhere in this file (e.g. the admin payment-methods QR replacement).
+function cleanupOrphanedUpload(filePath) {
+  if (!filePath) return;
+  const fp = path.join(uploadsDir, path.basename(filePath));
+  if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+}
+
 app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (req, res) => {
+  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + req.params.ref + '?msg=stale');
+  }
   const order = await orders.getByRef(req.params.ref);
-  if (!order) return res.redirect('/browse');
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   const channel = req.body.channel === 'messenger' ? 'messenger' : 'upload';
   const method = (req.body.method || '').trim().slice(0, 20) || null;
   let proofPath = null;
   if (channel === 'upload') {
-    if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+    if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
     proofPath = await processUploadedImage(req.file, 1400);
   }
-  await orders.transition(order.ref, 'verifying_payment', {
+  // A customer whose payment was rejected resubmits from the very same form
+  // (order-status.ejs renders it for both awaiting_payment and
+  // payment_rejected). payment_rejected cannot jump straight to
+  // verifying_payment, so first hop it back to awaiting_payment — this keeps
+  // the state history honest (rejected -> awaiting_payment -> verifying_payment)
+  // instead of pretending the direct jump is a real transition.
+  if (order.state === 'payment_rejected') {
+    await orders.transition(order.ref, 'awaiting_payment', {});
+  }
+  const r = await orders.transition(order.ref, 'verifying_payment', {
     payment_proof: proofPath,
     payment_channel: channel,
     payment_method: method
   });
-  res.redirect('/order/' + order.ref + '?msg=payment_submitted');
+  if (!r) {
+    cleanupOrphanedUpload(proofPath);
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
+  res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=payment_submitted');
 });
 
 // QR upload is website-only by design: the countdown is the whole mechanism,
 // and a code sitting in a Messenger thread has no expiry tracking.
 app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
+  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + req.params.ref + '?msg=stale');
+  }
   const order = await orders.getByRef(req.params.ref);
-  if (!order) return res.redirect('/browse');
-  if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
   const qrPath = await processUploadedImage(req.file, 1400);
   const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS).toISOString();
-  await orders.transition(order.ref, 'qr_pending', {
+  const r = await orders.transition(order.ref, 'qr_pending', {
     qr_image: qrPath,
     qr_expires_at: expiresAt
   });
-  res.redirect('/order/' + order.ref + '?msg=qr_sent');
+  if (!r) {
+    cleanupOrphanedUpload(qrPath);
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
+  res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
 });
 
 app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), async (req, res) => {
+  if (rateLimited('order_upload', req.ip, 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + req.params.ref + '?msg=stale');
+  }
   const order = await orders.getByRef(req.params.ref);
-  if (!order) return res.redirect('/browse');
-  if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
   const proofPath = await processUploadedImage(req.file, 1400);
-  await orders.transition(order.ref, 'verifying_return', { return_proof: proofPath });
-  res.redirect('/order/' + order.ref + '?msg=return_submitted');
+  const r = await orders.transition(order.ref, 'verifying_return', { return_proof: proofPath });
+  if (!r) {
+    cleanupOrphanedUpload(proofPath);
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
+  res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=return_submitted');
 });
 
 // ── Owner queue actions ───────────────────────────────────────────────────
@@ -1234,14 +1298,16 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
     patch.start_date = orders.manilaDate(start);
     patch.end_date = orders.manilaDate(end);
   }
-  await orders.transition(order.ref, to, patch);
+  const r = await orders.transition(order.ref, to, patch);
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_advanced');
 });
 
 app.post('/admin/orders/:ref/reject', requireAuth, async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
-  await orders.transition(order.ref, 'payment_rejected', { payment_proof: null, payment_channel: null });
+  const r = await orders.transition(order.ref, 'payment_rejected', { payment_proof: null, payment_channel: null });
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_rejected');
 });
 

@@ -54,6 +54,7 @@
   <% if (msg === 'no_file') { %><div class="ord-flash ord-flash-warn">Pick an image first, or use the Messenger option.</div><% } %>
   <% if (msg === 'qr_sent') { %><div class="ord-flash">QR received — hold tight.</div><% } %>
   <% if (msg === 'return_submitted') { %><div class="ord-flash">Return proof received — we'll confirm shortly.</div><% } %>
+  <% if (msg === 'stale') { %><div class="ord-flash ord-flash-warn">That step was already handled — here's your current status.</div><% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -111,12 +112,14 @@
       <form method="POST" action="/order/<%= order.ref %>/payment-proof" enctype="multipart/form-data" class="ord-upload">
         <input type="hidden" name="channel" value="upload">
         <input type="hidden" name="method" id="ordMethod" value="<%= payMethods.length ? payMethods[0].key : '' %>">
+        <input type="hidden" name="k" value="<%= order.url_key %>">
         <div class="ord-alt-label">or upload your receipt here instead</div>
         <input type="file" name="proof" accept="image/*" required>
         <button type="submit" class="ord-btn-secondary">Upload receipt</button>
       </form>
       <form method="POST" action="/order/<%= order.ref %>/payment-proof" class="ord-sent-form">
         <input type="hidden" name="channel" value="messenger">
+        <input type="hidden" name="k" value="<%= order.url_key %>">
         <button type="submit" class="ord-btn-link">I already sent it on Messenger</button>
       </form>
     </div>
@@ -170,6 +173,7 @@
     <% } %>
     <p class="ord-help">On your console, open the sign-in screen so the QR code is showing, take a photo of it, and upload it here. Your QR is only good for about 10 minutes.</p>
     <form method="POST" action="/order/<%= order.ref %>/qr" enctype="multipart/form-data" class="ord-upload">
+      <input type="hidden" name="k" value="<%= order.url_key %>">
       <input type="file" name="qr" accept="image/*" required>
       <button type="submit" class="ord-btn-primary" style="margin-top:0.6rem;">Send my QR</button>
     </form>
@@ -204,9 +208,18 @@
     <div class="ord-step-label">Return the account</div>
     <p class="ord-help">Sign out of our account on your console, then send us a photo or screenshot showing it. You can also send it on Messenger and we'll tick it off for you.</p>
     <form method="POST" action="/order/<%= order.ref %>/return-proof" enctype="multipart/form-data" class="ord-upload">
+      <input type="hidden" name="k" value="<%= order.url_key %>">
       <input type="file" name="proof" accept="image/*" required>
       <button type="submit" class="ord-btn-primary" style="margin-top:0.6rem;">Send return proof</button>
     </form>
+  </div>
+  <% } %>
+
+  <% if (order.state === 'active') { %>
+  <div class="ord-step">
+    <div class="ord-step-label">You're renting now</div>
+    <div class="ord-row"><span>Rented since</span><span><%= order.start_date %></span></div>
+    <div class="ord-row"><span>Return by</span><span><%= order.end_date %></span></div>
   </div>
   <% } %>
 </div>
