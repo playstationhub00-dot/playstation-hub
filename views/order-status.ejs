@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order <%= order.ref %> — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<%
+  const STEP_COPY = {
+    awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with GCash or Maya, then tell us below.' },
+    verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
+    awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
+    qr_pending:        { title: 'Scanning your QR',        sub: 'Keep the QR on screen — we\'re signing you in.' },
+    active:            { title: 'You\'re all set',         sub: 'Enjoy the game. Return the account by your end date.' },
+    awaiting_return:   { title: 'Time to return',          sub: 'Sign out and send us proof to finish up.' },
+    verifying_return:  { title: 'Checking your return',    sub: 'Almost done — we\'re confirming it now.' },
+    closed:            { title: 'Rental complete',         sub: 'Thanks for renting with us!' },
+    cancelled:         { title: 'Order cancelled',         sub: 'This order is no longer active.' },
+    payment_rejected:  { title: 'Payment not confirmed',   sub: 'We couldn\'t match your payment. Please send proof again.' }
+  };
+  const step = STEP_COPY[order.state] || STEP_COPY.awaiting_payment;
+  const typeLabel = order.account_type === 'tr' ? 'Trophy' : order.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+  const durLabel = order.days === 7 ? 'Weekly' : 'Monthly';
+  const totalDue = (order.amount_due || 0) + (order.deposit_due || 0);
+
+  // The message the customer copies and pastes into Messenger. Messenger has no
+  // ?text= URL parameter — unlike WhatsApp, the composer cannot be pre-filled —
+  // so this is shown on the page with a copy button instead.
+  const premadeMsg =
+    'Hi! I paid for order ' + order.ref + '.\n' +
+    order.game_title + ' — ' + typeLabel + ', ' + durLabel + '\n' +
+    'Amount: PHP ' + totalDue + '\n' +
+    'Here\'s my proof of payment:';
+
+  // ?ref= is invisible to the customer but comes back to our webhook paired
+  // with their PSID, which is the only way we ever learn which Facebook thread
+  // belongs to this order.
+  const mmLink = fbPage ? 'https://m.me/' + fbPage + '?ref=' + order.ref : '';
+%>
+
+<div class="ord-page">
+  <div class="ord-ref-bar">
+    <span class="ord-ref-label">Your reference</span>
+    <span class="ord-ref-code"><%= order.ref %></span>
+  </div>
+
+  <% if (msg === 'payment_submitted') { %><div class="ord-flash">Thanks — we'll confirm your payment shortly.</div><% } %>
+  <% if (msg === 'no_file') { %><div class="ord-flash ord-flash-warn">Pick an image first, or use the Messenger option.</div><% } %>
+
+  <h1 class="ord-title"><%= step.title %></h1>
+  <p class="ord-sub"><%= step.sub %></p>
+
+  <div class="ord-card">
+    <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>
+    <div class="ord-row"><span>Account type</span><span><%= typeLabel %></span></div>
+    <div class="ord-row"><span>Duration</span><span><%= durLabel %></span></div>
+    <div class="ord-row"><span>Rent</span><span>₱<%= order.amount_due %></span></div>
+    <% if (order.deposit_due > 0) { %>
+    <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
+    <% } %>
+    <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
+    <% if (order.deposit_due > 0) { %>
+    <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
+    <% } %>
+  </div>
+
+  <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>
+  <div class="ord-step">
+    <div class="ord-step-label">Step 1 — Send ₱<%= totalDue %></div>
+
+    <% if (!payMethods.length) { %>
+      <div class="ord-offline">Our payment details aren't set up on the site yet — please message us on Facebook and we'll sort it out with you directly.</div>
+    <% } else { %>
+      <div class="ord-pay-tabs">
+        <% payMethods.forEach((m, i) => { %>
+        <button type="button" class="ord-pay-tab<%= i === 0 ? ' ord-pay-tab-on' : '' %>" data-m="<%= m.key %>"><%= m.label %></button>
+        <% }) %>
+      </div>
+      <% payMethods.forEach((m, i) => { %>
+      <div class="ord-pay-panel<%= i === 0 ? '' : ' ord-hidden' %>" data-m="<%= m.key %>">
+        <% if (m.qr_image) { %>
+        <img src="<%= m.qr_image %>" alt="<%= m.label %> QR code" class="ord-pay-qr">
+        <% } %>
+        <% if (m.account_name) { %><div class="ord-pay-row"><span>Name</span><strong><%= m.account_name %></strong></div><% } %>
+        <% if (m.account_number) { %><div class="ord-pay-row"><span>Number</span><strong><%= m.account_number %></strong></div><% } %>
+        <div class="ord-pay-row"><span>Amount</span><strong>₱<%= totalDue %></strong></div>
+      </div>
+      <% }) %>
+      <div class="ord-pay-ref">
+        Type <strong><%= order.ref %></strong> in the message/notes field when you send it —
+        that's how we match your payment to this order.
+      </div>
+    <% } %>
+
+    <div class="ord-step-label ord-step-label-2">Step 2 — Tell us you paid</div>
+    <div class="ord-msg-box" id="ordMsg"><%= premadeMsg %></div>
+    <button type="button" class="ord-btn-secondary" id="ordCopyBtn">Copy this message</button>
+    <% if (mmLink) { %>
+    <a class="ord-btn-primary" target="_blank" rel="noopener" href="<%= mmLink %>">Open Messenger &amp; paste it</a>
+    <% } %>
+
+    <div class="ord-alt">
+      <form method="POST" action="/order/<%= order.ref %>/payment-proof" enctype="multipart/form-data" class="ord-upload">
+        <input type="hidden" name="channel" value="upload">
+        <input type="hidden" name="method" id="ordMethod" value="<%= payMethods.length ? payMethods[0].key : '' %>">
+        <div class="ord-alt-label">or upload your receipt here instead</div>
+        <input type="file" name="proof" accept="image/*" required>
+        <button type="submit" class="ord-btn-secondary">Upload receipt</button>
+      </form>
+      <form method="POST" action="/order/<%= order.ref %>/payment-proof" class="ord-sent-form">
+        <input type="hidden" name="channel" value="messenger">
+        <button type="submit" class="ord-btn-link">I already sent it on Messenger</button>
+      </form>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var tabs = document.querySelectorAll('.ord-pay-tab');
+    var methodField = document.getElementById('ordMethod');
+    tabs.forEach(function(t){
+      t.addEventListener('click', function(){
+        var key = t.dataset.m;
+        tabs.forEach(function(x){ x.classList.toggle('ord-pay-tab-on', x === t); });
+        document.querySelectorAll('.ord-pay-panel').forEach(function(p){
+          p.classList.toggle('ord-hidden', p.dataset.m !== key);
+        });
+        if (methodField) methodField.value = key;
+      });
+    });
+    var btn = document.getElementById('ordCopyBtn');
+    var box = document.getElementById('ordMsg');
+    if (btn && box) {
+      btn.addEventListener('click', function(){
+        var done = function(){ btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = 'Copy this message'; }, 1800); };
+        // navigator.clipboard needs HTTPS and can be blocked in in-app browsers
+        // (customers often arrive from the Facebook app), so fall back rather
+        // than leaving the button dead.
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(box.textContent).then(done).catch(function(){ fallback(); });
+        } else { fallback(); }
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = box.textContent;
+          ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Press and hold the text to copy'; }
+          document.body.removeChild(ta);
+        }
+      });
+    }
+  })();
+  </script>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

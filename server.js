@@ -1130,6 +1130,59 @@ app.post('/order/create', async (req, res) => {
   }
 });
 
+// Separate multer instance for customer-supplied files so its limits stay
+// independent of the admin upload paths.
+const uploadOrderFile = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => cb(null, 'order-' + Date.now() + path.extname(file.originalname))
+  }),
+  fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
+  limits: { fileSize: 8 * 1024 * 1024 }
+});
+
+app.get('/order/:ref', async (req, res) => {
+  // Sweep before rendering: lapsed QR windows go back to awaiting_qr so the
+  // customer is asked for a fresh code rather than shown a dead countdown, and
+  // rentals past their end date move to awaiting_return so the customer is
+  // prompted to return without the owner having to spot the date.
+  try {
+    await orders.expireStaleQrs();
+    await orders.advanceEndedRentals();
+  } catch (e) { console.error('[order sweep]', e.message); }
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/browse');
+  const s = getSiteSettings();
+  res.render('order-status', {
+    order,
+    settings: s,
+    payMethods: (s.payment_methods || []).filter(m => m.enabled),
+    fbPage: s.fb_page_username || '',
+    ownerOnline: !!(s.owner_online),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    msg: req.query.msg || null
+  });
+});
+
+app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/browse');
+  const channel = req.body.channel === 'messenger' ? 'messenger' : 'upload';
+  const method = (req.body.method || '').trim().slice(0, 20) || null;
+  let proofPath = null;
+  if (channel === 'upload') {
+    if (!req.file) return res.redirect('/order/' + order.ref + '?msg=no_file');
+    proofPath = await processUploadedImage(req.file, 1400);
+  }
+  await orders.transition(order.ref, 'verifying_payment', {
+    payment_proof: proofPath,
+    payment_channel: channel,
+    payment_method: method
+  });
+  res.redirect('/order/' + order.ref + '?msg=payment_submitted');
+});
+
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
 app.get('/api/search-index', (req, res) => {
