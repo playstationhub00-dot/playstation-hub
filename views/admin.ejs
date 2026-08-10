@@ -2840,17 +2840,6 @@ Message us anytime to reserve your slot! 😊</textarea>
 
       const recentVisitors = [...visitors].reverse().slice(0, 100);
 
-      // Page counts per period (computed here, filtered in JS)
-      const vPageToday = {}; visToday.forEach(v => { vPageToday[v.page||v.path] = (vPageToday[v.page||v.path]||0)+1; });
-      const vPageWeek  = {}; visWeek.forEach(v  => { vPageWeek[v.page||v.path]  = (vPageWeek[v.page||v.path] ||0)+1; });
-      const vPageMonth = {}; visMonth.forEach(v => { vPageMonth[v.page||v.path] = (vPageMonth[v.page||v.path]||0)+1; });
-      const vPageYear  = {}; visYear.forEach(v  => { vPageYear[v.page||v.path]  = (vPageYear[v.page||v.path] ||0)+1; });
-      const vPageAll   = {}; visitors.forEach(v => { vPageAll[v.page||v.path]   = (vPageAll[v.page||v.path]  ||0)+1; });
-      const topPagesToday = Object.entries(vPageToday).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const topPagesWeek  = Object.entries(vPageWeek).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const topPagesMonth = Object.entries(vPageMonth).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const topPagesYear  = Object.entries(vPageYear).sort((a,b)=>b[1]-a[1]).slice(0,5);
-      const topPagesAll   = Object.entries(vPageAll).sort((a,b)=>b[1]-a[1]).slice(0,5);
     %>
 
     <!-- KPI Cards -->
@@ -2978,14 +2967,65 @@ Message us anytime to reserve your slot! 😊</textarea>
     </div>
 
     <script>
-    // Top pages data from server
-    const TP_DATA = {
-      today: <%- JSON.stringify(topPagesToday) %>,
-      week:  <%- JSON.stringify(topPagesWeek) %>,
-      month: <%- JSON.stringify(topPagesMonth) %>,
-      year:  <%- JSON.stringify(topPagesYear) %>,
-      all:   <%- JSON.stringify(topPagesAll) %>
-    };
+    const VIS_WINDOWS = <%- JSON.stringify(VIS_WINDOWS) %>;
+
+    function renderFunnel(win) {
+      const body = document.getElementById('vfFunnelBody');
+      const browsedEl = document.getElementById('vfBrowsedStat');
+      if (!win || win.funnel[0].count === 0) {
+        browsedEl.innerHTML = '';
+        body.innerHTML = '<div class="vf-empty">No tracked sessions in this period.</div>';
+        return;
+      }
+      const b = win.browsed;
+      browsedEl.innerHTML = 'Browsed the catalog — <strong>' + b.count + '</strong> of <strong>' + b.total +
+        '</strong> sessions <span class="vf-browsed-pct">' + (b.pct === null ? '—' : b.pct + '%') + '</span>';
+      const top = win.funnel[0].count;
+      body.innerHTML = win.funnel.map(stage => {
+        const widthPct = top > 0 ? Math.max(2, Math.round((stage.count / top) * 100)) : 0;
+        const pctHtml = stage.pctOfPrev === null ? '' : ' <span class="vf-pct">' + stage.pctOfPrev + '%</span>';
+        return '<div class="vf-row">' +
+          '<span class="vf-name">' + stage.label + '</span>' +
+          '<div class="vf-bar-track"><div class="vf-bar-fill" style="width:' + widthPct + '%"></div></div>' +
+          '<span class="vf-n"><strong>' + stage.count + '</strong>' + pctHtml + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderExitPages(win) {
+      const body = document.getElementById('vfExitBody');
+      if (!win || !win.exitPages.length) {
+        body.innerHTML = '<div class="vf-empty">Nothing to show yet.</div>';
+        return;
+      }
+      body.innerHTML = win.exitPages.map(ep =>
+        '<div class="vf-exit-row">' +
+          '<span class="vf-exit-path">' + ep.path + '</span>' +
+          '<span class="vf-exit-n"><strong>' + ep.count + '</strong> session' + (ep.count !== 1 ? 's' : '') + '</span>' +
+        '</div>'
+      ).join('');
+    }
+
+    // Paints all three session-scoped panels from one window object, so they
+    // can never end up describing different periods.
+    function renderVisWindow(win) {
+      renderFunnel(win);
+      renderExitPages(win);
+      renderTopPages(win && win.topPages ? win.topPages : []);
+    }
+
+    let vfFilter = 'today';
+    function setFunnelFilter(f) {
+      vfFilter = f;
+      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
+      document.getElementById('vfDayLabel').style.display = 'none';
+      // Both button rows track the same window, so both highlight together.
+      ['today','week','month','year','all'].forEach(k => {
+        document.getElementById('vfBtn-'+k).classList.toggle('vis-filter-active', k === f);
+        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
+      });
+      renderVisWindow(VIS_WINDOWS[f]);
+    }
 
     function renderTopPages(pages) {
       const body = document.getElementById('topPagesBody');
@@ -3005,15 +3045,13 @@ Message us anytime to reserve your slot! 😊</textarea>
       ).join('');
     }
 
-    let tpFilter = 'today';
     function setTopFilter(f) {
-      tpFilter = f;
-      ['today','week','month','year','all'].forEach(k => {
-        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
-      });
-      renderTopPages(TP_DATA[f]);
+      // Most Visited Pages and the funnel share one window, so selecting a
+      // period on either row moves both.
+      setFunnelFilter(f);
     }
-    renderTopPages(TP_DATA['today']);
+
+    renderVisWindow(VIS_WINDOWS['today']);
 
     // Recent Visits filter
     const vTodayStr = '<%= new Date().toISOString().slice(0,10) %>';
@@ -3029,6 +3067,7 @@ Message us anytime to reserve your slot! 😊</textarea>
       rvFilter = f;
       document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
       document.getElementById('rvDayLabel').style.display = 'none';
+      document.getElementById('vfDayLabel').style.display = 'none';
       const tbody = document.getElementById('recentVisitsBody');
       if (tbody) tbody.innerHTML = ORIGINAL_TBODY_HTML;
       ['today','week','month','year','all'].forEach(k => {
@@ -3053,6 +3092,16 @@ Message us anytime to reserve your slot! 😊</textarea>
     function filterVisitsByDate(date, label) {
       document.querySelectorAll('.vis-filter-btn').forEach(b => b.classList.remove('vis-filter-active'));
       document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.toggle('vis-day-active', bar.dataset.date === date));
+
+      // The three session-scoped panels have this date precomputed; only the
+      // Recent Visits table needs a fetch, because the server-rendered table
+      // holds just the 100 most recent rows overall and may not contain an
+      // older day at all.
+      renderVisWindow(VIS_WINDOWS.byDate[date]);
+      const vfLabel = document.getElementById('vfDayLabel');
+      vfLabel.textContent = '📅 ' + label;
+      vfLabel.style.display = '';
+
       const dayLabel = document.getElementById('rvDayLabel');
       dayLabel.textContent = '📅 ' + label + ' — click a filter button above to clear';
       dayLabel.style.display = '';
