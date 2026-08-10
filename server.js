@@ -1780,22 +1780,29 @@ app.get('/admin', requireAuth, async (req, res) => {
       .slice(0, 8)
       .map(([path, count]) => ({ path, count }));
 
-    // Most Visited Pages counts PAGE VIEWS, not sessions — it answers "which
-    // pages got looked at most", a different question from the session-scoped
-    // funnel above it. Kept row-level deliberately.
-    const pageCounts = {};
-    sessions.forEach(s => s.rows.forEach(v => {
-      const key = v.page || v.path;
-      pageCounts[key] = (pageCounts[key] || 0) + 1;
-    }));
-    const topPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
     return {
       funnel,
       exitPages,
-      browsed: { count: browsedCount, total: landed, pct: pct(browsedCount, landed) },
-      topPages
+      browsed: { count: browsedCount, total: landed, pct: pct(browsedCount, landed) }
     };
+  }
+
+  // Most Visited Pages counts PAGE VIEWS, not sessions — it answers "which
+  // pages got looked at most", a different question from the session-scoped
+  // funnel. It is computed independently over the FULL visitors[] array
+  // (filtered by each row's own .date), not over sessionSummaries, so that:
+  //   1) "Today's Most Visited Pages" always agrees with the "Today's Visits"
+  //      KPI card (both count every row whose date is today), and
+  //   2) rows with no session_id (e.g. everything recorded before session
+  //      tracking launched) aren't silently dropped from "All-time".
+  function topPagesForWindow(dateFilter) {
+    const pageCounts = {};
+    (visitors || []).forEach(v => {
+      if (!dateFilter(v.date)) return;
+      const key = v.page || v.path;
+      pageCounts[key] = (pageCounts[key] || 0) + 1;
+    });
+    return Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
   }
 
   const winToday = new Date().toISOString().slice(0, 10);
@@ -1804,11 +1811,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   const winYear  = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
 
   const VIS_WINDOWS = {
-    today: visWindowMetrics(sessionSummaries.filter(s => s.startDate === winToday)),
-    week:  visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winWeek)),
-    month: visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winMonth)),
-    year:  visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winYear)),
-    all:   visWindowMetrics(sessionSummaries),
+    today: { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === winToday)), topPages: topPagesForWindow(d => d === winToday) },
+    week:  { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winWeek)),  topPages: topPagesForWindow(d => d >= winWeek) },
+    month: { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winMonth)), topPages: topPagesForWindow(d => d >= winMonth) },
+    year:  { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winYear)),  topPages: topPagesForWindow(d => d >= winYear) },
+    all:   { ...visWindowMetrics(sessionSummaries), topPages: topPagesForWindow(() => true) },
     byDate: {}
   };
 
@@ -1817,7 +1824,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   // vLast14 chart renders.
   for (let i = 13; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    VIS_WINDOWS.byDate[d] = visWindowMetrics(sessionSummaries.filter(s => s.startDate === d));
+    VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
   res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS });

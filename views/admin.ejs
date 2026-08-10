@@ -2967,7 +2967,15 @@ Message us anytime to reserve your slot! 😊</textarea>
     </div>
 
     <script>
-    const VIS_WINDOWS = <%- JSON.stringify(VIS_WINDOWS) %>;
+    const VIS_WINDOWS = <%- JSON.stringify(VIS_WINDOWS).replace(/</g, '\\u003c') %>;
+
+    // Every value below can originate from req.path (the visitor-tracking
+    // middleware records whatever path a client requests, fully attacker
+    // controlled), so anything user-influenced must be escaped before it is
+    // concatenated into an innerHTML string.
+    function escHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
     function renderFunnel(win) {
       const body = document.getElementById('vfFunnelBody');
@@ -3000,7 +3008,7 @@ Message us anytime to reserve your slot! 😊</textarea>
       }
       body.innerHTML = win.exitPages.map(ep =>
         '<div class="vf-exit-row">' +
-          '<span class="vf-exit-path">' + ep.path + '</span>' +
+          '<span class="vf-exit-path">' + escHtml(ep.path) + '</span>' +
           '<span class="vf-exit-n"><strong>' + ep.count + '</strong> session' + (ep.count !== 1 ? 's' : '') + '</span>' +
         '</div>'
       ).join('');
@@ -3014,17 +3022,8 @@ Message us anytime to reserve your slot! 😊</textarea>
       renderTopPages(win && win.topPages ? win.topPages : []);
     }
 
-    let vfFilter = 'today';
     function setFunnelFilter(f) {
-      vfFilter = f;
-      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
-      document.getElementById('vfDayLabel').style.display = 'none';
-      // Both button rows track the same window, so both highlight together.
-      ['today','week','month','year','all'].forEach(k => {
-        document.getElementById('vfBtn-'+k).classList.toggle('vis-filter-active', k === f);
-        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
-      });
-      renderVisWindow(VIS_WINDOWS[f]);
+      setPeriodFilter(f);
     }
 
     function renderTopPages(pages) {
@@ -3036,7 +3035,7 @@ Message us anytime to reserve your slot! 😊</textarea>
       const maxCount = pages[0][1];
       body.innerHTML = pages.map(([page, count]) =>
         `<div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
-          <div style="flex:1;font-size:0.82rem;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${page}</div>
+          <div style="flex:1;font-size:0.82rem;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(page)}</div>
           <div style="font-size:0.75rem;color:#a78bfa;font-weight:700;">${count}</div>
           <div style="width:60px;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
             <div style="height:100%;background:#a78bfa;border-radius:3px;width:${Math.round((count/maxCount)*100)}%;"></div>
@@ -3051,8 +3050,6 @@ Message us anytime to reserve your slot! 😊</textarea>
       setFunnelFilter(f);
     }
 
-    renderVisWindow(VIS_WINDOWS['today']);
-
     // Recent Visits filter
     const vTodayStr = '<%= new Date().toISOString().slice(0,10) %>';
     const vWeekAgo  = '<%= new Date(Date.now()-7*86400000).toISOString().slice(0,10) %>';
@@ -3062,17 +3059,26 @@ Message us anytime to reserve your slot! 😊</textarea>
     // full results) can restore the original server-rendered rows afterward.
     const ORIGINAL_TBODY_HTML = document.getElementById('recentVisitsBody') ? document.getElementById('recentVisitsBody').innerHTML : '';
 
-    let rvFilter = 'today';
-    function setVisFilter(f) {
-      rvFilter = f;
+    // Single source of truth for "select a period" (today/week/month/year/all),
+    // reachable from any of the three button rows (vfBtn-*, tpBtn-*, rvBtn-*)
+    // or from the 14-day chart's own period buttons. Every path that used to
+    // paint only its "own half" of the tab now goes through here, so the
+    // funnel, exit pages, top pages, and Recent Visits table — plus all three
+    // button rows and both day labels — always agree on one period.
+    function setPeriodFilter(f) {
       document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
-      document.getElementById('rvDayLabel').style.display = 'none';
       document.getElementById('vfDayLabel').style.display = 'none';
-      const tbody = document.getElementById('recentVisitsBody');
-      if (tbody) tbody.innerHTML = ORIGINAL_TBODY_HTML;
+      document.getElementById('rvDayLabel').style.display = 'none';
       ['today','week','month','year','all'].forEach(k => {
+        document.getElementById('vfBtn-'+k).classList.toggle('vis-filter-active', k === f);
+        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
         document.getElementById('rvBtn-'+k).classList.toggle('vis-filter-active', k === f);
       });
+
+      renderVisWindow(VIS_WINDOWS[f]);
+
+      const tbody = document.getElementById('recentVisitsBody');
+      if (tbody) tbody.innerHTML = ORIGINAL_TBODY_HTML;
       const rows = document.querySelectorAll('#recentVisitsBody tr');
       rows.forEach(row => {
         const d = row.dataset.date || '';
@@ -3084,7 +3090,12 @@ Message us anytime to reserve your slot! 😊</textarea>
         row.style.display = show ? '' : 'none';
       });
     }
-    setVisFilter('today');
+
+    function setVisFilter(f) {
+      setPeriodFilter(f);
+    }
+
+    setPeriodFilter('today');
 
     // Clicking a bar in the 14-day chart fetches that day's full visit list (the
     // server-rendered table only has the 100 most recent rows overall, which may not
@@ -3114,11 +3125,11 @@ Message us anytime to reserve your slot! 😊</textarea>
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:1.5rem;">No visits on ' + label + '.</td></tr>';
             return;
           }
-          tbody.innerHTML = rows.map(v => `<tr data-date="${v.date}">
-            <td><span style="color:#22c55e;font-weight:600;">${v.page || v.path}</span></td>
-            <td style="color:#aaa;font-size:0.8rem;">${v.date}</td>
-            <td style="color:#aaa;font-size:0.8rem;">${v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : ''}</td>
-            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.session_id ? v.session_id.slice(0,12) : '—'}</td>
+          tbody.innerHTML = rows.map(v => `<tr data-date="${escHtml(v.date)}">
+            <td><span style="color:#22c55e;font-weight:600;">${escHtml(v.page || v.path)}</span></td>
+            <td style="color:#aaa;font-size:0.8rem;">${escHtml(v.date)}</td>
+            <td style="color:#aaa;font-size:0.8rem;">${v.time ? escHtml(new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'})) : ''}</td>
+            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.session_id ? escHtml(v.session_id.slice(0,12)) : '—'}</td>
           </tr>`).join('');
         })
         .catch(() => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:1.5rem;">Failed to load visits.</td></tr>'; });
