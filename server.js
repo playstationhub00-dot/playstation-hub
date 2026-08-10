@@ -1997,7 +1997,7 @@ app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
-  const { title, platform, available_slots, renters,
+  const { title, platform, available_slots, renters, new_window_days,
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
@@ -2021,6 +2021,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     gallery,
     available_slots: parseInt(available_slots) || 1,
     renters: parseInt(renters) || 0,
+    new_window_days: parseInt(new_window_days) > 0 ? parseInt(new_window_days) : null,
     price_category_id: cat ? parseInt(price_category_id) : null,
     nt_price_7d: cat ? cat.nt_price_7d : (parseInt(nt_price_7d) || 149),
     nt_price_30d: cat ? cat.nt_price_30d : (parseInt(nt_price_30d) || 349),
@@ -2053,7 +2054,7 @@ app.get('/admin/edit/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
-  const { title, platform, available_slots, renters,
+  const { title, platform, available_slots, renters, new_window_days,
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
@@ -2094,6 +2095,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     gallery,
     available_slots: parseInt(available_slots),
     renters: parseInt(renters),
+    new_window_days: parseInt(new_window_days) > 0 ? parseInt(new_window_days) : null,
     price_category_id: cat ? parseInt(price_category_id) : null,
     nt_price_7d: cat ? cat.nt_price_7d : parseInt(nt_price_7d),
     nt_price_30d: cat ? cat.nt_price_30d : parseInt(nt_price_30d),
@@ -2124,6 +2126,16 @@ app.post('/admin/games/:id/description', requireAuth, (req, res) => {
   const description = (req.body.description || '').trim();
   db.get('games').find({ id: parseInt(req.params.id) }).assign({ description }).write();
   res.json({ ok: true, id: game.id, title: game.title });
+});
+
+// Toggles "the account is stocked and ready" independent of rental history — clears
+// the not-yet-stocked notice on game-detail.ejs without touching the new-game
+// countdown, which stays governed purely by created_at (the two are independent).
+app.post('/admin/games/:id/stocked', requireAuth, (req, res) => {
+  const game = getGame(req.params.id);
+  if (!game) return res.redirect('/admin');
+  db.get('games').find({ id: parseInt(req.params.id) }).assign({ stocked: !game.stocked }).write();
+  res.redirect('/admin?msg=updated');
 });
 
 app.post('/admin/delete/:id', requireAuth, (req, res) => {
@@ -2741,15 +2753,18 @@ function sortCategoryNames(names) {
   });
 }
 
-// A game counts as "new" for a fixed 11 days after created_at — not tied to calendar
-// month boundaries, so a game added on the 28th still gets the full window instead of
-// losing its NEW badge two days later at month-end. Same rule duplicated (with this
-// comment) in partials/game-card.ejs and admin.ejs's Added column — keep all three in sync.
+// A game counts as "new" for a fixed 11 days after created_at by default — not tied to
+// calendar month boundaries, so a game added on the 28th still gets the full window
+// instead of losing its NEW badge two days later at month-end. A game's own
+// new_window_days overrides this default when set (admin-configurable per game). Same
+// rule duplicated (with this comment) in partials/game-card.ejs and admin.ejs's Added
+// column — keep all three in sync.
 const NEW_GAME_WINDOW_DAYS = 11;
 function isAddedThisMonth(game) {
   if (!game.created_at) return false;
+  const windowDays = game.new_window_days || NEW_GAME_WINDOW_DAYS;
   const daysSinceAdded = Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000);
-  return daysSinceAdded < NEW_GAME_WINDOW_DAYS;
+  return daysSinceAdded < windowDays;
 }
 
 // Groups every catalog game by its price category (New Games/Deluxe/Special/Regular/Uncategorized),

@@ -1090,6 +1090,7 @@
           <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
           <div class="form-group"><label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label><input type="number" name="available_slots" value="1" min="0"></div>
           <div class="form-group"><label>Current Renters</label><input type="number" name="renters" value="0" min="0"></div>
+          <div class="form-group"><label>New Game Countdown (days) <span style="color:#555;font-size:0.7rem;">(blank = site default, 11)</span></label><input type="number" name="new_window_days" value="" min="1" placeholder="11"></div>
           <div class="form-group"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_primary_slots" value="0" min="0"></div>
           <div class="form-group"><label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label><input type="number" name="cost" value="0" min="0" placeholder="e.g. 2500"></div>
 
@@ -1190,14 +1191,16 @@
               const gameRentalCount = customers.filter(c => c.game_id === game.id).length;
               const gameCost = game.cost || 0;
               const gameProfit = gameTotalEarned - gameCost;
-              // Fixed 11-day "new" window from created_at — same rule as the site-wide
-              // NEW badge and New Arrivals poster group (server.js NEW_GAME_WINDOW_DAYS).
+              // Fixed 11-day "new" window from created_at by default — same rule as the
+              // site-wide NEW badge and New Arrivals poster group (server.js
+              // NEW_GAME_WINDOW_DAYS), overridable per game via game.new_window_days.
               // Days-left is how much runway remains to see if the game gets any renters
               // before deciding whether to keep restocking it.
+              const gWindowDays = game.new_window_days || 11;
               const gAddedDate = game.created_at ? new Date(game.created_at) : null;
               const gDaysSinceAdded = gAddedDate ? Math.floor((Date.now() - gAddedDate.getTime()) / 86400000) : null;
-              const gIsNewThisMonth = gDaysSinceAdded !== null && gDaysSinceAdded < 11;
-              const gDaysLeft = gIsNewThisMonth ? 11 - gDaysSinceAdded : null;
+              const gIsNewThisMonth = gDaysSinceAdded !== null && gDaysSinceAdded < gWindowDays;
+              const gDaysLeft = gIsNewThisMonth ? gWindowDays - gDaysSinceAdded : null;
               const gAddedLabel = gAddedDate ? gAddedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
             %>
             <tr>
@@ -1266,6 +1269,9 @@
               <td>
                 <div class="action-btns">
                   <a href="/admin/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
+                  <form method="POST" action="/admin/games/<%= game.id %>/stocked" style="display:inline">
+                    <button type="submit" class="btn-edit" style="<%= game.stocked ? 'background:rgba(34,197,94,0.15);color:#22c55e;border-color:rgba(34,197,94,0.3);' : '' %>"><%= game.stocked ? '📦 Stocked ✓' : '📦 Mark stocked' %></button>
+                  </form>
                   <form method="POST" action="/admin/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
                     <button type="submit" class="btn-delete">🗑 Delete</button>
                   </form>

@@ -25,7 +25,7 @@
   // for this specific type — the account only gets created after the first booking.
   // Both conditions are required (renters===0 alone would misfire on a game that was
   // pre-stocked with a real account before ever being rented).
-  const neverRented = !game.renters;
+  const neverRented = !game.renters && !game.stocked;
   const trNotStocked = neverRented && !hasTrophyAcc;
   const ntNotStocked = neverRented && !hasNtAcc;
   const ps4NotStocked = neverRented && !hasPs4Acc;
