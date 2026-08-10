@@ -1655,7 +1655,7 @@ select.ss-native {
 .table-cover { width: 40px; height: 53px; object-fit: cover; border-radius: 4px; background: #111; display: block; }
 .table-cover-placeholder { width: 40px; height: 53px; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #333; font-size: 1.2rem; }
 
-.action-btns { display: flex; gap: 0.5rem; }
+.action-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: 150px; }
 .btn-edit, .btn-delete {
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
