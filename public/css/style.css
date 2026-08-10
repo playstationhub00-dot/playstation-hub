@@ -1652,6 +1652,17 @@ select.ss-native {
 .games-table td { padding: 0.875rem 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
 .games-table tr:hover td { background: rgba(255,255,255,0.02); }
 
+/* Actions column pinned to the right edge of the horizontally-scrolling table, so the
+   buttons stay fully visible regardless of how far the other 13 columns are scrolled. */
+.games-table th:last-child,
+.games-table td:last-child { position: sticky; right: 0; z-index: 1; box-shadow: -8px 0 12px -8px rgba(0,0,0,0.5); }
+.games-table th:last-child { background: #111; }
+.games-table td:last-child { background: var(--bg-card); }
+.games-table tr:hover td:last-child { background: var(--bg-card-hover); }
+body.light-mode .games-table th:last-child { background: #f0f2f5; }
+body.light-mode .games-table td:last-child { background: #fff; }
+body.light-mode .games-table tr:hover td:last-child { background: #fafafa; }
+
 .table-cover { width: 40px; height: 53px; object-fit: cover; border-radius: 4px; background: #111; display: block; }
 .table-cover-placeholder { width: 40px; height: 53px; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #333; font-size: 1.2rem; }
 
