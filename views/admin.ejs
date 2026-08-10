@@ -1177,7 +1177,22 @@
       <div class="settings-accordion-body open">
     <div class="table-card">
       <h2 style="display:none;">All Games (<%= games.length %>)</h2>
-      <div style="overflow-x:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;padding:1rem 1.25rem 0;">
+        <div style="position:relative;flex:0 0 260px;">
+          <input type="text" id="gameSearch" placeholder="Search title or category..." oninput="applyGameFilter()"
+            style="width:100%;padding:0.45rem 0.9rem 0.45rem 2.2rem;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;font-size:0.85rem;box-sizing:border-box;">
+          <span style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:#555;font-size:0.9rem;pointer-events:none;">🔍</span>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button onclick="filterGamesPlatform('all')" id="gf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
+          <button onclick="filterGamesPlatform('PS5')" id="gf-PS5" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">PS5</button>
+          <button onclick="filterGamesPlatform('PS4')" id="gf-PS4" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">PS4</button>
+          <button onclick="filterGamesPlatform('PS4/PS5')" id="gf-PS4/PS5" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">PS4/PS5</button>
+          <button onclick="toggleGamesNewOnly()" id="gf-new" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🆕 New only</button>
+        </div>
+      </div>
+      <div id="gameFilterCount" style="font-size:0.78rem;color:#555;padding:0.6rem 1.25rem 0;"></div>
+      <div style="overflow:auto;max-height:calc(5 * 4.6rem + 2.6rem);">
         <table class="games-table">
           <thead>
             <tr><th>Cover</th><th>Title</th><th>Platform</th><th>🆕 Added</th><th>📅 Released</th><th>🎮 NT Slots</th><th style="color:#ffc400;">🏆 TR Slots</th><th>🕹️ PS4 Slots</th><th>Non-Trophy Prices</th><th>Trophy Prices</th><th style="color:#f59e0b;">Cost</th><th style="color:#22c55e;">Earned</th><th style="color:var(--ps-blue);">Profit</th><th>Actions</th></tr>
@@ -1202,8 +1217,9 @@
               const gIsNewThisMonth = gDaysSinceAdded !== null && gDaysSinceAdded < gWindowDays;
               const gDaysLeft = gIsNewThisMonth ? gWindowDays - gDaysSinceAdded : null;
               const gAddedLabel = gAddedDate ? gAddedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : null;
+              const gSearchText = (game.title + ' ' + (game._category_name || '')).toLowerCase();
             %>
-            <tr>
+            <tr class="game-row" data-platform="<%= game.platform %>" data-new="<%= gIsNewThisMonth ? '1' : '0' %>" data-search="<%= gSearchText %>">
               <td>
                 <% if (game.cover_image) { %><img src="<%= game.cover_image %>" class="table-cover" alt=""><% } else { %><div class="table-cover-placeholder">🎮</div><% } %>
               </td>
@@ -2764,6 +2780,43 @@ Message us anytime to reserve your slot! 😊</textarea>
         const searchOk = !q || r.dataset.name.includes(q) || r.dataset.game.includes(q);
         r.style.display = (statusOk && searchOk) ? '' : 'none';
       });
+    }
+    </script>
+    <script>
+    let _gamePlatform = 'all';
+    let _gameNewOnly = false;
+    function filterGamesPlatform(platform) {
+      _gamePlatform = platform;
+      applyGameFilter();
+      ['all','PS5','PS4','PS4/PS5'].forEach(p => {
+        const btn = document.getElementById('gf-'+p);
+        if (!btn) return;
+        btn.style.background = p === platform ? 'var(--ps-blue)' : '';
+        btn.style.color = p === platform ? '#000' : '';
+        btn.style.borderColor = p === platform ? 'var(--ps-blue)' : '';
+      });
+    }
+    function toggleGamesNewOnly() {
+      _gameNewOnly = !_gameNewOnly;
+      const btn = document.getElementById('gf-new');
+      btn.style.background = _gameNewOnly ? '#22c55e' : '';
+      btn.style.color = _gameNewOnly ? '#000' : '';
+      applyGameFilter();
+    }
+    function applyGameFilter() {
+      const q = (document.getElementById('gameSearch')?.value || '').toLowerCase().trim();
+      let shown = 0, total = 0;
+      document.querySelectorAll('.game-row').forEach(r => {
+        total++;
+        const platformOk = _gamePlatform === 'all' || r.dataset.platform === _gamePlatform;
+        const newOk = !_gameNewOnly || r.dataset.new === '1';
+        const searchOk = !q || r.dataset.search.includes(q);
+        const visible = platformOk && newOk && searchOk;
+        r.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+      });
+      const countEl = document.getElementById('gameFilterCount');
+      if (countEl) countEl.textContent = (shown === total) ? '' : ('Showing ' + shown + ' of ' + total + ' games');
     }
     </script>
     <script>

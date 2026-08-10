@@ -1648,7 +1648,11 @@ select.ss-native {
   letter-spacing: 0.5px;
   color: var(--text-secondary);
   background: #111;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
+body.light-mode .games-table th { background: #f0f2f5; }
 .games-table td { padding: 0.875rem 1rem; border-top: 1px solid var(--border); font-size: 0.875rem; vertical-align: middle; }
 .games-table tr:hover td { background: rgba(255,255,255,0.02); }
 
@@ -1656,7 +1660,7 @@ select.ss-native {
    buttons stay fully visible regardless of how far the other 13 columns are scrolled. */
 .games-table th:last-child,
 .games-table td:last-child { position: sticky; right: 0; z-index: 1; box-shadow: -8px 0 12px -8px rgba(0,0,0,0.5); }
-.games-table th:last-child { background: #111; }
+.games-table th:last-child { background: #111; z-index: 3; }
 .games-table td:last-child { background: var(--bg-card); }
 .games-table tr:hover td:last-child { background: var(--bg-card-hover); }
 body.light-mode .games-table th:last-child { background: #f0f2f5; }
