@@ -1270,7 +1270,7 @@
                 <div class="action-btns">
                   <a href="/admin/edit/<%= game.id %>" class="btn-edit">✏️ Edit</a>
                   <form method="POST" action="/admin/games/<%= game.id %>/stocked" style="display:inline">
-                    <button type="submit" class="btn-edit" style="<%= game.stocked ? 'background:rgba(34,197,94,0.15);color:#22c55e;border-color:rgba(34,197,94,0.3);' : '' %>"><%= game.stocked ? '📦 Stocked ✓' : '📦 Mark stocked' %></button>
+                    <button type="submit" class="btn-edit" style="<%= game.stocked ? 'background:rgba(34,197,94,0.15);color:#22c55e;' : '' %>" title="<%= game.stocked ? 'Stocked — click to clear the not-yet-stocked notice override' : 'Mark this game as stocked, clearing the not-yet-stocked notice regardless of rental history' %>"><%= game.stocked ? '📦 Stocked' : '📦 Stock' %></button>
                   </form>
                   <form method="POST" action="/admin/delete/<%= game.id %>" style="display:inline" onsubmit="return confirm('Delete <%= game.title.replace(/'/g, "\\'") %>?')">
                     <button type="submit" class="btn-delete">🗑 Delete</button>
