@@ -31,11 +31,13 @@
   const gcCheapest = gcAllPricePairs.length ? gcAllPricePairs.reduce((a, b) => b.final < a.final ? b : a) : null;
   const gcStartPrice = gcCheapest ? gcCheapest.final : null;
   const gcStartWas = gcCheapest && gcCheapest.final < gcCheapest.base ? gcCheapest.base : null;
-  // NEW badge lasts a fixed 11 days from created_at — same window used by the Admin
-  // "Added" column and the New Arrivals poster group (server.js NEW_GAME_WINDOW_DAYS).
+  // NEW badge lasts a fixed 11 days from created_at by default — same window used by
+  // the Admin "Added" column and the New Arrivals poster group (server.js
+  // NEW_GAME_WINDOW_DAYS), overridable per game via game.new_window_days.
+  const gcWindowDays = game.new_window_days || 11;
   const gcDaysSinceAdded = game.created_at ? Math.floor((Date.now() - new Date(game.created_at).getTime()) / 86400000) : null;
-  const gcIsNew = gcDaysSinceAdded !== null && gcDaysSinceAdded < 11;
-  const gcNewDaysLeft = gcIsNew ? 11 - gcDaysSinceAdded : null;
+  const gcIsNew = gcDaysSinceAdded !== null && gcDaysSinceAdded < gcWindowDays;
+  const gcNewDaysLeft = gcIsNew ? gcWindowDays - gcDaysSinceAdded : null;
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
 %>

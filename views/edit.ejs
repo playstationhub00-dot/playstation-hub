@@ -57,6 +57,10 @@
           <input type="number" name="renters" value="<%= game.renters %>" min="0">
         </div>
         <div class="form-group">
+          <label>New Game Countdown (days) <span style="color:#555;font-size:0.7rem;">(blank = site default, 11)</span></label>
+          <input type="number" name="new_window_days" value="<%= game.new_window_days || '' %>" min="1" placeholder="11">
+        </div>
+        <div class="form-group">
           <label>🕹️ PS4 Primary Slots</label>
           <input type="number" name="ps4_primary_slots" value="<%= game.ps4_primary_slots || 0 %>" min="0">
         </div>
