@@ -2446,3 +2446,10 @@ footer {
 .vf-exit-path { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; color: #ccc; word-break: break-all; }
 .vf-exit-n { color: #888; white-space: nowrap; flex-shrink: 0; margin-left: 0.75rem; }
 .vf-exit-n strong { color: #f59e0b; font-weight: 700; }
+
+.vf-filter-row { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.vf-filter-label { font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-right: 0.35rem; }
+.vf-day-label { font-size: 0.72rem; color: #60a5fa; margin-left: 0.4rem; }
+.vf-browsed { font-size: 0.78rem; color: #888; padding: 0.5rem 0.7rem; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 0.9rem; }
+.vf-browsed strong { color: #ddd; font-weight: 700; }
+.vf-browsed .vf-browsed-pct { color: #a78bfa; font-weight: 700; }
