@@ -671,7 +671,7 @@ function getSiteSettings() {
     s.hero_slides = [];
   }
   if (!s.promo) {
-    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0, media_path: '', media_type: '', ends_at: '' }).write();
+    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, late_fee_per_day: 20, buy_promo_enabled: false, buy_promo_pct: 0, media_path: '', media_type: '', ends_at: '' }).write();
     s.promo = db.get('site_settings.promo').value();
   } else if (!s.promo.discounts) {
     // Migrate legacy single-duration promo (discount_pct + apply_on_days) to the
@@ -1482,7 +1482,7 @@ app.get('/game/:slug', (req, res) => {
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), async (req, res) => {
-  const { enabled, discount_7, discount_30, deposit,
+  const { enabled, discount_7, discount_30, deposit, late_fee_per_day,
           buy_promo_enabled, buy_promo_pct, ends_at, remove_media } = req.body;
   const discounts = {
     7: Math.min(100, Math.max(0, parseInt(discount_7) || 0)),
@@ -1509,6 +1509,13 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
     enabled: enabled === 'on',
     discounts,
     deposit: Math.max(0, parseInt(deposit) || 100),
+    // This db.set replaces the whole promo object, so every field the app reads
+    // has to be listed here or it is silently dropped on the next save. An
+    // absent field keeps the stored value rather than resetting to 0 — only an
+    // explicit 0 in the form turns the late fee off.
+    late_fee_per_day: (late_fee_per_day != null && late_fee_per_day !== '')
+      ? Math.max(0, parseInt(late_fee_per_day) || 0)
+      : (existing.late_fee_per_day != null ? existing.late_fee_per_day : 20),
     buy_promo_enabled: buy_promo_enabled === 'on',
     buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0)),
     media_path, media_type,

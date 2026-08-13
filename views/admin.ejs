@@ -373,6 +373,10 @@
             <input type="number" name="deposit" value="<%= adminPromo.deposit %>" min="0" placeholder="100">
           </div>
           <div class="form-group">
+            <label>Late Return Fee (₱ per day) <span style="color:#555;font-size:0.75rem;">(deducted from the deposit in the overdue notice — 0 turns it off)</span></label>
+            <input type="number" name="late_fee_per_day" value="<%= adminPromo.late_fee_per_day != null ? adminPromo.late_fee_per_day : 20 %>" min="0" placeholder="20">
+          </div>
+          <div class="form-group">
             <label>Promo Ends At <span style="color:#555;font-size:0.75rem;">(optional — shows a countdown &amp; auto-hides the section after)</span></label>
             <input type="datetime-local" name="ends_at" value="<%= adminPromo.ends_at || '' %>">
           </div>
@@ -834,8 +838,16 @@
               <textarea name="expiry_today" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_today %></textarea>
             </div>
             <div class="form-group">
-              <label>⚠️ Overdue — not returned yet <span style="color:#555;font-size:0.7rem;">(supports {days_overdue})</span></label>
+              <label>⚠️ Overdue — not returned yet <span style="color:#555;font-size:0.7rem;">(supports {days_overdue} and {late_fee_line})</span></label>
               <textarea name="expiry_overdue" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_overdue %></textarea>
+            </div>
+            <div class="form-group">
+              <label>💸 Late fee — deposit still has value left</label>
+              <textarea name="late_fee_line" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.late_fee_line %></textarea>
+            </div>
+            <div class="form-group">
+              <label>💸 Late fee — deposit fully used up</label>
+              <textarea name="late_fee_zero_line" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.late_fee_zero_line %></textarea>
             </div>
 
             <div style="border-top:1px solid #1a1a1a;margin:1.25rem 0;padding-top:1.25rem;">
@@ -2627,7 +2639,8 @@ Message us anytime to reserve your slot! 😊</textarea>
               // copies a finished string.
               const p = settings.promo || {};
               const tplDeposit = p.deposit != null ? p.deposit : 100;
-              const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit }, extra));
+              const tplLateFee = p.late_fee_per_day != null ? p.late_fee_per_day : 20;
+              const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit, lateFeePerDay: tplLateFee }, extra));
             %>
             <%
               // Reuses the same day arithmetic the table rows below already do,
