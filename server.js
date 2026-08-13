@@ -140,6 +140,7 @@ db.defaults({
   nextCustomerId: 1,
   visitors: [],
   messenger_contacts: [],
+  notification_optins: [],
   bot_training: [],
   nextBotTrainingId: 1,
   accounts: [],
@@ -3319,6 +3320,28 @@ app.post('/webhook', express.json(), (req, res) => {
         }
       }
 
+      // Recurring Notifications opt-in confirmation arrives as event.optin
+      // (Meta's current shape for this button type) with the full grant
+      // details; a decline is a normal postback with the payload this bot
+      // sets on its own "No thanks" quick reply. The entire raw event is
+      // stored on opt-in — see the Global Constraint on raw_optin_payload for
+      // why only a subset is not stored instead.
+      if (event.optin) {
+        db.get('notification_optins').push({
+          psid: senderId,
+          opted_in_at: new Date().toISOString(),
+          frequency: 'MONTHLY',
+          topic: 'monthly_promo',
+          raw_optin_payload: event.optin,
+          status: 'active',
+          last_sent_at: null
+        }).write();
+        console.log('[notif optin] confirmed for psid=' + senderId);
+      }
+      if (event.postback?.payload === 'NOTIF_DECLINE') {
+        console.log('[notif optin] declined by psid=' + senderId);
+      }
+
       // Everything below this point is the existing chat bot, which only
       // handles real inbound text.
       if (!event.message) return;
@@ -3330,7 +3353,19 @@ app.post('/webhook', express.json(), (req, res) => {
       } else {
         db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
       }
-      handleMessage(senderId, text).catch(e => console.error('[handleMessage]', e));
+      handleMessage(senderId, text)
+        .then(() => {
+          // Offer once per contact, after the bot's real reply — never
+          // instead of it, never woven into handleMessage's own branches.
+          const contact = db.get('messenger_contacts').find({ psid: senderId }).value();
+          if (contact && !contact.notif_offered) {
+            setTimeout(() => {
+              sendNotificationOptinOffer(senderId);
+              markNotifOffered(senderId);
+            }, 1500);
+          }
+        })
+        .catch(e => console.error('[handleMessage]', e));
     });
   });
 });
@@ -3366,6 +3401,54 @@ function sendImage(recipientId, imageUrl) {
   sendMessage(recipientId, {
     attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
   });
+}
+
+// Offers the Recurring Notifications opt-in once per contact. The button's
+// exact field names (frequency key, token delivery shape) are Meta's current
+// Messenger Platform "Recurring Notifications" request format as of this
+// writing — this has changed shape across platform versions before, so this
+// function is intentionally isolated: if Meta's actual expected payload
+// differs, only this one function needs correcting, nothing else in the bot.
+function sendNotificationOptinOffer(recipientId) {
+  sendMessage(recipientId, {
+    attachment: {
+      type: 'template',
+      payload: {
+        template_type: 'generic',
+        elements: [{
+          title: '🔔 Monthly Game Drops & Promos',
+          subtitle: 'Want a heads-up when new games and promos land each month? No spam, one message a month.',
+          buttons: [{
+            type: 'notification_messages',
+            title: 'Yes, notify me!',
+            payload: 'NOTIF_OPTIN',
+            notification_messages_frequency: 'MONTHLY',
+            notification_messages_reoptin: 'PUSH'
+          }]
+        }]
+      }
+    }
+  });
+  // The "No thanks" option is a quick reply on a separate follow-up text —
+  // Messenger's notification_messages button type does not support a second,
+  // declining button alongside it in the same template element.
+  sendMessage(recipientId, {
+    text: 'Or if you\'d rather not get monthly updates, that\'s fine too:',
+    quick_replies: [{ content_type: 'text', title: 'No thanks', payload: 'NOTIF_DECLINE' }]
+  });
+}
+
+function markNotifOffered(psid) {
+  const existing = db.get('messenger_contacts').find({ psid }).value();
+  if (existing) {
+    db.get('messenger_contacts').find({ psid }).assign({ notif_offered: true }).write();
+  } else {
+    db.get('messenger_contacts').push({ psid, first_seen: new Date().toISOString(), last_seen: new Date().toISOString(), notif_offered: true }).write();
+  }
+}
+
+function getActiveOptins() {
+  return db.get('notification_optins').filter({ status: 'active' }).value();
 }
 
 async function handleMessage(senderId, text) {
