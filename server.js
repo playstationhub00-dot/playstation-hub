@@ -720,6 +720,17 @@ function getSiteSettings() {
       db.set('site_settings.message_templates', merged).write();
       s.message_templates = merged;
     }
+    // The backfill above only adds absent keys, so a template already stored
+    // keeps whatever it had. expiry_overdue shipped ending in {deposit_line}
+    // ("your deposit comes back") one release before the late fee existed —
+    // left alone it now contradicts the deduction notice in the same message.
+    // Swap just that one token so any other wording the owner changed survives.
+    const overdueTpl = s.message_templates.expiry_overdue;
+    if (typeof overdueTpl === 'string' && overdueTpl.includes('{deposit_line}')) {
+      const fixed = overdueTpl.replace(/\{deposit_line\}/g, '{late_fee_line}');
+      db.set('site_settings.message_templates.expiry_overdue', fixed).write();
+      s.message_templates.expiry_overdue = fixed;
+    }
   }
   // Payment methods start disabled: until the owner has uploaded a QR and
   // filled in the account details, showing a customer an empty GCash panel is
