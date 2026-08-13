@@ -357,6 +357,14 @@
               <span>Enable Rent Promo Discount</span>
             </label>
           </div>
+          <div class="form-group full">
+            <label>Promo Title <span style="color:#555;font-size:0.75rem;">(shown as the homepage headline)</span></label>
+            <input type="text" name="title" value="<%= adminPromo.title || 'Rent Longer. Save More.' %>" maxlength="80" placeholder="Rent Longer. Save More.">
+          </div>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label>Promo Text <span style="color:#555;font-size:0.75rem;">(shown under the title)</span></label>
+            <input type="text" name="text" value="<%= adminPromo.text || 'Discount applied automatically at checkout — no code needed.' %>" maxlength="160" placeholder="Discount applied automatically at checkout — no code needed.">
+          </div>
           <div class="form-group full" style="margin-bottom:0;">
             <label style="color:#888;font-size:0.78rem;">Discount % per duration <span style="color:#555;">(0 = no discount for that duration — set either or both of Weekly/Monthly)</span></label>
           </div>

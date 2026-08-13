@@ -672,7 +672,7 @@ function getSiteSettings() {
     s.hero_slides = [];
   }
   if (!s.promo) {
-    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, late_fee_per_day: 20, buy_promo_enabled: false, buy_promo_pct: 0, media_path: '', media_type: '', ends_at: '' }).write();
+    db.set('site_settings.promo', { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100, late_fee_per_day: 20, buy_promo_enabled: false, buy_promo_pct: 0, media_path: '', media_type: '', ends_at: '', title: 'Rent Longer. Save More.', text: 'Discount applied automatically at checkout — no code needed.' }).write();
     s.promo = db.get('site_settings.promo').value();
   } else if (!s.promo.discounts) {
     // Migrate legacy single-duration promo (discount_pct + apply_on_days) to the
@@ -704,6 +704,16 @@ function getSiteSettings() {
     const migratedDiscounts = { ...s.promo.discounts, 7: s.promo.discounts[10] || 0 };
     db.set('site_settings.promo.discounts', migratedDiscounts).write();
     s.promo.discounts = migratedDiscounts;
+  }
+  // Backfill title/text on an already-stored promo object from before these
+  // fields existed, so the homepage doesn't fall back to an empty string.
+  if (s.promo && (s.promo.title === undefined || s.promo.text === undefined)) {
+    const title = s.promo.title !== undefined ? s.promo.title : 'Rent Longer. Save More.';
+    const text = s.promo.text !== undefined ? s.promo.text : 'Discount applied automatically at checkout — no code needed.';
+    db.set('site_settings.promo.title', title).write();
+    db.set('site_settings.promo.text', text).write();
+    s.promo.title = title;
+    s.promo.text = text;
   }
   // Seed message templates on first read, and backfill any individual field
   // added later — an owner who has customised three templates should not lose
@@ -1495,7 +1505,7 @@ app.get('/game/:slug', (req, res) => {
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), async (req, res) => {
   const { enabled, discount_7, discount_30, deposit, late_fee_per_day,
-          buy_promo_enabled, buy_promo_pct, ends_at, remove_media } = req.body;
+          buy_promo_enabled, buy_promo_pct, ends_at, remove_media, title, text } = req.body;
   const discounts = {
     7: Math.min(100, Math.max(0, parseInt(discount_7) || 0)),
     30: Math.min(100, Math.max(0, parseInt(discount_30) || 0))
@@ -1531,7 +1541,9 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
     buy_promo_enabled: buy_promo_enabled === 'on',
     buy_promo_pct: Math.min(100, Math.max(0, parseInt(buy_promo_pct) || 0)),
     media_path, media_type,
-    ends_at: (ends_at || '').trim()
+    ends_at: (ends_at || '').trim(),
+    title: (title || '').trim() || 'Rent Longer. Save More.',
+    text: (text || '').trim() || 'Discount applied automatically at checkout — no code needed.'
   }).write();
   res.redirect('/admin?msg=promo_saved');
 });

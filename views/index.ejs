@@ -420,13 +420,6 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
   const bestPromoDuration = activeDurations.length
     ? activeDurations.reduce((best, d) => getPromoDiscountPct(promo, d) > getPromoDiscountPct(promo, best) ? d : best, activeDurations[0])
     : null;
-  // Cheapest advertised base price per duration across the whole catalog, so the
-  // ladder shows a real ₱ before/after instead of a made-up example.
-  const promoLadderPrices = {};
-  activeDurations.forEach(d => {
-    const prices = games.map(g => [g['nt_price_' + d + 'd'], g['tr_price_' + d + 'd']]).flat().filter(p => p > 0);
-    promoLadderPrices[d] = prices.length ? Math.min(...prices) : null;
-  });
   const promoEndsValid = promo.ends_at && new Date(promo.ends_at).getTime() > Date.now();
 %>
 <% if (activeDurations.length) { %>
@@ -449,16 +442,13 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
       </div>
       <% } %>
       <div>
-        <h2 class="promo2-title">Rent Longer. Save More.</h2>
-        <p class="promo2-sub">Discount applied automatically at checkout — no code needed.</p>
+        <h2 class="promo2-title"><%= promo.title || 'Rent Longer. Save More.' %></h2>
+        <p class="promo2-sub"><%= promo.text || 'Discount applied automatically at checkout — no code needed.' %></p>
         <div class="ladder">
-          <% activeDurations.forEach(d => { const pct = getPromoDiscountPct(promo, d); const base = promoLadderPrices[d]; const final = base ? base - Math.round(base * pct / 100) : null; %>
+          <% activeDurations.forEach(d => { const pct = getPromoDiscountPct(promo, d); %>
           <div class="rung<%= d === bestPromoDuration ? ' best' : '' %>">
             <span class="days"><%= d %> Days</span>
             <span class="pct"><%= pct %>% Off</span>
-            <% if (base) { %>
-            <span class="price"><s>₱<%= base %></s><b>₱<%= final %></b></span>
-            <% } %>
             <% if (d === bestPromoDuration && activeDurations.length > 1) { %>
             <span class="best-tag">Best Value</span>
             <% } %>
