@@ -2096,7 +2096,7 @@
           <div style="font-size:1.2rem;">⚡</div>
           <div>
             <div style="font-weight:800;font-size:0.9rem;color:#f43f5e;">Auto Send via Messenger API</div>
-            <div style="font-size:0.72rem;color:#555;margin-top:0.1rem;">Sends directly to everyone who has ever messaged your Facebook Page</div>
+            <div style="font-size:0.72rem;color:#555;margin-top:0.1rem;">Sends only to contacts who messaged in the last 24 hours — Messenger's rule, not a limit we set</div>
           </div>
           <div style="margin-left:auto;background:#111;border:1px solid #2a2a2a;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.72rem;color:#aaa;" id="blastContactCount">
             Loading contacts...
@@ -2113,13 +2113,13 @@ Mayroon kaming mga PS5 exclusives at dagdag pang mga titles. Pumunta sa aming we
 Mag-message lang para mag-reserve ng slot! 😊</textarea>
         <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
           <button onclick="sendAutoBlast()" id="autoBlastBtn" style="background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;border:none;border-radius:9px;padding:0.6rem 1.25rem;font-weight:800;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
-            ⚡ Send to All Contacts
+            ⚡ Send to Reachable Contacts
           </button>
           <div id="autoBlastStatus" style="font-size:0.8rem;color:#555;"></div>
         </div>
         <div id="autoBlastResult" style="display:none;margin-top:0.85rem;background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;font-size:0.82rem;line-height:1.7;"></div>
         <div style="margin-top:0.65rem;font-size:0.68rem;color:#333;line-height:1.5;">
-          ℹ️ Uses <strong style="color:#444;">HUMAN_AGENT</strong> tag — works for contacts who messaged within 7 days. Contacts are collected automatically from your Page's Messenger inbox.
+          ℹ️ Messenger only allows sending this kind of message to someone within <strong style="color:#444;">24 hours</strong> of their last message to your Page — that's a platform rule, not something we can widen. Contacts are collected automatically from your Page's Messenger inbox. For everyone outside that window, use the copy-paste tool below instead.
         </div>
       </div>
 
@@ -2249,10 +2249,10 @@ Message us anytime to reserve your slot! 😊</textarea>
         btn.disabled = false; btn.textContent = '✨ Generate';
       }
 
-      // Load contact count
+      // Load contact count — reachable (inside Messenger's 24h window) vs total ever saved
       fetch('/admin/blast/contacts').then(r=>r.json()).then(d=>{
-        document.getElementById('blastContactCount').textContent = d.count + ' FB contact' + (d.count!==1?'s':'');
-        document.getElementById('blastContactCount').style.color = d.count > 0 ? '#22c55e' : '#f43f5e';
+        document.getElementById('blastContactCount').textContent = d.reachable + ' reachable now · ' + d.total + ' total';
+        document.getElementById('blastContactCount').style.color = d.reachable > 0 ? '#22c55e' : '#f43f5e';
       }).catch(()=>{});
 
       async function sendAutoBlast() {
@@ -2261,7 +2261,7 @@ Message us anytime to reserve your slot! 😊</textarea>
         const btn = document.getElementById('autoBlastBtn');
         const status = document.getElementById('autoBlastStatus');
         const result = document.getElementById('autoBlastResult');
-        if (!confirm('Send this message to ALL your Facebook Messenger contacts?\n\nThis cannot be undone.')) return;
+        if (!confirm('Send this message to everyone currently inside Messenger\'s 24-hour reachable window?\n\nThis cannot be undone.')) return;
         btn.disabled = true;
         btn.textContent = '⏳ Sending...';
         status.textContent = 'Please wait...';
@@ -2278,7 +2278,7 @@ Message us anytime to reserve your slot! 😊</textarea>
             result.innerHTML = '<strong style="color:#22c55e;">✅ Blast Complete!</strong><br>' +
               '📤 Sent: <strong style="color:#22c55e;">' + data.sent + '</strong> &nbsp;|&nbsp; ' +
               '❌ Failed: <strong style="color:' + (data.failed>0?'#f43f5e':'#555') + '">' + data.failed + '</strong> &nbsp;|&nbsp; ' +
-              '👥 Total contacts: <strong>' + data.total + '</strong>';
+              '👥 Reachable contacts: <strong>' + data.total + '</strong>';
             status.textContent = '';
           } else {
             result.innerHTML = '<strong style="color:#f43f5e;">❌ ' + (data.error || 'Send failed') + '</strong>';
@@ -2290,7 +2290,7 @@ Message us anytime to reserve your slot! 😊</textarea>
           status.textContent = '';
         }
         btn.disabled = false;
-        btn.textContent = '⚡ Send to All Contacts';
+        btn.textContent = '⚡ Send to Reachable Contacts';
       }
 
       const _blastData = <%- JSON.stringify(blastData) %>;

@@ -3754,9 +3754,22 @@ Write only the message, nothing else.`
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Messenger Auto Blast ──────────────────────────────────────────────────────
-app.get('/admin/blast/contacts', requireAuth, (req, res) => {
+// Messenger only allows a business-initiated message within 24h of the
+// contact's last inbound message (the "standard messaging window"). Outside
+// that window, only specific message tags are allowed, and every tag is
+// reserved for a narrow non-promotional case (order updates, human-agent
+// replies, etc) — none of them permit a promo blast. So "reachable" here
+// means "inside the 24h window", not "ever contacted us".
+const BLAST_WINDOW_MS = 24 * 60 * 60 * 1000;
+function reachableContacts() {
   const contacts = db.get('messenger_contacts').value() || [];
-  res.json({ count: contacts.length });
+  const cutoff = Date.now() - BLAST_WINDOW_MS;
+  return contacts.filter(c => c.last_seen && new Date(c.last_seen).getTime() >= cutoff);
+}
+
+app.get('/admin/blast/contacts', requireAuth, (req, res) => {
+  const total = (db.get('messenger_contacts').value() || []).length;
+  res.json({ reachable: reachableContacts().length, total });
 });
 
 app.post('/admin/blast', requireAuth, async (req, res) => {
@@ -3764,8 +3777,8 @@ app.post('/admin/blast', requireAuth, async (req, res) => {
   if (!message || !message.trim()) return res.json({ ok: false, error: 'No message provided.' });
   if (!PAGE_ACCESS_TOKEN) return res.json({ ok: false, error: 'MESSENGER_PAGE_TOKEN not configured on server.' });
 
-  const contacts = db.get('messenger_contacts').value() || [];
-  if (!contacts.length) return res.json({ ok: false, error: 'No contacts yet. Contacts are saved automatically when people message your Facebook Page.' });
+  const contacts = reachableContacts();
+  if (!contacts.length) return res.json({ ok: false, error: 'No contacts are inside the 24-hour messaging window right now. Messenger only allows this kind of message to people who messaged your Page in the last 24 hours.' });
 
   const https = require('https');
   let sent = 0, failed = 0;
@@ -3775,8 +3788,7 @@ app.post('/admin/blast', requireAuth, async (req, res) => {
       const payload = JSON.stringify({
         recipient: { id: psid },
         message: { text: message },
-        messaging_type: 'MESSAGE_TAG',
-        tag: 'HUMAN_AGENT'
+        messaging_type: 'UPDATE'
       });
       const options = {
         hostname: 'graph.facebook.com',
