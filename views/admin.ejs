@@ -2433,6 +2433,7 @@ Message us anytime to reserve your slot! 😊</textarea>
                 <option value="<%= g.id %>" data-type="regular"
                   data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
                   data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
+                  data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
                   data-slots="<%= g.available_slots %>">
                   <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
                 </option>
@@ -2519,6 +2520,17 @@ Message us anytime to reserve your slot! 😊</textarea>
         </div>
       </form>
       <script>
+      // Same promo the game-detail page applies — an admin-entered price should
+      // land on the number a walk-in customer actually pays today, not the base
+      // rate. PS4 Primary borrows the Non-Trophy price/discount: games have no
+      // PS4-specific price fields of their own (matches computeSwapReferencePrice
+      // in server.js, the other place that needs a PS4 reference price).
+      const ADMIN_PROMO = <%- JSON.stringify({
+        enabled: (settings.promo || {}).enabled || false,
+        discounts: (settings.promo || {}).discounts || {},
+        buyPromoEnabled: (settings.promo || {}).buy_promo_enabled || false,
+        buyPromoPct: (settings.promo || {}).buy_promo_pct || 0
+      }) %>;
       function getCustDays() {
         const sel = document.getElementById('cust_days');
         if (sel.value === 'custom') return parseInt(document.getElementById('cust_custom_days').value) || 0;
@@ -2561,16 +2573,33 @@ Message us anytime to reserve your slot! 😊</textarea>
             updateCustEndDate();
           }
         }
+        // Bought uses a flat buy price, not a per-duration rent price — the
+        // price field needs recomputing whenever status crosses that line.
+        updateCustPrice();
       }
       function updateCustPrice() {
         const sel = document.getElementById('cust_game');
         const opt = sel.options[sel.selectedIndex];
         const days = document.getElementById('cust_days').value;
-        const type = document.getElementById('cust_type').value;
+        const type = document.getElementById('cust_type').value === 'ps4' ? 'nt' : document.getElementById('cust_type').value;
+        const status = document.getElementById('cust_status').value;
         if (!opt.value) return;
-        // Only auto-fill price for standard durations
-        const price = (days !== 'custom') ? (opt.dataset[type + days] || '') : '';
-        if (price) document.getElementById('cust_price').value = price;
+
+        let base = 0;
+        let pct = 0;
+        if (status === 'bought') {
+          base = parseInt(opt.dataset['buy' + type], 10) || 0;
+          pct = ADMIN_PROMO.buyPromoEnabled ? ADMIN_PROMO.buyPromoPct : 0;
+        } else if (days !== 'custom') {
+          // Only auto-fill price for standard durations — a custom day count
+          // has no matching promo bracket, so it's left to manual entry.
+          base = parseInt(opt.dataset[type + days], 10) || 0;
+          pct = ADMIN_PROMO.enabled ? (ADMIN_PROMO.discounts[days] || 0) : 0;
+        }
+        if (base > 0) {
+          const final = pct > 0 ? Math.round(base * (1 - pct / 100)) : base;
+          document.getElementById('cust_price').value = final;
+        }
         updateCustEndDate();
       }
       function updateCustEndDate() {
