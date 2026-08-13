@@ -11,6 +11,7 @@ const TPL = {
   confirmation: 'Hi {name}, you rented {game} ({type}) for {days} days at P{price}, back by {end_date}. {website}',
   expiry_tomorrow: '{name}: {game} ends {end_date}.\n{return_steps}\n{deposit_line}',
   expiry_today: '{name}: {game} ends TODAY {end_date}.\n{return_steps}\n{deposit_line}',
+  expiry_overdue: '{name}: {game} ended {end_date}, {days_overdue} days ago.\n{return_steps}\n{deposit_line}',
   return_steps_tr: 'TROPHY STEPS',
   return_steps_ps4: 'PS4 STEPS',
   return_steps_nt: 'NONTROPHY STEPS',
@@ -83,10 +84,28 @@ check('a missing end date does not print Invalid Date', () => {
 });
 
 check('defaults expose every field the settings form saves', () => {
-  ['confirmation','expiry_tomorrow','expiry_today','return_steps_tr','return_steps_ps4',
+  ['confirmation','expiry_tomorrow','expiry_today','expiry_overdue','return_steps_tr','return_steps_ps4',
    'return_steps_nt','deposit_line','reviews_link','website_link'].forEach(k => {
     assert.ok(typeof t.DEFAULT_TEMPLATES[k] === 'string' && t.DEFAULT_TEMPLATES[k].length > 0, 'missing default: ' + k);
   });
+});
+
+check('days_overdue comes from opts, so render stays time-independent', () => {
+  const out = t.render('{days_overdue}', TR, TPL, { daysOverdue: 12 });
+  assert.strictEqual(out, '12');
+});
+
+check('days_overdue is blank when the caller does not supply it', () => {
+  const out = t.render('[{days_overdue}]', TR, TPL, {});
+  assert.strictEqual(out, '[]');
+});
+
+check('the overdue template fills name, game and day count together', () => {
+  const out = t.renderFor('expiry_overdue', TR, TPL, { deposit: 100, daysOverdue: 3 });
+  assert.ok(out.includes(TR.customer_name), 'name missing');
+  assert.ok(out.includes(TR.game_title), 'game missing');
+  assert.ok(out.includes('3 days ago'), 'day count missing');
+  assert.ok(!out.includes('{'), 'an unresolved token remains: ' + out);
 });
 
 check('trailing blank line from an empty token is trimmed cleanly', () => {

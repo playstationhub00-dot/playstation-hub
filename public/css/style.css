@@ -2331,6 +2331,9 @@ footer {
 .rem-badge { font-size: 0.68rem; font-weight: 800; padding: 0.12rem 0.45rem; border-radius: 5px; margin-left: 0.5rem; }
 .rem-today { background: rgba(239,68,68,0.15); color: #ef4444; }
 .rem-tomorrow { background: rgba(245,158,11,0.15); color: #f59e0b; }
+/* Solid fill rather than the 15% tint the other two use — overdue outranks both
+   and needs to separate at a glance in a list sorted most-overdue first. */
+.rem-overdue { background: #ef4444; color: #fff; }
 .rem-meta { font-size: 0.75rem; color: #777; margin-top: 0.2rem; }
 .rem-copy { background: #1a1a1a; color: #ddd; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0; }
 .rem-copy:hover { border-color: #22c55e; color: #fff; }

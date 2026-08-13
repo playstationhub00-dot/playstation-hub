@@ -833,6 +833,10 @@
               <label>🔔 Reminder — due today</label>
               <textarea name="expiry_today" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_today %></textarea>
             </div>
+            <div class="form-group">
+              <label>⚠️ Overdue — not returned yet <span style="color:#555;font-size:0.7rem;">(supports {days_overdue})</span></label>
+              <textarea name="expiry_overdue" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_overdue %></textarea>
+            </div>
 
             <div style="border-top:1px solid #1a1a1a;margin:1.25rem 0;padding-top:1.25rem;">
               <div style="font-size:0.75rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#555;margin-bottom:0.85rem;">Return steps — one per account type</div>
@@ -2623,21 +2627,26 @@ Message us anytime to reserve your slot! 😊</textarea>
               // copies a finished string.
               const p = settings.promo || {};
               const tplDeposit = p.deposit != null ? p.deposit : 100;
-              const renderMsg = (kind, cust) => renderTemplate(kind, cust, messageTemplates, { deposit: tplDeposit });
+              const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit }, extra));
             %>
             <%
               // Reuses the same day arithmetic the table rows below already do,
               // rather than introducing a second definition of "due tomorrow".
+              // dl <= 1 covers overdue (negative) too: a rental still marked
+              // 'renting' past its end date is an account nobody has returned,
+              // which is exactly who most needs chasing. The ascending sort then
+              // puts the most-overdue first without any extra ordering rule.
               const remToday = new Date(); remToday.setHours(0,0,0,0);
               const needsReminder = customers.filter(c => {
                 if (c.status !== 'renting' || !c.end_date) return false;
                 const end = new Date(c.end_date + 'T00:00:00');
                 const dl = Math.ceil((end - remToday) / 86400000);
-                return dl === 0 || dl === 1;
+                return dl <= 1;
               }).map(c => {
                 const end = new Date(c.end_date + 'T00:00:00');
                 const dl = Math.ceil((end - remToday) / 86400000);
-                return { c, dl, kind: dl === 0 ? 'expiry_today' : 'expiry_tomorrow' };
+                const kind = dl < 0 ? 'expiry_overdue' : dl === 0 ? 'expiry_today' : 'expiry_tomorrow';
+                return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
               }).sort((a, b) => a.dl - b.dl);
             %>
             <% if (needsReminder.length) { %>
@@ -2647,10 +2656,10 @@ Message us anytime to reserve your slot! 😊</textarea>
               <div class="rem-row">
                 <div class="rem-info">
                   <span class="rem-name"><%= r.c.customer_name %></span>
-                  <span class="rem-badge <%= r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
+                  <span class="rem-badge <%= r.dl < 0 ? 'rem-overdue' : r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl < 0 ? 'Overdue by ' + r.overdueBy + 'd' : r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
                   <div class="rem-meta"><%= r.c.game_title %> · <%= r.c.account_type === 'tr' ? 'Trophy' : r.c.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %> · <%= r.c.days %> days</div>
                 </div>
-                <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c) %>">📋 Copy reminder</button>
+                <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c, { daysOverdue: r.overdueBy }) %>"><%= r.dl < 0 ? '📋 Copy overdue notice' : '📋 Copy reminder' %></button>
               </div>
               <% }) %>
             </div>
