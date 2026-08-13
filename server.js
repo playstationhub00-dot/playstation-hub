@@ -3327,24 +3327,43 @@ app.post('/webhook', express.json(), (req, res) => {
       // stored on opt-in — see the Global Constraint on raw_optin_payload for
       // why only a subset is not stored instead.
       if (event.optin) {
-        db.get('notification_optins').push({
-          psid: senderId,
-          opted_in_at: new Date().toISOString(),
-          frequency: 'MONTHLY',
-          topic: 'monthly_promo',
-          raw_optin_payload: event.optin,
-          status: 'active',
-          last_sent_at: null
-        }).write();
+        const existingOptin = db.get('notification_optins').find({ psid: senderId, topic: 'monthly_promo' }).value();
+        if (existingOptin) {
+          db.get('notification_optins').find({ psid: senderId, topic: 'monthly_promo' }).assign({
+            opted_in_at: new Date().toISOString(),
+            raw_optin_payload: event.optin,
+            status: 'active',
+            last_error: null,
+            last_attempt_at: null
+          }).write();
+        } else {
+          db.get('notification_optins').push({
+            psid: senderId,
+            opted_in_at: new Date().toISOString(),
+            frequency: 'MONTHLY',
+            topic: 'monthly_promo',
+            raw_optin_payload: event.optin,
+            status: 'active',
+            last_sent_at: null,
+            last_error: null,
+            last_attempt_at: null
+          }).write();
+        }
         console.log('[notif optin] confirmed for psid=' + senderId);
-      }
-      if (event.postback?.payload === 'NOTIF_DECLINE') {
-        console.log('[notif optin] declined by psid=' + senderId);
       }
 
       // Everything below this point is the existing chat bot, which only
       // handles real inbound text.
       if (!event.message) return;
+
+      // A tapped "No thanks" quick reply arrives as event.message.quick_reply,
+      // not event.postback (that shape is reserved for Structured
+      // Messages/persistent-menu/Get-Started taps). Handle and return before
+      // this falls through to the bot's normal text handling below.
+      if (event.message.quick_reply?.payload === 'NOTIF_DECLINE') {
+        console.log('[notif optin] declined by psid=' + senderId);
+        return;
+      }
       const text = (event.message.text || '').toLowerCase().trim();
       // Save/update PSID so we can blast later
       const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
@@ -3942,10 +3961,20 @@ app.post('/admin/notifications/send', requireAuth, async (req, res) => {
           console.log('[notif send] psid=' + optin.psid, resp.statusCode, data);
           if (resp.statusCode === 200) {
             sent++;
-            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ last_sent_at: new Date().toISOString() }).write();
+            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ last_sent_at: new Date().toISOString(), last_error: null }).write();
           } else {
+            // A non-200 response (e.g. the Recurring Notifications permission
+            // not yet approved by Meta) is diagnostic information, not proof
+            // the opt-in itself is invalid — status stays 'active' so the
+            // contact remains reachable on the next send once the underlying
+            // condition clears. There is no way to distinguish a transient/
+            // permission failure from a permanently invalid recipient from
+            // the status code alone, so we default to retryable.
             failed++;
-            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ status: 'send_failed' }).write();
+            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({
+              last_error: String(resp.statusCode) + ' ' + data.slice(0, 500),
+              last_attempt_at: new Date().toISOString()
+            }).write();
           }
           resolve();
         });
