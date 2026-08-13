@@ -3356,6 +3356,18 @@ app.post('/webhook', express.json(), (req, res) => {
       // handles real inbound text.
       if (!event.message) return;
 
+      // Save/update PSID so we can blast later. Runs for every inbound
+      // message, decline quick-replies included — this contact-tracking
+      // must never sit below the decline early-return below, or a person
+      // who taps "No thanks" is silently excluded from messenger_contacts
+      // (and therefore the 24h Auto Blast pool) despite having messaged us.
+      const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
+      if (!existingContact) {
+        db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
+      } else {
+        db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
+      }
+
       // A tapped "No thanks" quick reply arrives as event.message.quick_reply,
       // not event.postback (that shape is reserved for Structured
       // Messages/persistent-menu/Get-Started taps). Handle and return before
@@ -3365,13 +3377,6 @@ app.post('/webhook', express.json(), (req, res) => {
         return;
       }
       const text = (event.message.text || '').toLowerCase().trim();
-      // Save/update PSID so we can blast later
-      const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
-      if (!existingContact) {
-        db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
-      } else {
-        db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
-      }
       handleMessage(senderId, text)
         .then(() => {
           // Offer once per contact, after the bot's real reply — never
