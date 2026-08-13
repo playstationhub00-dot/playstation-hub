@@ -3903,6 +3903,72 @@ app.post('/admin/blast', requireAuth, async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Recurring Notifications Send ─────────────────────────────────────────────
+app.post('/admin/notifications/send', requireAuth, async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) return res.json({ ok: false, error: 'No message provided.' });
+  if (!PAGE_ACCESS_TOKEN) return res.json({ ok: false, error: 'MESSENGER_PAGE_TOKEN not configured on server.' });
+
+  const optins = getActiveOptins();
+  if (!optins.length) return res.json({ ok: false, error: 'No active opt-ins yet. Contacts opt in via the bot after messaging your Page.' });
+
+  const https = require('https');
+  let sent = 0, failed = 0;
+
+  function sendOne(optin) {
+    return new Promise((resolve) => {
+      // Best-effort per the plan's stated uncertainty: Meta's recurring-
+      // notification send is expected to accept the PSID directly like a
+      // normal message once a valid opt-in exists for that recipient/topic,
+      // tagged so it's exempt from the 24h window this feature exists to
+      // bypass. If Meta's account requires a different recipient shape (e.g.
+      // a token field instead of the PSID), this is the one place to adjust.
+      const payload = JSON.stringify({
+        recipient: { id: optin.psid },
+        message: { text: message },
+        messaging_type: 'MESSAGE_TAG',
+        tag: 'CONFIRMED_EVENT_UPDATE'
+      });
+      const options = {
+        hostname: 'graph.facebook.com',
+        path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+      };
+      const r2 = https.request(options, (resp) => {
+        let data = '';
+        resp.on('data', c => data += c);
+        resp.on('end', () => {
+          console.log('[notif send] psid=' + optin.psid, resp.statusCode, data);
+          if (resp.statusCode === 200) {
+            sent++;
+            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ last_sent_at: new Date().toISOString() }).write();
+          } else {
+            failed++;
+            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ status: 'send_failed' }).write();
+          }
+          resolve();
+        });
+      });
+      r2.on('error', (e) => { console.error('[notif send error] psid=' + optin.psid, e.message); failed++; resolve(); });
+      r2.write(payload);
+      r2.end();
+    });
+  }
+
+  for (const optin of optins) {
+    await sendOne(optin);
+    await new Promise(r => setTimeout(r, 120));
+  }
+
+  res.json({ ok: true, sent, failed, total: optins.length });
+});
+
+app.get('/admin/notifications/optins', requireAuth, (req, res) => {
+  res.json({ active: getActiveOptins().length });
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── Reviews ──────────────────────────────────────────────────────────────────
 
 app.post('/admin/reviews/add', requireAuth, (req, res) => {
