@@ -698,6 +698,62 @@ nav {
 .gd-noslot-title { font-weight: 800; font-size: 0.95rem; color: #f59e0b; margin-bottom: 0.2rem; }
 .gd-noslot-sub { font-size: 0.8rem; color: #776040; line-height: 1.5; }
 
+/* ── Coming Soon detail page — cinematic hero ── */
+.usd-page { max-width: 960px; margin: 0 auto; padding: 0 0 3rem; }
+.usd-back { padding: 1.25rem 1.25rem 0; }
+.usd-back a { color: #555; text-decoration: none; font-size: 0.85rem; }
+.usd-back a:hover { color: var(--ps-blue); }
+
+.usd-hero { position: relative; height: 340px; overflow: hidden; margin-top: 1rem; border-radius: 0; }
+.usd-hero-img, .usd-hero-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.usd-hero-placeholder { background: linear-gradient(135deg, #0d0015, #1a0030); }
+/* Two overlapping gradients: left-to-right so the text panel is always readable
+   regardless of the art underneath, and bottom-to-top so the hero's lower edge
+   blends into the body panel instead of ending on a hard line. */
+.usd-hero-scrim {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, rgba(10,10,10,0.97) 8%, rgba(10,10,10,0.7) 46%, rgba(10,10,10,0.15) 100%),
+    linear-gradient(to top, rgba(10,10,10,0.92) 0%, transparent 42%);
+}
+.usd-hero-in {
+  position: relative; height: 100%; max-width: 640px;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 1.75rem clamp(1.25rem, 4vw, 3rem); gap: 0.5rem;
+}
+.usd-badge-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.usd-badge {
+  background: linear-gradient(135deg, #7b2ff7, #f107a3); color: #fff;
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  padding: 0.28rem 0.7rem; border-radius: 20px;
+}
+.usd-plat-chip {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #ccc;
+  font-size: 0.72rem; font-weight: 700; padding: 0.22rem 0.6rem; border-radius: 6px;
+}
+.usd-title {
+  font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 900; line-height: 1.14; letter-spacing: -0.01em;
+  margin: 0.35rem 0 0.05rem; color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.55);
+}
+.usd-cd-row { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.1rem; }
+.usd-cd-n { font-size: 2.3rem; font-weight: 900; line-height: 1; color: #c9a4ff; font-variant-numeric: tabular-nums; }
+.usd-cd-u { font-size: 0.78rem; font-weight: 700; color: #a99bc0; text-transform: uppercase; letter-spacing: 0.05em; }
+.usd-cd-date { font-size: 0.78rem; color: #888; margin-left: 0.15rem; }
+
+.usd-body { padding: 1.5rem clamp(1.25rem, 4vw, 3rem) 0; display: flex; flex-direction: column; gap: 1.25rem; }
+.usd-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.usd-chip { font-size: 0.75rem; font-weight: 700; padding: 0.25rem 0.7rem; border-radius: 20px; }
+.usd-chip-ok { background: #0d2213; border: 1px solid #1e4a2e; color: #22c55e; }
+.usd-chip-full { background: #2a0d0d; border: 1px solid #4a1e1e; color: #ef4444; }
+.usd-desc { font-size: 0.9rem; color: #999; line-height: 1.75; max-width: 68ch; margin: 0; }
+
+@media (max-width: 600px) {
+  .usd-hero { height: 230px; margin-top: 0; }
+  .usd-hero-in { padding: 1.1rem 1rem; }
+  .usd-cd-n { font-size: 1.7rem; }
+  .usd-back { padding: 1rem 1rem 0; }
+}
+
 .gd-reserve-options {
   display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem;
 }
@@ -2073,34 +2129,72 @@ footer {
 .upcoming-slider-wrap { position: relative; display: flex; align-items: center; gap: 0.5rem; }
 /* align-items: flex-start — otherwise flex stretches every card in the row to
    match the tallest card's height. */
-.upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; padding-top: 18px; flex: 1; }
+.upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
 .upcoming-slider .game-card { min-width: 240px; max-width: 240px; scroll-snap-align: start; flex-shrink: 0; }
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
 .slider-arrow:hover { background: #7b2ff7; border-color: #7b2ff7; }
 
-/* UPCOMING GAMES — compact card */
+/* ── UPCOMING GAMES — poster card ──
+   Full-bleed cover art in a fixed 2:3 ratio (not a fixed pixel height), so it
+   scales correctly from the 240px desktop slider down to the ~50vw mobile
+   slider without any card ever being forced taller than its own width allows. */
 .upcoming-card {
+  position: relative;
+  aspect-ratio: 2 / 3;
+  height: auto !important;
+  padding: 0;
   border-color: #2a1a3a;
-  height: 380px !important;
-  overflow: visible;
+  overflow: hidden;
 }
-.upcoming-card:hover { box-shadow: 0 12px 40px rgba(123,47,247,0.25); border-color: #5a2a8a; }
-.upcoming-card .game-cover,
-.upcoming-card .game-cover-placeholder { height: 200px !important; border-radius: 13px 13px 0 0; }
-.upcoming-card .game-info { gap: 0.25rem; padding: 0.75rem; }
-.upcoming-card .rent-btn { margin-top: auto; flex-shrink: 0; }
-.upcoming-overlay-badge {
-  position: absolute;
-  top: 10px; left: 10px;
-  background: linear-gradient(135deg, #7b2ff7, #f107a3);
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
-  text-transform: uppercase;
+.upcoming-card:hover { box-shadow: 0 12px 40px rgba(123,47,247,0.3); border-color: #5a2a8a; }
+.cs-cover-img, .cs-cover-placeholder {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.cs-cover-placeholder {
+  background: linear-gradient(135deg, #0d0015, #1a0030);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: #333;
+}
+.cs-cover-placeholder svg { width: 40px; height: 40px; opacity: 0.4; }
+.cs-cover-placeholder span { font-size: 0.7rem; opacity: 0.5; }
+/* Scrim only where text sits, so the art itself stays undimmed. */
+.cs-scrim { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.6) 62%, rgba(0,0,0,0.94) 100%); }
+.cs-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.18);
+  color: #fff; font-size: 0.62rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  padding: 0.22rem 0.55rem; border-radius: 20px;
+}
+.cs-hot {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  background: linear-gradient(135deg,#ff4500,#ff8c00); color: #fff; font-size: 0.68rem; font-weight: 900;
+  padding: 0.2rem 0.55rem; border-radius: 20px; box-shadow: 0 2px 10px rgba(255,69,0,0.5);
+}
+.cs-cd {
+  position: absolute; right: 10px; z-index: 2; top: 10px;
+  background: linear-gradient(135deg,#7b2ff7,#f107a3); border-radius: 10px; text-align: center;
+  padding: 0.32rem 0.5rem; min-width: 44px; line-height: 1;
+}
+.cs-hot ~ .cs-cd { top: 40px; } /* stack under the HOT badge instead of overlapping it */
+.cs-cd-n { display: block; font-size: 1.1rem; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.cs-cd-u { display: block; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(255,255,255,0.85); margin-top: 0.1rem; }
+.cs-cd-tba { background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.18); }
+.cs-cd-tba .cs-cd-n { font-size: 0.72rem; }
+.cs-body { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.22rem; }
+.cs-plat { font-size: 0.62rem; font-weight: 700; color: var(--ps-blue); text-transform: uppercase; letter-spacing: 0.6px; }
+.cs-title {
+  font-size: 1rem; font-weight: 800; line-height: 1.22; color: #fff; letter-spacing: -0.01em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cs-meta { font-size: 0.68rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.cs-slots-ok { color: #22c55e; font-weight: 700; }
+.cs-slots-full { color: #ef4444; font-weight: 700; }
+.cs-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.4rem; }
+.cs-price { font-size: 0.72rem; color: rgba(255,255,255,0.75); }
+.cs-price b { color: #fff; font-size: 0.9rem; }
+.cs-cta {
+  background: #fff; color: #12081f; font-size: 0.7rem; font-weight: 800; padding: 0.4rem 0.75rem;
+  border-radius: 20px; white-space: nowrap; flex-shrink: 0;
 }
 
 /* HOW IT WORKS PAGE */

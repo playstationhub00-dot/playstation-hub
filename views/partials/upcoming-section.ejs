@@ -12,41 +12,58 @@
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="upcomingSlider">
-    <% upcoming.forEach(game => { %>
+    <% upcoming.forEach(game => {
+      const csIsTba = !game.release_date || game.release_date === 'TBA';
+      let csDaysLeft = null;
+      if (!csIsTba) {
+        const csReleaseDate = new Date(game.release_date + 'T00:00:00');
+        const csToday0 = new Date(); csToday0.setHours(0,0,0,0);
+        csDaysLeft = Math.ceil((csReleaseDate - csToday0) / 86400000);
+      }
+      let csDisplayDate = 'TBA';
+      if (!csIsTba) {
+        csDisplayDate = new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      }
+      const csSlotsLeft = (game.non_trophy_slots||0) + (game.trophy_slots||0);
+      const csFull = csSlotsLeft === 0;
+      // Cheapest configured price across every duration/type, for the "from ₱X" line.
+      const csPrices = [game.nt_price_7d, game.nt_price_30d, game.tr_price_7d, game.tr_price_30d].filter(p => p > 0);
+      const csFromPrice = csPrices.length ? Math.min(...csPrices) : null;
+    %>
     <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
-      <div style="position:relative;overflow:visible;">
-        <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" loading="lazy" decoding="async" style="filter:brightness(0.75);">
-        <% } else { %>
-          <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0d0015,#1a0030);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-            </svg>
-            <span>No Image</span>
-          </div>
-        <% } %>
-        <div class="upcoming-overlay-badge">COMING SOON</div>
-        <% if (game.rank) { %>
-        <div style="position:absolute;top:-14px;right:8px;background:linear-gradient(135deg,#ff4500,#ff8c00);color:#fff;font-size:0.75rem;font-weight:900;padding:0.25rem 0.6rem;border-radius:20px;letter-spacing:0.5px;box-shadow:0 2px 10px rgba(255,69,0,0.6);z-index:10;">🔥 HOT #<%= game.rank %></div>
-        <% } %>
-      </div>
-      <div class="game-info">
-        <div class="game-platform"><%= game.platform %></div>
-        <div class="game-title"><%= game.title %></div>
-        <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <%
-          let displayDate = 'TBA';
-          if (game.release_date && game.release_date !== 'TBA') {
-            const d = new Date(game.release_date + 'T00:00:00');
-            displayDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-          }
-        %>
-        <div style="font-size:0.78rem;color:#888;margin-top:0.25rem;">
-          📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong>
+      <% if (game.cover_image) { %>
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
+      <% } else { %>
+        <div class="cs-cover-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          <span>No Image</span>
         </div>
-        <span class="rent-btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);margin-top:0.75rem;">
-          🔔 Reserve Slot
-        </span>
+      <% } %>
+      <div class="cs-scrim"></div>
+      <div class="cs-badge">Coming Soon</div>
+      <% if (game.rank) { %><div class="cs-hot">🔥 #<%= game.rank %></div><% } %>
+      <% if (csIsTba) { %>
+        <div class="cs-cd cs-cd-tba"><span class="cs-cd-n">Date<br>TBA</span></div>
+      <% } else if (csDaysLeft > 0) { %>
+        <div class="cs-cd"><span class="cs-cd-n"><%= csDaysLeft %></span><span class="cs-cd-u">days</span></div>
+      <% } else { %>
+        <div class="cs-cd cs-cd-tba"><span class="cs-cd-n" style="font-size:0.62rem;">Any Day<br>Now</span></div>
+      <% } %>
+      <div class="cs-body">
+        <div class="cs-plat"><%= game.platform %><%= game.genre ? ' · ' + game.genre : '' %></div>
+        <div class="cs-title"><%= game.title %></div>
+        <div class="cs-meta">
+          <span><%= csDisplayDate %></span>
+          <span>·</span>
+          <% if (csFull) { %><span class="cs-slots-full">Slots full</span>
+          <% } else { %><span class="cs-slots-ok"><%= csSlotsLeft %> slot<%= csSlotsLeft !== 1 ? 's' : '' %> left</span><% } %>
+        </div>
+        <div class="cs-foot">
+          <% if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
+          <div class="cs-cta"><%= csFull ? 'Notify Me' : 'Reserve →' %></div>
+        </div>
       </div>
     </a>
     <% }) %>

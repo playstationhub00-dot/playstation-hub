@@ -17,59 +17,72 @@
   const hasTr = !!(game.tr_price_7d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
   const showTr = hasTr;
 
+  const udIsTba = !game.release_date || game.release_date === 'TBA';
+  let udDaysLeft = null;
+  if (!udIsTba) {
+    const udReleaseDate = new Date(game.release_date + 'T00:00:00');
+    const udToday0 = new Date(); udToday0.setHours(0,0,0,0);
+    udDaysLeft = Math.ceil((udReleaseDate - udToday0) / 86400000);
+  }
   let displayDate = 'TBA';
-  if (game.release_date && game.release_date !== 'TBA') {
+  if (!udIsTba) {
     const d = new Date(game.release_date + 'T00:00:00');
     displayDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
   }
+
+  const ntSlots = game.non_trophy_slots || 0;
+  const trSlots = game.trophy_slots || 0;
+  const totalSlots = ntSlots + trSlots;
+  const allFull = totalSlots === 0;
 %>
 
-<div class="gd-page">
-  <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
+<div class="usd-page">
+  <div class="usd-back"><a href="/browse">← Back to Catalog</a></div>
 
-  <div class="gd-layout">
-
-    <!-- LEFT: Cover -->
-    <div class="gd-cover-col">
-      <% if (game.cover_image) { %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover" style="filter:brightness(0.8);">
-      <% } else { %>
-        <div class="gd-cover gd-cover-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
-            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-          </svg>
-        </div>
-      <% } %>
+  <!-- Cinematic hero: full-bleed cover art with title + countdown over it -->
+  <div class="usd-hero">
+    <% if (game.cover_image) { %>
+      <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="usd-hero-img">
+    <% } else { %>
+      <div class="usd-hero-placeholder"></div>
+    <% } %>
+    <div class="usd-hero-scrim"></div>
+    <div class="usd-hero-in">
+      <div class="usd-badge-row">
+        <span class="usd-badge">🔜 Coming Soon</span>
+        <span class="usd-plat-chip"><%= game.platform %></span>
+        <% if (game.genre) { %><span class="usd-plat-chip"><%= game.genre %></span><% } %>
+      </div>
+      <h1 class="usd-title"><%= game.title %></h1>
+      <div class="usd-cd-row">
+        <% if (udIsTba) { %>
+          <span class="usd-cd-n" style="font-size:1.4rem;">Date TBA</span>
+        <% } else if (udDaysLeft > 0) { %>
+          <span class="usd-cd-n"><%= udDaysLeft %></span>
+          <span class="usd-cd-u">day<%= udDaysLeft !== 1 ? 's' : '' %> until release</span>
+          <span class="usd-cd-date"><%= displayDate %></span>
+        <% } else { %>
+          <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
+        <% } %>
+      </div>
     </div>
+  </div>
 
-    <!-- RIGHT: Info -->
-    <div class="gd-info-col">
+  <div class="usd-body">
 
-      <!-- Genre + Platform -->
-      <% if (game.genre) { %><div class="gd-genre-tag"><%= game.genre.toUpperCase() %></div><% } %>
-      <h1 class="gd-title"><%= game.title %></h1>
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
-        <span style="background:#1a1a2e;border:1px solid #2a2a4a;color:var(--ps-blue);font-size:0.78rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:6px;"><%= game.platform %></span>
-        <span style="background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:8px;padding:0.2rem 0.65rem;font-size:0.78rem;color:#a855f7;font-weight:700;">🔜 COMING SOON</span>
-        <span style="font-size:0.82rem;color:#888;">📅 Expected: <strong style="color:<%= displayDate === 'TBA' ? '#666' : '#aaa' %>;"><%= displayDate %></strong></span>
+      <!-- Slot state + description -->
+      <div class="usd-chips">
+        <% if (allFull) { %>
+          <span class="usd-chip usd-chip-full">Slots full</span>
+        <% } else { %>
+          <span class="usd-chip usd-chip-ok"><%= totalSlots %> reservation slot<%= totalSlots !== 1 ? 's' : '' %> left</span>
+        <% } %>
       </div>
+      <% if (game.description) { %>
+        <p class="usd-desc"><%= game.description %></p>
+      <% } %>
 
-      <!-- Coming soon banner -->
-      <div class="gd-noslot-banner" style="margin-bottom:1.5rem;">
-        <span class="gd-noslot-icon">🔜</span>
-        <div>
-          <div class="gd-noslot-title">Not Yet Available — Open for Reservation</div>
-          <div class="gd-noslot-sub">This game is coming soon. Reserve your slot now and be first in line when it drops!</div>
-        </div>
-      </div>
-
-      <%
-        const ntSlots = game.non_trophy_slots || 0;
-        const trSlots = game.trophy_slots || 0;
-        const totalSlots = ntSlots + trSlots;
-        const allFull = totalSlots === 0;
-      %>
-
+      <div style="max-width:480px;">
       <!-- FULL banner when no slots -->
       <% if (allFull) { %>
       <div style="display:flex;align-items:center;gap:0.75rem;background:linear-gradient(135deg,#1a0a0a,#2a0a0a);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.5rem;">
@@ -185,10 +198,10 @@
           </a>
         </div>
       </div>
+      </div><!-- /reserve-panel max-width -->
 
-    </div><!-- /gd-info-col -->
-  </div><!-- /gd-layout -->
-</div><!-- /gd-page -->
+  </div><!-- /usd-body -->
+</div><!-- /usd-page -->
 
 <%- include('partials/footer') %>
 
