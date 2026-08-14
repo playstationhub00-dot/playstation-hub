@@ -141,6 +141,9 @@
     <div class="oq-ab-right">
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+      <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out duplicate or accidental orders. This cannot be undone.');">
+        <button type="submit" class="oq-btn-no" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
+      </form>
     </div>
   </div>
   <% }) %>

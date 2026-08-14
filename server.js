@@ -1687,11 +1687,19 @@ app.get('/admin', requireAuth, async (req, res) => {
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
   const customers = [...getCustomers()].sort((a, b) => {
-    // No end_date (bought/missing) → bottom
-    if (!a.end_date && !b.end_date) return 0;
-    if (!a.end_date) return 1;
-    if (!b.end_date) return -1;
-    return a.end_date.localeCompare(b.end_date); // soonest first
+    const rank = c => c.status === 'renting' ? 0 : c.status === 'reservation' ? 1 : c.status === 'bought' ? 2 : 3; // done last
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
+    if (a.status === 'renting') {
+      // Active rentals: soonest due date first, no end_date → bottom
+      if (!a.end_date && !b.end_date) return 0;
+      if (!a.end_date) return 1;
+      if (!b.end_date) return -1;
+      return a.end_date.localeCompare(b.end_date);
+    }
+    // Done / bought / reservation: most recently finished/added first
+    const ad = a.end_date || a.created_at || '';
+    const bd = b.end_date || b.created_at || '';
+    return bd.localeCompare(ad);
   });
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
