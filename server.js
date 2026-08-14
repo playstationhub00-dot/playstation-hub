@@ -1752,6 +1752,70 @@ app.get('/admin', requireAuth, async (req, res) => {
     ? ((startedCount / gamePageVisits) * 100).toFixed(1)
     : null;
 
+  // ── Orders ledger ─────────────────────────────────────────────────────────
+  // Every order, browsable by period. Derived from the allOrders array already
+  // fetched above rather than a second query, so adding the ledger costs no
+  // extra database round trips.
+  //
+  // Nothing is ever pruned: `orderPeriods` lists every YYYY-MM that actually
+  // contains orders, so the picker can reach the full history. Only the DEFAULT
+  // view is narrowed — to the last 3 months — because rendering every order on
+  // a tab that is usually opened for the action queue is what made the
+  // Customers table need trimming.
+  const LEDGER_DEFAULT_MONTHS = 3;
+  const orderPeriods = [...new Set(allOrders
+    .map(o => (o.created_at || '').slice(0, 7))
+    .filter(p => /^\d{4}-\d{2}$/.test(p))
+  )].sort().reverse();
+  const orderYears = [...new Set(orderPeriods.map(p => p.slice(0, 4)))];
+  // "2026-08" (one month), "2026" (whole year), "all", or "" for the default window.
+  const rawPeriod = String(req.query.operiod || '').trim();
+  const orderPeriod = /^(\d{4}(-\d{2})?|all)$/.test(rawPeriod) ? rawPeriod : '';
+  let ledgerOrders;
+  if (orderPeriod === 'all') {
+    ledgerOrders = allOrders;
+  } else if (orderPeriod) {
+    ledgerOrders = allOrders.filter(o => (o.created_at || '').startsWith(orderPeriod));
+  } else {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - LEDGER_DEFAULT_MONTHS);
+    const cutoffStr = cutoff.toISOString().slice(0, 7);
+    ledgerOrders = allOrders.filter(o => (o.created_at || '').slice(0, 7) >= cutoffStr);
+  }
+  ledgerOrders = [...ledgerOrders].sort((a, b) =>
+    String(b.created_at || '').localeCompare(String(a.created_at || ''))
+  );
+  // Month headers carry their own count and peso subtotal, so the running total
+  // always describes the rows directly beneath it. Paid orders only — an order
+  // that was never paid contributed no money and must not inflate the subtotal.
+  const ledgerGroups = [];
+  ledgerOrders.forEach(o => {
+    const key = (o.created_at || '').slice(0, 7);
+    let g = ledgerGroups[ledgerGroups.length - 1];
+    if (!g || g.key !== key) {
+      g = { key, label: key, orders: [], paidCount: 0, paidTotal: 0 };
+      ledgerGroups.push(g);
+    }
+    g.orders.push(o);
+    if (orders.isPaid(o.state)) {
+      g.paidCount++;
+      g.paidTotal += (o.amount_due || 0) + (o.deposit_due || 0);
+    }
+  });
+  // Stat tiles. Scoped to the loaded period so they describe what is on screen,
+  // except "needs you" and "out on rent", which are always live totals.
+  const ledgerStats = {
+    needsYou: orderQueue.length,
+    qrLive: orderQueue.filter(o => o.state === 'qr_pending').length,
+    out: allOrders.filter(o => orders.OUT_STATES.includes(o.state)).length,
+    paidCount: ledgerOrders.filter(o => orders.isPaid(o.state)).length,
+    paidTotal: ledgerOrders.filter(o => orders.isPaid(o.state))
+      .reduce((s, o) => s + (o.amount_due || 0) + (o.deposit_due || 0), 0),
+    unpaid: ledgerOrders.filter(o => ['awaiting_payment', 'payment_rejected'].includes(o.state)).length,
+    cancelled: ledgerOrders.filter(o => o.state === 'cancelled').length,
+    total: ledgerOrders.length
+  };
+
   // ── Visitors tab: session summaries + windowed metrics ────────────────────
   // One pass collapses raw pageview rows into a single record per session, and
   // every time window is then derived from that compact array. Re-walking the
@@ -1866,7 +1930,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

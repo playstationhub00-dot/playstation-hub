@@ -3475,7 +3475,16 @@ function switchTab(name) {
     document.querySelector('[data-tab='+t+']').classList.toggle('active', t===name);
   });
   localStorage.setItem(TAB_KEY, name);
-  history.replaceState({}, '', '/admin' + (name !== 'settings' ? '?tab='+name : ''));
+  // Preserve any other query params (the orders ledger period, ?history=1).
+  // Rewriting the whole query string would drop them the moment this runs on
+  // load, so a reload would silently snap back to the default view. `msg` is
+  // deliberately dropped so its toast does not re-fire on refresh.
+  const q = new URLSearchParams(window.location.search);
+  q.delete('tab');
+  q.delete('msg');
+  if (name !== 'settings') q.set('tab', name);
+  const qs = q.toString();
+  history.replaceState({}, '', '/admin' + (qs ? '?' + qs : ''));
 }
 
 // Determine initial tab: URL param > msg-based auto-switch > localStorage > default

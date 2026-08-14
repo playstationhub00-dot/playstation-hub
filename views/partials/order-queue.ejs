@@ -1,8 +1,37 @@
-<div class="oq-funnel">
-  Last 7 days: <strong><%= startedCount %> started</strong> ·
-  <strong><%= completedCount %> completed</strong> ·
-  <span class="oq-funnel-ab"><%= abandonedCount %> abandoned</span>
-  <% if (orderStartRate !== null) { %> · <span class="oq-funnel-rate"><%= orderStartRate %>%</span> of game-page visits<% } %>
+<%
+  const PERIOD_LABEL = p => {
+    if (p === 'all') return 'All time';
+    if (/^\d{4}$/.test(p)) return p;
+    const [y, m] = p.split('-');
+    return new Date(Number(y), Number(m) - 1, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+  const periodLabel = orderPeriod ? PERIOD_LABEL(orderPeriod) : 'Last 3 months';
+%>
+
+<div class="oq-stats">
+  <div class="oq-stat">
+    <div class="oq-stat-k">Needs you</div>
+    <div class="oq-stat-v" style="color:var(--ps-blue);"><%= ledgerStats.needsYou %></div>
+    <div class="oq-stat-s"><%= ledgerStats.qrLive ? ledgerStats.qrLive + ' QR waiting' : 'Nothing waiting' %></div>
+  </div>
+  <div class="oq-stat">
+    <div class="oq-stat-k">Out on rent</div>
+    <div class="oq-stat-v" style="color:#22c55e;"><%= ledgerStats.out %></div>
+    <div class="oq-stat-s">Paid, not returned yet</div>
+  </div>
+  <div class="oq-stat">
+    <div class="oq-stat-k">Completed · <%= periodLabel %></div>
+    <div class="oq-stat-v" style="color:#7c8794;"><%= ledgerStats.paidCount %></div>
+    <div class="oq-stat-s">₱<%= ledgerStats.paidTotal.toLocaleString() %> collected</div>
+  </div>
+  <div class="oq-stat">
+    <div class="oq-stat-k">Didn't pay · 7d</div>
+    <div class="oq-stat-v" style="color:#f59e0b;"><%= abandonedCount %></div>
+    <div class="oq-stat-s">
+      of <%= startedCount %> started<% if (orderStartRate !== null) { %> · <%= orderStartRate %>% of game views<% } %>
+    </div>
+  </div>
 </div>
 <%
   const QUEUE_ACTION = {
@@ -30,11 +59,13 @@
   </label>
 </form>
 
+<div class="oq-zone oq-zone-act">Needs you <span class="oq-zone-n"><%= sortedQueue.length %></span></div>
+
 <% if (!sortedQueue.length) { %>
   <div class="oq-empty">Nothing waiting on you right now.</div>
 <% } else { %>
   <% sortedQueue.forEach(o => { %>
-  <div class="oq-row oq-<%= o.state %>">
+  <div class="oq-row oq-sv-act oq-<%= o.state %>">
     <div class="oq-main">
       <div class="oq-top">
         <span class="oq-ref"><%= o.ref %></span>
@@ -87,6 +118,107 @@
   <% }) %>
 <% } %>
 
+<!-- ── All orders ledger ────────────────────────────────────────────────── -->
+<div class="oq-zone oq-zone-all">
+  All orders
+  <span class="oq-zone-n"><%= ledgerStats.total %></span>
+  <span class="oq-zone-sub"><%= periodLabel %></span>
+</div>
+
+<div class="oq-ledger-bar">
+  <form method="GET" action="/admin" class="oq-period">
+    <input type="hidden" name="tab" value="orders">
+    <label for="oqPeriod">Period</label>
+    <select name="operiod" id="oqPeriod" onchange="this.form.submit()">
+      <option value="" <%= orderPeriod === '' ? 'selected' : '' %>>Last 3 months</option>
+      <option value="all" <%= orderPeriod === 'all' ? 'selected' : '' %>>All time</option>
+      <% if (orderYears.length) { %>
+      <optgroup label="By year">
+        <% orderYears.forEach(y => { %>
+        <option value="<%= y %>" <%= orderPeriod === y ? 'selected' : '' %>><%= y %></option>
+        <% }) %>
+      </optgroup>
+      <optgroup label="By month">
+        <% orderPeriods.forEach(p => { %>
+        <option value="<%= p %>" <%= orderPeriod === p ? 'selected' : '' %>><%= PERIOD_LABEL(p) %></option>
+        <% }) %>
+      </optgroup>
+      <% } %>
+    </select>
+  </form>
+  <input type="text" id="oqSearch" class="oq-search" placeholder="Search ref, name or game…" oninput="oqFilter()">
+</div>
+
+<div class="oq-chips">
+  <button type="button" class="oq-chip oq-chip-on" data-g="all" onclick="oqChip('all')">All <span class="oq-chip-n"><%= ledgerStats.total %></span></button>
+  <button type="button" class="oq-chip" data-g="out" onclick="oqChip('out')">🎮 Out on rent <span class="oq-chip-n"><%= ledgerStats.out %></span></button>
+  <button type="button" class="oq-chip" data-g="paid" onclick="oqChip('paid')">✅ Completed <span class="oq-chip-n"><%= ledgerStats.paidCount %></span></button>
+  <button type="button" class="oq-chip" data-g="unpaid" onclick="oqChip('unpaid')">⚠ Didn't pay <span class="oq-chip-n"><%= ledgerStats.unpaid %></span></button>
+  <button type="button" class="oq-chip" data-g="cancelled" onclick="oqChip('cancelled')">🚫 Cancelled <span class="oq-chip-n"><%= ledgerStats.cancelled %></span></button>
+</div>
+
+<% if (!ledgerGroups.length) { %>
+  <div class="oq-empty">No orders in this period.</div>
+<% } else { %>
+<div class="oq-tw">
+  <table class="oq-tbl" id="oqLedger">
+    <thead>
+      <tr>
+        <th>Ref</th><th>Customer</th><th>Game</th><th>Rental</th>
+        <th>Dates</th><th>Total</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% ledgerGroups.forEach(g => { %>
+      <tr class="oq-grp" data-grp="<%= g.key %>">
+        <td colspan="7">
+          <%= PERIOD_LABEL(g.key) %>
+          <span class="oq-grp-sum"><%= g.paidCount %> completed · ₱<%= g.paidTotal.toLocaleString() %></span>
+        </td>
+      </tr>
+      <% g.orders.forEach(o => {
+           const paid = !['awaiting_payment','verifying_payment','payment_rejected','cancelled'].includes(o.state);
+           const out = ['awaiting_qr','qr_pending','active','awaiting_return','verifying_return'].includes(o.state);
+           const grp = o.state === 'cancelled' ? 'cancelled'
+                     : ['awaiting_payment','payment_rejected'].includes(o.state) ? 'unpaid'
+                     : out ? 'out' : 'paid';
+           const typeLbl = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+           const durLbl = o.days === 7 ? 'Weekly' : 'Monthly';
+           const total = (o.amount_due || 0) + (o.deposit_due || 0);
+           const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
+           const dates = o.start_date ? fmt(o.start_date) + (o.end_date ? ' – ' + fmt(o.end_date) : '') : '—';
+           const stCls = grp === 'cancelled' ? 'oq-st-dead' : grp === 'unpaid' ? 'oq-st-wait' : out ? 'oq-st-live' : 'oq-st-done';
+           const stLbl = o.state === 'cancelled' ? 'Cancelled'
+                       : o.state === 'payment_rejected' ? 'Payment rejected'
+                       : o.state === 'awaiting_payment' ? 'Awaiting payment'
+                       : o.state === 'closed' ? 'Completed'
+                       : out ? 'Out on rent' : 'Completed';
+      %>
+      <tr class="oq-lr" data-g="<%= grp %>"
+          data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>">
+        <td class="oq-lref"><%= o.ref %></td>
+        <td class="oq-lcust"><%= o.fb_name %></td>
+        <td class="oq-lgame"><%= o.game_title %></td>
+        <td class="oq-lmeta"><%= typeLbl %> · <%= durLbl %></td>
+        <td class="oq-lnum"><%= dates %></td>
+        <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %></td>
+        <td>
+          <span class="oq-st <%= stCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
+          <% if (paid && (o.deposit_due || 0) > 0) { %>
+            <div class="oq-dep <%= o.deposit_refunded ? 'oq-dep-ok' : '' %>">
+              <%= o.deposit_refunded ? 'Deposit refunded' : 'Deposit not refunded' %>
+            </div>
+          <% } %>
+        </td>
+      </tr>
+      <% }) %>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<div class="oq-empty" id="oqNoMatch" style="display:none;">No orders match that search.</div>
+<% } %>
+
 <% if (refundsOwed.length) { %>
 <div class="oq-refunds">
   <div class="oq-refunds-title">Deposits to refund (<%= refundsOwed.length %>)</div>
@@ -128,7 +260,7 @@
       + 'Still want it? ' + payLine + '\n\n'
       + 'No worries if you changed your mind, just let us know!';
   %>
-  <div class="oq-ab-row">
+  <div class="oq-ab-row oq-sv-wait">
     <div>
       <span class="oq-ref"><%= o.ref %></span>
       <span class="oq-ab-name"><%= o.fb_name %></span>
@@ -140,10 +272,12 @@
     </div>
     <div class="oq-ab-right">
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
-      <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
-      <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out duplicate or accidental orders. This cannot be undone.');">
-        <button type="submit" class="oq-btn-no" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
-      </form>
+      <div class="oq-ab-btns">
+        <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+        <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out duplicate or accidental orders. This cannot be undone.');">
+          <button type="submit" class="oq-btn-no" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
+        </form>
+      </div>
     </div>
   </div>
   <% }) %>
@@ -162,6 +296,39 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  // Ledger chip + search filtering. Both narrow the rows already loaded for the
+  // selected period; changing the period itself reloads from the server.
+  var _oqGroup = 'all';
+  window.oqChip = function(g) {
+    _oqGroup = g;
+    document.querySelectorAll('.oq-chip').forEach(function(c){
+      c.classList.toggle('oq-chip-on', c.dataset.g === g);
+    });
+    oqFilter();
+  };
+  window.oqFilter = function() {
+    var el = document.getElementById('oqSearch');
+    var q = (el ? el.value : '').toLowerCase().trim();
+    var shown = 0;
+    document.querySelectorAll('.oq-lr').forEach(function(r){
+      var ok = (_oqGroup === 'all' || r.dataset.g === _oqGroup) &&
+               (!q || r.dataset.s.indexOf(q) !== -1);
+      r.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    // A month header with every row filtered out is noise, so hide it too.
+    document.querySelectorAll('.oq-grp').forEach(function(h){
+      var n = h.nextElementSibling, any = false;
+      while (n && !n.classList.contains('oq-grp')) {
+        if (n.classList.contains('oq-lr') && n.style.display !== 'none') { any = true; break; }
+        n = n.nextElementSibling;
+      }
+      h.style.display = any ? '' : 'none';
+    });
+    var empty = document.getElementById('oqNoMatch');
+    if (empty) empty.style.display = shown ? 'none' : '';
+  };
 
   function formatAge() {
     document.querySelectorAll('.oq-ab-age').forEach(function(el){

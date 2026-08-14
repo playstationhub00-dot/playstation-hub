@@ -2445,6 +2445,96 @@ footer {
 .oq-funnel-ab { color: #f59e0b; font-weight: 700; }
 .oq-funnel-rate { color: var(--ps-blue); font-weight: 700; }
 
+/* ── Orders: stat tiles ── */
+.oq-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.25rem; }
+@media (max-width: 700px) { .oq-stats { grid-template-columns: repeat(2, 1fr); } }
+.oq-stat { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 0.85rem; }
+.oq-stat-k { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #5a5a5a; margin-bottom: 0.18rem; }
+.oq-stat-v { font-size: 1.35rem; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.oq-stat-s { font-size: 0.66rem; color: #5a5a5a; margin-top: 0.15rem; }
+
+/* ── Orders: zone headings + severity stripes ── */
+.oq-zone { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin: 1.75rem 0 0.75rem; }
+.oq-zone:first-child { margin-top: 0; }
+.oq-zone-act { color: var(--ps-blue); }
+.oq-zone-all { color: #8a8a8a; }
+.oq-zone-n { font-variant-numeric: tabular-nums; color: #5a5a5a; font-weight: 700; }
+.oq-zone-sub { margin-left: auto; font-size: 0.66rem; letter-spacing: 0.04em; text-transform: none; color: #5a5a5a; font-weight: 600; }
+.oq-row.oq-sv-act { border-left: 3px solid var(--ps-blue); }
+.oq-ab-row.oq-sv-wait { border-left: 3px solid #f59e0b; }
+
+/* ── Orders: ledger controls ── */
+.oq-ledger-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.oq-period { display: flex; align-items: center; gap: 0.45rem; margin: 0; }
+.oq-period label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5a5a5a; }
+.oq-period select { background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #ddd; padding: 0.38rem 0.65rem; font-size: 0.78rem; font-family: inherit; }
+.oq-search { flex: 1; min-width: 180px; max-width: 280px; background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; padding: 0.4rem 0.75rem; font-size: 0.78rem; font-family: inherit; }
+.oq-search::placeholder { color: #4a4a4a; }
+.oq-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
+.oq-chip { background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.28rem 0.7rem; font-size: 0.74rem; font-weight: 700; color: #8a8a8a; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-chip:hover { border-color: #3a3a3a; color: #bbb; }
+.oq-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
+.oq-chip-n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 0.24rem; }
+
+/* ── Orders: ledger table ── */
+.oq-tw { overflow-x: auto; border: 1px solid #222; border-radius: 10px; }
+.oq-tbl { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 680px; }
+.oq-tbl th { text-align: left; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #5a5a5a; padding: 0.6rem 0.7rem; background: #111; border-bottom: 1px solid #222; white-space: nowrap; }
+.oq-tbl td { padding: 0.6rem 0.7rem; border-bottom: 1px solid #1a1a1a; color: #8a8a8a; vertical-align: middle; }
+.oq-tbl tr:last-child td { border-bottom: 0; }
+.oq-grp td { background: #101010; border-bottom: 1px solid #222; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #5a5a5a; padding: 0.45rem 0.7rem; }
+.oq-grp-sum { float: right; color: #7c8794; font-variant-numeric: tabular-nums; }
+.oq-lref { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: 800; color: var(--ps-blue); white-space: nowrap; }
+.oq-lcust { color: #d8d8d8; font-weight: 650; }
+.oq-lgame { color: #c4c4c4; }
+.oq-lmeta { white-space: nowrap; }
+.oq-lnum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.oq-ltot { color: #fff; font-weight: 800; }
+.oq-st { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
+.oq-st-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
+.oq-st-live { color: #22c55e; }
+.oq-st-done { color: #7c8794; }
+.oq-st-wait { color: #f59e0b; }
+.oq-st-dead { color: #ef4444; }
+.oq-dep { font-size: 0.65rem; color: #f59e0b; margin-top: 0.15rem; }
+.oq-dep-ok { color: #7c8794; }
+.oq-ab-btns { display: flex; align-items: center; gap: 0.4rem; }
+
+/* ── Orders: light mode ── */
+body.light-mode .oq-stat,
+body.light-mode .oq-row,
+body.light-mode .oq-ab-row,
+body.light-mode .oq-refund-row,
+body.light-mode .oq-online-toggle,
+body.light-mode .oq-funnel { background: #fff; border-color: #ddd; }
+body.light-mode .oq-stat-k,
+body.light-mode .oq-stat-s,
+body.light-mode .oq-zone-n,
+body.light-mode .oq-zone-sub,
+body.light-mode .oq-period label,
+body.light-mode .oq-tbl th,
+body.light-mode .oq-grp td { color: #777; }
+body.light-mode .oq-zone-all { color: #555; }
+body.light-mode .oq-meta,
+body.light-mode .oq-tbl td { color: #555; }
+body.light-mode .oq-fb { color: #777; }
+body.light-mode .oq-fb strong,
+body.light-mode .oq-lcust,
+body.light-mode .oq-lgame { color: #111; }
+body.light-mode .oq-ltot { color: #111; }
+body.light-mode .oq-tw,
+body.light-mode .oq-tbl th { border-color: #ddd; }
+body.light-mode .oq-tbl td { border-bottom-color: #eee; }
+body.light-mode .oq-tbl th,
+body.light-mode .oq-grp td { background: #f6f7f9; }
+body.light-mode .oq-period select,
+body.light-mode .oq-search { background: #f8f9fa; border-color: #ccc; color: #111; }
+body.light-mode .oq-chip { border-color: #ccc; color: #555; }
+body.light-mode .oq-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
+body.light-mode .oq-btn-no { color: #777; border-color: #ccc; }
+body.light-mode .oq-badge { background: #eee; color: #555; }
+body.light-mode .oq-empty { color: #888; }
+
 .vf-section { margin: 0 0 2rem; }
 .vf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 @media (max-width: 820px) { .vf-grid { grid-template-columns: 1fr; } }
