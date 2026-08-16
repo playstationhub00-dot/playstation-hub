@@ -29,6 +29,7 @@
         <span class="buy-bundle-name"><%= b.name %></span>
         <span class="buy-bundle-count"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %></span>
       </div>
+      <% if (b.perGame) { %><div class="buy-bundle-each">from ₱<%= b.perGame %> per game</div><% } %>
       <div class="buy-bundle-covers">
         <% b.covers.forEach(g => { %>
           <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
@@ -36,32 +37,34 @@
         <% }) %>
         <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
       </div>
-      <% if (b.nonTrophy) { %>
-      <form method="POST" action="/order/buy" class="buy-slot-row<%= !b.nonTrophy.open ? ' buy-slot-sold' : '' %>">
+      <%
+        const tiers = [
+          b.nonTrophy ? { key: 'nt', label: 'Non-Trophy', slot: b.nonTrophy } : null,
+          b.trophy ? { key: 'tr', label: 'Trophy', slot: b.trophy } : null
+        ].filter(Boolean);
+        const firstOpen = tiers.find(t => t.slot.open);
+      %>
+      <form method="POST" action="/order/buy" class="buy-bundle-foot">
         <input type="hidden" name="kind" value="bundle">
         <input type="hidden" name="account_id" value="<%= b.id %>">
-        <input type="hidden" name="slot_type" value="nt">
-        <span class="buy-slot-label">🎮 Non-Trophy</span>
-        <span class="buy-slot-price">₱<%= b.nonTrophy.price %></span>
-        <% if (b.nonTrophy.open) { %>
+        <div class="buy-tier-row">
+          <% tiers.forEach(t => { %>
+          <label class="buy-tier<%= t.slot.open ? '' : ' buy-tier-off' %>">
+            <input type="radio" name="slot_type" value="<%= t.key %>" data-price="<%= t.slot.price %>"
+              <%= t.slot.open ? '' : 'disabled' %><%= firstOpen && firstOpen.key === t.key ? ' checked' : '' %>>
+            <span class="buy-tier-label"><%= t.label %></span>
+            <span class="buy-tier-price">₱<%= t.slot.price %></span>
+            <% if (!t.slot.open) { %><span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span><% } %>
+          </label>
+          <% }) %>
+        </div>
+        <% if (firstOpen) { %>
         <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
-        <button type="submit" class="buy-slot-btn">Buy</button>
-        <% } else { %><span class="buy-slot-status"><%= slotStatusLabel(b.nonTrophy.status) %></span><% } %>
+        <button type="submit" class="buy-slot-btn">Buy ₱<%= firstOpen.slot.price %></button>
+        <% } else { %>
+        <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
+        <% } %>
       </form>
-      <% } %>
-      <% if (b.trophy) { %>
-      <form method="POST" action="/order/buy" class="buy-slot-row<%= !b.trophy.open ? ' buy-slot-sold' : '' %>">
-        <input type="hidden" name="kind" value="bundle">
-        <input type="hidden" name="account_id" value="<%= b.id %>">
-        <input type="hidden" name="slot_type" value="tr">
-        <span class="buy-slot-label">🏆 Trophy</span>
-        <span class="buy-slot-price">₱<%= b.trophy.price %></span>
-        <% if (b.trophy.open) { %>
-        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
-        <button type="submit" class="buy-slot-btn">Buy</button>
-        <% } else { %><span class="buy-slot-status"><%= slotStatusLabel(b.trophy.status) %></span><% } %>
-      </form>
-      <% } %>
     </div>
     <% }) %>
   </div>
@@ -95,5 +98,18 @@
 </div>
 
 <%- include('partials/footer') %>
+<script>
+document.querySelectorAll('.buy-bundle-foot').forEach(function (form) {
+  var btn = form.querySelector('.buy-slot-btn');
+  var radios = form.querySelectorAll('input[name="slot_type"]');
+  function sync() {
+    radios.forEach(function (r) { r.closest('.buy-tier').classList.toggle('buy-tier-on', r.checked); });
+    var picked = form.querySelector('input[name="slot_type"]:checked');
+    if (btn && picked) btn.textContent = 'Buy ₱' + picked.dataset.price;
+  }
+  radios.forEach(function (r) { r.addEventListener('change', sync); });
+  sync();
+});
+</script>
 </body>
 </html>

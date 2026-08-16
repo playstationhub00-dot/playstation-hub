@@ -1071,15 +1071,25 @@ app.get('/buy', (req, res) => {
   const gameById = id => allGames.find(g => g.id === parseInt(id));
   const bundles = getAccounts()
     .filter(acc => acc.for_sale && (acc.slots.trophy.enabled || acc.slots.non_trophy.enabled))
-    .map(acc => ({
-      id: acc.id,
-      name: acc.public_name || acc.label,
-      gameCount: acc.game_ids.length,
-      covers: acc.game_ids.map(gameById).filter(Boolean).slice(0, 4),
-      moreCount: Math.max(0, acc.game_ids.length - 4),
-      trophy: acc.slots.trophy.enabled ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open', status: acc.slots.trophy.status } : null,
-      nonTrophy: acc.slots.non_trophy.enabled ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open', status: acc.slots.non_trophy.status } : null
-    }));
+    .map(acc => {
+      const trophy = acc.slots.trophy.enabled
+        ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open', status: acc.slots.trophy.status } : null;
+      const nonTrophy = acc.slots.non_trophy.enabled
+        ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open', status: acc.slots.non_trophy.status } : null;
+      // "from ₱X per game" only reads as a deal on a real multi-game bundle.
+      const prices = [trophy, nonTrophy].filter(s => s && s.price > 0).map(s => s.price);
+      const gameCount = acc.game_ids.length;
+      return {
+        id: acc.id,
+        name: acc.public_name || acc.label,
+        gameCount,
+        perGame: gameCount > 1 && prices.length ? Math.round(Math.min(...prices) / gameCount) : null,
+        covers: acc.game_ids.map(gameById).filter(Boolean).slice(0, 4),
+        moreCount: Math.max(0, gameCount - 4),
+        trophy,
+        nonTrophy
+      };
+    });
   const s = getSiteSettings();
   const promo = s.promo || {};
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
