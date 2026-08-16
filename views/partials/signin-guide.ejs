@@ -29,21 +29,24 @@
 </div>
 <script>
   if (!window.ssgGuideSwitch) {
+    // Updates every instance of this partial on the page (not just the one
+    // that triggered the click) so multiple instances always stay in sync,
+    // then persists the choice once.
     window.ssgGuideSwitch = function(id, cons) {
-      var root = document.getElementById(id + '-guide');
-      if (!root) return;
-      root.querySelectorAll('.ssg-guide-tab').forEach(function(t){ t.classList.toggle('ssg-guide-tab-on', t.dataset.c === cons); });
-      root.querySelectorAll('.ssg-guide-panel').forEach(function(p){ p.classList.toggle('ssg-guide-hidden', p.dataset.c !== cons); });
+      document.querySelectorAll('.ssg-guide').forEach(function(root){
+        root.querySelectorAll('.ssg-guide-tab').forEach(function(t){ t.classList.toggle('ssg-guide-tab-on', t.dataset.c === cons); });
+        root.querySelectorAll('.ssg-guide-panel').forEach(function(p){ p.classList.toggle('ssg-guide-hidden', p.dataset.c !== cons); });
+      });
       try { sessionStorage.setItem('ssgConsole', cons); } catch (e) {}
     };
-    // Restore the customer's last-picked console across every instance of
-    // this partial on the page (there's at most one per page today, but this
-    // stays correct if that ever changes).
+    // Restore the customer's last-picked console. Since ssgGuideSwitch now
+    // updates every instance itself, a single call at load is enough.
     document.addEventListener('DOMContentLoaded', function() {
       var saved = null;
       try { saved = sessionStorage.getItem('ssgConsole'); } catch (e) {}
       if (saved === 'ps4') {
-        document.querySelectorAll('.ssg-guide').forEach(function(g){ window.ssgGuideSwitch(g.id.replace('-guide',''), 'ps4'); });
+        var first = document.querySelector('.ssg-guide');
+        if (first) window.ssgGuideSwitch(first.id.slice(0, -6), 'ps4');
       }
     });
   }

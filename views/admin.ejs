@@ -433,7 +433,7 @@
 
     <!-- SIGN-IN QR GUIDE -->
     <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #38bdf8;">
+      <div class="settings-accordion-header" id="ssgAccordionHeader" onclick="toggleAccordion(this)" style="border-left:3px solid #38bdf8;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(56,189,248,0.15);">📷</div>
           <div>
@@ -443,7 +443,7 @@
         </div>
         <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="settings-accordion-body" id="ssgAccordionBody">
     <div style="border-color:rgba(56,189,248,0.3);background:linear-gradient(135deg,#04141c,#071d2a);padding:1.25rem;">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
         <button type="button" class="ssg-tab ssg-tab-on" data-c="ps5" onclick="ssgSwitch('ps5')">PS5 steps</button>
@@ -511,6 +511,7 @@
       function ssgSwitch(cons) {
         document.querySelectorAll('.ssg-tab').forEach(function(t){ t.classList.toggle('ssg-tab-on', t.dataset.c === cons); });
         document.querySelectorAll('.ssg-panel').forEach(function(p){ p.classList.toggle('ssg-hidden', p.dataset.c !== cons); });
+        try { sessionStorage.setItem('ssgAdminConsole', cons); } catch (e) {}
       }
     </script>
 
@@ -3587,7 +3588,8 @@ function switchTab(name) {
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
     month_log_saved:'customers', month_log_deleted:'customers',
     settings_saved:'settings', promo_saved:'settings', popup_saved:'settings', password_changed:'security',
-    wrong_password:'security', password_mismatch:'security', password_too_short:'security'
+    wrong_password:'security', password_mismatch:'security', password_too_short:'security',
+    signin_step_saved:'settings', signin_step_deleted:'settings'
   };
 
   const initial = urlTab || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'settings';
@@ -3595,7 +3597,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', promo_saved:'🎉 Promo settings saved!', popup_saved:'🪧 Popup settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', promo_saved:'🎉 Promo settings saved!', popup_saved:'🪧 Popup settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!', signin_step_saved:'✅ Step saved!', signin_step_deleted:'🗑 Step deleted!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');
@@ -3606,7 +3608,25 @@ function switchTab(name) {
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
       history.replaceState({}, '', '/admin?tab=' + (msgTabMap[msg] || initial));
     }
+    // Sign-in QR Guide edits happen inside a nested accordion that
+    // switchTab/toggleAccordion don't know about — open it explicitly
+    // so the admin lands back on the step they just edited.
+    if (String(msg).startsWith('signin_step_')) {
+      const ssgHeader = document.getElementById('ssgAccordionHeader');
+      const ssgBody = document.getElementById('ssgAccordionBody');
+      if (ssgHeader && ssgBody) {
+        ssgHeader.classList.add('open');
+        ssgBody.classList.add('open');
+      }
+    }
   }
+
+  // Restore whichever PS5/PS4 console tab was last active in the Sign-In
+  // QR Guide editor, independent of the toast/accordion logic above.
+  try {
+    const savedConsole = sessionStorage.getItem('ssgAdminConsole');
+    if (savedConsole === 'ps4' && typeof ssgSwitch === 'function') ssgSwitch('ps4');
+  } catch (e) {}
 })();
 
 // ── Loading overlay ──
