@@ -25,18 +25,20 @@
     <% const slotStatusLabel = st => st === 'rented' ? 'Rented' : st === 'buyed' ? 'Sold' : 'Unavailable'; %>
     <% bundles.forEach(b => { %>
     <div class="buy-bundle-card">
-      <div class="buy-bundle-head">
-        <span class="buy-bundle-name"><%= b.name %></span>
-        <span class="buy-bundle-count"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %></span>
-      </div>
-      <% if (b.perGame) { %><div class="buy-bundle-each">from ₱<%= b.perGame %> per game</div><% } %>
-      <div class="buy-bundle-covers">
-        <% b.covers.forEach(g => { %>
-          <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
-          <% } else { %><div class="buy-cover-thumb buy-cover-placeholder"></div><% } %>
-        <% }) %>
-        <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
-      </div>
+      <a href="/bundle/<%= b.slug %>" class="buy-bundle-link">
+        <div class="buy-bundle-head">
+          <span class="buy-bundle-name"><%= b.name %></span>
+          <span class="buy-bundle-count"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %></span>
+        </div>
+        <% if (b.perGame) { %><div class="buy-bundle-each">from ₱<%= b.perGame %> per game</div><% } %>
+        <div class="buy-bundle-covers">
+          <% b.covers.forEach(g => { %>
+            <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
+            <% } else { %><div class="buy-cover-thumb buy-cover-placeholder"></div><% } %>
+          <% }) %>
+          <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
+        </div>
+      </a>
       <%
         const tiers = [
           b.nonTrophy ? { key: 'nt', label: 'Non-Trophy', slot: b.nonTrophy } : null,

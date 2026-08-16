@@ -1078,25 +1078,61 @@ app.get('/', (req, res) => {
   res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
+// Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute
+// game lists and prices the same way. Some accounts (e.g. "PS HUB Main
+// Account") have a catalog game entry with the same title as the account
+// itself, linked into their own game_ids — that entry is excluded everywhere
+// a bundle's game list is shown, so a bundle never appears to contain itself.
+function buildBundleGames(acc, allGames) {
+  const gameById = id => allGames.find(g => g.id === parseInt(id));
+  const displayName = (acc.public_name || acc.label || '').trim().toLowerCase();
+  return acc.game_ids
+    .map(gameById)
+    .filter(Boolean)
+    .filter(g => g.title.trim().toLowerCase() !== displayName);
+}
+
+function bundleSlotInfo(acc) {
+  const trophy = acc.slots.trophy.enabled
+    ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open', status: acc.slots.trophy.status } : null;
+  const nonTrophy = acc.slots.non_trophy.enabled
+    ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open', status: acc.slots.non_trophy.status } : null;
+  return { trophy, nonTrophy };
+}
+
+// Sum of what each game would cost bought individually (same NT-first price
+// selection /buy's single-game cards use) vs. the bundle's own price. A
+// partial sum would understate the bundle and undercut its own pitch, so
+// this returns null the moment any game lacks a buy price — callers fall
+// back to the plain per-game-count line instead of showing nothing wrong.
+function bundleSavings(games, bundlePrice) {
+  if (!games.length || !bundlePrice) return null;
+  let sum = 0;
+  for (const g of games) {
+    const price = g.buy_nt_price > 0 ? g.buy_nt_price : g.buy_tr_price;
+    if (!price) return null;
+    sum += price;
+  }
+  return sum > bundlePrice ? { sum, save: sum - bundlePrice } : null;
+}
+
 app.get('/buy', (req, res) => {
   const allGames = getGames();
-  const gameById = id => allGames.find(g => g.id === parseInt(id));
   const bundles = getAccounts()
     .filter(acc => acc.for_sale && (acc.slots.trophy.enabled || acc.slots.non_trophy.enabled))
     .map(acc => {
-      const trophy = acc.slots.trophy.enabled
-        ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open', status: acc.slots.trophy.status } : null;
-      const nonTrophy = acc.slots.non_trophy.enabled
-        ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open', status: acc.slots.non_trophy.status } : null;
-      // "from ₱X per game" only reads as a deal on a real multi-game bundle.
-      const prices = [trophy, nonTrophy].filter(s => s && s.price > 0).map(s => s.price);
-      const gameCount = acc.game_ids.length;
+      const games = buildBundleGames(acc, allGames);
+      const { trophy, nonTrophy } = bundleSlotInfo(acc);
+      const prices = [trophy, nonTrophy].filter(x => x && x.price > 0).map(x => x.price);
+      const gameCount = games.length;
+      const name = acc.public_name || acc.label;
       return {
         id: acc.id,
-        name: acc.public_name || acc.label,
+        slug: gameSlug(name),
+        name,
         gameCount,
         perGame: gameCount > 1 && prices.length ? Math.round(Math.min(...prices) / gameCount) : null,
-        covers: acc.game_ids.map(gameById).filter(Boolean).slice(0, 4),
+        covers: games.slice(0, 4),
         moreCount: Math.max(0, gameCount - 4),
         trophy,
         nonTrophy
