@@ -2718,7 +2718,7 @@ body.light-mode .oq-empty { color: #888; }
 .buy-bundle-foot { margin-top: auto; }
 .buy-tier-row { display: flex; gap: 6px; margin-bottom: 0.55rem; }
 .buy-tier { flex: 1; display: block; background: #101010; border: 1px solid #262626; border-radius: 8px; padding: 0.45rem 0.55rem; cursor: pointer; }
-.buy-tier input { position: absolute; opacity: 0; width: 0; height: 0; }
+.buy-tier input { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .buy-tier-on { border-color: #7b2ff7; background: #17111f; }
 .buy-tier:focus-within { outline: 2px solid #a98bff; outline-offset: 2px; }
 .buy-tier-off { cursor: default; opacity: 0.6; }

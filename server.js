@@ -329,7 +329,16 @@ app.locals.computeAvailability = computeAvailability;
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
-app.use(express.static(path.join(__dirname, 'public')));
+// CSS/JS must revalidate on every request — the edge otherwise caches them for
+// hours, so a deploy leaves returning visitors on stale styles. ETags make the
+// revalidation a cheap 304; images and fonts keep the default caching.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  }
+}));
 
 // ── JPEG renditions for the Meta catalog feed ────────────────────────────────
 // processUploadedImage() stores every cover as .webp, which keeps the site fast
