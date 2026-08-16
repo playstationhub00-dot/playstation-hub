@@ -1177,8 +1177,10 @@ app.get('/bundle/:slug', (req, res) => {
     nonTrophy
   };
   const s = getSiteSettings();
+  const reqTier = ['nt', 'tr'].includes(req.query.tier) ? req.query.tier : null;
   res.render('bundle', {
     bundle,
+    requestedTier: reqTier,
     announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s
   });
 });

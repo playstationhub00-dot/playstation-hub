@@ -44,29 +44,29 @@
           b.nonTrophy ? { key: 'nt', label: 'Non-Trophy', slot: b.nonTrophy } : null,
           b.trophy ? { key: 'tr', label: 'Trophy', slot: b.trophy } : null
         ].filter(Boolean);
-        const firstOpen = tiers.find(t => t.slot.open);
+        const anyOpen = tiers.some(t => t.slot.open);
       %>
-      <form method="POST" action="/order/buy" class="buy-bundle-foot">
-        <input type="hidden" name="kind" value="bundle">
-        <input type="hidden" name="account_id" value="<%= b.id %>">
+      <div class="buy-bundle-foot">
         <div class="buy-tier-row">
           <% tiers.forEach(t => { %>
-          <label class="buy-tier<%= t.slot.open ? '' : ' buy-tier-off' %>">
-            <input type="radio" name="slot_type" value="<%= t.key %>" data-price="<%= t.slot.price %>"
-              <%= t.slot.open ? '' : 'disabled' %><%= firstOpen && firstOpen.key === t.key ? ' checked' : '' %>>
-            <span class="buy-tier-label"><%= t.label %></span>
-            <span class="buy-tier-price">₱<%= t.slot.price %></span>
-            <% if (!t.slot.open) { %><span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span><% } %>
-          </label>
+            <% if (t.slot.open) { %>
+            <a href="/bundle/<%= b.slug %>?tier=<%= t.key %>" class="buy-tier">
+              <span class="buy-tier-label"><%= t.label %></span>
+              <span class="buy-tier-price">₱<%= t.slot.price %></span>
+            </a>
+            <% } else { %>
+            <div class="buy-tier buy-tier-off">
+              <span class="buy-tier-label"><%= t.label %></span>
+              <span class="buy-tier-price">₱<%= t.slot.price %></span>
+              <span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span>
+            </div>
+            <% } %>
           <% }) %>
         </div>
-        <% if (firstOpen) { %>
-        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
-        <button type="submit" class="buy-slot-btn">Buy ₱<%= firstOpen.slot.price %></button>
-        <% } else { %>
+        <% if (!anyOpen) { %>
         <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
         <% } %>
-      </form>
+      </div>
     </div>
     <% }) %>
   </div>
@@ -100,18 +100,5 @@
 </div>
 
 <%- include('partials/footer') %>
-<script>
-document.querySelectorAll('.buy-bundle-foot').forEach(function (form) {
-  var btn = form.querySelector('.buy-slot-btn');
-  var radios = form.querySelectorAll('input[name="slot_type"]');
-  function sync() {
-    radios.forEach(function (r) { r.closest('.buy-tier').classList.toggle('buy-tier-on', r.checked); });
-    var picked = form.querySelector('input[name="slot_type"]:checked');
-    if (btn && picked) btn.textContent = 'Buy ₱' + picked.dataset.price;
-  }
-  radios.forEach(function (r) { r.addEventListener('change', sync); });
-  sync();
-});
-</script>
 </body>
 </html>

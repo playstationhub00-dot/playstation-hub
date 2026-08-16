@@ -45,6 +45,8 @@
           bundle.trophy ? { key: 'tr', label: 'Trophy', slot: bundle.trophy } : null
         ].filter(Boolean);
         const firstOpen = tiers.find(t => t.slot.open);
+        const requested = requestedTier ? tiers.find(t => t.key === requestedTier && t.slot.open) : null;
+        const preselected = requested || firstOpen;
       %>
       <form method="POST" action="/order/buy" class="buy-bundle-foot">
         <input type="hidden" name="kind" value="bundle">
@@ -53,7 +55,7 @@
           <% tiers.forEach(t => { %>
           <label class="buy-tier<%= t.slot.open ? '' : ' buy-tier-off' %>">
             <input type="radio" name="slot_type" value="<%= t.key %>" data-price="<%= t.slot.price %>"
-              <%= t.slot.open ? '' : 'disabled' %><%= firstOpen && firstOpen.key === t.key ? ' checked' : '' %>>
+              <%= t.slot.open ? '' : 'disabled' %><%= preselected && preselected.key === t.key ? ' checked' : '' %>>
             <span class="buy-tier-label"><%= t.label %></span>
             <span class="buy-tier-price">₱<%= t.slot.price %></span>
             <% if (!t.slot.open) { %><span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span><% } %>
@@ -62,7 +64,7 @@
         </div>
         <% if (firstOpen) { %>
         <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
-        <button type="submit" class="buy-slot-btn">Buy ₱<%= firstOpen.slot.price %></button>
+        <button type="submit" class="buy-slot-btn">Buy ₱<%= preselected.slot.price %></button>
         <% } else { %>
         <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
         <% } %>
