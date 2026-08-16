@@ -100,39 +100,35 @@
       <div class="gd-type-options" id="typeOptions">
 
         <% if (showTr) { %>
-        <label class="gd-type-card" id="typeCard-tr">
-          <input type="radio" name="rental_type" value="tr" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🏆</span>
-              <span class="gd-type-name">Trophy</span>
-              <% if (trSlots > 0) { %>
-                <span class="gd-type-status gd-status-avail"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> available</span>
-              <% } else { %>
-                <span class="gd-type-status gd-status-rented">Reserved</span>
-              <% } %>
-            </div>
-            <div class="gd-type-desc">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
-          </div>
-        </label>
+        <div class="gd-type-card" id="typeCard-tr">
+          <label class="gd-type-row-label">
+            <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
+            <span class="gd-type-icon">🏆</span>
+            <span class="gd-type-name">Trophy</span>
+            <% if (trSlots > 0) { %>
+              <span class="gd-type-status gd-status-avail"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> available</span>
+            <% } else { %>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            <% } %>
+          </label>
+          <div class="gd-type-desc" style="padding:0 0.75rem 0.75rem 2.65rem;">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
+        </div>
         <% } %>
 
         <% if (hasNt) { %>
-        <label class="gd-type-card" id="typeCard-nt">
-          <input type="radio" name="rental_type" value="nt" id="type-nt" onchange="onTypeChange()" checked>
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🎮</span>
-              <span class="gd-type-name">Non-Trophy</span>
-              <% if (ntSlots > 0) { %>
-                <span class="gd-type-status gd-status-avail"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> available</span>
-              <% } else { %>
-                <span class="gd-type-status gd-status-rented">Reserved</span>
-              <% } %>
-            </div>
-            <div class="gd-type-desc">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
-          </div>
-        </label>
+        <div class="gd-type-card" id="typeCard-nt">
+          <label class="gd-type-row-label">
+            <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
+            <span class="gd-type-icon">🎮</span>
+            <span class="gd-type-name">Non-Trophy</span>
+            <% if (ntSlots > 0) { %>
+              <span class="gd-type-status gd-status-avail"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> available</span>
+            <% } else { %>
+              <span class="gd-type-status gd-status-rented">Reserved</span>
+            <% } %>
+          </label>
+          <div class="gd-type-desc" style="padding:0 0.75rem 0.75rem 2.65rem;">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+        </div>
         <% } %>
 
       </div>

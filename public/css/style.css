@@ -705,7 +705,7 @@ nav {
 .usd-back a:hover { color: var(--ps-blue); }
 
 .usd-hero { position: relative; height: 340px; overflow: hidden; margin-top: 1rem; border-radius: 0; }
-.usd-hero-img, .usd-hero-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.usd-hero-img, .usd-hero-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
 .usd-hero-placeholder { background: linear-gradient(135deg, #0d0015, #1a0030); }
 /* Two overlapping gradients: left-to-right so the text panel is always readable
    regardless of the art underneath, and bottom-to-top so the hero's lower edge
