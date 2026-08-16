@@ -163,12 +163,24 @@
           <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;">Reserve a Slot</div>
           <div id="ctaHasSlotFee" style="font-size:0.88rem;color:#22c55e;font-weight:700;margin-bottom:0.35rem;">Select a duration to see downpayment</div>
           <div id="ctaHasSlotDP" style="display:none;font-size:0.8rem;color:#aaa;margin-bottom:0.75rem;"></div>
-          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when you start renting.</div>
+          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
+          <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
+            <input type="hidden" name="game_id" value="<%= game.id %>">
+            <input type="hidden" name="account_type" id="reserveType" value="">
+            <input type="hidden" name="days" id="reserveDays" value="">
+            <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
+            <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+              Reserve Now →
+            </button>
+          </form>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              onclick="return handleReserveClick(event,'reserve')"
-             style="display:inline-block;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 2rem;border-radius:50px;text-decoration:none;font-size:0.92rem;">
-            📘 Reserve Now →
+             style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
+            or message us on Facebook instead
           </a>
+          <% if (order_error === '1') { %>
+          <div style="margin-top:0.75rem;font-size:0.8rem;color:#ef4444;font-weight:600;">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+          <% } %>
         </div>
       </div>
 
@@ -335,16 +347,31 @@ function updateLinks() {
 
 const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
 
+function shakeDurGrid() {
+  const grid = document.getElementById('durGrid');
+  grid.classList.remove('gd-dur-grid-shake');
+  void grid.offsetWidth;
+  grid.classList.add('gd-dur-grid-shake');
+  setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
+}
+
 function handleReserveClick(e, mode) {
   if (!ALL_FULL && !selectedDays) {
     e.preventDefault();
-    const grid = document.getElementById('durGrid');
-    grid.classList.remove('gd-dur-grid-shake');
-    void grid.offsetWidth;
-    grid.classList.add('gd-dur-grid-shake');
-    setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
+    shakeDurGrid();
     return false;
   }
+  return true;
+}
+
+function handleReserveSubmit(e) {
+  if (!selectedDays) {
+    e.preventDefault();
+    shakeDurGrid();
+    return false;
+  }
+  document.getElementById('reserveType').value = selectedType;
+  document.getElementById('reserveDays').value = selectedDays;
   return true;
 }
 

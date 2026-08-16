@@ -1222,6 +1222,58 @@ app.post('/order/create', async (req, res) => {
   }
 });
 
+// Creates a reservation order for a Coming Soon game — a 50% downpayment to
+// lock a slot ahead of release, not a rental. Reuses the same order-status
+// page and payment-proof flow as /order/create, but settles into 'reserved'
+// instead of progressing to a console sign-in, since there's nothing to sign
+// into until the game actually releases.
+app.post('/order/reserve', async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.redirect('/browse?order_error=rate');
+  }
+  const { game_id, account_type, days, fb_name } = req.body;
+  const game = getUpcomingGame(game_id);
+  if (!game) return res.redirect('/browse');
+
+  const name = (fb_name || '').trim();
+  const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+  const d = parseInt(days);
+  if (!name || !type || !PROMO_DURATIONS.includes(d)) {
+    return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
+  }
+
+  const priceField = type + '_price_' + d + 'd';
+  const base = game[priceField] || 0;
+  if (!base) return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
+
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
+  const total = base + depositDue;
+  const downpayment = Math.ceil(total * 0.5);
+
+  try {
+    const order = await orders.create({
+      game_id: game.id,
+      game_title: game.title,
+      account_type: type,
+      days: d,
+      amount_due: downpayment,
+      deposit_due: 0,
+      fb_name: name,
+      session_id: req.sessionId || null,
+      is_reservation: true,
+      upcoming_game_id: game.id,
+      release_date: game.release_date || '',
+      remaining_due: total - downpayment
+    });
+    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+  } catch (e) {
+    console.error('[order reserve]', e.message);
+    res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
+  }
+});
+
 // Separate multer instance for customer-supplied files so its limits stay
 // independent of the admin upload paths.
 const uploadOrderFile = multer({
@@ -1357,7 +1409,8 @@ const ORDER_ADVANCE = {
 app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
-  const to = ORDER_ADVANCE[order.state];
+  let to = ORDER_ADVANCE[order.state];
+  if (order.is_reservation && order.state === 'verifying_payment') to = 'reserved';
   if (!to) return res.redirect('/admin?tab=orders&msg=order_bad_state');
   const patch = {};
   if (to === 'active') {
@@ -1407,6 +1460,35 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       else if (order.account_type === 'ps4') adjustPs4Slots(game.id, -1);
       else adjustNtSlots(game.id, -1);
     }
+    const linked = await orders.setCustomerId(order.ref, customerId);
+    if (!linked) {
+      console.error('[order->customer] setCustomerId failed for', order.ref, '— customer', customerId, 'created but not linked, re-advance could duplicate it');
+    }
+  }
+
+  // A confirmed reservation goes into the customers table the same way a
+  // Messenger-arranged one already does — the upcoming game's slot count is
+  // computed live from status:'reservation' rows (see /upcoming/:slug), so
+  // no game-record fields need updating here.
+  if (to === 'reserved' && !order.customer_id) {
+    const customerId = newCustomerId();
+    db.get('customers').push({
+      id: customerId,
+      customer_name: order.fb_name,
+      game_id: 'upcoming_' + order.upcoming_game_id,
+      game_title: order.game_title,
+      days: order.days,
+      account_type: order.account_type,
+      start_date: '',
+      end_date: '',
+      price: order.amount_due || 0,
+      status: 'reservation',
+      notes: 'Web reservation ' + order.ref + ' — downpayment ₱' + (order.amount_due || 0) + ', ₱' + (order.remaining_due || 0) + ' due on release',
+      created_at: new Date().toISOString(),
+      payments: order.amount_due > 0
+        ? [{ amount: order.amount_due, date: orders.manilaDate(new Date()), kind: 'reservation' }]
+        : [],
+    }).write();
     const linked = await orders.setCustomerId(order.ref, customerId);
     if (!linked) {
       console.error('[order->customer] setCustomerId failed for', order.ref, '— customer', customerId, 'created but not linked, re-advance could duplicate it');
@@ -1972,7 +2054,7 @@ app.get('/upcoming/:slug', (req, res) => {
     trophy_slots:     Math.max(0, (game.trophy_slots     || 0) - reservedTr),
   });
 
-  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null });
 });
 
 app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, async (req, res) => {

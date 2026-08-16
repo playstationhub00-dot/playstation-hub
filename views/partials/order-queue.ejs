@@ -44,6 +44,10 @@
     qr_pending: 'Scan QR',
     verifying_return: 'Check return'
   };
+  // Reservation downpayments settle into 'reserved' rather than moving on to
+  // a console sign-in — the button text and post-confirm action differ from
+  // a normal rental order's, even though both sit in verifying_payment.
+  const queueAction = o => (o.is_reservation && o.state === 'verifying_payment') ? 'Reservation confirmed' : QUEUE_ACTION[o.state];
   // Live QR windows first — they are the only rows with a deadline.
   const sortedQueue = [...orderQueue].sort((a, b) => {
     if (a.state === 'qr_pending' && b.state !== 'qr_pending') return -1;
@@ -69,6 +73,7 @@
     <div class="oq-main">
       <div class="oq-top">
         <span class="oq-ref"><%= o.ref %></span>
+        <% if (o.is_reservation) { %><span class="oq-badge" style="background:#3a1a5c;color:#c9a4ff;">🔜 Reservation</span><% } %>
         <span class="oq-badge"><%= QUEUE_LABEL[o.state] %></span>
         <% if (o.state === 'qr_pending' && o.qr_expires_at) { %>
         <span class="oq-timer" data-expires="<%= o.qr_expires_at %>">--:--</span>
@@ -76,7 +81,7 @@
       </div>
       <div class="oq-meta">
         <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
-        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %>
+        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? ' downpayment (₱' + (o.remaining_due || 0) + ' on release)' : '' %>
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
@@ -103,7 +108,7 @@
     </div>
     <div class="oq-actions">
       <form method="POST" action="/admin/orders/<%= o.ref %>/advance">
-        <button type="submit" class="oq-btn-go"><%= QUEUE_ACTION[o.state] %></button>
+        <button type="submit" class="oq-btn-go"><%= queueAction(o) %></button>
       </form>
       <% if (o.state === 'verifying_payment') { %>
       <form method="POST" action="/admin/orders/<%= o.ref %>/reject">
@@ -192,6 +197,7 @@
                        : o.state === 'payment_rejected' ? 'Payment rejected'
                        : o.state === 'awaiting_payment' ? 'Awaiting payment'
                        : o.state === 'closed' ? 'Completed'
+                       : o.state === 'reserved' ? 'Reserved — awaiting release'
                        : out ? 'Out on rent' : 'Completed';
       %>
       <tr class="oq-lr" data-g="<%= grp %>"

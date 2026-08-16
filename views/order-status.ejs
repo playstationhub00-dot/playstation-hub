@@ -22,12 +22,14 @@
     verifying_return:  { title: 'Checking your return',    sub: 'Almost done — we\'re confirming it now.' },
     closed:            { title: 'Rental complete',         sub: 'Thanks for renting with us!' },
     cancelled:         { title: 'Order cancelled',         sub: 'This order is no longer active.' },
-    payment_rejected:  { title: 'Payment not confirmed',   sub: 'We couldn\'t match your payment. Please send proof again.' }
+    payment_rejected:  { title: 'Payment not confirmed',   sub: 'We couldn\'t match your payment. Please send proof again.' },
+    reserved:          { title: 'Slot reserved! 🎉',       sub: 'We\'ll message you when ' + order.game_title + ' releases to set up your account and collect the rest.' }
   };
   const step = STEP_COPY[order.state] || STEP_COPY.awaiting_payment;
   const typeLabel = order.account_type === 'tr' ? 'Trophy' : order.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
   const durLabel = order.days === 7 ? 'Weekly' : 'Monthly';
   const totalDue = (order.amount_due || 0) + (order.deposit_due || 0);
+  const rentLabel = order.is_reservation ? 'Reservation downpayment' : 'Rent';
 
   // The message the customer copies and pastes into Messenger. Messenger has no
   // ?text= URL parameter — unlike WhatsApp, the composer cannot be pre-filled —
@@ -63,13 +65,16 @@
     <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>
     <div class="ord-row"><span>Account type</span><span><%= typeLabel %></span></div>
     <div class="ord-row"><span>Duration</span><span><%= durLabel %></span></div>
-    <div class="ord-row"><span>Rent</span><span>₱<%= order.amount_due %></span></div>
+    <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= order.amount_due %></span></div>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
     <% } %>
     <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
+    <% } %>
+    <% if (order.is_reservation && order.remaining_due > 0) { %>
+    <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due when <%= order.game_title %> releases<%= order.release_date ? ' (' + order.release_date + ')' : '' %>.</div>
     <% } %>
   </div>
 
@@ -220,6 +225,13 @@
     <div class="ord-step-label">You're renting now</div>
     <div class="ord-row"><span>Rented since</span><span><%= order.start_date %></span></div>
     <div class="ord-row"><span>Return by</span><span><%= order.end_date %></span></div>
+  </div>
+  <% } %>
+
+  <% if (order.state === 'reserved') { %>
+  <div class="ord-step">
+    <div class="ord-step-label">Your slot is locked in</div>
+    <p class="ord-help">Expected release: <strong><%= order.release_date || 'TBA' %></strong>. We'll message you here or on Facebook when it's time to set up your account and collect the remaining ₱<%= order.remaining_due || 0 %>.</p>
   </div>
   <% } %>
 </div>
