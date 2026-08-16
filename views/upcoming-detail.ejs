@@ -89,13 +89,13 @@
         <span style="font-size:1.5rem;">🚫</span>
         <div>
           <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">All Slots Full</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:0.15rem;">No reservation slots available right now. You can still request a slot or join the waitlist below.</div>
+          <div style="font-size:0.78rem;color:#888;margin-top:0.15rem;">You can still request a slot with a downpayment below, or join the free waitlist.</div>
         </div>
       </div>
       <% } %>
 
       <!-- SELECT RENTAL TYPE -->
-      <% if ((hasNt || showTr) && !allFull) { %>
+      <% if (hasNt || showTr) { %>
       <div class="gd-section-label">SELECT RENTAL TYPE</div>
       <div class="gd-type-options" id="typeOptions">
 
@@ -134,14 +134,11 @@
       </div>
       <% } %>
 
-      <!-- SELECT DURATION (hidden when no slots) -->
-      <% if (!allFull) { %>
+      <!-- SELECT DURATION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
       <div class="gd-duration-grid" id="durGrid"></div>
-      <% } %>
 
-      <!-- ORDER SUMMARY (hidden when no slots) -->
-      <% if (!allFull) { %>
+      <!-- ORDER SUMMARY -->
       <div class="gd-total-box" id="orderSummary" style="display:none;">
         <div class="gd-total-label">ORDER SUMMARY</div>
         <div class="gd-total-rows">
@@ -151,25 +148,27 @@
         </div>
         <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
       </div>
-      <% } %>
 
       <!-- CHOOSE YOUR OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
 
-      <!-- Has slots: Reserve a Slot with 50% downpayment -->
-      <div id="ctaHasSlot" style="display:none;">
+      <!-- Reserve with 50% downpayment — shown whether or not a slot is free
+           right now. When full, the owner confirms manually and it works
+           exactly like a priority request; when a slot is open, it's
+           confirmed the same way, just usually faster. -->
+      <div id="ctaReserve">
         <div style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);border:1px solid #1a4a1a;border-radius:14px;padding:1.5rem;text-align:center;">
           <div style="font-size:1.5rem;margin-bottom:0.35rem;">⭐</div>
-          <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;">Reserve a Slot</div>
+          <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;" id="ctaReserveTitle">Reserve a Slot</div>
           <div id="ctaHasSlotFee" style="font-size:0.88rem;color:#22c55e;font-weight:700;margin-bottom:0.35rem;">Select a duration to see downpayment</div>
           <div id="ctaHasSlotDP" style="display:none;font-size:0.8rem;color:#aaa;margin-bottom:0.75rem;"></div>
-          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
+          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;" id="ctaReserveNote">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
           <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
             <input type="hidden" name="game_id" value="<%= game.id %>">
             <input type="hidden" name="account_type" id="reserveType" value="">
             <input type="hidden" name="days" id="reserveDays" value="">
             <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
-            <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+            <button type="submit" id="ctaReserveBtn" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
               Reserve Now →
             </button>
           </form>
@@ -184,27 +183,17 @@
         </div>
       </div>
 
-      <!-- No slots: Request a Slot + Fall in Line -->
-      <div id="ctaNoSlot" style="display:<%= allFull ? '' : 'none' %>;">
-        <div class="gd-reserve-options">
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-             class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event,'reserve')">
-            <div class="gd-reserve-badge">PRIORITY</div>
-            <div class="gd-reserve-icon">⭐</div>
-            <div class="gd-reserve-name">Request a Slot</div>
-            <div class="gd-reserve-fee" style="color:#f59e0b;">Downpayment upon approval</div>
-            <div class="gd-reserve-note">Request a slot and we'll reach out with downpayment details upon approval.</div>
-            <div class="gd-reserve-cta">📘 Request Now →</div>
-          </a>
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-             class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-            <div class="gd-reserve-icon">🎮</div>
-            <div class="gd-reserve-name">Fall in Line</div>
-            <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-          </a>
-        </div>
+      <!-- Free waitlist — no payment, always available as a fallback when
+           slots are full. -->
+      <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
+        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+           class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+          <div class="gd-reserve-icon">🎮</div>
+          <div class="gd-reserve-name">Fall in Line</div>
+          <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
+          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+        </a>
       </div>
       </div><!-- /reserve-panel max-width -->
 
@@ -285,8 +274,11 @@ function updateSummary() {
 
 function updateCta() {
   const hasSlot = getSlots() > 0;
-  document.getElementById('ctaHasSlot').style.display = hasSlot ? '' : 'none';
-  document.getElementById('ctaNoSlot').style.display  = hasSlot ? 'none' : '';
+  document.getElementById('ctaReserveTitle').textContent = hasSlot ? 'Reserve a Slot' : 'Request a Slot';
+  document.getElementById('ctaReserveNote').textContent = hasSlot
+    ? 'Pay 50% now to lock in your slot. Remaining balance due when the game releases.'
+    : 'No slots free right now — pay 50% to request one. We\'ll confirm as soon as it opens, or refund you if it doesn\'t.';
+  document.getElementById('ctaReserveBtn').textContent = hasSlot ? 'Reserve Now →' : 'Request Now →';
 }
 
 function updateLinks() {
@@ -311,38 +303,26 @@ function updateLinks() {
     }
   }
 
-  if (hasSlot) {
-    const msg = encodeURIComponent(
-      'Hi! I want to RESERVE a slot for:\n' +
-      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-      'Type: ' + typeName + '\n' +
-      'Duration: ' + selectedDays + ' Days\n' +
-      'Total: ' + priceStr + '\n' +
-      '50% Downpayment: ' + dpStr
-    );
-    const el = document.getElementById('reserveLinkSlot');
-    if (el) el.href = 'http://m.me/PlaystationHub00?text=' + msg;
-  } else {
-    const reserveMsg = encodeURIComponent(
-      'Hi! I want to REQUEST a slot for:\n' +
-      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-      'Type: ' + typeName + '\n' +
-      'Duration: ' + selectedDays + ' Days\n' +
-      'Total: ' + priceStr + '\n' +
-      '(₱100 reservation fee applies)'
-    );
-    const queueMsg = encodeURIComponent(
-      'Hi! I want to JOIN THE WAITLIST for:\n' +
-      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-      'Type: ' + typeName + '\n' +
-      'Duration: ' + selectedDays + ' Days\n' +
-      'Total: ' + priceStr
-    );
-    const rl = document.getElementById('reserveLink');
-    const ql = document.getElementById('queueLink');
-    if (rl) rl.href = 'http://m.me/PlaystationHub00?text=' + reserveMsg;
-    if (ql) ql.href = 'http://m.me/PlaystationHub00?text=' + queueMsg;
-  }
+  const msg = encodeURIComponent(
+    'Hi! I want to ' + (hasSlot ? 'RESERVE' : 'REQUEST') + ' a slot for:\n' +
+    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+    'Type: ' + typeName + '\n' +
+    'Duration: ' + selectedDays + ' Days\n' +
+    'Total: ' + priceStr + '\n' +
+    '50% Downpayment: ' + dpStr
+  );
+  const el = document.getElementById('reserveLinkSlot');
+  if (el) el.href = 'http://m.me/PlaystationHub00?text=' + msg;
+
+  const queueMsg = encodeURIComponent(
+    'Hi! I want to JOIN THE WAITLIST for:\n' +
+    'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+    'Type: ' + typeName + '\n' +
+    'Duration: ' + selectedDays + ' Days\n' +
+    'Total: ' + priceStr
+  );
+  const ql = document.getElementById('queueLink');
+  if (ql) ql.href = 'http://m.me/PlaystationHub00?text=' + queueMsg;
 }
 
 const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
