@@ -143,10 +143,33 @@ db.defaults({
   notification_optins: [],
   bot_training: [],
   nextBotTrainingId: 1,
+  signin_steps: [],
+  nextSigninStepId: 1,
   accounts: [],
   nextAccountId: 1,
   month_logs: []
 }).write();
+
+// Seed default sign-in steps on first run only — an owner who has already
+// edited/reordered these should never have them silently reset.
+if (!db.get('signin_steps').value().length) {
+  const DEFAULT_SIGNIN_STEPS = [
+    { console: 'ps5', text: 'On your PS5, go to Settings → Users and Accounts → Users' },
+    { console: 'ps5', text: 'Select your profile, then choose "Sign in with PS App" so the QR code appears on screen' },
+    { console: 'ps5', text: 'Take a photo of the QR code and send it to us' },
+    { console: 'ps4', text: 'On your PS4, go to Settings → Login Settings → Sign In' },
+    { console: 'ps4', text: 'Choose "Sign in with QR Code" so the QR code appears on screen' },
+    { console: 'ps4', text: 'Take a photo of the QR code and send it to us' }
+  ];
+  let nextId = db.get('nextSigninStepId').value();
+  const seeded = DEFAULT_SIGNIN_STEPS.map((s, i) => {
+    const byConsole = DEFAULT_SIGNIN_STEPS.filter(x => x.console === s.console);
+    const rank = byConsole.indexOf(s);
+    return Object.assign({ id: nextId++, rank, image: null, created_at: new Date().toISOString() }, s);
+  });
+  db.set('signin_steps', seeded).write();
+  db.set('nextSigninStepId', nextId).write();
+}
 
 // Ensure accounts collection exists for pre-existing databases
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
@@ -424,6 +447,14 @@ function newPsplusId() {
 }
 function getPsplusPrices() { return db.get('psplus_prices').value(); }
 function getPsplusSlots() { return db.get('psplus_slots').value() || { nt_slots: 0, tr_slots: 0, ps4_slots: 0 }; }
+function getSigninSteps() {
+  const all = db.get('signin_steps').value() || [];
+  const sortByRank = (a, b) => a.rank - b.rank;
+  return {
+    ps5: all.filter(s => s.console === 'ps5').sort(sortByRank),
+    ps4: all.filter(s => s.console === 'ps4').sort(sortByRank)
+  };
+}
 
 function getPsplusPopular() { return db.get('psplus_popular').value(); }
 function getPsplusPopularEntry(id) { return db.get('psplus_popular').find({ id: parseInt(id) }).value(); }
@@ -4066,6 +4097,78 @@ app.post('/admin/bot-training/add', requireAuth, (req, res) => {
 app.post('/admin/bot-training/delete/:id', requireAuth, (req, res) => {
   db.get('bot_training').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?tab=settings&msg=training_deleted');
+});
+
+// ── Sign-In QR Guide ──────────────────────────────────────────────────────────
+// Each step is added/edited/deleted individually — never as one bulk form —
+// so uploading one screenshot can never risk re-submitting or losing the others.
+const uploadSigninStep = multer({
+  storage,
+  fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
+  limits: { fileSize: 8 * 1024 * 1024 }
+});
+
+app.post('/admin/signin-steps/add', requireAuth, uploadSigninStep.single('image'), async (req, res) => {
+  const { console: cons, text } = req.body;
+  if (!['ps5', 'ps4'].includes(cons) || !text || !text.trim()) {
+    return res.redirect('/admin?tab=settings&msg=error');
+  }
+  const image = req.file ? await processUploadedImage(req.file, 900) : null;
+  const existing = db.get('signin_steps').filter({ console: cons }).value();
+  const rank = existing.length ? Math.max(...existing.map(s => s.rank)) + 1 : 0;
+  const id = db.get('nextSigninStepId').value();
+  db.get('signin_steps').push({
+    id, console: cons, rank, text: text.trim(), image, created_at: new Date().toISOString()
+  }).write();
+  db.set('nextSigninStepId', id + 1).write();
+  res.redirect('/admin?tab=settings&msg=signin_step_saved');
+});
+
+app.post('/admin/signin-steps/:id', requireAuth, uploadSigninStep.single('image'), async (req, res) => {
+  const id = parseInt(req.params.id);
+  const step = db.get('signin_steps').find({ id }).value();
+  if (!step) return res.redirect('/admin?tab=settings&msg=error');
+  const patch = { text: (req.body.text || step.text).trim() };
+  if (req.body.remove_image === 'on' && step.image) {
+    const fp = path.join(uploadsDir, path.basename(step.image));
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    patch.image = null;
+  } else if (req.file) {
+    if (step.image) {
+      const oldFp = path.join(uploadsDir, path.basename(step.image));
+      if (fs.existsSync(oldFp)) fs.unlinkSync(oldFp);
+    }
+    patch.image = await processUploadedImage(req.file, 900);
+  }
+  db.get('signin_steps').find({ id }).assign(patch).write();
+  res.redirect('/admin?tab=settings&msg=signin_step_saved');
+});
+
+app.post('/admin/signin-steps/:id/delete', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const step = db.get('signin_steps').find({ id }).value();
+  if (step && step.image) {
+    const fp = path.join(uploadsDir, path.basename(step.image));
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+  }
+  db.get('signin_steps').remove({ id }).write();
+  res.redirect('/admin?tab=settings&msg=signin_step_deleted');
+});
+
+app.post('/admin/signin-steps/:id/move', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const dir = req.body.dir === 'up' ? -1 : req.body.dir === 'down' ? 1 : 0;
+  const step = db.get('signin_steps').find({ id }).value();
+  if (!step || !dir) return res.redirect('/admin?tab=settings&msg=error');
+  const siblings = db.get('signin_steps').filter({ console: step.console }).sortBy('rank').value();
+  const idx = siblings.findIndex(s => s.id === id);
+  const swapIdx = idx + dir;
+  if (swapIdx < 0 || swapIdx >= siblings.length) return res.redirect('/admin?tab=settings&msg=signin_step_saved');
+  const swapWith = siblings[swapIdx];
+  const stepRank = step.rank;
+  db.get('signin_steps').find({ id: step.id }).assign({ rank: swapWith.rank }).write();
+  db.get('signin_steps').find({ id: swapWith.id }).assign({ rank: stepRank }).write();
+  res.redirect('/admin?tab=settings&msg=signin_step_saved');
 });
 
 app.post('/admin/bot-training/import-fb', requireAuth, express.json({ limit: '10mb' }), (req, res) => {
