@@ -76,10 +76,25 @@
   <div class="buy-section-label">Single games</div>
   <div class="buy-single-grid">
     <% singleGames.forEach(g => { %>
-    <a href="/game/<%= g.slug %>?mode=buy" class="buy-single-card">
-      <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-single-cover" loading="lazy">
-      <% } else { %><div class="buy-single-cover buy-cover-placeholder"></div><% } %>
-      <div class="buy-single-price">from ₱<%= g.price %><% if (g.was) { %> <s class="buy-single-was">₱<%= g.was %></s><% } %></div>
+    <a href="/game/<%= g.slug %>?mode=buy" class="game-card gc2-card">
+      <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
+      <% } else { %>
+        <div class="gc2-cover-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          <span>No Image</span>
+        </div>
+      <% } %>
+      <div class="gc2-scrim"></div>
+      <div class="gc2-body">
+        <div class="gc2-plat"><%= g.platform %><%= g.genre ? ' · ' + g.genre.split('/')[0].trim() : '' %></div>
+        <div class="gc2-title"><%= g.title %></div>
+        <div class="gc2-foot">
+          <div class="gc2-price">from <b>₱<%= g.price %></b><% if (g.was) { %><s class="gc2-price-was">₱<%= g.was %></s><% } %></div>
+          <div class="gc2-cta">Buy</div>
+        </div>
+      </div>
     </a>
     <% }) %>
   </div>

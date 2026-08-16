@@ -1146,7 +1146,11 @@ app.get('/buy', (req, res) => {
     .map(g => {
       const base = g.buy_nt_price > 0 ? g.buy_nt_price : g.buy_tr_price;
       const final = buyPromo ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
-      return { id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title) };
+      return {
+        id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title),
+        platform: g.platform, genre: g.genre,
+        cover_focal_x: g.cover_focal_x, cover_focal_y: g.cover_focal_y
+      };
     });
   res.render('buy', {
     bundles, singleGames, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
