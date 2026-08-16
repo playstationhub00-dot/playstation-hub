@@ -329,16 +329,19 @@ app.locals.computeAvailability = computeAvailability;
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
-// CSS/JS must revalidate on every request — the edge otherwise caches them for
-// hours, so a deploy leaves returning visitors on stale styles. ETags make the
-// revalidation a cheap 304; images and fonts keep the default caching.
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'no-cache');
-    }
+app.use(express.static(path.join(__dirname, 'public')));
+
+// The edge caches /css/style.css for hours and ignores any Cache-Control we
+// set, so a deploy would otherwise leave visitors on stale styles. Cache keys
+// are per-URL, so views append ?v=<assetV> to bust it. A redeploy rewrites
+// every file's mtime, which is exactly when the version should change.
+app.locals.assetV = (() => {
+  try {
+    return String(Math.floor(fs.statSync(path.join(__dirname, 'public/css/style.css')).mtimeMs));
+  } catch {
+    return String(Date.now());
   }
-}));
+})();
 
 // ── JPEG renditions for the Meta catalog feed ────────────────────────────────
 // processUploadedImage() stores every cover as .webp, which keeps the site fast
