@@ -1077,8 +1077,8 @@ app.get('/buy', (req, res) => {
       gameCount: acc.game_ids.length,
       covers: acc.game_ids.map(gameById).filter(Boolean).slice(0, 4),
       moreCount: Math.max(0, acc.game_ids.length - 4),
-      trophy: acc.slots.trophy.enabled ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open' } : null,
-      nonTrophy: acc.slots.non_trophy.enabled ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open' } : null
+      trophy: acc.slots.trophy.enabled ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open', status: acc.slots.trophy.status } : null,
+      nonTrophy: acc.slots.non_trophy.enabled ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open', status: acc.slots.non_trophy.status } : null
     }));
   const s = getSiteSettings();
   const promo = s.promo || {};

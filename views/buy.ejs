@@ -22,6 +22,7 @@
   <% if (bundles.length) { %>
   <div class="buy-section-label">Account bundles — best value</div>
   <div class="buy-bundle-grid">
+    <% const slotStatusLabel = st => st === 'rented' ? 'Rented' : st === 'buyed' ? 'Sold' : 'Unavailable'; %>
     <% bundles.forEach(b => { %>
     <div class="buy-bundle-card">
       <div class="buy-bundle-head">
@@ -45,7 +46,7 @@
         <% if (b.nonTrophy.open) { %>
         <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
         <button type="submit" class="buy-slot-btn">Buy</button>
-        <% } else { %><span class="buy-slot-status">Sold</span><% } %>
+        <% } else { %><span class="buy-slot-status"><%= slotStatusLabel(b.nonTrophy.status) %></span><% } %>
       </form>
       <% } %>
       <% if (b.trophy) { %>
@@ -58,7 +59,7 @@
         <% if (b.trophy.open) { %>
         <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
         <button type="submit" class="buy-slot-btn">Buy</button>
-        <% } else { %><span class="buy-slot-status">Sold</span><% } %>
+        <% } else { %><span class="buy-slot-status"><%= slotStatusLabel(b.trophy.status) %></span><% } %>
       </form>
       <% } %>
     </div>
