@@ -1222,35 +1222,63 @@ app.post('/order/create', async (req, res) => {
   }
 });
 
-// Creates a reservation order for a Coming Soon game — a 50% downpayment to
-// lock a slot ahead of release, not a rental. Reuses the same order-status
-// page and payment-proof flow as /order/create, but settles into 'reserved'
-// instead of progressing to a console sign-in, since there's nothing to sign
-// into until the game actually releases.
+// Creates a reservation order — either a 50% downpayment on a Coming Soon
+// game (locking a slot ahead of release) or a flat ₱100 priority-reservation
+// fee on an available game whose selected type has no open slot right now
+// (matching the fee the site has always quoted for that). Both reuse the
+// same order-status page and payment-proof flow as /order/create, but settle
+// into 'reserved' instead of progressing to a console sign-in — there's
+// either nothing to sign into yet, or no free slot to sign into.
 app.post('/order/reserve', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
   const { game_id, account_type, days, fb_name } = req.body;
-  const game = getUpcomingGame(game_id);
+  const upcoming = getUpcomingGame(game_id);
+  const game = upcoming || getGame(game_id);
   if (!game) return res.redirect('/browse');
+  const isUpcoming = !!upcoming;
+  const errRedirect = isUpcoming
+    ? '/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1'
+    : '/game/' + gameSlug(game.title) + '?order_error=1';
 
   const name = (fb_name || '').trim();
-  const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+  const type = isUpcoming
+    ? (['nt', 'tr'].includes(account_type) ? account_type : null)
+    : (['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null);
   const d = parseInt(days);
-  if (!name || !type || !PROMO_DURATIONS.includes(d)) {
-    return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
-  }
-
-  const priceField = type + '_price_' + d + 'd';
-  const base = game[priceField] || 0;
-  if (!base) return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
+  if (!name || !type || !PROMO_DURATIONS.includes(d)) return res.redirect(errRedirect);
 
   const s = getSiteSettings();
   const promo = s.promo || {};
-  const depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
-  const total = base + depositDue;
-  const downpayment = Math.ceil(total * 0.5);
+  let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
+
+  if (isUpcoming) {
+    const priceField = type + '_price_' + d + 'd';
+    const base = game[priceField] || 0;
+    if (!base) return res.redirect(errRedirect);
+    depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
+    const total = base + depositDue;
+    amountDue = Math.ceil(total * 0.5);
+    remainingDue = total - amountDue;
+    releaseDate = game.release_date || '';
+    upcomingGameId = game.id;
+  } else {
+    const resolved = resolveGamePrices(game);
+    const priceType = type === 'ps4' ? 'nt' : type;
+    const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+    if (!base) return res.redirect(errRedirect);
+    const pct = getPromoDiscountPct(promo, d);
+    const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+    const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+    // Flat ₱100 priority fee, matching the site's existing reservation copy —
+    // not a percentage of the total, and independent of the promo/deposit math.
+    amountDue = 100;
+    depositDue = 0;
+    remainingDue = Math.max(0, rentAfterPromo - amountDue) + gameDeposit;
+    releaseDate = '';
+    upcomingGameId = null;
+  }
 
   try {
     const order = await orders.create({
@@ -1258,19 +1286,19 @@ app.post('/order/reserve', async (req, res) => {
       game_title: game.title,
       account_type: type,
       days: d,
-      amount_due: downpayment,
-      deposit_due: 0,
+      amount_due: amountDue,
+      deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
       is_reservation: true,
-      upcoming_game_id: game.id,
-      release_date: game.release_date || '',
-      remaining_due: total - downpayment
+      upcoming_game_id: upcomingGameId,
+      release_date: releaseDate,
+      remaining_due: remainingDue
     });
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order reserve]', e.message);
-    res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1');
+    res.redirect(errRedirect);
   }
 });
 
@@ -1466,11 +1494,15 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
     }
   }
 
-  // A confirmed reservation goes into the customers table the same way a
-  // Messenger-arranged one already does — the upcoming game's slot count is
-  // computed live from status:'reservation' rows (see /upcoming/:slug), so
-  // no game-record fields need updating here.
-  if (to === 'reserved' && !order.customer_id) {
+  // A confirmed Coming Soon reservation goes into the customers table the
+  // same way a Messenger-arranged one already does — the upcoming game's
+  // slot count is computed live from status:'reservation' rows (see
+  // /upcoming/:slug), so no game-record fields need updating here. An
+  // available-game priority reservation (upcoming_game_id is null) has no
+  // such slot-count mechanism — it stays as an order only, and the owner
+  // sets the customer up manually once a slot actually frees, same as a
+  // Messenger-arranged priority reservation always has.
+  if (to === 'reserved' && !order.customer_id && order.upcoming_game_id) {
     const customerId = newCustomerId();
     db.get('customers').push({
       id: customerId,
