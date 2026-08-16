@@ -14,10 +14,6 @@
 <div class="buy-page bundle-page">
   <div class="bundle-crumb"><a href="/buy">Buy</a> › <%= bundle.name %></div>
 
-  <% if (orderError === 'sold') { %><div class="ord-flash ord-flash-warn">That slot just sold — sorry! Pick another below.</div><% } %>
-  <% if (orderError === 'rate') { %><div class="ord-flash ord-flash-warn">Too many attempts, please wait a moment and try again.</div><% } %>
-  <% if (orderError && orderError !== 'sold' && orderError !== 'rate') { %><div class="ord-flash ord-flash-warn">Something went wrong, please try again.</div><% } %>
-
   <div class="bundle-layout">
     <div class="bundle-main">
       <h1 class="bundle-title"><%= bundle.name %></h1>
@@ -90,9 +86,12 @@ document.querySelectorAll('.buy-bundle-foot').forEach(function (form) {
 });
 function bundleCopyLink() {
   var btn = document.getElementById('bundleCopyBtn');
+  var original = btn.textContent;
   navigator.clipboard.writeText(window.location.href).then(function () {
-    var original = btn.textContent;
     btn.textContent = 'Link copied';
+    setTimeout(function () { btn.textContent = original; }, 2000);
+  }).catch(function () {
+    btn.textContent = "Couldn't copy — copy manually";
     setTimeout(function () { btn.textContent = original; }, 2000);
   });
 }

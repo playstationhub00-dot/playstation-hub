@@ -1157,7 +1157,7 @@ app.get('/buy', (req, res) => {
 
 app.get('/bundle/:slug', (req, res) => {
   const allGames = getGames();
-  const acc = getAccounts().find(a => a.for_sale && gameSlug(a.public_name || a.label) === req.params.slug);
+  const acc = getAccounts().find(a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled) && gameSlug(a.public_name || a.label) === req.params.slug);
   if (!acc) return res.redirect('/buy');
   const name = acc.public_name || acc.label;
   const games = buildBundleGames(acc, allGames);
@@ -1179,8 +1179,7 @@ app.get('/bundle/:slug', (req, res) => {
   const s = getSiteSettings();
   res.render('bundle', {
     bundle,
-    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
-    orderError: req.query.order_error || null
+    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s
   });
 });
 
