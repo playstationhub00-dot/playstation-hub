@@ -1070,7 +1070,7 @@ app.get('/buy', (req, res) => {
   const allGames = getGames();
   const gameById = id => allGames.find(g => g.id === parseInt(id));
   const bundles = getAccounts()
-    .filter(acc => acc.for_sale && ((acc.slots.trophy.enabled && acc.slots.trophy.status === 'open') || (acc.slots.non_trophy.enabled && acc.slots.non_trophy.status === 'open')))
+    .filter(acc => acc.for_sale && (acc.slots.trophy.enabled || acc.slots.non_trophy.enabled))
     .map(acc => ({
       id: acc.id,
       name: acc.public_name || acc.label,
