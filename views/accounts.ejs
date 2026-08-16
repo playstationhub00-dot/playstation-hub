@@ -113,12 +113,16 @@
         <div><label>Trophy permanent price (₱)</label><input type="number" name="price_permanent_tr" value="5000" min="0"></div>
         <div><label>Non-Trophy permanent price (₱)</label><input type="number" name="price_permanent_nt" value="4500" min="0"></div>
         <div><label>Internal note</label><input type="text" name="note" placeholder="reminders, misc info..."></div>
+        <div style="grid-column:1/-1;"><label>Public bundle name (leave blank to hide from Buy page)</label><input type="text" name="public_name" placeholder="e.g. Sports Pack"></div>
       </div>
       <div class="slot-toggles">
         <label><input type="checkbox" name="enable_trophy" checked> 🏆 Trophy slot</label>
         <label><input type="checkbox" name="enable_non_trophy" checked> 🎮 Non-Trophy slot</label>
         <label><input type="checkbox" name="enable_ps4_primary" checked> 🕹️ PS4 Primary slot</label>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:0.5rem;cursor:pointer;">
+        <input type="checkbox" name="for_sale"> 🛒 List on the public Buy page
+      </label>
       <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Create Account</button>
     </form>
   </details>
@@ -236,11 +240,13 @@
                     <div><label>TR price</label><input type="number" name="price_permanent_tr" value="<%= acc.price_permanent_tr %>"></div>
                     <div><label>NT price</label><input type="number" name="price_permanent_nt" value="<%= acc.price_permanent_nt %>"></div>
                     <div><label>Note</label><input type="text" name="note" value="<%= acc.note %>"></div>
+                    <div><label>Public bundle name</label><input type="text" name="public_name" value="<%= acc.public_name %>" placeholder="leave blank to hide"></div>
                   </div>
                   <div class="slot-toggles">
                     <label><input type="checkbox" name="enable_trophy" <%= acc.slots.trophy.enabled?'checked':'' %>> 🏆</label>
                     <label><input type="checkbox" name="enable_non_trophy" <%= acc.slots.non_trophy.enabled?'checked':'' %>> 🎮</label>
                     <label><input type="checkbox" name="enable_ps4_primary" <%= acc.slots.ps4_primary.enabled?'checked':'' %>> 🕹️</label>
+                    <label><input type="checkbox" name="for_sale" <%= acc.for_sale?'checked':'' %>> 🛒 For sale</label>
                   </div>
                   <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Save</button>
                 </form>

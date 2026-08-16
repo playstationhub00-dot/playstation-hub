@@ -540,6 +540,8 @@ function normalizeAccount(a) {
   });
   a.game_ids = Array.isArray(a.game_ids) ? a.game_ids : [];
   a.email = a.email || '';
+  a.for_sale = a.for_sale === true;
+  a.public_name = a.public_name || '';
   return a;
 }
 function getAccounts() { return (db.get('accounts').value() || []).map(normalizeAccount); }
@@ -3183,7 +3185,7 @@ app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
-    enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
+    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
   if (!label || !label.trim()) return res.redirect('/admin/accounts?msg=error');
   db.get('accounts').push({
     id: newAccountId(),
@@ -3194,6 +3196,8 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
     email: (email || '').trim(),
     price_permanent_tr: parseInt(price_permanent_tr) || 5000,
     price_permanent_nt: parseInt(price_permanent_nt) || 4500,
+    for_sale: for_sale === 'on',
+    public_name: (public_name || '').trim(),
     slots: {
       trophy: blankSlot(enable_trophy !== undefined),
       non_trophy: blankSlot(enable_non_trophy !== undefined),
@@ -3206,7 +3210,7 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
 
 app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
-    enable_trophy, enable_non_trophy, enable_ps4_primary } = req.body;
+    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
   const existing = getAccount(req.params.id);
   if (!existing) return res.redirect('/admin/accounts?msg=error');
   const slots = existing.slots;
@@ -3221,6 +3225,8 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     email: email !== undefined ? email.trim() : existing.email,
     price_permanent_tr: price_permanent_tr !== undefined && price_permanent_tr !== '' ? (parseInt(price_permanent_tr) || 0) : existing.price_permanent_tr,
     price_permanent_nt: price_permanent_nt !== undefined && price_permanent_nt !== '' ? (parseInt(price_permanent_nt) || 0) : existing.price_permanent_nt,
+    for_sale: for_sale === 'on',
+    public_name: public_name !== undefined ? public_name.trim() : existing.public_name,
     slots
   }).write();
   res.redirect('/admin/accounts?msg=account_updated');
