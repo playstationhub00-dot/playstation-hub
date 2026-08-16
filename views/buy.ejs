@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Permanent Access — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'buy' }) %>
+
+<div class="buy-page">
+  <h1 class="buy-title">Buy permanently</h1>
+  <p class="buy-sub">Own it forever. No return date, no weekly fee.</p>
+
+  <% if (bundles.length) { %>
+  <div class="buy-section-label">Account bundles — best value</div>
+  <div class="buy-bundle-grid">
+    <% bundles.forEach(b => { %>
+    <div class="buy-bundle-card">
+      <div class="buy-bundle-head">
+        <span class="buy-bundle-name"><%= b.name %></span>
+        <span class="buy-bundle-count"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %></span>
+      </div>
+      <div class="buy-bundle-covers">
+        <% b.covers.forEach(g => { %>
+          <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
+          <% } else { %><div class="buy-cover-thumb buy-cover-placeholder"></div><% } %>
+        <% }) %>
+        <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
+      </div>
+      <% if (b.nonTrophy) { %>
+      <form method="POST" action="/order/buy" class="buy-slot-row<%= !b.nonTrophy.open ? ' buy-slot-sold' : '' %>">
+        <input type="hidden" name="kind" value="bundle">
+        <input type="hidden" name="account_id" value="<%= b.id %>">
+        <input type="hidden" name="slot_type" value="nt">
+        <span class="buy-slot-label">🎮 Non-Trophy</span>
+        <span class="buy-slot-price">₱<%= b.nonTrophy.price %></span>
+        <% if (b.nonTrophy.open) { %>
+        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
+        <button type="submit" class="buy-slot-btn">Buy</button>
+        <% } else { %><span class="buy-slot-status">Sold</span><% } %>
+      </form>
+      <% } %>
+      <% if (b.trophy) { %>
+      <form method="POST" action="/order/buy" class="buy-slot-row<%= !b.trophy.open ? ' buy-slot-sold' : '' %>">
+        <input type="hidden" name="kind" value="bundle">
+        <input type="hidden" name="account_id" value="<%= b.id %>">
+        <input type="hidden" name="slot_type" value="tr">
+        <span class="buy-slot-label">🏆 Trophy</span>
+        <span class="buy-slot-price">₱<%= b.trophy.price %></span>
+        <% if (b.trophy.open) { %>
+        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
+        <button type="submit" class="buy-slot-btn">Buy</button>
+        <% } else { %><span class="buy-slot-status">Sold</span><% } %>
+      </form>
+      <% } %>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (singleGames.length) { %>
+  <div class="buy-section-label">Single games</div>
+  <div class="buy-single-grid">
+    <% singleGames.forEach(g => { %>
+    <a href="/game/<%= g.slug %>?mode=buy" class="buy-single-card">
+      <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-single-cover" loading="lazy">
+      <% } else { %><div class="buy-single-cover buy-cover-placeholder"></div><% } %>
+      <div class="buy-single-price">₱<%= g.price %><% if (g.was) { %> <s class="buy-single-was">₱<%= g.was %></s><% } %></div>
+    </a>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <div class="buy-placeholder-grid">
+    <div class="buy-placeholder-card">
+      <div class="buy-placeholder-title">📦 Build your own</div>
+      <p class="buy-placeholder-text">Pick any 3 or more games and save. We put them on one account for you.</p>
+      <a href="http://m.me/PlaystationHub00?text=Hi!%20I%20want%20to%20build%20my%20own%20bundle." target="_blank" rel="noopener" class="buy-placeholder-cta">Start building</a>
+    </div>
+    <div class="buy-placeholder-card buy-placeholder-amber">
+      <div class="buy-placeholder-title">🛒 Don't see it?</div>
+      <p class="buy-placeholder-text">We'll buy it for you. Pay first, we purchase and set up your account.</p>
+      <a href="http://m.me/PlaystationHub00?text=Hi!%20I%20want%20to%20request%20a%20game%20to%20buy." target="_blank" rel="noopener" class="buy-placeholder-cta">Request a game</a>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

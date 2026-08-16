@@ -1066,6 +1066,36 @@ app.get('/', (req, res) => {
   res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
+app.get('/buy', (req, res) => {
+  const allGames = getGames();
+  const gameById = id => allGames.find(g => g.id === parseInt(id));
+  const bundles = getAccounts()
+    .filter(acc => acc.for_sale && ((acc.slots.trophy.enabled && acc.slots.trophy.status === 'open') || (acc.slots.non_trophy.enabled && acc.slots.non_trophy.status === 'open')))
+    .map(acc => ({
+      id: acc.id,
+      name: acc.public_name || acc.label,
+      gameCount: acc.game_ids.length,
+      covers: acc.game_ids.map(gameById).filter(Boolean).slice(0, 4),
+      moreCount: Math.max(0, acc.game_ids.length - 4),
+      trophy: acc.slots.trophy.enabled ? { price: acc.price_permanent_tr, open: acc.slots.trophy.status === 'open' } : null,
+      nonTrophy: acc.slots.non_trophy.enabled ? { price: acc.price_permanent_nt, open: acc.slots.non_trophy.status === 'open' } : null
+    }));
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
+  const singleGames = allGames
+    .filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0)
+    .map(g => {
+      const base = g.buy_nt_price > 0 ? g.buy_nt_price : g.buy_tr_price;
+      const final = buyPromo ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
+      return { id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title) };
+    });
+  res.render('buy', {
+    bundles, singleGames, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
+    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s
+  });
+});
+
 app.get('/browse', (req, res) => {
   const { search, platform, genre, unit, newOnly } = req.query;
   const accountSummaryMap = buildAccountSummaryMap();
