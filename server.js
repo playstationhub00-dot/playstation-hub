@@ -335,7 +335,7 @@ app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(
 app.use(express.static(path.join(__dirname, 'public'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.css') || filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.setHeader('Cache-Control', 'no-cache');
     }
   }
 }));
