@@ -1,0 +1,50 @@
+<%
+  // idPrefix keeps element ids unique if this partial is ever included twice
+  // on the same page. locals.idPrefix may be undefined on some includes.
+  const ssgId = (typeof idPrefix !== 'undefined' && idPrefix) ? idPrefix : 'ssg';
+%>
+<div class="ssg-guide" id="<%= ssgId %>-guide">
+  <div class="ssg-guide-tabs">
+    <button type="button" class="ssg-guide-tab ssg-guide-tab-on" data-c="ps5" onclick="ssgGuideSwitch('<%= ssgId %>','ps5')">PS5</button>
+    <button type="button" class="ssg-guide-tab" data-c="ps4" onclick="ssgGuideSwitch('<%= ssgId %>','ps4')">PS4</button>
+  </div>
+  <% ['ps5', 'ps4'].forEach(cons => { %>
+  <div class="ssg-guide-panel<%= cons === 'ps5' ? '' : ' ssg-guide-hidden' %>" data-c="<%= cons %>">
+    <% if (!signinSteps[cons].length) { %>
+    <p class="ssg-guide-empty">Steps for <%= cons.toUpperCase() %> haven't been added yet — message us and we'll walk you through it.</p>
+    <% } %>
+    <% signinSteps[cons].forEach((s, i) => { %>
+    <div class="ssg-guide-step">
+      <span class="ssg-guide-num"><%= i + 1 %></span>
+      <div class="ssg-guide-body">
+        <p class="ssg-guide-text"><%= s.text %></p>
+        <% if (s.image) { %>
+        <img src="<%= s.image %>" alt="Step <%= i + 1 %>" class="ssg-guide-img">
+        <% } %>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+  <% }) %>
+</div>
+<script>
+  if (!window.ssgGuideSwitch) {
+    window.ssgGuideSwitch = function(id, cons) {
+      var root = document.getElementById(id + '-guide');
+      if (!root) return;
+      root.querySelectorAll('.ssg-guide-tab').forEach(function(t){ t.classList.toggle('ssg-guide-tab-on', t.dataset.c === cons); });
+      root.querySelectorAll('.ssg-guide-panel').forEach(function(p){ p.classList.toggle('ssg-guide-hidden', p.dataset.c !== cons); });
+      try { sessionStorage.setItem('ssgConsole', cons); } catch (e) {}
+    };
+    // Restore the customer's last-picked console across every instance of
+    // this partial on the page (there's at most one per page today, but this
+    // stays correct if that ever changes).
+    document.addEventListener('DOMContentLoaded', function() {
+      var saved = null;
+      try { saved = sessionStorage.getItem('ssgConsole'); } catch (e) {}
+      if (saved === 'ps4') {
+        document.querySelectorAll('.ssg-guide').forEach(function(g){ window.ssgGuideSwitch(g.id.replace('-guide',''), 'ps4'); });
+      }
+    });
+  }
+</script>

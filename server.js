@@ -1431,7 +1431,8 @@ app.get('/order/:ref', async (req, res) => {
     ownerOnline: !!(s.owner_online),
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),
-    msg: req.query.msg || null
+    msg: req.query.msg || null,
+    signinSteps: getSigninSteps(),
   });
 });
 
