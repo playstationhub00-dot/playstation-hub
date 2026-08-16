@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to sign in and send your QR — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<div class="ord-page">
+  <h1 class="ord-title">How to sign in and send your QR</h1>
+  <p class="ord-sub">Pick your console below, follow the steps, then send the QR code here on Messenger.</p>
+
+  <div class="ord-card">
+    <%- include('partials/signin-guide', { signinSteps, idPrefix: 'pub' }) %>
+  </div>
+
+  <a class="ord-btn-primary" style="display:block;text-align:center;margin-top:1rem;" target="_blank" rel="noopener" href="http://m.me/PlaystationHub00">Message us on Facebook</a>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

@@ -830,6 +830,15 @@ app.get('/how-it-works', (req, res) => {
   res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+app.get('/how-to-sign-in', (req, res) => {
+  res.render('how-to-sign-in', {
+    signinSteps: getSigninSteps(),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
+});
+
 // PS Plus Deluxe public page
 app.get('/ps-plus', (req, res) => {
   const entries = getPsplus();
