@@ -17,7 +17,7 @@
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
     awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
     qr_pending:        { title: 'Scanning your QR',        sub: 'Keep the QR on screen — we\'re signing you in.' },
-    active:            { title: 'You\'re all set',         sub: 'Enjoy the game. Return the account by your end date.' },
+    active:            { title: 'You\'re all set',         sub: order.is_buy ? 'It\'s yours — enjoy!' : 'Enjoy the game. Return the account by your end date.' },
     awaiting_return:   { title: 'Time to return',          sub: 'Sign out and send us proof to finish up.' },
     verifying_return:  { title: 'Checking your return',    sub: 'Almost done — we\'re confirming it now.' },
     closed:            { title: 'Rental complete',         sub: 'Thanks for renting with us!' },
@@ -32,7 +32,7 @@
   const typeLabel = order.account_type === 'tr' ? 'Trophy' : order.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
   const durLabel = order.days === 7 ? 'Weekly' : 'Monthly';
   const totalDue = (order.amount_due || 0) + (order.deposit_due || 0);
-  const rentLabel = order.is_reservation ? (order.upcoming_game_id ? 'Reservation downpayment' : 'Priority reservation fee') : 'Rent';
+  const rentLabel = order.is_buy ? 'Purchase price' : (order.is_reservation ? (order.upcoming_game_id ? 'Reservation downpayment' : 'Priority reservation fee') : 'Rent');
 
   // The message the customer copies and pastes into Messenger. Messenger has no
   // ?text= URL parameter — unlike WhatsApp, the composer cannot be pre-filled —
@@ -240,7 +240,12 @@
   </div>
   <% } %>
 
-  <% if (order.state === 'active') { %>
+  <% if (order.state === 'active' && order.is_buy) { %>
+  <div class="ord-step">
+    <div class="ord-step-label">It's yours</div>
+    <p class="ord-help">Purchased on <%= order.start_date %>. No return date — enjoy it.</p>
+  </div>
+  <% } else if (order.state === 'active') { %>
   <div class="ord-step">
     <div class="ord-step-label">You're renting now</div>
     <div class="ord-row"><span>Rented since</span><span><%= order.start_date %></span></div>

@@ -1294,6 +1294,83 @@ app.post('/order/create', async (req, res) => {
   }
 });
 
+// Creates a permanent-purchase order — either a specific account's open slot
+// (bundle) or a single game (account assigned by the owner at activation,
+// same as rentals already work). No days/end_date: reuses the existing
+// order lifecycle unchanged, and an empty end_date is already excluded by
+// advanceEndedRentals()'s own filter, so a bought order simply rests at
+// 'active' forever with no new sweep logic.
+app.post('/order/buy', async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.redirect('/buy?order_error=rate');
+  }
+  const { kind, fb_name } = req.body;
+  const name = (fb_name || '').trim();
+  if (!name) return res.redirect('/buy?order_error=1');
+
+  if (kind === 'bundle') {
+    const { account_id, slot_type } = req.body;
+    const account = getAccount(account_id);
+    const type = ['tr', 'nt'].includes(slot_type) ? slot_type : null;
+    if (!account || !account.for_sale || !type) return res.redirect('/buy?order_error=1');
+    const slotKey = type === 'tr' ? 'trophy' : 'non_trophy';
+    const slot = account.slots[slotKey];
+    // Re-check availability at order time — the page a customer loaded may be stale.
+    if (!slot || !slot.enabled || slot.status !== 'open') return res.redirect('/buy?order_error=sold');
+    const price = type === 'tr' ? account.price_permanent_tr : account.price_permanent_nt;
+    if (!price) return res.redirect('/buy?order_error=1');
+    try {
+      const order = await orders.create({
+        game_id: 'bundle_' + account.id,
+        game_title: account.public_name || account.label,
+        account_type: type,
+        days: null,
+        amount_due: price,
+        deposit_due: 0,
+        fb_name: name,
+        session_id: req.sessionId || null,
+        is_buy: true,
+        account_id: account.id,
+        slot_type: type
+      });
+      res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+    } catch (e) {
+      console.error('[order buy bundle]', e.message);
+      res.redirect('/buy?order_error=1');
+    }
+    return;
+  }
+
+  // Single game
+  const { game_id, account_type } = req.body;
+  const game = getGame(game_id);
+  const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+  if (!game || !type) return res.redirect('/buy?order_error=1');
+  const base = type === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
+  if (!base) return res.redirect('/buy?order_error=1');
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
+    ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
+  try {
+    const order = await orders.create({
+      game_id: game.id,
+      game_title: game.title,
+      account_type: type,
+      days: null,
+      amount_due: price,
+      deposit_due: 0,
+      fb_name: name,
+      session_id: req.sessionId || null,
+      is_buy: true
+    });
+    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+  } catch (e) {
+    console.error('[order buy single]', e.message);
+    res.redirect('/buy?order_error=1');
+  }
+});
+
 // Creates a PS Plus Deluxe rental order. PS Plus is a global singleton
 // product, not a games-collection record, so it can't reuse /order/create's
 // per-game price-category/snapshot logic — it reads the flat psplus_prices
@@ -1583,9 +1660,15 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
     // hours they couldn't play. Both dates are Manila dates: on a UTC server
     // an ISO slice reports yesterday for the whole Manila morning.
     const start = new Date();
-    const end = new Date(start.getTime() + order.days * 86400000);
     patch.start_date = orders.manilaDate(start);
-    patch.end_date = orders.manilaDate(end);
+    // A buy order has no days — it has no end date either, and stays active
+    // indefinitely (advanceEndedRentals() already skips rows with end_date: '').
+    if (order.days) {
+      const end = new Date(start.getTime() + order.days * 86400000);
+      patch.end_date = orders.manilaDate(end);
+    } else {
+      patch.end_date = '';
+    }
   }
   const r = await orders.transition(order.ref, to, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
@@ -1594,7 +1677,49 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   // reminder panel, and top-games — all of which read the customers table,
   // not the orders collection. order.customer_id makes this idempotent: a
   // retried or raced advance call must never create a second customer.
-  if (to === 'active' && !order.customer_id) {
+  if (to === 'active' && !order.customer_id && order.is_buy) {
+    // Permanent purchase — no rental clock, status 'bought' instead of
+    // 'renting'. A bundle-slot purchase also flips that specific account
+    // slot to 'buyed', mirroring what the admin UI already does manually
+    // for a Messenger-arranged sale (POST /admin/accounts/:id/slot/:type).
+    const customerId = newCustomerId();
+    db.get('customers').push({
+      id: customerId,
+      customer_name: order.fb_name,
+      game_id: order.game_id,
+      game_title: order.game_title,
+      days: null,
+      account_type: order.account_type,
+      start_date: patch.start_date,
+      end_date: '',
+      price: order.amount_due || 0,
+      status: 'bought',
+      notes: 'Web purchase ' + order.ref,
+      created_at: new Date().toISOString(),
+      payments: order.amount_due > 0
+        ? [{ amount: order.amount_due, date: patch.start_date, kind: 'purchase' }]
+        : [],
+    }).write();
+    if (order.account_id && order.slot_type) {
+      const account = getAccount(order.account_id);
+      if (account) {
+        const slotKey = order.slot_type === 'tr' ? 'trophy' : 'non_trophy';
+        const slot = account.slots[slotKey];
+        slot.status = 'buyed';
+        slot.renter_id = customerId;
+        slot.renter_name = order.fb_name;
+        slot.start = ''; slot.end = '';
+        account.slots[slotKey] = slot;
+        db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+      }
+    }
+    const linked = await orders.setCustomerId(order.ref, customerId);
+    if (!linked) {
+      console.error('[order->customer] setCustomerId failed for', order.ref, '— customer', customerId, 'created but not linked, re-advance could duplicate it');
+    }
+  }
+
+  if (to === 'active' && !order.customer_id && !order.is_buy) {
     const game = order.is_psplus ? null : getGame(order.game_id);
     const customerId = newCustomerId();
     db.get('customers').push({

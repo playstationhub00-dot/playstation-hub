@@ -76,6 +76,9 @@
         <% if (o.is_reservation) { %>
         <span class="oq-badge" style="background:#3a1a5c;color:#c9a4ff;"><%= o.upcoming_game_id ? '🔜 Coming Soon reservation' : '⭐ Priority reservation' %></span>
         <% } %>
+        <% if (o.is_buy) { %>
+        <span class="oq-badge" style="background:#2a0a3a;color:#d9a7f0;">♾️ Purchase</span>
+        <% } %>
         <span class="oq-badge"><%= QUEUE_LABEL[o.state] %></span>
         <% if (o.state === 'qr_pending' && o.qr_expires_at) { %>
         <span class="oq-timer" data-expires="<%= o.qr_expires_at %>">--:--</span>
