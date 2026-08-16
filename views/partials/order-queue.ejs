@@ -86,7 +86,7 @@
       </div>
       <div class="oq-meta">
         <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
-        · <%= o.days === 7 ? 'Weekly' : 'Monthly' %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? (o.upcoming_game_id ? ' downpayment (₱' + (o.remaining_due || 0) + ' on release)' : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
+        · <%= o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly') %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? (o.upcoming_game_id ? ' downpayment (₱' + (o.remaining_due || 0) + ' on release)' : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
