@@ -15,6 +15,10 @@
   <h1 class="buy-title">Buy permanently</h1>
   <p class="buy-sub">Own it forever. No return date, no weekly fee.</p>
 
+  <% if (orderError === 'sold') { %><div class="ord-flash ord-flash-warn">That slot just sold — sorry! Pick another below.</div><% } %>
+  <% if (orderError === 'rate') { %><div class="ord-flash ord-flash-warn">Too many attempts, please wait a moment and try again.</div><% } %>
+  <% if (orderError && orderError !== 'sold' && orderError !== 'rate') { %><div class="ord-flash ord-flash-warn">Something went wrong, please try again.</div><% } %>
+
   <% if (bundles.length) { %>
   <div class="buy-section-label">Account bundles — best value</div>
   <div class="buy-bundle-grid">
@@ -69,7 +73,7 @@
     <a href="/game/<%= g.slug %>?mode=buy" class="buy-single-card">
       <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-single-cover" loading="lazy">
       <% } else { %><div class="buy-single-cover buy-cover-placeholder"></div><% } %>
-      <div class="buy-single-price">₱<%= g.price %><% if (g.was) { %> <s class="buy-single-was">₱<%= g.was %></s><% } %></div>
+      <div class="buy-single-price">from ₱<%= g.price %><% if (g.was) { %> <s class="buy-single-was">₱<%= g.was %></s><% } %></div>
     </a>
     <% }) %>
   </div>

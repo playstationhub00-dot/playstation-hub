@@ -179,6 +179,12 @@
       </tr>
     </thead>
     <tbody>
+      <%
+        // Flattened view of orders currently loaded for this ledger period — used
+        // only to flag possible duplicate slot claims below (see Fix 6 note: this
+        // is limited to orders in the currently selected period, not the full DB).
+        const allLedgerOrders = ledgerGroups.flatMap(gr => gr.orders);
+      %>
       <% ledgerGroups.forEach(g => { %>
       <tr class="oq-grp" data-grp="<%= g.key %>">
         <td colspan="7">
@@ -204,6 +210,13 @@
                        : o.state === 'closed' ? 'Completed'
                        : o.state === 'reserved' ? (o.upcoming_game_id ? 'Reserved — awaiting release' : 'Priority — awaiting a slot')
                        : out ? 'Out on rent' : 'Completed';
+           // Fix 6: bundle slots aren't locked until an order reaches 'active', so
+           // two customers can both pay for the same slot before we notice — flag
+           // it here for manual review rather than trying to prevent it.
+           const dupSlotCount = (o.is_buy && o.account_id && o.slot_type)
+             ? allLedgerOrders.filter(x => x.ref !== o.ref && x.account_id === o.account_id && x.slot_type === o.slot_type
+                 && !['closed','cancelled','payment_rejected'].includes(x.state)).length
+             : 0;
       %>
       <tr class="oq-lr" data-g="<%= grp %>"
           data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>">
@@ -218,6 +231,11 @@
           <% if (paid && (o.deposit_due || 0) > 0) { %>
             <div class="oq-dep <%= o.deposit_refunded ? 'oq-dep-ok' : '' %>">
               <%= o.deposit_refunded ? 'Deposit refunded' : 'Deposit not refunded' %>
+            </div>
+          <% } %>
+          <% if (dupSlotCount > 0) { %>
+            <div class="oq-dep" title="Multiple live orders are claiming the same slot — verify before fulfilling and refund manually if needed.">
+              ⚠ Duplicate slot claim — <%= dupSlotCount %> other order<%= dupSlotCount > 1 ? 's' : '' %> for this slot
             </div>
           <% } %>
         </td>
@@ -260,12 +278,12 @@
   %>
   <% sortedAbandoned.forEach(o => {
     const abTypeLabel = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
-    const abDurLabel = o.days === 7 ? 'Weekly' : 'Monthly';
+    const abDurLabel = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
     const abTotal = (o.amount_due || 0) + (o.deposit_due || 0);
     const firstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
     const followUpMsg = '👋 Hi ' + firstName + '! Saw you started an order with us —\n\n'
       + '🎮 ' + o.game_title + ' (' + abTypeLabel + ')\n'
-      + '⏱ ' + abDurLabel + ' rental\n'
+      + (o.is_buy ? '🛒 One-time purchase\n' : '⏱ ' + abDurLabel + ' rental\n')
       + '💰 Total: ₱' + abTotal + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
       + '🔖 Reference: ' + o.ref + '\n\n'
       + 'Still want it? ' + payLine + '\n\n'

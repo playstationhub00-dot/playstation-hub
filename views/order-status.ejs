@@ -39,7 +39,7 @@
   // so this is shown on the page with a copy button instead.
   const premadeMsg =
     'Hi! I paid for order ' + order.ref + '.\n' +
-    order.game_title + ' — ' + typeLabel + ', ' + durLabel + '\n' +
+    order.game_title + ' — ' + typeLabel + ', ' + (order.is_buy ? 'One-time purchase' : durLabel) + '\n' +
     'Amount: PHP ' + totalDue + '\n' +
     'Here\'s my proof of payment:';
 
@@ -67,7 +67,9 @@
   <div class="ord-card">
     <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>
     <div class="ord-row"><span>Account type</span><span><%= typeLabel %></span></div>
+    <% if (!order.is_buy) { %>
     <div class="ord-row"><span>Duration</span><span><%= durLabel %></span></div>
+    <% } %>
     <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= order.amount_due %></span></div>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>

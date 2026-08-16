@@ -1092,7 +1092,8 @@ app.get('/buy', (req, res) => {
     });
   res.render('buy', {
     bundles, singleGames, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
-    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s
+    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
+    orderError: req.query.order_error || null
   });
 });
 
