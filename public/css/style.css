@@ -1263,8 +1263,8 @@ nav {
 /* GAME GRID */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 1rem;
   /* Grid items stretch to the row's tallest cell by default — this keeps each card
      sized to its own content instead of matching its tallest row-mate. */
   align-items: start;
