@@ -828,7 +828,7 @@ app.get('/ps-plus/rent', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : rawSlots;
   const settings = getSiteSettings();
-  res.render('psplus-rent', { prices, slots, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings });
+  res.render('psplus-rent', { prices, slots, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null });
 });
 
 // PS Plus admin CRUD
@@ -1222,6 +1222,52 @@ app.post('/order/create', async (req, res) => {
   }
 });
 
+// Creates a PS Plus Deluxe rental order. PS Plus is a global singleton
+// product, not a games-collection record, so it can't reuse /order/create's
+// per-game price-category/snapshot logic — it reads the flat psplus_prices
+// fields instead and uses the sentinel game_id 'psplus' (lib/orders.js never
+// validates game_id against anything, it's just stored/displayed).
+app.post('/order/create-psplus', async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.redirect('/ps-plus/rent?order_error=rate');
+  }
+  const { account_type, days, fb_name } = req.body;
+  const name = (fb_name || '').trim();
+  const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+  const d = parseInt(days);
+  if (!name || !type || !PROMO_DURATIONS.includes(d)) {
+    return res.redirect('/ps-plus/rent?order_error=1');
+  }
+
+  const prices = getPsplusPrices();
+  const base = prices[type + '_price_' + d + 'd'] || 0;
+  if (!base) return res.redirect('/ps-plus/rent?order_error=1');
+
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const pct = getPromoDiscountPct(promo, d);
+  const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
+
+  try {
+    const order = await orders.create({
+      game_id: 'psplus',
+      game_title: 'PS Plus Deluxe',
+      account_type: type,
+      days: d,
+      amount_due: amountDue,
+      deposit_due: depositDue,
+      fb_name: name,
+      session_id: req.sessionId || null,
+      is_psplus: true
+    });
+    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+  } catch (e) {
+    console.error('[order create-psplus]', e.message);
+    res.redirect('/ps-plus/rent?order_error=1');
+  }
+});
+
 // Creates a reservation order — either a 50% downpayment on a Coming Soon
 // game (locking a slot ahead of release) or a flat ₱100 priority-reservation
 // fee on an available game whose selected type has no open slot right now
@@ -1235,15 +1281,19 @@ app.post('/order/reserve', async (req, res) => {
   }
   const { game_id, account_type, days, fb_name } = req.body;
   const upcoming = getUpcomingGame(game_id);
-  const game = upcoming || getGame(game_id);
-  if (!game) return res.redirect('/browse');
+  const isPsplus = !upcoming && game_id === 'psplus';
+  const game = upcoming || (isPsplus ? null : getGame(game_id));
+  if (!upcoming && !isPsplus && !game) return res.redirect('/browse');
   const isUpcoming = !!upcoming;
+  const gameTitle = isPsplus ? 'PS Plus Deluxe' : game.title;
   const errRedirect = isUpcoming
     ? '/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1'
-    : '/game/' + gameSlug(game.title) + '?order_error=1';
+    : isPsplus
+      ? '/ps-plus/rent?order_error=1'
+      : '/game/' + gameSlug(game.title) + '?order_error=1';
 
   const name = (fb_name || '').trim();
-  const type = isUpcoming
+  const type = (isUpcoming || isPsplus)
     ? (['nt', 'tr'].includes(account_type) ? account_type : null)
     : (['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null);
   const d = parseInt(days);
@@ -1263,6 +1313,18 @@ app.post('/order/reserve', async (req, res) => {
     remainingDue = total - amountDue;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
+  } else if (isPsplus) {
+    const prices = getPsplusPrices();
+    const base = prices[type + '_price_' + d + 'd'] || 0;
+    if (!base) return res.redirect(errRedirect);
+    const pct = getPromoDiscountPct(promo, d);
+    const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+    const psplusDeposit = type === 'tr' ? (promo.deposit || 0) : 0;
+    amountDue = 100;
+    depositDue = 0;
+    remainingDue = Math.max(0, rentAfterPromo - amountDue) + psplusDeposit;
+    releaseDate = '';
+    upcomingGameId = null;
   } else {
     const resolved = resolveGamePrices(game);
     const priceType = type === 'ps4' ? 'nt' : type;
@@ -1282,8 +1344,8 @@ app.post('/order/reserve', async (req, res) => {
 
   try {
     const order = await orders.create({
-      game_id: game.id,
-      game_title: game.title,
+      game_id: isPsplus ? 'psplus' : game.id,
+      game_title: gameTitle,
       account_type: type,
       days: d,
       amount_due: amountDue,
@@ -1291,6 +1353,7 @@ app.post('/order/reserve', async (req, res) => {
       fb_name: name,
       session_id: req.sessionId || null,
       is_reservation: true,
+      is_psplus: isPsplus,
       upcoming_game_id: upcomingGameId,
       release_date: releaseDate,
       remaining_due: remainingDue
@@ -1459,12 +1522,12 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   // not the orders collection. order.customer_id makes this idempotent: a
   // retried or raced advance call must never create a second customer.
   if (to === 'active' && !order.customer_id) {
-    const game = getGame(order.game_id);
+    const game = order.is_psplus ? null : getGame(order.game_id);
     const customerId = newCustomerId();
     db.get('customers').push({
       id: customerId,
       customer_name: order.fb_name,
-      game_id: parseInt(order.game_id),
+      game_id: order.is_psplus ? 'psplus' : parseInt(order.game_id),
       game_title: order.game_title,
       days: order.days,
       account_type: order.account_type,
@@ -1479,7 +1542,21 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
         ? [{ amount: order.amount_due, date: patch.start_date, kind: 'rental' }]
         : [],
     }).write();
-    if (game) {
+    if (order.is_psplus) {
+      // /ps-plus/rent shows slots from a matching games-collection entry when
+      // one exists (same lookup as that GET route), falling back to the
+      // psplus_slots singleton otherwise — decrement whichever source the
+      // page actually displayed when this order was placed.
+      const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
+      if (psplusGame) {
+        if (order.account_type === 'tr') adjustTrophySlots(psplusGame.id, -1);
+        else adjustNtSlots(psplusGame.id, -1);
+      } else {
+        const psplusSlots = getPsplusSlots();
+        const key = order.account_type === 'tr' ? 'tr_slots' : 'nt_slots';
+        db.set('psplus_slots.' + key, Math.max(0, (psplusSlots[key] || 0) - 1)).write();
+      }
+    } else if (game) {
       db.get('games').find({ id: game.id }).assign({
         available_slots: Math.max(0, (game.available_slots || 0) - 1),
         renters: (game.renters || 0) + 1

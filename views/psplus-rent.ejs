@@ -112,15 +112,24 @@
 
       <!-- CHOOSE OPTION -->
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-      <div class="gd-reserve-options">
-        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event)">
-          <div class="gd-reserve-badge">PRIORITY</div>
-          <div class="gd-reserve-icon">⭐</div>
-          <div class="gd-reserve-name">Reservation</div>
-          <div class="gd-reserve-fee">₱100 fee</div>
-          <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
-          <div class="gd-reserve-cta">📘 Reserve Now →</div>
+      <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:1.25rem;text-align:center;margin-bottom:0.75rem;">
+        <div style="font-size:1.4rem;margin-bottom:0.3rem;">⭐</div>
+        <div style="font-weight:800;font-size:1rem;color:#fff;margin-bottom:0.25rem;">Priority Reservation — ₱100 fee</div>
+        <div style="font-size:0.78rem;color:#888;margin-bottom:0.9rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
+        <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
+          <input type="hidden" name="game_id" value="psplus">
+          <input type="hidden" name="account_type" id="resType" value="">
+          <input type="hidden" name="days" id="resDays" value="">
+          <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
+          <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+            Reserve Now — ₱100 →
+          </button>
+        </form>
+        <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event)" style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
+          or message us on Facebook instead
         </a>
+      </div>
+      <div class="gd-reserve-options">
         <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
           <div class="gd-reserve-icon">🎮</div>
           <div class="gd-reserve-name">Fall in Line</div>
@@ -130,6 +139,9 @@
         </a>
       </div>
       <div id="reserveValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+      <% if (order_error === '1') { %>
+      <div style="margin-top:0.75rem;font-size:0.8rem;color:#ef4444;font-weight:600;text-align:center;">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+      <% } %>
 
       <% } else { %>
 
@@ -182,12 +194,22 @@
         </div>
       </div>
 
-      <!-- CTA: Message Us -->
-      <a href="#" class="gd-cta-btn" id="ctaBtn" style="display:none;" onclick="return handleMessageUs(event)">
-        📘 Message Us on Facebook
-      </a>
-      <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>PS Plus Deluxe · Days · Trophy or Non-Trophy</strong></div>
-      <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+      <!-- CTA: order online -->
+      <div id="ctaOrderWrap" style="display:none;">
+        <form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" onsubmit="return handleOrderFormSubmit(event)">
+          <input type="hidden" name="account_type" id="orderType" value="">
+          <input type="hidden" name="days" id="orderDays" value="">
+          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <button type="submit" class="gd-order-btn" id="ctaBtn">Rent PS Plus Deluxe</button>
+          <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
+        </form>
+        <a href="#" class="gd-cta-link" id="ctaMsgLink" onclick="return handleMessageUs(event)">or message us on Facebook instead</a>
+        <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>PS Plus Deluxe · Days · Trophy or Non-Trophy</strong></div>
+        <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        <% if (order_error === '1') { %>
+        <div style="margin-top:0.75rem;font-size:0.8rem;color:#ef4444;font-weight:600;text-align:center;">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+        <% } %>
+      </div>
 
       <!-- CTA: Reserve options (shown when selected type has no slot) -->
       <div id="reserveSection" style="display:none;">
@@ -199,15 +221,24 @@
           </div>
         </div>
         <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
-        <div class="gd-reserve-options">
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-priority" onclick="return handleReserveClick(event)">
-            <div class="gd-reserve-badge">PRIORITY</div>
-            <div class="gd-reserve-icon">⭐</div>
-            <div class="gd-reserve-name">Reservation</div>
-            <div class="gd-reserve-fee">₱100 fee</div>
-            <div class="gd-reserve-note">Fee is deducted from your total rent when a slot opens.</div>
-            <div class="gd-reserve-cta">📘 Reserve Now →</div>
+        <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:1.25rem;text-align:center;margin-bottom:0.75rem;">
+          <div style="font-size:1.4rem;margin-bottom:0.3rem;">⭐</div>
+          <div style="font-weight:800;font-size:1rem;color:#fff;margin-bottom:0.25rem;">Priority Reservation — ₱100 fee</div>
+          <div style="font-size:0.78rem;color:#888;margin-bottom:0.9rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
+          <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
+            <input type="hidden" name="game_id" value="psplus">
+            <input type="hidden" name="account_type" id="resType" value="">
+            <input type="hidden" name="days" id="resDays" value="">
+            <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
+            <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+              Reserve Now — ₱100 →
+            </button>
+          </form>
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event)" style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
+            or message us on Facebook instead
           </a>
+        </div>
+        <div class="gd-reserve-options">
           <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
             <div class="gd-reserve-icon">🎮</div>
             <div class="gd-reserve-name">Fall in Line</div>
@@ -251,10 +282,10 @@ function onTypeChange(radio) {
   updateTotal();
   updateLinks();
   const hasSlot = AVAIL[selectedType] !== false;
-  const ctaBtn = document.getElementById('ctaBtn');
+  const ctaOrderWrap = document.getElementById('ctaOrderWrap');
   const ctaHint = document.getElementById('ctaHint');
   const reserveSection = document.getElementById('reserveSection');
-  if (ctaBtn) ctaBtn.style.display = hasSlot ? '' : 'none';
+  if (ctaOrderWrap) ctaOrderWrap.style.display = hasSlot ? '' : 'none';
   if (ctaHint) ctaHint.style.display = hasSlot ? '' : 'none';
   if (reserveSection) reserveSection.style.display = hasSlot ? 'none' : '';
 }
@@ -313,10 +344,19 @@ function updateLinks() {
     if (discount > 0) totalLine += ' (incl. ' + pct + '% promo discount)';
     if (deposit  > 0) totalLine += ' + ₱' + deposit + ' refundable deposit';
   }
-  const ctaBtn = document.getElementById('ctaBtn');
-  if (ctaBtn) {
+  const oType = document.getElementById('orderType');
+  const oDays = document.getElementById('orderDays');
+  if (oType) oType.value = selectedType || '';
+  if (oDays) oDays.value = selectedDays || '';
+  const rType = document.getElementById('resType');
+  const rDays = document.getElementById('resDays');
+  if (rType) rType.value = selectedType || '';
+  if (rDays) rDays.value = selectedDays || '';
+
+  const ctaMsgLink = document.getElementById('ctaMsgLink');
+  if (ctaMsgLink) {
     const msg = ['Hi! I want to RENT PS Plus Deluxe 🏆', typeLabel ? 'Account Type: ' + typeLabel : '', daysLabel ? 'Duration: ' + daysLabel : '', totalLine].filter(Boolean).join('\n');
-    ctaBtn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
+    ctaMsgLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
   }
   const rLink = document.getElementById('reserveLink');
   if (rLink) {
@@ -328,6 +368,28 @@ function updateLinks() {
     const msg = ['Hi! I want to JOIN THE WAITLIST for PS Plus Deluxe 🎮', typeLabel ? 'Account Type: ' + typeLabel : '', daysLabel ? 'Duration: ' + daysLabel : '', 'Please notify me when a slot becomes available.'].filter(Boolean).join('\n');
     qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
   }
+}
+
+function handleOrderFormSubmit(e) {
+  if (!selectedType || !selectedDays) {
+    e.preventDefault();
+    const el = document.getElementById('ctaValidationMsg');
+    if (el) { el.textContent = '⚠️ Please select an account type and rental duration (Weekly or Monthly) to continue.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+    highlightDurationGrid();
+    return false;
+  }
+  return true;
+}
+
+function handleReserveFormSubmit(e) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const el = document.getElementById('reserveValidationMsg');
+    if (el) { el.textContent = '⚠️ Please select a rental duration first.'; el.style.display = 'block'; setTimeout(() => el.style.display = 'none', 4000); }
+    highlightDurationGrid();
+    return false;
+  }
+  return true;
 }
 
 function handleReserveClick(e) {
