@@ -431,6 +431,89 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion promo -->
 
+    <!-- SIGN-IN QR GUIDE -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #38bdf8;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(56,189,248,0.15);">📷</div>
+          <div>
+            <div class="sa-title">Sign-In QR Guide</div>
+            <div class="sa-desc">Step-by-step, with screenshots, for PS5 and PS4</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(56,189,248,0.3);background:linear-gradient(135deg,#04141c,#071d2a);padding:1.25rem;">
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+        <button type="button" class="ssg-tab ssg-tab-on" data-c="ps5" onclick="ssgSwitch('ps5')">PS5 steps</button>
+        <button type="button" class="ssg-tab" data-c="ps4" onclick="ssgSwitch('ps4')">PS4 steps</button>
+      </div>
+
+      <% ['ps5', 'ps4'].forEach(cons => { %>
+      <div class="ssg-panel<%= cons === 'ps5' ? '' : ' ssg-hidden' %>" data-c="<%= cons %>">
+        <% signinSteps[cons].forEach((s, i) => { %>
+        <div style="border:1px solid #1a3a4a;border-radius:8px;padding:0.6rem 0.75rem;margin-bottom:0.5rem;background:#0a1a24;">
+          <form method="POST" action="/admin/signin-steps/<%= s.id %>" enctype="multipart/form-data" style="display:flex;gap:0.6rem;align-items:flex-start;">
+            <span style="color:#555;font-size:0.8rem;padding-top:0.5rem;width:16px;flex-shrink:0;"><%= i + 1 %></span>
+            <div style="flex:1;min-width:0;">
+              <input type="text" name="text" value="<%= s.text %>" style="width:100%;background:#111;border:1px solid #222;border-radius:6px;padding:0.5rem 0.7rem;color:#fff;font-size:0.85rem;margin-bottom:0.4rem;">
+              <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                <% if (s.image) { %>
+                <img src="<%= s.image %>" style="width:48px;height:38px;object-fit:cover;border-radius:4px;border:1px solid #222;">
+                <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.72rem;color:#e74c3c;cursor:pointer;">
+                  <input type="checkbox" name="remove_image" style="width:13px;height:13px;">Remove
+                </label>
+                <% } %>
+                <input type="file" name="image" accept="image/*" style="font-size:0.72rem;color:#888;max-width:180px;">
+                <button type="submit" style="font-size:0.72rem;padding:0.3rem 0.7rem;background:#38bdf8;color:#000;border:none;border-radius:5px;font-weight:700;cursor:pointer;">Save</button>
+              </div>
+            </div>
+          </form>
+          <div style="display:flex;gap:0.4rem;margin-top:0.4rem;padding-left:26px;">
+            <form method="POST" action="/admin/signin-steps/<%= s.id %>/move">
+              <input type="hidden" name="dir" value="up">
+              <button type="submit" <%= i === 0 ? 'disabled' : '' %> style="font-size:0.7rem;padding:0.2rem 0.5rem;background:#1a1a1a;color:#aaa;border:1px solid #222;border-radius:4px;cursor:pointer;">↑</button>
+            </form>
+            <form method="POST" action="/admin/signin-steps/<%= s.id %>/move">
+              <input type="hidden" name="dir" value="down">
+              <button type="submit" <%= i === signinSteps[cons].length - 1 ? 'disabled' : '' %> style="font-size:0.7rem;padding:0.2rem 0.5rem;background:#1a1a1a;color:#aaa;border:1px solid #222;border-radius:4px;cursor:pointer;">↓</button>
+            </form>
+            <form method="POST" action="/admin/signin-steps/<%= s.id %>/delete" onsubmit="return confirm('Delete this step?');">
+              <button type="submit" style="font-size:0.7rem;padding:0.2rem 0.5rem;background:#2a0a0a;color:#ef4444;border:1px solid #4a1e1e;border-radius:4px;cursor:pointer;">Delete</button>
+            </form>
+          </div>
+        </div>
+        <% }) %>
+
+        <form method="POST" action="/admin/signin-steps/add" enctype="multipart/form-data" style="border:1px dashed #2a4a5a;border-radius:8px;padding:0.75rem;margin-top:0.5rem;">
+          <input type="hidden" name="console" value="<%= cons %>">
+          <input type="text" name="text" placeholder="New step text…" required style="width:100%;background:#111;border:1px solid #222;border-radius:6px;padding:0.5rem 0.7rem;color:#fff;font-size:0.85rem;margin-bottom:0.4rem;">
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <input type="file" name="image" accept="image/*" style="font-size:0.72rem;color:#888;">
+            <button type="submit" style="font-size:0.75rem;padding:0.35rem 0.9rem;background:#38bdf8;color:#000;border:none;border-radius:5px;font-weight:700;cursor:pointer;">+ Add step</button>
+          </div>
+        </form>
+      </div>
+      <% }) %>
+
+      <div style="margin-top:1rem;font-size:0.72rem;color:#555;">Also live at <code>/how-to-sign-in</code> — link it in Messenger anytime.</div>
+    </div>
+      </div>
+    </div>
+
+    <style>
+      .ssg-tab { font-size:0.78rem; padding:0.4rem 1rem; background:#111; color:#888; border:1px solid #222; border-radius:6px; cursor:pointer; }
+      .ssg-tab-on { background:#38bdf8; color:#000; font-weight:700; border-color:#38bdf8; }
+      .ssg-hidden { display:none; }
+    </style>
+    <script>
+      function ssgSwitch(cons) {
+        document.querySelectorAll('.ssg-tab').forEach(function(t){ t.classList.toggle('ssg-tab-on', t.dataset.c === cons); });
+        document.querySelectorAll('.ssg-panel').forEach(function(p){ p.classList.toggle('ssg-hidden', p.dataset.c !== cons); });
+      }
+    </script>
+
     <!-- HOMEPAGE POPUP -->
     <% const adminPopup = settings.popup || { enabled: false, image_path: '', link_url: '/browse', starts_at: '', ends_at: '' }; %>
     <div class="settings-accordion">
