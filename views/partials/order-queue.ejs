@@ -199,7 +199,7 @@
                      : ['awaiting_payment','payment_rejected'].includes(o.state) ? 'unpaid'
                      : out ? 'out' : 'paid';
            const typeLbl = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
-           const durLbl = o.days === 7 ? 'Weekly' : 'Monthly';
+           const durLbl = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
            const total = (o.amount_due || 0) + (o.deposit_due || 0);
            const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
            const dates = o.start_date ? fmt(o.start_date) + (o.end_date ? ' – ' + fmt(o.end_date) : '') : '—';
