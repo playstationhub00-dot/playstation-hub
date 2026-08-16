@@ -2727,6 +2727,10 @@ body.light-mode .oq-empty { color: #888; }
 .buy-tier-label { display: block; font-size: 0.7rem; color: #9a9a9a; }
 .buy-tier-price { display: block; font-size: 0.85rem; color: #fff; font-weight: 700; }
 .buy-tier-status { display: inline-block; margin-top: 2px; font-size: 0.63rem; font-weight: 700; color: #e0a878; background: #2a1a10; padding: 1px 6px; border-radius: 20px; }
+.buy-tier-status-open { color: #7fd99a; background: #10251a; }
+.buy-tier-open { display: flex; flex-direction: column; align-items: flex-start; }
+.buy-tier-buy-btn { display: block; width: 100%; box-sizing: border-box; margin-top: 0.4rem; background: #7b2ff7; color: #fff; font-weight: 700; font-size: 0.72rem; padding: 0.35rem 0; border-radius: 6px; text-align: center; }
+.buy-tier-open:hover .buy-tier-buy-btn { background: #8f45f9; }
 .buy-bundle-none { text-align: center; font-size: 0.72rem; font-weight: 700; color: #e0a878; background: #1a1210; padding: 0.5rem; border-radius: 6px; }
 .buy-slot-name { display: block; width: 100%; box-sizing: border-box; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; padding: 0.45rem 0.6rem; color: #fff; font-size: 0.8rem; margin-bottom: 0.4rem; }
 .buy-slot-btn { display: block; width: 100%; background: #7b2ff7; color: #fff; font-weight: 700; font-size: 0.8rem; padding: 0.55rem 0; border: none; border-radius: 6px; cursor: pointer; }

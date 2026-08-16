@@ -50,9 +50,11 @@
         <div class="buy-tier-row">
           <% tiers.forEach(t => { %>
             <% if (t.slot.open) { %>
-            <a href="/bundle/<%= b.slug %>?tier=<%= t.key %>" class="buy-tier">
+            <a href="/bundle/<%= b.slug %>?tier=<%= t.key %>" class="buy-tier buy-tier-open">
               <span class="buy-tier-label"><%= t.label %></span>
               <span class="buy-tier-price">₱<%= t.slot.price %></span>
+              <span class="buy-tier-status buy-tier-status-open">Available</span>
+              <span class="buy-tier-buy-btn">Buy</span>
             </a>
             <% } else { %>
             <div class="buy-tier buy-tier-off">
