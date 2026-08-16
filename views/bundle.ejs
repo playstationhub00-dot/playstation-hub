@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= bundle.name %> — Playstation Hub</title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'buy' }) %>
+
+<div class="buy-page bundle-page">
+  <div class="bundle-crumb"><a href="/buy">Buy</a> › <%= bundle.name %></div>
+
+  <% if (orderError === 'sold') { %><div class="ord-flash ord-flash-warn">That slot just sold — sorry! Pick another below.</div><% } %>
+  <% if (orderError === 'rate') { %><div class="ord-flash ord-flash-warn">Too many attempts, please wait a moment and try again.</div><% } %>
+  <% if (orderError && orderError !== 'sold' && orderError !== 'rate') { %><div class="ord-flash ord-flash-warn">Something went wrong, please try again.</div><% } %>
+
+  <div class="bundle-layout">
+    <div class="bundle-main">
+      <h1 class="bundle-title"><%= bundle.name %></h1>
+      <div class="bundle-meta"><%= bundle.gameCount %> game<%= bundle.gameCount !== 1 ? 's' : '' %></div>
+      <% if (bundle.savings) { %>
+      <div class="bundle-savings">₱<%= bundle.savings.sum.toLocaleString() %> if bought separately — save ₱<%= bundle.savings.save.toLocaleString() %></div>
+      <% } else if (bundle.perGame) { %>
+      <div class="buy-bundle-each">from ₱<%= bundle.perGame %> per game</div>
+      <% } %>
+
+      <div class="bundle-game-grid">
+        <% bundle.games.forEach(g => { %>
+        <div class="bundle-game-tile">
+          <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
+          <% } else { %><div class="bundle-game-cover buy-cover-placeholder"></div><% } %>
+          <div class="bundle-game-title"><%= g.title %></div>
+        </div>
+        <% }) %>
+      </div>
+
+      <button type="button" class="bundle-copy-btn" id="bundleCopyBtn" onclick="bundleCopyLink()">Copy link to share</button>
+    </div>
+
+    <div class="bundle-side">
+      <%
+        const slotStatusLabel = st => st === 'rented' ? 'Rented' : st === 'buyed' ? 'Sold' : 'Unavailable';
+        const tiers = [
+          bundle.nonTrophy ? { key: 'nt', label: 'Non-Trophy', slot: bundle.nonTrophy } : null,
+          bundle.trophy ? { key: 'tr', label: 'Trophy', slot: bundle.trophy } : null
+        ].filter(Boolean);
+        const firstOpen = tiers.find(t => t.slot.open);
+      %>
+      <form method="POST" action="/order/buy" class="buy-bundle-foot">
+        <input type="hidden" name="kind" value="bundle">
+        <input type="hidden" name="account_id" value="<%= bundle.id %>">
+        <div class="buy-tier-row">
+          <% tiers.forEach(t => { %>
+          <label class="buy-tier<%= t.slot.open ? '' : ' buy-tier-off' %>">
+            <input type="radio" name="slot_type" value="<%= t.key %>" data-price="<%= t.slot.price %>"
+              <%= t.slot.open ? '' : 'disabled' %><%= firstOpen && firstOpen.key === t.key ? ' checked' : '' %>>
+            <span class="buy-tier-label"><%= t.label %></span>
+            <span class="buy-tier-price">₱<%= t.slot.price %></span>
+            <% if (!t.slot.open) { %><span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span><% } %>
+          </label>
+          <% }) %>
+        </div>
+        <% if (firstOpen) { %>
+        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
+        <button type="submit" class="buy-slot-btn">Buy ₱<%= firstOpen.slot.price %></button>
+        <% } else { %>
+        <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
+        <% } %>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+<script>
+document.querySelectorAll('.buy-bundle-foot').forEach(function (form) {
+  var btn = form.querySelector('.buy-slot-btn');
+  var radios = form.querySelectorAll('input[name="slot_type"]');
+  function sync() {
+    radios.forEach(function (r) { r.closest('.buy-tier').classList.toggle('buy-tier-on', r.checked); });
+    var picked = form.querySelector('input[name="slot_type"]:checked');
+    if (btn && picked) btn.textContent = 'Buy ₱' + picked.dataset.price;
+  }
+  radios.forEach(function (r) { r.addEventListener('change', sync); });
+  sync();
+});
+function bundleCopyLink() {
+  var btn = document.getElementById('bundleCopyBtn');
+  navigator.clipboard.writeText(window.location.href).then(function () {
+    var original = btn.textContent;
+    btn.textContent = 'Link copied';
+    setTimeout(function () { btn.textContent = original; }, 2000);
+  });
+}
+</script>
+</body>
+</html>

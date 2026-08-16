@@ -1155,6 +1155,35 @@ app.get('/buy', (req, res) => {
   });
 });
 
+app.get('/bundle/:slug', (req, res) => {
+  const allGames = getGames();
+  const acc = getAccounts().find(a => a.for_sale && gameSlug(a.public_name || a.label) === req.params.slug);
+  if (!acc) return res.redirect('/buy');
+  const name = acc.public_name || acc.label;
+  const games = buildBundleGames(acc, allGames);
+  const { trophy, nonTrophy } = bundleSlotInfo(acc);
+  const prices = [trophy, nonTrophy].filter(x => x && x.price > 0).map(x => x.price);
+  const gameCount = games.length;
+  const comparePrice = nonTrophy && nonTrophy.price > 0 ? nonTrophy.price : (trophy ? trophy.price : 0);
+  const bundle = {
+    id: acc.id,
+    slug: req.params.slug,
+    name,
+    gameCount,
+    perGame: gameCount > 1 && prices.length ? Math.round(Math.min(...prices) / gameCount) : null,
+    savings: bundleSavings(games, comparePrice),
+    games,
+    trophy,
+    nonTrophy
+  };
+  const s = getSiteSettings();
+  res.render('bundle', {
+    bundle,
+    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
+    orderError: req.query.order_error || null
+  });
+});
+
 app.get('/browse', (req, res) => {
   const { search, platform, genre, unit, newOnly } = req.query;
   const accountSummaryMap = buildAccountSummaryMap();

@@ -2741,3 +2741,22 @@ body.light-mode .oq-empty { color: #888; }
 .buy-placeholder-text { font-size: 0.76rem; color: #888; line-height: 1.5; margin: 0 0 0.75rem; }
 .buy-placeholder-cta { display: block; text-align: center; font-size: 0.76rem; border: 1px solid #2f4468; color: #7fb3ff; padding: 0.5rem 0; border-radius: 6px; text-decoration: none; }
 .buy-placeholder-amber .buy-placeholder-cta { border-color: #6a4a12; color: #F0A500; }
+
+.bundle-crumb { font-size: 0.78rem; color: #888; margin-bottom: 1rem; }
+.bundle-crumb a { color: #888; text-decoration: none; }
+.bundle-crumb a:hover { color: #F0A500; }
+.bundle-layout { display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start; }
+.bundle-main { min-width: 0; }
+.bundle-title { font-size: 1.3rem; color: #fff; font-weight: 800; margin: 0 0 0.3rem; }
+.bundle-meta { font-size: 0.8rem; color: #888; margin-bottom: 0.3rem; }
+.bundle-savings { font-size: 0.85rem; color: #F0A500; font-weight: 700; margin-bottom: 1rem; }
+.bundle-game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.7rem; margin-bottom: 1.25rem; }
+.bundle-game-tile { display: block; }
+.bundle-game-cover { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 6px; margin-bottom: 0.3rem; }
+.bundle-game-title { font-size: 0.72rem; color: #ccc; line-height: 1.3; }
+.bundle-copy-btn { background: transparent; border: 1px solid #333; color: #a98bff; font-size: 0.78rem; font-weight: 700; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+.bundle-side { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 0.9rem; position: sticky; top: 1rem; }
+@media (max-width: 720px) {
+  .bundle-layout { grid-template-columns: 1fr; }
+  .bundle-side { position: static; }
+}
