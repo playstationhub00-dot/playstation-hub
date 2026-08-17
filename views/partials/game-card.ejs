@@ -41,6 +41,7 @@
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
   const gcBundle = resolveBundleInfo(game);
+  const gcBundleParent = findBundleContaining(game);
 %>
 <a href="/game/<%= gameSlug %>" class="game-card gc2-card">
   <% if (game.cover_image) { %>
@@ -108,5 +109,8 @@
       <% } %>
       <div class="gc2-cta<%= allUnavail ? ' gc2-cta-reserve' : '' %>"><%= allUnavail ? 'Reserve' : 'Rent' %></div>
     </div>
+    <% if (gcBundleParent) { %>
+    <div class="gc2-bundle-note">Comes with <%= gcBundleParent.count - 1 %> more</div>
+    <% } %>
   </div>
 </a>

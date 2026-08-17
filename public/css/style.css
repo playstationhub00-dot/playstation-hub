@@ -2239,6 +2239,7 @@ footer {
   border-radius: 20px; white-space: nowrap; flex-shrink: 0;
 }
 .gc2-cta-reserve { background: transparent; color: #a78bfa; border: 1px solid #4a2a8a; }
+.gc2-bundle-note { font-size: 0.62rem; color: #7fc7e8; margin-top: 0.3rem; }
 
 /* HOW IT WORKS PAGE */
 .hiw-step {
