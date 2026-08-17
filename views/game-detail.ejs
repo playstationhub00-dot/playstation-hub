@@ -330,20 +330,20 @@
             </div>
           </div>
           <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
-          <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:1.25rem;text-align:center;margin-bottom:0.75rem;">
-            <div style="font-size:1.4rem;margin-bottom:0.3rem;">⭐</div>
-            <div style="font-weight:800;font-size:1rem;color:#fff;margin-bottom:0.25rem;">Priority Reservation — ₱100 fee</div>
-            <div style="font-size:0.78rem;color:#888;margin-bottom:0.9rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
+          <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:0.85rem 0.9rem;text-align:center;margin-bottom:0.5rem;">
+            <div style="font-size:1.1rem;margin-bottom:0.2rem;">⭐</div>
+            <div style="font-weight:800;font-size:0.85rem;color:#fff;margin-bottom:0.15rem;">Priority Reservation — ₱100 fee</div>
+            <div style="font-size:0.7rem;color:#888;margin-bottom:0.55rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
             <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
               <input type="hidden" name="game_id" value="<%= game.id %>">
               <input type="hidden" name="account_type" id="resType" value="">
               <input type="hidden" name="days" id="resDays" value="">
-              <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
-              <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+              <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
+              <button type="submit" style="display:block;width:100%;max-width:230px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.55rem 1.1rem;border-radius:50px;border:none;font-size:0.78rem;cursor:pointer;">
                 Reserve Now — ₱100 →
               </button>
             </form>
-            <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
+            <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
               or message us on Facebook instead
             </a>
           </div>
@@ -362,20 +362,20 @@
         <!-- All unavail: reservation options shown directly -->
         <div id="reserveSectionAll">
         <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-        <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:1.25rem;text-align:center;margin-bottom:0.75rem;">
-          <div style="font-size:1.4rem;margin-bottom:0.3rem;">⭐</div>
-          <div style="font-weight:800;font-size:1rem;color:#fff;margin-bottom:0.25rem;">Priority Reservation — ₱100 fee</div>
-          <div style="font-size:0.78rem;color:#888;margin-bottom:0.9rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
+        <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:0.85rem 0.9rem;text-align:center;margin-bottom:0.5rem;">
+          <div style="font-size:1.1rem;margin-bottom:0.2rem;">⭐</div>
+          <div style="font-weight:800;font-size:0.85rem;color:#fff;margin-bottom:0.15rem;">Priority Reservation — ₱100 fee</div>
+          <div style="font-size:0.7rem;color:#888;margin-bottom:0.55rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
           <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
             <input type="hidden" name="game_id" value="<%= game.id %>">
             <input type="hidden" name="account_type" id="resType" value="">
             <input type="hidden" name="days" id="resDays" value="">
-            <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
-            <button type="submit" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
+            <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
+            <button type="submit" style="display:block;width:100%;max-width:230px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.55rem 1.1rem;border-radius:50px;border:none;font-size:0.78rem;cursor:pointer;">
               Reserve Now — ₱100 →
             </button>
           </form>
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
+          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
             or message us on Facebook instead
           </a>
         </div>
