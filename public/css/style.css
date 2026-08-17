@@ -228,7 +228,9 @@ nav {
 }
 .navsearch-title mark { background: rgba(240,165,0,0.22); color: var(--ps-light-blue); border-radius: 2px; padding: 0 1px; }
 .navsearch-meta { font-size: 0.75rem; color: #666; display: flex; gap: 0.5rem; align-items: center; }
-.navsearch-price { color: var(--ps-blue); font-weight: 800; font-size: 0.82rem; flex-shrink: 0; }
+.navsearch-price-col { display: flex; flex-direction: column; align-items: flex-end; gap: 0.1rem; flex-shrink: 0; }
+.navsearch-price { color: var(--ps-blue); font-weight: 800; font-size: 0.82rem; }
+.navsearch-buy-price { color: #a78bfa; font-weight: 600; font-size: 0.68rem; }
 .navsearch-avail-yes { color: #3f9e6a; }
 .navsearch-bundle-note { color: #7fc7e8; font-size: 0.7rem; }
 .navsearch-avail-no {

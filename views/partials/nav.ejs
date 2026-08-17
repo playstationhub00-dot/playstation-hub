@@ -124,7 +124,10 @@
         h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + thumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span>' + bundleNote + av + '</div></div>' +
-          (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') + '</a>';
+          '<div class="navsearch-price-col">' +
+          (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') +
+          (x.bpr ? '<div class="navsearch-buy-price">Buy ₱' + x.bpr + '</div>' : '') +
+          '</div></a>';
       });
     }
     if (psplus.length) {

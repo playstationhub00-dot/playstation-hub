@@ -1973,6 +1973,7 @@ app.get('/api/search-index', (req, res) => {
     const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const slots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
     const prices = [g.nt_price_7d, g.nt_price_30d, g.tr_price_7d, g.tr_price_30d].filter(p => p > 0);
+    const buyPrices = [g.buy_nt_price, g.buy_tr_price].filter(p => p > 0);
     // A bundle account carries the titles it contains as hidden search keywords, so
     // searching a game that's only inside the bundle still surfaces the bundle. The
     // contained games are separate catalog entries with their own rows, so this adds
@@ -1980,6 +1981,7 @@ app.get('/api/search-index', (req, res) => {
     const bundle = resolveBundleInfo(g);
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
+      bpr: buyPrices.length ? Math.min(...buyPrices) : null,
       s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || '',
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
