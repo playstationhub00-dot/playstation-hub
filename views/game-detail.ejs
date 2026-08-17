@@ -461,17 +461,25 @@
           <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
             <div>♾️ &nbsp;Permanent access — no time limit</div>
             <div>🔓 &nbsp;Play anytime, as many times as you want</div>
-            <div>💬 &nbsp;Message us and we'll set it up for you</div>
+            <div>💳 &nbsp;Pay online via GCash or Maya</div>
           </div>
         </div>
 
-        <!-- Buy CTA -->
-        <a id="buyCtaBtn" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-          style="display:block;background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;font-weight:800;font-size:1rem;text-align:center;padding:1rem;border-radius:12px;text-decoration:none;letter-spacing:0.3px;margin-bottom:0.5rem;"
-          onclick="return handleBuyClick(event)">
-          📘 Buy Permanent Access
-        </a>
+        <!-- Buy CTA: order on the site -->
+        <form method="POST" action="/order/buy" class="gd-order-form" id="gdBuyForm">
+          <input type="hidden" name="kind" value="game">
+          <input type="hidden" name="game_id" value="<%= game.id %>">
+          <input type="hidden" name="account_type" id="buyOrderType" value="">
+          <input type="text" name="fb_name" id="buyFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <button type="submit" class="gd-order-btn" id="buyCtaBtn" onclick="return handleBuyClick(event)">
+            📘 Buy Permanent Access
+          </button>
+          <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
+        </form>
         <div id="buyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+
+        <!-- Secondary: Messenger, always one tap away -->
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-link" style="display:block;text-align:center;margin-top:0.5rem;">or message us on Facebook instead</a>
 
       </div><!-- /buyPanel -->
       <% } %>
@@ -541,32 +549,14 @@ function setMode(mode) {
 // ── Buy type selection ──
 function selectBuyType(type) {
   selectedBuyType = type;
-  ['nt','tr'].forEach(t => {
-    const card = document.getElementById('buyNtCard'  .replace('nt', t === 'nt' ? 'Nt' : 'Tr'));
-    // fix: use correct IDs
-  });
   const ntCard = document.getElementById('buyNtCard');
   const trCard = document.getElementById('buyTrCard');
   if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
   if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
-  updateBuyLink();
+  const typeField = document.getElementById('buyOrderType');
+  if (typeField) typeField.value = type;
   updateBuyPriceHeader();
   syncStickyBar();
-}
-
-function updateBuyLink() {
-  const btn = document.getElementById('buyCtaBtn');
-  if (!btn || !selectedBuyType) return;
-  const gameTitle = '<%= game.title.replace(/'/g, "\\'") %>';
-  const typeLabel = selectedBuyType === 'tr' ? 'Trophy Account' : 'Non-Trophy Account';
-  const price = BUY_PRICES[selectedBuyType];
-  const msg = [
-    'Hi! I want to BUY PERMANENT ACCESS ♾️',
-    'Game: ' + gameTitle,
-    'Account Type: ' + typeLabel,
-    'Price: ₱' + price
-  ].join('\n');
-  btn.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(msg);
 }
 
 // Shared by both modes — writes the DOM nodes the price header owns.
@@ -614,9 +604,9 @@ function updateBuyPriceHeader() {
 }
 
 function handleBuyClick(e) {
+  const el = document.getElementById('buyValidationMsg');
   if (!selectedBuyType) {
     e.preventDefault();
-    const el = document.getElementById('buyValidationMsg');
     el.textContent = '⚠️ Please select Non-Trophy or Trophy account type first.';
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 4000);
@@ -625,6 +615,14 @@ function handleBuyClick(e) {
       const c = document.getElementById(id);
       if (c) { c.style.transform='translateX(4px)'; setTimeout(()=>c.style.transform='',200); }
     });
+    return false;
+  }
+  const nameField = document.getElementById('buyFbName');
+  if (!nameField || !nameField.value.trim()) {
+    e.preventDefault();
+    el.textContent = '⚠️ Please enter your Facebook name.';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
     return false;
   }
   return true;
