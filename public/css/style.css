@@ -2233,9 +2233,11 @@ footer {
 .gc2-slot-buy { color: #a78bfa; }
 .gc2-icon { width: 13px; height: 13px; flex-shrink: 0; }
 .gc2-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.15rem; }
+.gc2-price-col { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .gc2-price { font-size: 0.72rem; color: rgba(255,255,255,0.75); }
 .gc2-price b { color: #fff; font-size: 0.92rem; font-weight: 800; }
 .gc2-price-was { margin-left: 0.3rem; font-size: 0.66rem; color: rgba(255,255,255,0.4); }
+.gc2-buy-price { font-size: 0.64rem; color: #a78bfa; font-weight: 600; }
 .gc2-cta {
   background: #fff; color: #12081f; font-size: 0.72rem; font-weight: 800; padding: 0.4rem 0.8rem;
   border-radius: 20px; white-space: nowrap; flex-shrink: 0;
