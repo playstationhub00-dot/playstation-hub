@@ -67,32 +67,50 @@
   </div>
   <% } %>
 
-  <% if (singleGames.length) { %>
-  <div class="buy-section-label">Single games</div>
-  <div class="buy-single-grid">
-    <% singleGames.forEach(g => { %>
-    <a href="/game/<%= g.slug %>?mode=buy" class="game-card gc2-card">
-      <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
-      <% } else { %>
-        <div class="gc2-cover-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-          </svg>
-          <span>No Image</span>
-        </div>
-      <% } %>
-      <div class="gc2-scrim"></div>
-      <div class="gc2-body">
-        <div class="gc2-plat"><%= g.platform %><%= g.genre ? ' · ' + g.genre.split('/')[0].trim() : '' %></div>
-        <div class="gc2-title"><%= g.title %></div>
-        <div class="gc2-foot">
-          <div class="gc2-price">from <b>₱<%= g.price %></b><% if (g.was) { %><s class="gc2-price-was">₱<%= g.was %></s><% } %></div>
-          <div class="gc2-cta">Buy</div>
-        </div>
-      </div>
-    </a>
-    <% }) %>
+  <% if (priceGroups.length) { %>
+  <div class="buy-filter-row">
+    <div class="buy-section-label buy-section-label-plain">Single games</div>
+    <% if (pendingCount > 0) { %>
+    <label class="buy-avail-toggle">
+      <input type="checkbox" id="buyAvailToggle" onchange="buyToggleAvailability(this.checked)">
+      <span>Available today only</span>
+    </label>
+    <% } %>
   </div>
+  <% priceGroups.forEach(group => { %>
+  <div class="buy-price-section" data-group-count="<%= group.count %>" data-group-pending="<%= group.games.filter(g => g.pending).length %>">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label"><%= group.label %></span>
+      <span class="buy-price-section-count" data-full-count="<%= group.count %>"><%= group.count %> game<%= group.count !== 1 ? 's' : '' %></span>
+    </div>
+    <div class="buy-single-grid">
+      <% group.games.forEach(g => { %>
+      <a href="/game/<%= g.slug %>?mode=buy" class="game-card gc2-card<%= g.pending ? ' buy-card-pending' : '' %>" data-pending="<%= g.pending %>">
+        <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
+        <% } else { %>
+          <div class="gc2-cover-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+            <span>No Image</span>
+          </div>
+        <% } %>
+        <div class="gc2-scrim"></div>
+        <% if (g.pending) { %><div class="gc2-badge buy-badge-pending">Set up on order</div><% } %>
+        <div class="gc2-body">
+          <div class="gc2-plat"><%= g.platform %><%= g.genre ? ' · ' + g.genre.split('/')[0].trim() : '' %></div>
+          <div class="gc2-title"><%= g.title %></div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱<%= g.price %></b><% if (g.was) { %><s class="gc2-price-was">₱<%= g.was %></s><% } %></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      <% }) %>
+    </div>
+  </div>
+  <% }) %>
+  <div class="buy-empty-filtered" id="buyEmptyFiltered" style="display:none;">Everything is set up on order right now.</div>
   <% } %>
 
   <div class="buy-placeholder-grid">
@@ -108,6 +126,33 @@
     </div>
   </div>
 </div>
+
+<script>
+function buyToggleAvailability(showOnly) {
+  const sections = document.querySelectorAll('.buy-price-section');
+  let anyVisible = false;
+  sections.forEach(function (section) {
+    const cards = section.querySelectorAll('.gc2-card');
+    let visibleInSection = 0;
+    cards.forEach(function (card) {
+      const isPending = card.dataset.pending === 'true';
+      const hide = showOnly && isPending;
+      card.style.display = hide ? 'none' : '';
+      if (!hide) visibleInSection++;
+    });
+    section.style.display = visibleInSection > 0 ? '' : 'none';
+    if (visibleInSection > 0) anyVisible = true;
+    const countEl = section.querySelector('.buy-price-section-count');
+    if (countEl) {
+      const fullCount = parseInt(countEl.dataset.fullCount, 10);
+      const shown = showOnly ? visibleInSection : fullCount;
+      countEl.textContent = shown + (shown !== 1 ? ' games' : ' game');
+    }
+  });
+  const empty = document.getElementById('buyEmptyFiltered');
+  if (empty) empty.style.display = (showOnly && !anyVisible) ? '' : 'none';
+}
+</script>
 
 <%- include('partials/footer') %>
 </body>
