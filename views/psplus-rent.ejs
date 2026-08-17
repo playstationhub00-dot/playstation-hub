@@ -128,16 +128,9 @@
         <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event)" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
           or message us on Facebook instead
         </a>
-      </div>
-      <div class="gd-reserve-options">
-        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
-          <div class="gd-reserve-icon">🎮</div>
-          <div class="gd-reserve-name">Fall in Line</div>
-          <div class="gd-reserve-fee">FREE</div>
-          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-        </a>
-      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.08);margin:0.55rem 0 0.45rem;"></div>
+            <div style="font-size:0.68rem;color:#888;">Not ready to pay? <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'queue')" style="color:#93c5fd;text-decoration:underline;">Join the free waitlist →</a></div>
+          </div>
       <div id="reserveValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
       <% if (order_error === '1') { %>
       <div style="margin-top:0.75rem;font-size:0.8rem;color:#ef4444;font-weight:600;text-align:center;">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
@@ -237,16 +230,9 @@
           <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event)" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
             or message us on Facebook instead
           </a>
-        </div>
-        <div class="gd-reserve-options">
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event)">
-            <div class="gd-reserve-icon">🎮</div>
-            <div class="gd-reserve-name">Fall in Line</div>
-            <div class="gd-reserve-fee">FREE</div>
-            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-          </a>
-        </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.08);margin:0.55rem 0 0.45rem;"></div>
+            <div style="font-size:0.68rem;color:#888;">Not ready to pay? <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'queue')" style="color:#93c5fd;text-decoration:underline;">Join the free waitlist →</a></div>
+          </div>
         <div id="reserveValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
       </div>
 
