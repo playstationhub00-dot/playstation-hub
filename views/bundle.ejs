@@ -24,12 +24,24 @@
       <div class="buy-bundle-each">from ₱<%= bundle.perGame %> per game</div>
       <% } %>
 
+      <%
+        // The account's own open-tier prices, cheapest first — every game on this
+        // account shares this same price because buying/renting any one of them
+        // hands over the whole account. Each tile repeats this one number rather
+        // than its own unrelated buy_nt_price/buy_tr_price field.
+        const bundleOpenPrices = [
+          bundle.nonTrophy && bundle.nonTrophy.open ? bundle.nonTrophy.price : null,
+          bundle.trophy && bundle.trophy.open ? bundle.trophy.price : null
+        ].filter(p => p > 0);
+        const bundleTilePrice = bundleOpenPrices.length ? Math.min(...bundleOpenPrices) : null;
+      %>
       <div class="bundle-game-grid">
         <% bundle.games.forEach(g => { %>
         <div class="bundle-game-tile">
           <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
           <% } else { %><div class="bundle-game-cover buy-cover-placeholder"></div><% } %>
           <div class="bundle-game-title"><%= g.title %></div>
+          <% if (bundleTilePrice) { %><div class="bundle-game-price">Buy ₱<%= bundleTilePrice %></div><% } %>
         </div>
         <% }) %>
       </div>
