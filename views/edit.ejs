@@ -213,6 +213,22 @@
           <input type="number" name="buy_tr_price" value="<%= game.buy_tr_price || 0 %>" min="0" placeholder="e.g. 1199">
         </div>
         <div class="form-group full">
+          <label>
+            <input type="checkbox" name="is_bundle" id="edit_bundle_chk" <%= game.is_bundle ? 'checked' : '' %>
+              onchange="document.getElementById('edit_bundle_account').style.display = this.checked ? 'block' : 'none';">
+            📦 This game represents an account bundle
+          </label>
+          <div id="edit_bundle_account" style="display:<%= game.is_bundle ? 'block' : 'none' %>;margin-top:0.5rem;">
+            <label>Bundle account</label>
+            <select name="bundle_account_id">
+              <option value="">— Select account —</option>
+              <% accounts.forEach(acc => { %>
+              <option value="<%= acc.id %>" <%= game.bundle_account_id === acc.id ? 'selected' : '' %>><%= acc.label %></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="form-group full">
           <label>Description</label>
           <textarea name="description"><%= game.description || '' %></textarea>
         </div>

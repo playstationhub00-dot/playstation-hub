@@ -1116,6 +1116,20 @@ function bundleSavings(games, bundlePrice) {
   return sum > bundlePrice ? { sum, save: sum - bundlePrice } : null;
 }
 
+// Resolves the account bundle a game represents (owner-marked via admin edit),
+// for the catalog card and detail page. Returns null the moment the flag is
+// off, unset, or the linked account no longer exists — a stale link silently
+// turns the bundle display off instead of erroring or showing partial data.
+function resolveBundleInfo(game) {
+  if (!game.is_bundle || !game.bundle_account_id) return null;
+  const acc = getAccount(game.bundle_account_id);
+  if (!acc) return null;
+  const allGames = getGames();
+  const games = buildBundleGames(acc, allGames);
+  return { account: acc, games, count: games.length };
+}
+app.locals.resolveBundleInfo = (game) => resolveBundleInfo(game);
+
 app.get('/buy', (req, res) => {
   const allGames = getGames();
   const bundles = getAccounts()
@@ -2635,7 +2649,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
 app.get('/admin/edit/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (!game) return res.redirect('/admin');
-  res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories() });
+  res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories(), accounts: getAccounts() });
 });
 
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
@@ -2646,7 +2660,8 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     remove_gallery, cover_focal_x, cover_focal_y,
-    price_category_id, price_mode, cost, link_label, link_url } = req.body;
+    price_category_id, price_mode, cost, link_label, link_url,
+    is_bundle, bundle_account_id } = req.body;
   const existing = getGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
@@ -2697,6 +2712,8 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     buy_nt_price: parseInt(buy_nt_price) || 0,
     buy_tr_price: parseInt(buy_tr_price) || 0,
     cost: parseInt(cost) || 0,
+    is_bundle: is_bundle === 'on',
+    bundle_account_id: bundle_account_id ? parseInt(bundle_account_id) : null,
     release_date: (release_date || '').trim()
   }).write();
   res.redirect('/admin?msg=updated');
