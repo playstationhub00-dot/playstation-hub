@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playstation Hub — Promo Reel</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #frame {
+    position: relative; width: 390px; height: 844px; overflow: hidden;
+    background: #0a0a0a; border-radius: 0;
+  }
+  .scene {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 2rem; opacity: 0; transform: scale(0.96);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
+  }
+  .scene.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+  .kicker { font-size: 0.9rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #F0A500; margin-bottom: 0.75rem; }
+  .headline { font-size: 2.6rem; font-weight: 900; color: #fff; line-height: 1.1; }
+  .headline.small { font-size: 1.9rem; }
+  .sub { font-size: 1.2rem; color: #aaaaaa; margin-top: 1rem; font-weight: 500; }
+  .accent { color: #F0A500; }
+  .highlight { color: #FFD700; }
+  .stat-row { display: flex; gap: 1.5rem; margin-top: 1.5rem; }
+  .stat { display: flex; flex-direction: column; align-items: center; }
+  .stat-num { font-size: 1.6rem; font-weight: 900; color: #F0A500; }
+  .stat-label { font-size: 0.7rem; color: #aaaaaa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cover-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin-top: 1.5rem; width: 100%; max-width: 300px; }
+  .cover-grid img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 10px; }
+  .buy-badge {
+    display: inline-block; margin-top: 1.5rem; padding: 0.75rem 1.5rem; border-radius: 30px;
+    background: linear-gradient(135deg, #7b2ff7, #f107a3); font-weight: 800; font-size: 1.1rem; color: #fff;
+  }
+  .promo-box {
+    margin-top: 1.5rem; padding: 1.25rem 2rem; border-radius: 16px;
+    background: rgba(240,165,0,0.1); border: 2px solid #F0A500;
+  }
+  .promo-pct { font-size: 3rem; font-weight: 900; color: #FFD700; }
+  .cta-methods { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+  .cta-pill { padding: 0.4rem 0.9rem; border-radius: 20px; background: #141414; border: 1px solid #2a2a2a; font-size: 0.8rem; color: #aaaaaa; font-weight: 700; }
+  .cta-url { margin-top: 2rem; font-size: 1.5rem; font-weight: 900; color: #fff; }
+  #replay {
+    position: absolute; bottom: 16px; right: 16px; z-index: 10;
+    background: rgba(0,0,0,0.6); color: #fff; border: 1px solid #444; border-radius: 20px;
+    padding: 0.4rem 0.9rem; font-size: 0.75rem; cursor: pointer;
+  }
+  .feature-row { display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem; width: 100%; max-width: 300px; }
+  .feature-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem; text-align: left; }
+  .feature-card .tag { font-size: 0.65rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #FFD700; }
+  .feature-card .title { font-size: 1.1rem; font-weight: 800; color: #fff; margin-top: 0.3rem; }
+  .feature-card .desc { font-size: 0.85rem; color: #aaaaaa; margin-top: 0.2rem; }
+</style>
+</head>
+<body>
+<div id="frame">
+
+  <div class="scene" data-scene="hook">
+    <div class="headline">PS5 GAMES.</div>
+    <div class="headline highlight">₱199 LANG.</div>
+  </div>
+
+  <div class="scene" data-scene="what-it-is">
+    <div class="kicker">Playstation Hub</div>
+    <div class="headline small">55+ na games.<br>Digital lahat.</div>
+    <div class="sub">Walang disc. Walang meetup.</div>
+    <div class="cover-grid">
+      <img src="https://playstation-hub.com/uploads/1782490858966.webp" alt="">
+      <img src="https://playstation-hub.com/uploads/1782496201428.webp" alt="">
+      <img src="https://playstation-hub.com/uploads/1782496613784.webp" alt="">
+      <img src="https://playstation-hub.com/uploads/1782496157709.webp" alt="">
+    </div>
+  </div>
+
+  <div class="scene" data-scene="whats-new">
+    <div class="kicker">Bago Ngayon</div>
+    <div class="feature-row">
+      <div class="feature-card">
+        <div class="tag">Account Bundles</div>
+        <div class="title">12 games, isang account</div>
+        <div class="desc">From ₱299</div>
+      </div>
+      <div class="feature-card">
+        <div class="tag">Buy Permanent</div>
+        <div class="title">Sa'yo na habambuhay</div>
+        <div class="desc">Isang bayad, forever access</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scene" data-scene="promo">
+    <div class="kicker">Limited Promo</div>
+    <div class="promo-box">
+      <div class="sub" style="margin-top:0;">30 DAYS RENT</div>
+      <div class="promo-pct">10% OFF</div>
+    </div>
+    <div class="sub">Automatic sa checkout — walang code</div>
+  </div>
+
+  <div class="scene" data-scene="cta">
+    <div class="kicker">Simulan Na</div>
+    <div class="cta-url">playstation-hub.com</div>
+    <div class="cta-methods">
+      <div class="cta-pill">GCash</div>
+      <div class="cta-pill">Maya</div>
+      <div class="cta-pill">QR Ph</div>
+    </div>
+    <div class="sub" style="margin-top:1.5rem;">Message us sa Messenger</div>
+  </div>
+
+  <button id="replay" onclick="playReel()">↻ Replay</button>
+</div>
+<script>
+  var SCENES = [
+    { id: 'hook', duration: 3000 },
+    { id: 'what-it-is', duration: 5000 },
+    { id: 'whats-new', duration: 6000 },
+    { id: 'promo', duration: 5000 },
+    { id: 'cta', duration: 6000 }
+  ];
+  var timers = [];
+
+  function clearTimers() {
+    timers.forEach(function (t) { clearTimeout(t); });
+    timers = [];
+  }
+
+  function playReel() {
+    clearTimers();
+    document.querySelectorAll('.scene').forEach(function (el) { el.classList.remove('active'); });
+    var elapsed = 0;
+    SCENES.forEach(function (scene) {
+      var startTimer = setTimeout(function () {
+        document.querySelectorAll('.scene').forEach(function (el) { el.classList.remove('active'); });
+        var el = document.querySelector('.scene[data-scene="' + scene.id + '"]');
+        if (el) el.classList.add('active');
+      }, elapsed);
+      timers.push(startTimer);
+      elapsed += scene.duration;
+    });
+  }
+
+  playReel();
+</script>
+</body>
+</html>
