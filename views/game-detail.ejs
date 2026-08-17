@@ -132,6 +132,24 @@
       <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
       <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-bottom:1.25rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
 
+      <%
+        const gdBundle = resolveBundleInfo(game);
+      %>
+      <% if (gdBundle) { %>
+      <div style="margin-bottom:1.25rem;">
+        <div class="gd-section-label">GAMES INCLUDED — <%= gdBundle.count %> TOTAL</div>
+        <div class="bundle-game-grid">
+          <% gdBundle.games.forEach(g => { %>
+          <div class="bundle-game-tile">
+            <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
+            <% } else { %><div class="bundle-game-cover buy-cover-placeholder"></div><% } %>
+            <div class="bundle-game-title"><%= g.title %></div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
         <button id="toggleRent" onclick="setMode('rent')"

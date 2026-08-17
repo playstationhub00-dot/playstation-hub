@@ -40,6 +40,7 @@
   const gcNewDaysLeft = gcIsNew ? gcWindowDays - gcDaysSinceAdded : null;
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
+  const gcBundle = resolveBundleInfo(game);
 %>
 <a href="/game/<%= gameSlug %>" class="game-card gc2-card">
   <% if (game.cover_image) { %>
@@ -64,7 +65,7 @@
   <% } %>
 
   <div class="gc2-body">
-    <div class="gc2-plat"><%= game.platform %><%= game.genre ? ' · ' + game.genre.split('/')[0].trim() : '' %></div>
+    <div class="gc2-plat<%= gcBundle ? ' gc2-plat-bundle' : '' %>"><%= gcBundle ? ('Bundle · ' + gcBundle.count + ' games') : (game.platform + (game.genre ? ' · ' + game.genre.split('/')[0].trim() : '')) %></div>
     <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>"><%= game.title %></div>
 
     <% if (allUnavail) { %>
@@ -98,7 +99,9 @@
     <% } %>
 
     <div class="gc2-foot">
-      <% if (gcStartPrice) { %>
+      <% if (gcBundle && gcStartPrice) { %>
+      <div class="gc2-price"><%= gcBundle.count %> games from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
+      <% } else if (gcStartPrice) { %>
       <div class="gc2-price">from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
       <% } else { %>
       <div class="gc2-price">See pricing</div>
