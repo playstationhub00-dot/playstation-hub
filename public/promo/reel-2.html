@@ -110,6 +110,7 @@
 
   <div class="scene" data-scene="buy-1">
     <iframe class="live-frame" src="https://playstation-hub.com/buy" scrolling="no" tabindex="-1"></iframe>
+    <div class="tap-dot" style="top: 10px; left: 330px;"></div>
     <div class="caption-bar"><div class="step">Buy · Hakbang 1</div><div class="text">Gusto mo permanent? Tap BUY</div></div>
   </div>
 
@@ -156,6 +157,22 @@
     { id: 'cta', duration: 6000 }
   ];
   var timers = [];
+
+  function scrollIframeTo(sceneId, y) {
+    var scene = document.querySelector('.scene[data-scene="' + sceneId + '"]');
+    if (!scene) return;
+    var frame = scene.querySelector('.live-frame');
+    if (!frame) return;
+    frame.addEventListener('load', function () {
+      try { frame.contentWindow.scrollTo(0, y); } catch (e) {}
+    });
+  }
+
+  scrollIframeTo('rent-3', 792);
+  scrollIframeTo('rent-4', 944);
+  scrollIframeTo('rent-5', 1283);
+  scrollIframeTo('buy-2', 1190);
+  scrollIframeTo('buy-4', 772);
 
   function clearTimers() {
     timers.forEach(function (t) { clearTimeout(t); });
