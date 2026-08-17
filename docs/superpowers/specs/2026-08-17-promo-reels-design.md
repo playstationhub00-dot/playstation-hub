@@ -65,11 +65,17 @@ the payment methods from the hero badges.
 
 ## Reel 2 — How-to (~78s)
 
-Real screenshots of the live site at a 390×844 mobile viewport, with animated tap
-indicators and callout arrows layered on top.
+Live, non-interactive `<iframe>`s of the real site at a 390×844 scale, with
+animated tap indicators and callout arrows layered on top — not static screenshots
+and not recreated UI. An iframe of the actual live page is the real thing, not a
+copy of it, at the moment the reel is recorded; a screenshot would go stale the
+next time a price or a game changes, and no tool in this build produces a savable
+image file to embed one anyway. Viewers still see the exact buttons they'll be
+tapping — more precisely than a screenshot would, since it's literally the same
+page.
 
-Screenshots rather than recreated UI: viewers need to recognize the exact buttons
-they will be tapping. A prettier reconstruction would defeat the reel's only job.
+Each iframe sets `pointer-events: none` so screen-recording taps land on the
+overlay's tap-indicator animation, never on the live site underneath.
 
 | Time | Step | On-screen |
 |---|---|---|
@@ -87,31 +93,34 @@ they will be tapping. A prettier reconstruction would defeat the reel's only job
 | 66–72s | Buy 4 | `Piliin Non-Trophy o Trophy → bayad` |
 | 72–78s | CTA | `Sa'yo na habambuhay.` / `playstation-hub.com` |
 
-### Screenshots versus designed graphics — and why the split
+### Live pages versus designed graphics — and why the split
 
-Browsing and selection steps use real screenshots. **Payment and confirmation steps
-use designed graphics instead.**
+Browsing and selection steps embed the real, live site. **Payment and confirmation
+steps use designed graphics instead.**
 
 The reason is customer privacy. A real order status page carries an order reference
-and the customer's Facebook name. Screenshotting one and publishing it in a promo
-video would expose a real person's data. Those two steps (Rent 6 and Rent 7) are
-therefore rendered as designed panels — GCash and Maya marks, an upload affordance,
-a generic confirmation — with no real order data anywhere.
+and the customer's Facebook name. Displaying one — live or as a screenshot — in a
+promo video would expose a real person's data. Those two steps (Rent 6 and Rent 7)
+are therefore rendered as designed panels — GCash and Maya marks, an upload
+affordance, a generic confirmation — with no real order data anywhere.
 
 No test order is created for this work either. Creating one would write a real
-record into the production order queue.
+record into the production order queue, and a scripted iframe has no way to fill
+and submit the order form on the customer's behalf regardless.
 
-Screenshots to capture (none contain customer data), and the step each one serves:
+Live pages to embed (none contain customer data), and the step each one serves:
 
-| # | Screenshot | Serves |
+| # | URL | Serves |
 |---|---|---|
-| 1 | Homepage, mobile viewport | Rent 1 |
-| 2 | `/browse` game grid | Rent 2 |
-| 3 | Game detail — account type rows | Rent 3 |
-| 4 | Game detail — duration buttons and order summary | Rent 4 |
-| 5 | Game detail — name field and Rent button | Rent 5 |
-| 6 | `/buy` — price-grouped sections | Buy 1, Buy 2 |
-| 7 | Game detail — Buy Permanent panel with tier rows | Buy 3, Buy 4 (tier selection only) |
+| 1 | `/` | Rent 1 |
+| 2 | `/browse` | Rent 2 |
+| 3 | `/game/<any live rentable slug>` | Rent 3, Rent 4, Rent 5 |
+| 4 | `/buy` | Buy 1, Buy 2 |
+| 5 | `/game/<any live game with a buy price>?mode=buy` | Buy 3, Buy 4 (tier selection only) |
+
+Steps 3–5 within Rent and Buy each reuse one embedded page, scrolled or with a
+different area highlighted per step by the overlay — not five separate iframes —
+since the game detail page already carries both its rent and buy panels together.
 
 The remaining steps are designed graphics with no real order data: **Rent 6**
 (payment), **Rent 7** (confirmation), the payment half of **Buy 4**, and the CTA.
