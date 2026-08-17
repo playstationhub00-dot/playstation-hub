@@ -741,6 +741,10 @@ function getSiteSettings() {
     db.set('site_settings.section_gap', 4).write();
     s.section_gap = 4;
   }
+  if (s.bot_ai_fallback_enabled === undefined) {
+    db.set('site_settings.bot_ai_fallback_enabled', false).write();
+    s.bot_ai_fallback_enabled = false;
+  }
   // Weekly/Monthly migration: promo discount keys move from {10,15,30} to {7,30}.
   // Seed the new "7" key from the old "10" key so an existing promo's Weekly
   // discount isn't silently lost; leave "10"/"15"/"30" in place (unread) for a
@@ -4378,7 +4382,7 @@ async function handleMessage(senderId, text) {
 
   // ── AI FALLBACK ───────────────────────────────────────────────────────────
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (apiKey) {
+  if (apiKey && getSiteSettings().bot_ai_fallback_enabled) {
     try {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic.default({ apiKey });
@@ -4451,6 +4455,11 @@ app.post('/admin/bot-training/add', requireAuth, (req, res) => {
 app.post('/admin/bot-training/delete/:id', requireAuth, (req, res) => {
   db.get('bot_training').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?tab=settings&msg=training_deleted');
+});
+
+app.post('/admin/settings/bot-ai-fallback', requireAuth, (req, res) => {
+  db.set('site_settings.bot_ai_fallback_enabled', req.body.bot_ai_fallback_enabled === 'on').write();
+  res.redirect('/admin?tab=settings&msg=bot_ai_fallback_updated');
 });
 
 // ── Sign-In QR Guide ──────────────────────────────────────────────────────────
