@@ -215,7 +215,7 @@
         <div class="form-group full">
           <label>
             <input type="checkbox" name="is_bundle" id="edit_bundle_chk" <%= game.is_bundle ? 'checked' : '' %>
-              onchange="document.getElementById('edit_bundle_account').style.display = this.checked ? 'block' : 'none';">
+              onchange="document.getElementById('edit_bundle_account').style.display = this.checked ? 'block' : 'none'; if (!this.checked) document.querySelector('#edit_bundle_account select').value = '';">
             📦 This game represents an account bundle
           </label>
           <div id="edit_bundle_account" style="display:<%= game.is_bundle ? 'block' : 'none' %>;margin-top:0.5rem;">
@@ -223,7 +223,7 @@
             <select name="bundle_account_id">
               <option value="">— Select account —</option>
               <% accounts.forEach(acc => { %>
-              <option value="<%= acc.id %>" <%= game.bundle_account_id === acc.id ? 'selected' : '' %>><%= acc.label %></option>
+              <option value="<%= acc.id %>" <%= (game.is_bundle && game.bundle_account_id === acc.id) ? 'selected' : '' %>><%= acc.label %> (#<%= acc.id %>, <%= (acc.game_ids || []).length %> games)</option>
               <% }) %>
             </select>
           </div>

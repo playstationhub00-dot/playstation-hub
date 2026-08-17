@@ -1125,7 +1125,7 @@ function resolveBundleInfo(game) {
   const acc = getAccount(game.bundle_account_id);
   if (!acc) return null;
   const allGames = getGames();
-  const games = buildBundleGames(acc, allGames);
+  const games = buildBundleGames(acc, allGames).filter(g => g.id !== game.id);
   return { account: acc, games, count: games.length };
 }
 app.locals.resolveBundleInfo = (game) => resolveBundleInfo(game);
