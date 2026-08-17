@@ -100,7 +100,9 @@
   function render(term) {
     if (!term.trim() || !index) { box.classList.remove('show'); box.innerHTML = ''; items = []; sel = -1; return; }
     const t = term.trim().toLowerCase();
-    const matches = index.filter(x => x.t.toLowerCase().includes(t));
+    // Match the title, or a bundle's hidden contained-game keywords, so searching a
+    // title that only lives inside a bundle still surfaces that bundle.
+    const matches = index.filter(x => x.t.toLowerCase().includes(t) || (x.k || '').toLowerCase().includes(t));
     const now = matches.filter(x => x.y === 'now').slice(0, 6);
     const psplus = matches.filter(x => x.y === 'psplus').slice(0, 3);
     const soon = matches.filter(x => x.y === 'soon').slice(0, 3);
@@ -113,9 +115,15 @@
           ? '<span class="navsearch-avail-yes">' + x.s + ' slot' + (x.s !== 1 ? 's' : '') + ' left</span>'
           : '<span class="navsearch-avail-no">FULLY BOOKED</span>';
         const thumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🎮';
+        // A bundle that matched on its contents (not its own name) needs to say why
+        // it's in the results, otherwise the hit looks unrelated to what was typed.
+        const viaContents = x.bn > 0 && !x.t.toLowerCase().includes(t);
+        const bundleNote = x.bn > 0
+          ? '<span class="navsearch-bundle-note">' + (viaContents ? 'includes this · ' : '') + x.bn + ' games</span>'
+          : '';
         h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + thumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
-          '<div class="navsearch-meta"><span>' + x.p + '</span>' + av + '</div></div>' +
+          '<div class="navsearch-meta"><span>' + x.p + '</span>' + bundleNote + av + '</div></div>' +
           (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') + '</a>';
       });
     }

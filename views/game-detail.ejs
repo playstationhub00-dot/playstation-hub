@@ -136,9 +136,9 @@
         const gdBundle = resolveBundleInfo(game);
       %>
       <% if (gdBundle) { %>
-      <div style="margin-bottom:1.25rem;">
-        <div class="gd-section-label">GAMES INCLUDED — <%= gdBundle.count %> TOTAL</div>
-        <div class="bundle-game-grid">
+      <details class="gd-bundle-details">
+        <summary class="gd-bundle-summary">See the <%= gdBundle.count %> games included</summary>
+        <div class="bundle-game-grid" style="margin-top:0.75rem;">
           <% gdBundle.games.forEach(g => { %>
           <div class="bundle-game-tile">
             <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
@@ -147,7 +147,7 @@
           </div>
           <% }) %>
         </div>
-      </div>
+      </details>
       <% } %>
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
