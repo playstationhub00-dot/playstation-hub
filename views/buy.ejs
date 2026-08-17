@@ -49,23 +49,16 @@
       <div class="buy-bundle-foot">
         <div class="buy-tier-row">
           <% tiers.forEach(t => { %>
-            <% if (t.slot.open) { %>
-            <a href="/bundle/<%= b.slug %>?tier=<%= t.key %>" class="buy-tier buy-tier-open">
+            <div class="buy-tier<%= t.slot.open ? ' buy-tier-open' : ' buy-tier-off' %>">
               <span class="buy-tier-label"><%= t.label %></span>
               <span class="buy-tier-price">₱<%= t.slot.price %></span>
-              <span class="buy-tier-status buy-tier-status-open">Available</span>
-              <span class="buy-tier-buy-btn">Buy</span>
-            </a>
-            <% } else { %>
-            <div class="buy-tier buy-tier-off">
-              <span class="buy-tier-label"><%= t.label %></span>
-              <span class="buy-tier-price">₱<%= t.slot.price %></span>
-              <span class="buy-tier-status"><%= slotStatusLabel(t.slot.status) %></span>
+              <span class="buy-tier-status<%= t.slot.open ? ' buy-tier-status-open' : '' %>"><%= t.slot.open ? 'Available' : slotStatusLabel(t.slot.status) %></span>
             </div>
-            <% } %>
           <% }) %>
         </div>
-        <% if (!anyOpen) { %>
+        <% if (anyOpen) { %>
+        <a href="/bundle/<%= b.slug %>" class="buy-tier-buy-btn">Buy</a>
+        <% } else { %>
         <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
         <% } %>
       </div>
