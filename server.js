@@ -1130,6 +1130,23 @@ function resolveBundleInfo(game) {
 }
 app.locals.resolveBundleInfo = (game) => resolveBundleInfo(game);
 
+// The inverse of resolveBundleInfo: given an ordinary game, finds the bundle (if
+// any) that contains it, so its catalog card can disclose "renting this gets you
+// the whole account." A bundle game itself never resolves to a parent bundle.
+function findBundleContaining(game) {
+  if (game.is_bundle) return null;
+  const allGames = getGames();
+  for (const g of allGames) {
+    if (!g.is_bundle) continue;
+    const info = resolveBundleInfo(g);
+    if (info && info.games.some(cg => cg.id === game.id)) {
+      return { bundleGame: g, count: info.count };
+    }
+  }
+  return null;
+}
+app.locals.findBundleContaining = (game) => findBundleContaining(game);
+
 app.get('/buy', (req, res) => {
   const allGames = getGames();
   const bundles = getAccounts()
