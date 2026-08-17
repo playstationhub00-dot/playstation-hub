@@ -1147,6 +1147,43 @@ function findBundleContaining(game) {
 }
 app.locals.findBundleContaining = (game) => findBundleContaining(game);
 
+// Groups /buy's single-game cards into price-point sections, cheapest first.
+// Price points with fewer than MIN_GROUP games merge into one trailing "and up"
+// group, but only from the top: if the highest price point itself already has
+// MIN_GROUP or more games, nothing merges and every price point stands alone.
+const MIN_GROUP = 3;
+function groupSingleGamesByPrice(games) {
+  const byPrice = new Map();
+  games.forEach(g => {
+    if (!byPrice.has(g.price)) byPrice.set(g.price, []);
+    byPrice.get(g.price).push(g);
+  });
+  const prices = [...byPrice.keys()].sort((a, b) => a - b);
+  if (prices.length === 0) return [];
+
+  let mergeFromIndex = prices.length; // no merge by default
+  for (let i = prices.length - 1; i >= 0; i--) {
+    if (byPrice.get(prices[i]).length < MIN_GROUP && i > 0) {
+      mergeFromIndex = i;
+    } else {
+      break;
+    }
+  }
+
+  const groups = [];
+  for (let i = 0; i < mergeFromIndex; i++) {
+    const price = prices[i];
+    groups.push({ label: '₱' + price.toLocaleString(), minPrice: price, count: byPrice.get(price).length, games: byPrice.get(price) });
+  }
+  if (mergeFromIndex < prices.length) {
+    const mergedPrices = prices.slice(mergeFromIndex);
+    const mergedGames = mergedPrices.flatMap(p => byPrice.get(p));
+    const lowest = mergedPrices[0];
+    groups.push({ label: '₱' + lowest.toLocaleString() + ' and up', minPrice: lowest, count: mergedGames.length, games: mergedGames });
+  }
+  return groups;
+}
+
 app.get('/buy', (req, res) => {
   const allGames = getGames();
   const bundles = getAccounts()
@@ -1180,11 +1217,14 @@ app.get('/buy', (req, res) => {
       return {
         id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title),
         platform: g.platform, genre: g.genre,
-        cover_focal_x: g.cover_focal_x, cover_focal_y: g.cover_focal_y
+        cover_focal_x: g.cover_focal_x, cover_focal_y: g.cover_focal_y,
+        pending: !g.renters && !g.stocked
       };
     });
+  const priceGroups = groupSingleGamesByPrice(singleGames);
+  const pendingCount = singleGames.filter(g => g.pending).length;
   res.render('buy', {
-    bundles, singleGames, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
+    bundles, singleGames, priceGroups, pendingCount, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
     announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
     orderError: req.query.order_error || null
   });
