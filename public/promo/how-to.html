@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playstation Hub — How to Rent or Buy</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #card {
+    width: 1080px; height: 1350px; background: #0a0a0a;
+    padding: 70px 64px; display: flex; flex-direction: column;
+    transform-origin: top center;
+  }
+  .head { text-align: center; margin-bottom: 44px; }
+  .kicker { font-size: 22px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #F0A500; margin-bottom: 14px; }
+  .title { font-size: 62px; font-weight: 900; color: #fff; line-height: 1.08; }
+  .title span { color: #FFD700; }
+  .sub { font-size: 25px; color: #aaaaaa; margin-top: 16px; }
+  .steps { display: flex; flex-direction: column; gap: 20px; flex: 1; }
+  .step { display: flex; align-items: flex-start; gap: 22px; }
+  .n {
+    width: 58px; height: 58px; border-radius: 50%; background: #F0A500;
+    color: #000; font-size: 27px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .n.buy { background: #a78bfa; }
+  .txt { padding-top: 6px; }
+  .st { font-size: 31px; font-weight: 800; color: #fff; line-height: 1.25; }
+  .sd { font-size: 23px; color: #aaaaaa; margin-top: 5px; line-height: 1.45; }
+  .warn { color: #f59e0b; font-weight: 700; }
+  .foot {
+    margin-top: 36px; padding-top: 28px; border-top: 2px solid #1a1a1a;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+  .url { font-size: 34px; font-weight: 900; color: #fff; }
+  .pays { display: flex; gap: 10px; }
+  .pay { font-size: 21px; font-weight: 700; color: #aaaaaa; background: #141414; border: 1px solid #2a2a2a; border-radius: 22px; padding: 9px 20px; }
+</style>
+</head>
+<body>
+<div id="card">
+
+  <div class="head">
+    <div class="kicker">Playstation Hub</div>
+    <div class="title">Paano mag-<span>rent</span> o <span>bumili</span></div>
+    <div class="sub">PS5 &amp; PS4 games — online lahat, GCash o Maya</div>
+  </div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="n">1</div>
+      <div class="txt">
+        <div class="st">Buksan ang playstation-hub.com</div>
+        <div class="sd">Tap <b style="color:#fff">Rent</b> para umupa, o <b style="color:#fff">Buy</b> para sa'yo na habambuhay</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">2</div>
+      <div class="txt">
+        <div class="st">Pumili ng game</div>
+        <div class="sd">Makikita mo ang presyo at kung ilan pang slot ang bakante</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">3</div>
+      <div class="txt">
+        <div class="st">Piliin ang account type</div>
+        <div class="sd">Non-Trophy, Trophy, o PS4 Primary — may ₱100 refundable deposit ang Trophy at PS4 Primary</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">4</div>
+      <div class="txt">
+        <div class="st">Pumili ng haba — 7 o 30 days</div>
+        <div class="sd">Umuupa lang. Kung bibili ka, laktawan mo 'to — walang expiry</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">5</div>
+      <div class="txt">
+        <div class="st">Ilagay ang Facebook name mo</div>
+        <div class="sd">Tapos tap Rent o Buy — may lalabas na order page na may reference number</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">6</div>
+      <div class="txt">
+        <div class="st">Bayad via GCash o Maya</div>
+        <div class="sd">I-scan ang QR sa order page, tapos i-upload ang resibo — o send sa Messenger</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">7</div>
+      <div class="txt">
+        <div class="st">Send ang sign-in QR mo</div>
+        <div class="sd"><span class="warn">10 minutes lang bago mag-expire</span> — i-send agad. Kami na ang bahala mag-sign in. Laro na!</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    <div class="url">playstation-hub.com</div>
+    <div class="pays">
+      <div class="pay">GCash</div>
+      <div class="pay">Maya</div>
+    </div>
+  </div>
+
+</div>
+<script>
+  function fit() {
+    var c = document.getElementById('card');
+    var s = Math.min(window.innerWidth / 1080, window.innerHeight / 1350);
+    c.style.transform = s < 1 ? 'scale(' + s + ')' : 'none';
+    document.body.style.height = (s < 1 ? 1350 * s : 1350) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+</body>
+</html>
