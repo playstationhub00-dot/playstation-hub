@@ -18,9 +18,9 @@
 <section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
   <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
   <div style="position:relative;z-index:1;">
-    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">🎮 Simple 3-Step Process</div>
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">🎮 Order online in minutes</div>
     <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">How It <span style="color:var(--ps-blue);">Works</span></h1>
-    <p style="color:var(--text-secondary);font-size:1rem;max-width:480px;margin:0 auto;">Renting a game from Playstation Hub is quick and easy. Just follow these steps and you're ready to play.</p>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:520px;margin:0 auto;">Rent a game for a week or a month, or buy it permanently. Everything happens right here on the site — pay with GCash or Maya and we'll set you up.</p>
   </div>
 </section>
 
@@ -34,9 +34,12 @@
     <div class="hiw-card">
       <div class="hiw-icon">🎮</div>
       <div class="hiw-body">
-        <h2>Choose Your Game</h2>
-        <p>Browse our full game list and find the PS5 or PS4 title you want to play. Each listing shows the available slots, rental prices for Weekly and Monthly durations, and whether a Trophy Account is included.</p>
-        <a href="/browse" class="btn btn-primary" style="margin-top:1rem;display:inline-block;font-size:0.875rem;padding:0.6rem 1.4rem;">Browse Game List →</a>
+        <h2>Pick Rent or Buy</h2>
+        <p>Tap <strong style="color:#fff;">Rent</strong> in the menu to rent a game for a week or a month, or <strong style="color:#fff;">Buy</strong> to own it permanently with a one-time payment.</p>
+        <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap;">
+          <a href="/browse" class="btn btn-primary" style="font-size:0.875rem;padding:0.6rem 1.4rem;">Rent a Game →</a>
+          <a href="/buy" class="btn btn-outline" style="font-size:0.875rem;padding:0.6rem 1.4rem;">Buy Permanently →</a>
+        </div>
       </div>
     </div>
   </div>
@@ -46,56 +49,116 @@
     <div class="hiw-num">2</div>
     <div class="hiw-connector"></div>
     <div class="hiw-card">
-      <div class="hiw-icon">📲</div>
+      <div class="hiw-icon">🔎</div>
       <div class="hiw-body">
-        <h2>Click Rent Now</h2>
-        <p>Hit the <strong style="color:#fff;">Rent Now</strong> button on your chosen game. It will open our <strong style="color:#fff;">Facebook page</strong> directly so you can message us right away — no sign-up, no checkout, no hassle.</p>
-        <div class="hiw-tip">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-          Make sure your Facebook Messenger is ready!
-        </div>
+        <h2>Choose Your Game</h2>
+        <p>Each listing shows the price, how many slots are free, and whether a Trophy Account is available. Tap the game you want.</p>
       </div>
     </div>
   </div>
 
   <!-- Step 3 -->
-  <div class="hiw-step" style="--no-connector:1">
+  <div class="hiw-step">
     <div class="hiw-num">3</div>
+    <div class="hiw-connector"></div>
     <div class="hiw-card">
-      <div class="hiw-icon">💬</div>
+      <div class="hiw-icon">🏆</div>
       <div class="hiw-body">
-        <h2>Send Us These Details</h2>
-        <p>In your message to us, just include the following:</p>
+        <h2>Choose Your Account Type</h2>
+        <p>Pick <strong style="color:#fff;">Non-Trophy</strong>, <strong style="color:#ffc400;">Trophy</strong>, or <strong style="color:#60a5fa;">PS4 Primary</strong>. The difference is explained further down this page.</p>
+        <div class="hiw-tip">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Trophy and PS4 Primary include a ₱100 refundable deposit. Non-Trophy has no deposit.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="hiw-step">
+    <div class="hiw-num">4</div>
+    <div class="hiw-connector"></div>
+    <div class="hiw-card">
+      <div class="hiw-icon">📅</div>
+      <div class="hiw-body">
+        <h2>Pick How Long <span style="font-size:0.8rem;color:#555;font-weight:600;">— renting only</span></h2>
+        <p>Choose <strong style="color:#fff;">Weekly (7 days)</strong> or <strong style="color:#fff;">Monthly (30 days)</strong>. Monthly works out cheaper per day, and any active discount is applied automatically at checkout.</p>
+        <div class="hiw-tip">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Buying permanently? Skip this step — there's no time limit.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5 -->
+  <div class="hiw-step">
+    <div class="hiw-num">5</div>
+    <div class="hiw-connector"></div>
+    <div class="hiw-card">
+      <div class="hiw-icon">✍️</div>
+      <div class="hiw-body">
+        <h2>Enter Your Facebook Name</h2>
+        <p>Type the name on your Facebook account so we know who the order belongs to, then tap <strong style="color:#fff;">Rent</strong> or <strong style="color:#fff;">Buy</strong>. You'll get an order page with your own reference number — keep that page open.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 6 -->
+  <div class="hiw-step">
+    <div class="hiw-num">6</div>
+    <div class="hiw-connector"></div>
+    <div class="hiw-card">
+      <div class="hiw-icon">💳</div>
+      <div class="hiw-body">
+        <h2>Pay, Then Tell Us</h2>
+        <p>Your order page shows the exact amount and a <strong style="color:#fff;">GCash</strong> or <strong style="color:#fff;">Maya</strong> QR code to scan. Once you've paid, confirm it in one of two ways:</p>
         <div class="hiw-details">
           <div class="hiw-detail-item">
-            <span class="hiw-detail-icon">🎮</span>
+            <span class="hiw-detail-icon">📤</span>
             <div>
-              <strong>Game Name</strong>
-              <span>Which game you want to rent</span>
+              <strong>Upload your receipt</strong>
+              <span>Attach the screenshot straight from the order page</span>
             </div>
           </div>
           <div class="hiw-detail-item">
-            <span class="hiw-detail-icon">📅</span>
+            <span class="hiw-detail-icon">💬</span>
             <div>
-              <strong>Days of Rent</strong>
-              <span>Choose Weekly or Monthly</span>
+              <strong>Or send it on Messenger</strong>
+              <span>Copy the ready-made message and paste it to us</span>
             </div>
-          </div>
-          <div class="hiw-detail-item">
-            <span class="hiw-detail-icon">🏆</span>
-            <div>
-              <strong>Trophy or Non-Trophy</strong>
-              <span>Let us know if you want access to a Trophy Account</span>
-            </div>
-          </div>
-        </div>
-        <div class="hiw-example">
-          <div style="font-size:0.75rem;color:#555;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:0.6rem;">Example Message</div>
-          <div style="color:#ccc;font-size:0.9rem;line-height:1.7;">
-            Hi! I'd like to rent <strong style="color:#fff;">God of War Ragnarök</strong> for <strong style="color:#fff;">15 days</strong>, <strong style="color:#fff;">with Trophy Account</strong>. 😊
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="hiw-step" style="--no-connector:1">
+    <div class="hiw-num">7</div>
+    <div class="hiw-card">
+      <div class="hiw-icon">📱</div>
+      <div class="hiw-body">
+        <h2>Send Your Sign-In QR</h2>
+        <p>Last step. Your console shows a sign-in QR code — send it to us and we'll sign you in. Then you're playing.</p>
+        <div class="hiw-tip" style="border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.08);color:#f59e0b;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          Your QR expires after about 10 minutes — send it right away.
+        </div>
+        <a href="/how-to-sign-in" class="btn btn-outline" style="margin-top:1rem;display:inline-block;font-size:0.875rem;padding:0.6rem 1.4rem;">How to get your sign-in QR →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- After -->
+  <div style="margin-top:2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;">
+    <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem;">
+      <div style="font-weight:800;color:var(--ps-blue);font-size:0.9rem;margin-bottom:0.4rem;">⏱️ If you rented</div>
+      <p style="font-size:0.85rem;color:#888;line-height:1.6;margin:0;">When your week or month is up, return the account and send us the return proof. Your deposit comes back after that.</p>
+    </div>
+    <div style="background:#0d0d0d;border:1px solid #2a1a3a;border-radius:12px;padding:1.25rem;">
+      <div style="font-weight:800;color:#a78bfa;font-size:0.9rem;margin-bottom:0.4rem;">♾️ If you bought</div>
+      <p style="font-size:0.85rem;color:#888;line-height:1.6;margin:0;">Nothing to return. The game stays on your account permanently — no expiry, no weekly fee.</p>
     </div>
   </div>
 
@@ -171,8 +234,9 @@
 
   </div>
 
-  <div style="margin-top:1rem;background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:1rem 1.25rem;font-size:0.82rem;color:#555;text-align:center;">
-    💡 Not sure? You can always ask us when you message — we're happy to help you choose!
+  <div style="margin-top:1rem;background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:1rem 1.25rem;font-size:0.82rem;color:#555;text-align:center;line-height:1.7;">
+    💡 Trophy accounts include a <strong style="color:#888;">₱100 refundable deposit</strong>, returned once you send the account back. Non-Trophy has no deposit.<br>
+    Not sure which to pick? Message us — we're happy to help you choose.
   </div>
 </div>
 
