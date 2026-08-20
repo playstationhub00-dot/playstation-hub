@@ -303,6 +303,12 @@
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       <div class="oq-ab-btns">
         <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+        <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
+          <button type="submit" class="oq-btn-go" title="Confirm this order was paid outside the site">✅ Mark paid</button>
+        </form>
+        <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Cancel order ' + <%= JSON.stringify(o.ref) %> + '? The customer said no or never followed up. The record is kept, unlike Delete.');">
+          <button type="submit" class="oq-btn-no" title="Cancel this order — the customer declined or never paid">Cancel</button>
+        </form>
         <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out duplicate or accidental orders. This cannot be undone.');">
           <button type="submit" class="oq-btn-no" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
         </form>
