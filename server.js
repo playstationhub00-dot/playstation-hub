@@ -1988,6 +1988,35 @@ app.post('/admin/orders/:ref/reject', requireAuth, async (req, res) => {
   res.redirect('/admin?tab=orders&msg=order_rejected');
 });
 
+// Confirms a payment that arrived outside the site (e.g. Messenger). Lands
+// in awaiting_qr, not active — the customer still needs to send their
+// sign-in QR before the rental clock starts. Revenue is recorded later by
+// the existing advance route at that point, not here.
+app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
+    return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  }
+  const r = await orders.transition(order.ref, 'awaiting_qr', {});
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_marked_paid');
+});
+
+// Owner-initiated cancellation for an unpaid order — the customer said no,
+// or never followed up. Distinct from Delete: this keeps the record (and
+// its state_history) instead of removing it.
+app.post('/admin/orders/:ref/cancel', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
+    return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  }
+  const r = await orders.transition(order.ref, 'cancelled', {});
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_cancelled');
+});
+
 app.post('/admin/online', requireAuth, (req, res) => {
   const on = req.body.online === 'on';
   db.set('site_settings.owner_online', on).write();
