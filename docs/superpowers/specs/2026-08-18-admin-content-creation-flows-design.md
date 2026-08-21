@@ -154,12 +154,28 @@ Tabs are CSS-toggled, not routed, so every tab's markup parses on every admin vi
 
 ### Remaining sub-projects, not specced here
 
-- **B — Dead feature removal.** `/admin/app` and `views/admin-app.ejs` (18 KB) have
-  zero inbound links from any view and appear fully orphaned. `backfill-images` and
-  `fix-end-dates` are one-time migration utilities sitting in the daily UI;
-  `mongo-status` is a debug endpoint in the Settings tab. Candidates for removal or
-  relocation, subject to the owner's confirmation — no feature with working code
-  should be deleted on inference alone.
+- **B — Dead feature removal.** `backfill-images` and `fix-end-dates` are one-time
+  migration utilities sitting in the daily UI; `mongo-status` is a debug endpoint in
+  the Settings tab. Candidates for removal or relocation, subject to the owner's
+  confirmation — no feature with working code should be deleted on inference alone.
+
+  **Correction (2026-08-21):** an earlier draft of this section listed `/admin/app`
+  and `views/admin-app.ejs` as "fully orphaned" candidates for deletion, on the
+  evidence that no view links to them. That inference was wrong, and the owner
+  confirmed the page is in active use.
+
+  `/admin/app` is an installable mobile PWA dashboard. `public/manifest.json` sets
+  `"start_url": "/admin/app"` with `"name": "PlayStation Hub Admin"`, standalone
+  display, and the site's theme colour; `views/admin-app.ejs` carries the matching
+  iOS web-app meta tags. It is launched from a phone home screen, so having no
+  inbound links is the expected design, not evidence of abandonment. The route also
+  computes live data — active renters, overdue, expiring soon, reservations, monthly
+  and total revenue, today's visitors, and total plus per-game slot counts.
+
+  Deleting it would have removed a working dashboard and broken any installed
+  home-screen icon. It stays. The lesson generalises: "nothing links to it" is not
+  sufficient evidence of deadness for any entry point reached by bookmark, PWA
+  install, deep link, or external reference.
 - **C — Admin file split.** Break `admin.ejs` into per-tab partials so each tab's
   markup is not parsed on every load. Highest structural value, but a pure refactor
   across 85 routes on a live production site with paying customers, delivering no new
