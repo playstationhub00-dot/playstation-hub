@@ -1031,19 +1031,20 @@ nav {
 /* ── HOMEPAGE: SPOTLIGHT ────────────────────────────────────────────────── */
 .spotlight-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .spotlight-card {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: center;
-  background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2.5rem;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem;
+  max-width: 1000px; margin: 0 auto;
 }
 .spotlight-cover { border-radius: 14px; overflow: hidden; aspect-ratio: 4/3; background: #111; display: flex; align-items: center; justify-content: center; }
 .spotlight-cover img { width: 100%; height: 100%; object-fit: contain; }
 .spotlight-tag {
-  display: inline-block; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em;
+  display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--ps-blue); background: rgba(240,165,0,0.1);
-  border: 1px solid rgba(240,165,0,0.3); padding: 0.35rem 0.75rem; border-radius: 20px; margin-bottom: 1rem;
+  border: 1px solid rgba(240,165,0,0.3); padding: 0.3rem 0.7rem; border-radius: 20px; margin-bottom: 0.85rem;
 }
-.spotlight-title { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 0.75rem; }
-.spotlight-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; margin: 0 0 1.25rem; }
-.spotlight-price { font-size: 1.9rem; font-weight: 800; color: var(--ps-blue); letter-spacing: -0.02em; }
+.spotlight-title { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 0.6rem; }
+.spotlight-desc { font-size: 0.84rem; color: var(--text-secondary); line-height: 1.55; margin: 0 0 1.1rem; }
+.spotlight-price { font-size: 1.6rem; font-weight: 800; color: var(--ps-blue); letter-spacing: -0.02em; }
 .spotlight-avail { font-size: 0.78rem; color: #22c55e; font-weight: 600; margin: 0.4rem 0 1.5rem; }
 .spotlight-link { font-size: 0.85rem; color: var(--ps-blue); font-weight: 600; text-decoration: none; }
 .spotlight-link:hover { text-decoration: underline; }
