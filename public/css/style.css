@@ -2112,8 +2112,11 @@ footer {
    scrolling overflow content across engines. Sits below the arrow's z-index so the
    arrow stays fully opaque and clickable. */
 .upcoming-slider-wrap::after {
-  content: ''; position: absolute; top: 0; bottom: 0.5rem; right: 48px; width: 70px;
-  background: linear-gradient(to right, transparent, var(--bg-dark));
+  content: ''; position: absolute; top: 0; bottom: 0.5rem; right: 48px; width: 110px;
+  /* A simple transparent->bg gradient rendered but was barely perceptible against
+     busy, mostly-dark cover art (verified with a solid-red debug swap before tuning
+     this) — the 35% midpoint stop is what actually makes the fade visible. */
+  background: linear-gradient(to right, rgba(10,10,10,0) 0%, rgba(10,10,10,0.55) 35%, var(--bg-dark) 100%);
   pointer-events: none; z-index: 1;
 }
 /* align-items: flex-start — otherwise flex stretches every card in the row to
