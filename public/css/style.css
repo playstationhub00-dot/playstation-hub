@@ -1244,6 +1244,8 @@ nav {
   #newReleasesSection .upcoming-slider-wrap { display: block; }
   #mostPopularSection .slider-arrow,
   #newReleasesSection .slider-arrow { display: none; }
+  #mostPopularSection .upcoming-slider-wrap::after,
+  #newReleasesSection .upcoming-slider-wrap::after { display: none; }
   #mostPopularSection .upcoming-slider,
   #newReleasesSection .upcoming-slider {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
@@ -2102,17 +2104,21 @@ footer {
 
 /* UPCOMING GAMES SLIDER */
 .upcoming-slider-wrap { position: relative; display: flex; align-items: center; gap: 0.5rem; }
+/* The card at rest scroll position is usually only partially visible past the right
+   arrow — a hard clip there reads as broken. Fade it into the page background instead
+   of cutting it off, the same treatment Netflix/Amazon-style carousels use for a
+   peeking-but-cut card. A plain gradient overlay rather than mask-image, since
+   mask-image's percentage-based stops proved unreliable against this element's
+   scrolling overflow content across engines. Sits below the arrow's z-index so the
+   arrow stays fully opaque and clickable. */
+.upcoming-slider-wrap::after {
+  content: ''; position: absolute; top: 0; bottom: 0.5rem; right: 48px; width: 70px;
+  background: linear-gradient(to right, transparent, var(--bg-dark));
+  pointer-events: none; z-index: 1;
+}
 /* align-items: flex-start — otherwise flex stretches every card in the row to
    match the tallest card's height. */
-.upcoming-slider {
-  display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible;
-  scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; flex: 1;
-  /* The last card at rest scroll position is usually only partially in view — a hard
-     clip there reads as broken. Fade it out instead of cutting it off; this is the
-     same treatment Netflix/Amazon-style carousels use for a peeking-but-cut card. */
-  mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 56px), transparent 100%);
-}
+.upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
 .upcoming-slider .game-card { min-width: 200px; max-width: 200px; scroll-snap-align: start; flex-shrink: 0; }
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
@@ -2445,6 +2451,10 @@ footer {
   .upcoming-slider { gap: 1px; }
   .slider-arrow { display: none; }
   .upcoming-slider-wrap { gap: 0; }
+  /* Arrow is hidden at this width, so the fade has no arrow to sit in front of —
+     move it flush to the true right edge instead of leaving a 48px gap of
+     unfaded content past where the (now-invisible) arrow used to reserve space. */
+  .upcoming-slider-wrap::after { right: 0; }
   .slider-card-wrap {
     min-width: calc(50vw - 1px) !important;
     max-width: calc(50vw - 1px) !important;
