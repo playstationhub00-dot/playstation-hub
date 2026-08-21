@@ -1266,7 +1266,7 @@ nav {
 /* GAME GRID */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
   /* Grid items stretch to the row's tallest cell by default — this keeps each card
      sized to its own content instead of matching its tallest row-mate. */
@@ -2750,7 +2750,7 @@ body.light-mode .oq-empty { color: #888; }
 
 
 /* BUY PAGE */
-.buy-page { max-width: 1000px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+.buy-page { max-width: 1400px; margin: 0 auto; padding: 2rem 2rem 4rem; }
 .buy-title { font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 0 0.2rem; }
 .buy-sub { font-size: 0.85rem; color: #888; margin: 0 0 1.75rem; }
 .buy-section-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: #F0A500; margin: 0 0 0.75rem; }
@@ -2793,7 +2793,7 @@ label.buy-tier:hover { border-color: #444; }
 .buy-price-section-count { font-size: 0.78rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.2rem 0.65rem; }
 .buy-badge-pending { left: 9px; background: rgba(240,165,0,0.15); color: #f0a500; border: 1px solid rgba(240,165,0,0.35); }
 .buy-empty-filtered { text-align: center; color: #888; font-size: 0.85rem; padding: 2.5rem 0; }
-.buy-single-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.buy-single-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
 .buy-placeholder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
 .buy-placeholder-card { background: #10141c; border: 1px solid #24304a; border-radius: 12px; padding: 1rem; }
 .buy-placeholder-amber { background: #1a1206; border-color: #4a3410; }
