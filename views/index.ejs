@@ -376,27 +376,7 @@
     <div class="upcoming-slider" id="psplusSlider">
     <% psplusPopular.forEach((game, idx) => { %>
     <div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;">
-    <a href="<%= psplusSlug ? '/game/' + psplusSlug : '/game/17' %>" class="game-card psplus-popular-card game-card-link">
-      <div style="position:relative;">
-        <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="game-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
-        <% } else { %>
-          <div class="game-cover-placeholder" style="background:linear-gradient(135deg,#0a0800,#1a1400);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            <span>No Image</span>
-          </div>
-        <% } %>
-        <div class="psplus-popular-rank">#<%= game.rank || idx + 1 %></div>
-      </div>
-      <div class="game-info">
-        <div class="game-platform"><%= game.platform %></div>
-        <div class="game-title"><%= game.title %></div>
-        <% if (game.genre) { %><div style="font-size:0.75rem;color:#555;"><%= game.genre %></div><% } %>
-        <span class="rent-btn" style="background:linear-gradient(135deg,#856200,#FFD700);color:#000;font-weight:800;width:100%;text-align:center;">
-          📘 Rent via PS Plus
-        </span>
-      </div>
-    </a>
+    <%- include('partials/psplus-card', { game, idx, href: psplusSlug ? '/game/' + psplusSlug : '/game/17' }) %>
     </div>
     <% }) %>
     </div>

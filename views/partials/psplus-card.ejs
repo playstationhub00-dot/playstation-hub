@@ -1,0 +1,36 @@
+<%
+  // PS Plus "Most Played" card. Uses the same .gc2-card poster layout as every
+  // other game card on the site — cover fills the card, text sits over a scrim,
+  // CTA pill bottom-right. The two things that differ carry real meaning: the
+  // rank badge (this is a ranked list) and "Via PS Plus" in the price slot,
+  // because these titles come through the subscription rather than being rented
+  // individually. Rendered from both the homepage and /ps-plus.
+  const ppRank = game.rank || (typeof idx !== 'undefined' ? idx + 1 : 1);
+  const ppGenre = game.genre ? ' · ' + game.genre.split('/')[0].trim() : '';
+%>
+<a href="<%= href %>" class="game-card gc2-card">
+  <% if (game.cover_image) { %>
+    <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
+  <% } else { %>
+    <div class="gc2-cover-placeholder">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+      </svg>
+      <span>No Image</span>
+    </div>
+  <% } %>
+  <div class="gc2-scrim"></div>
+
+  <div class="gc2-badge gc2-badge-rank">#<%= ppRank %></div>
+
+  <div class="gc2-body">
+    <div class="gc2-plat"><%= game.platform %><%= ppGenre %></div>
+    <div class="gc2-title"><%= game.title %></div>
+    <div class="gc2-foot">
+      <div class="gc2-price-col">
+        <div class="gc2-psplus-note">Via PS Plus</div>
+      </div>
+      <div class="gc2-cta">Rent</div>
+    </div>
+  </div>
+</a>
