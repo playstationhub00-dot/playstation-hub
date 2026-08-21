@@ -2764,6 +2764,22 @@ app.get('/admin/edit/:id', requireAuth, (req, res) => {
   res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories(), accounts: getAccounts() });
 });
 
+// Add forms live on their own pages, matching the convention /admin/edit/:id
+// already sets. ?bundle=1 pre-expands and pre-ticks the bundle section so the
+// "Bundle" card in the add menu lands somewhere already set up for the job.
+app.get('/admin/add/game', requireAuth, (req, res) => {
+  res.render('add-game', {
+    settings: getSiteSettings(),
+    priceCategories: getPriceCategories(),
+    accounts: getAccounts(),
+    presetBundle: req.query.bundle === '1'
+  });
+});
+
+app.get('/admin/add/upcoming', requireAuth, (req, res) => {
+  res.render('add-upcoming', { settings: getSiteSettings() });
+});
+
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
   const { title, platform, available_slots, renters, new_window_days,
     nt_price_7d, nt_price_30d,

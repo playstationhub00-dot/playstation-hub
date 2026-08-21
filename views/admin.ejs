@@ -17,7 +17,7 @@
     .add-choice-overlay.open { display:flex; }
     .add-choice-box { background:#111;border:1px solid #222;border-radius:20px;padding:2rem;width:min(480px,92vw);animation:popIn 0.18s ease; }
     @keyframes popIn { from{transform:scale(0.93);opacity:0} to{transform:scale(1);opacity:1} }
-    .add-choice-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-top:1.25rem; }
+    .add-choice-grid { display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:1.25rem; }
     .add-choice-card { background:#0a0a0a;border:1px solid #222;border-radius:14px;padding:1.25rem 0.75rem;text-align:center;cursor:pointer;transition:all 0.15s;text-decoration:none;display:flex;flex-direction:column;align-items:center;gap:0.5rem; }
     .add-choice-card:hover { border-color:var(--ps-blue);background:#1a1500;transform:translateY(-2px); }
     .add-choice-card .icon { font-size:2rem;line-height:1; }
@@ -1071,15 +1071,20 @@
           <button onclick="document.getElementById('addChoiceModal').classList.remove('open')" style="background:none;border:none;color:#555;font-size:1.4rem;cursor:pointer;line-height:1;">✕</button>
         </div>
         <div class="add-choice-grid">
-          <a class="add-choice-card" href="#add-game-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-game-form').scrollIntoView({behavior:'smooth'}),50)">
+          <a class="add-choice-card" href="/admin/add/game">
             <span class="icon">🎮</span>
             <span class="label">New Game</span>
-            <span class="desc">Add a rentable PS5 or PS4 game to your library</span>
+            <span class="desc">A rentable PS5 or PS4 title</span>
           </a>
-          <a class="add-choice-card" href="#add-upcoming-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-upcoming-form').scrollIntoView({behavior:'smooth'}),50)">
+          <a class="add-choice-card" href="/admin/add/game?bundle=1">
+            <span class="icon">📦</span>
+            <span class="label">Bundle</span>
+            <span class="desc">One entry standing in for a whole account</span>
+          </a>
+          <a class="add-choice-card" href="/admin/add/upcoming">
             <span class="icon">🔜</span>
             <span class="label">Upcoming Game</span>
-            <span class="desc">Add a coming soon title open for reservation</span>
+            <span class="desc">Not released yet — open for reservations</span>
           </a>
           <a class="add-choice-card" href="#add-category-form" onclick="document.getElementById('addChoiceModal').classList.remove('open');setTimeout(()=>document.getElementById('add-category-form').scrollIntoView({behavior:'smooth'}),50)">
             <span class="icon">🏷️</span>
@@ -1186,126 +1191,6 @@
 
       </div></div><!-- /accordion price-cat -->
 
-    <!-- ADD GAME FORM -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid var(--ps-blue);">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎮</div>
-          <div><div class="sa-title">Add New Game</div><div class="sa-desc">Add a PS5 or PS4 game to your rental library</div></div>
-        </div><span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body">
-    <div id="add-game-form" class="form-card">
-      <h2 style="display:none;">+ Add New Game</h2>
-      <form method="POST" action="/admin/add" enctype="multipart/form-data">
-        <div class="form-grid">
-          <div class="form-group full"><label>Game Title *</label><input type="text" name="title" placeholder="e.g. God of War Ragnarök" required></div>
-          <div class="form-group">
-            <label>Platform</label>
-            <select name="platform"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
-          </div>
-          <div class="form-group"><label>Genre</label><input type="text" name="genre" placeholder="e.g. Action, RPG, Horror"></div>
-          <div class="form-group"><label>📅 Release Date <span style="color:#555;font-size:0.7rem;">(when the game launched — powers "New Releases")</span></label><input type="date" name="release_date"></div>
-          <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
-          <div class="form-group"><label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label><input type="number" name="available_slots" value="1" min="0"></div>
-          <div class="form-group"><label>Current Renters</label><input type="number" name="renters" value="0" min="0"></div>
-          <div class="form-group"><label>New Game Countdown (days) <span style="color:#555;font-size:0.7rem;">(blank = site default, 11)</span></label><input type="number" name="new_window_days" value="" min="1" placeholder="11"></div>
-          <div class="form-group"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_primary_slots" value="0" min="0"></div>
-          <div class="form-group"><label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label><input type="number" name="cost" value="0" min="0" placeholder="e.g. 2500"></div>
-
-          <!-- Pricing mode -->
-          <div class="form-group full">
-            <label>Pricing</label>
-            <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;">
-              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-weight:600;">
-                <input type="radio" name="price_mode" value="category" id="add_mode_cat" onchange="toggleAddPriceMode(this.value)" <%= priceCategories.length ? '' : 'disabled' %>>
-                🏷️ Use Category
-              </label>
-              <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-weight:600;">
-                <input type="radio" name="price_mode" value="custom" id="add_mode_custom" onchange="toggleAddPriceMode(this.value)" checked>
-                ✏️ Custom Price
-              </label>
-            </div>
-            <div id="add_cat_section" style="display:none;">
-              <select name="price_category_id" style="width:100%;">
-                <option value="">— Select a category —</option>
-                <% priceCategories.forEach(cat => { %>
-                <option value="<%= cat.id %>"><%= cat.name %> (NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %>)</option>
-                <% }) %>
-              </select>
-            </div>
-          </div>
-          <div id="add_custom_prices">
-            <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-            <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
-            <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
-            <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱) <span style="font-weight:400;color:#664d00;font-size:0.78rem;">— +₱100 deposit not included here</span></label></div>
-            <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
-            <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
-          </div>
-          <script>
-          function toggleAddPriceMode(v) {
-            document.getElementById('add_cat_section').style.display = v==='category' ? 'block' : 'none';
-            document.getElementById('add_custom_prices').style.display = v==='category' ? 'none' : 'contents';
-          }
-          </script>
-
-          <div class="form-group"><label>Cover Image</label><input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;"></div>
-          <div class="form-group full"><label>🖼️ Gameplay Gallery <span style="color:#555;font-size:0.75rem;">(optional — select multiple screenshots, shown as a slider)</span></label><input type="file" name="gallery" accept="image/*" multiple style="padding:0.5rem;"></div>
-          <div class="form-group" style="justify-content:center;">
-            <label>Trophy Account Available</label>
-            <label class="toggle-switch"><input type="checkbox" name="trophy_account" id="add_trophy_chk" onchange="document.getElementById('add_trophy_slots').style.display=this.checked?'block':'none'"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="form-group" id="add_trophy_slots" style="display:none;">
-            <label>Trophy Account Slots <span style="color:#ffc400;font-size:0.72rem;">🏆 how many accounts</span></label>
-            <input type="number" name="trophy_slots" value="1" min="1" max="20">
-          </div>
-          <!-- Buy Permanent Prices -->
-          <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
-            <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Access Prices (₱) <span style="font-weight:400;color:#555;font-size:0.78rem;text-transform:none;letter-spacing:0;">— leave 0 to hide Buy option</span></label>
-          </div>
-          <div class="form-group">
-            <label>🎮 Non-Trophy Buy Price</label>
-            <input type="number" name="buy_nt_price" value="0" min="0" placeholder="e.g. 999">
-          </div>
-          <div class="form-group">
-            <label>🏆 Trophy Buy Price</label>
-            <input type="number" name="buy_tr_price" value="0" min="0" placeholder="e.g. 1199">
-          </div>
-          <div class="form-group full">
-            <label>
-              <input type="checkbox" name="is_bundle" id="add_bundle_chk"
-                onchange="document.getElementById('add_bundle_account').style.display = this.checked ? 'block' : 'none'; if (!this.checked) { const s = document.querySelector('#add_bundle_account select'); if (s) s.value = ''; }">
-              📦 This game represents an account bundle
-            </label>
-            <div id="add_bundle_account" style="display:none;margin-top:0.5rem;">
-              <label>Bundle account</label>
-              <% if (accounts.length) { %>
-              <select name="bundle_account_id">
-                <option value="">— Select account —</option>
-                <% accounts.forEach(acc => { %>
-                <option value="<%= acc.id %>"><%= acc.label %> (#<%= acc.id %>, <%= (acc.game_ids || []).length %> games)</option>
-                <% }) %>
-              </select>
-              <% } else { %>
-              <div style="font-size:0.8rem;color:#888;line-height:1.6;">
-                No accounts exist yet — <a href="/admin/accounts" style="color:var(--ps-blue);">create one first</a>, then come back and link it here.
-              </div>
-              <% } %>
-            </div>
-          </div>
-          <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description of the game..."></textarea></div>
-          <div class="form-group"><label>🔗 Custom Link Label (optional)</label><input type="text" name="link_label" placeholder="e.g. Visit PS Plus website"></div>
-          <div class="form-group"><label>🔗 Custom Link URL (optional)</label><input type="url" name="link_url" placeholder="https://..."></div>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Add Game</button>
-          <button type="reset" class="btn btn-outline">Clear</button>
-        </div>
-      </form>
-    </div>
-
-      </div></div><!-- /accordion add-game -->
 
     <!-- GAMES TABLE (not collapsible — always shown) -->
     <div class="settings-accordion">
@@ -1452,67 +1337,6 @@
         </div><span class="sa-arrow">▼</span>
       </div>
       <div class="settings-accordion-body">
-    <div id="add-upcoming-form" class="form-card" style="border-color:#2a1a3a;background:linear-gradient(135deg,#1a1a1a,#0d001a);">
-      <h2 style="display:none;">🔜 Add Upcoming Game</h2>
-      <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
-        <div class="form-grid">
-          <div class="form-group full"><label>Game Title *</label><input type="text" name="title" placeholder="e.g. GTA VI" required></div>
-          <div class="form-group">
-            <label>Platform</label>
-            <select name="platform"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
-          </div>
-          <div class="form-group"><label>Genre</label><input type="text" name="genre" placeholder="e.g. Open World, RPG"></div>
-          <div class="form-group">
-            <label>Expected Release Date</label>
-            <div style="display:flex;flex-direction:column;gap:0.5rem;">
-              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.85rem;font-weight:600;">
-                <input type="checkbox" id="add_tba" name="release_date_tba" onchange="toggleAddTba(this.checked)">
-                Mark as TBA (date unknown)
-              </label>
-              <input type="date" name="release_date" id="add_date_input" style="width:100%;">
-              <input type="hidden" name="release_date_tba_val" id="add_tba_hidden" value="">
-            </div>
-          </div>
-          <script>
-          function toggleAddTba(checked) {
-            const inp=document.getElementById('add_date_input'),hid=document.getElementById('add_tba_hidden');
-            inp.disabled=checked; inp.style.opacity=checked?'0.3':'1'; hid.value=checked?'TBA':'';
-          }
-          </script>
-          <div class="form-group"><label>Cover Image</label><input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;"></div>
-          <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description..."></textarea></div>
-          <div class="form-group"><label>🔥 Hot Rank <span style="color:#555;font-size:0.75rem;">(0 = none, 1 = #1 most hyped)</span></label><input type="number" name="rank" min="0" value="0" placeholder="0"></div>
-        </div>
-
-        <!-- Slots & Pricing -->
-        <div style="margin:1.25rem 0 0.5rem;font-size:0.85rem;font-weight:700;color:#a78bfa;letter-spacing:0.5px;">🎮 SLOTS & PRICING (for when released)</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
-          <!-- Non-Trophy -->
-          <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;">
-            <div style="font-weight:700;font-size:0.82rem;color:#ccc;margin-bottom:0.75rem;">🎮 Non-Trophy</div>
-            <div class="form-grid" style="gap:0.6rem;">
-              <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="non_trophy_slots" min="0" value="1" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Weekly Price (₱)</label><input type="number" name="nt_price_7d" min="0" placeholder="e.g. 149" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Monthly Price (₱)</label><input type="number" name="nt_price_30d" min="0" placeholder="e.g. 299" style="width:100%;"></div>
-            </div>
-          </div>
-          <!-- Trophy -->
-          <div style="background:#111;border:1px solid #222;border-radius:10px;padding:1rem;">
-            <div style="font-weight:700;font-size:0.82rem;color:#ffc400;margin-bottom:0.75rem;">🏆 Trophy</div>
-            <div class="form-grid" style="gap:0.6rem;">
-              <div class="form-group"><label style="font-size:0.75rem;">Slots</label><input type="number" name="trophy_slots" min="0" value="0" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Weekly Price (₱)</label><input type="number" name="tr_price_7d" min="0" placeholder="e.g. 199" style="width:100%;"></div>
-              <div class="form-group"><label style="font-size:0.75rem;">Monthly Price (₱)</label><input type="number" name="tr_price_30d" min="0" placeholder="e.g. 349" style="width:100%;"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-actions" style="margin-top:1.25rem;">
-          <button type="submit" class="btn" style="background:linear-gradient(135deg,#4a0080,#7b2ff7);color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Add Upcoming Game</button>
-          <button type="reset" class="btn btn-outline">Clear</button>
-        </div>
-      </form>
-    </div>
 
     <% if (upcoming.length > 0) { %>
     <div class="table-card" style="border-color:#2a1a3a;">
