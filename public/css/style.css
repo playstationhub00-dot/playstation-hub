@@ -2106,7 +2106,7 @@ footer {
    match the tallest card's height. */
 .upcoming-slider { display: flex; align-items: flex-start; gap: 1.25rem; overflow-x: auto; overflow-y: visible; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.5rem; flex: 1; }
 .upcoming-slider::-webkit-scrollbar { display: none; }
-.upcoming-slider .game-card { min-width: 170px; max-width: 170px; scroll-snap-align: start; flex-shrink: 0; }
+.upcoming-slider .game-card { min-width: 200px; max-width: 200px; scroll-snap-align: start; flex-shrink: 0; }
 .slider-arrow { background: rgba(30,30,30,0.9); border: 1px solid #333; color: #fff; font-size: 2rem; line-height: 1; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s; z-index: 2; padding: 0; }
 .slider-arrow:hover { background: #7b2ff7; border-color: #7b2ff7; }
 
