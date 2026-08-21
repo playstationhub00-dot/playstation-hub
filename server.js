@@ -2708,7 +2708,8 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     buy_nt_price, buy_tr_price,
     genre, description, release_date, trophy_account, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
-    price_category_id, price_mode, cost, link_label, link_url } = req.body;
+    price_category_id, price_mode, cost, link_label, link_url,
+    is_bundle, bundle_account_id } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? await processUploadedImage(coverFile) : '';
@@ -2747,6 +2748,11 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     // Releases" section, which skips any game where this is unset — distinct
     // from created_at, which is when we started stocking it (the NEW badge).
     release_date: (release_date || '').trim(),
+    // Marks this catalog entry as standing in for a whole account. Same shape
+    // POST /admin/edit/:id writes, so a game created as a bundle here is
+    // indistinguishable from one flagged as a bundle later via Edit.
+    is_bundle: is_bundle === 'on',
+    bundle_account_id: is_bundle === 'on' && bundle_account_id ? parseInt(bundle_account_id) : null,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=added');

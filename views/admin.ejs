@@ -1272,6 +1272,28 @@
             <label>🏆 Trophy Buy Price</label>
             <input type="number" name="buy_tr_price" value="0" min="0" placeholder="e.g. 1199">
           </div>
+          <div class="form-group full">
+            <label>
+              <input type="checkbox" name="is_bundle" id="add_bundle_chk"
+                onchange="document.getElementById('add_bundle_account').style.display = this.checked ? 'block' : 'none'; if (!this.checked) { const s = document.querySelector('#add_bundle_account select'); if (s) s.value = ''; }">
+              📦 This game represents an account bundle
+            </label>
+            <div id="add_bundle_account" style="display:none;margin-top:0.5rem;">
+              <label>Bundle account</label>
+              <% if (accounts.length) { %>
+              <select name="bundle_account_id">
+                <option value="">— Select account —</option>
+                <% accounts.forEach(acc => { %>
+                <option value="<%= acc.id %>"><%= acc.label %> (#<%= acc.id %>, <%= (acc.game_ids || []).length %> games)</option>
+                <% }) %>
+              </select>
+              <% } else { %>
+              <div style="font-size:0.8rem;color:#888;line-height:1.6;">
+                No accounts exist yet — <a href="/admin/accounts" style="color:var(--ps-blue);">create one first</a>, then come back and link it here.
+              </div>
+              <% } %>
+            </div>
+          </div>
           <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description of the game..."></textarea></div>
           <div class="form-group"><label>🔗 Custom Link Label (optional)</label><input type="text" name="link_label" placeholder="e.g. Visit PS Plus website"></div>
           <div class="form-group"><label>🔗 Custom Link URL (optional)</label><input type="url" name="link_url" placeholder="https://..."></div>
