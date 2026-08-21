@@ -1168,7 +1168,14 @@ nav {
   .spotlight-card { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
-  .why-grid { grid-template-columns: 1fr; gap: 0.85rem; }
+  /* Two columns, not one. Stacking all four cards made this section 861px on a
+     390px screen against 277px on desktop — a 3x blowup from layout alone. Two
+     rows of two keeps every card readable and roughly halves the height. */
+  .why-grid { grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+  .why-card { padding: 1rem 0.85rem; }
+  .why-title { font-size: 0.92rem; }
+  .why-desc { font-size: 0.78rem; line-height: 1.5; }
+  .why-icon { font-size: 1.5rem; }
   .tier-section, .spotlight-section, .promo-section, .why-section { padding-left: 1rem; padding-right: 1rem; }
   .spotlight-card { padding: 1.5rem; }
   .promo-band { padding: 1.75rem; flex-direction: column; align-items: flex-start; }
@@ -1897,7 +1904,11 @@ footer {
   .footer-brand { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) {
-  .footer-grid { grid-template-columns: 1fr; }
+  /* Kept at two columns rather than one. Stacking all four made the footer 994px
+     on mobile — the tallest thing on the page, taller than the hero. The brand
+     column still spans the full width (set at the 820px breakpoint above); the
+     three link columns pair up beneath it. */
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem 1.25rem; }
   .footer-bottom { flex-direction: column; align-items: flex-start; }
 }
 
