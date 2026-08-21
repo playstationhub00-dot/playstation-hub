@@ -1077,7 +1077,11 @@ nav {
    leaving a large empty gap beside the text. The 4/5 ratio is kept: the poster
    has text at its top and bottom edges, so cropping it to landscape would cut
    the promo dates off. */
-.promo2-grid { display: grid; grid-template-columns: minmax(0, 620px) 1fr; gap: 2rem; align-items: center; }
+/* Capped AND proportional. A flat 620px column looked right at 1440px but starved
+   the text to 137px around 930px, where the card is much narrower than the
+   viewport. min() keeps the media at most 620px and never more than 55% of the
+   row, so the copy always keeps its half. */
+.promo2-grid { display: grid; grid-template-columns: minmax(0, min(620px, 55%)) 1fr; gap: 2rem; align-items: center; }
 .promo2-grid.nomedia { grid-template-columns: 1fr; }
 /* No fixed aspect-ratio: the uploaded image decides its own shape, so a wide
    banner and a tall poster both work without either being cropped. max-height
