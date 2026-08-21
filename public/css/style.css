@@ -562,12 +562,16 @@ nav {
   }
   .hero-trust-item b { font-size: inherit; }
 }
-/* Homepage only, phones: remove the hero entirely rather than just compact it — the
-   nav (with search) is the new top of page, straight into Most Popular below it. The
-   480px compaction rules above become moot once this hides the whole section, which
-   is fine — they still apply harmlessly between 480-600px if this threshold changes. */
+/* Only the legacy slideshow hides on phones. This rule previously also listed
+   .home-page .hero — and because .hero-v2 carries .hero, that hid the entire value
+   proposition from every phone visitor: headline, ₱199 price, stats, payment badges,
+   and both CTAs. The original rationale was "nav (with search) is the new top of
+   page", but the nav search measures 0x0 at 390px (it collapses behind an icon), so
+   that premise did not hold. The 480px/720px compaction rules above were written for
+   this hero and only now start applying, and .home-page .hero { order: 10 } in the
+   600px block below always intended it to sit first on mobile. */
 @media (max-width: 600px) {
-  .home-page .hero, .home-page #heroSlideshow { display: none; }
+  .home-page #heroSlideshow { display: none; }
 }
 
 /* ── Game Detail Page ─────────────────────────────────────── */
@@ -1252,6 +1256,13 @@ nav {
     display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;
     overflow: visible; padding: 0;
   }
+  /* Two rows is enough to show what the catalogue looks like. Rendering all ten
+     made each of these sections 1,385px — together 37% of the mobile page. The
+     rest stay one tap away behind the section's existing "View All" link.
+     .slider-card-wrap is the grid child, so hiding the inner .game-card instead
+     would leave an empty cell behind. */
+  #mostPopularSection .slider-card-wrap:nth-child(n+5),
+  #newReleasesSection .slider-card-wrap:nth-child(n+5) { display: none; }
   #mostPopularSection .slider-card-wrap,
   #newReleasesSection .slider-card-wrap {
     min-width: 0 !important; max-width: none !important; width: 100%;
@@ -1263,6 +1274,26 @@ nav {
   #mostPopularSection .game-card,
   #newReleasesSection .game-card {
     min-width: 0 !important; max-width: none !important; width: 100% !important;
+  }
+
+  /* Touch targets. iOS and Android both guide a 44px minimum; these measured
+     28-38px. Controls get min-height; footer text links get vertical padding
+     instead, so the tap area grows without changing the type size — they were
+     18px tall with only 10px between them, which is a mis-tap waiting to happen. */
+  .navicon-btn,
+  .section-toggle-btn,
+  .section-viewall,
+  .social-icon,
+  .spotlight-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  footer .footer-col a {
+    display: inline-block;
+    padding: 0.65rem 0;
+    line-height: 1.2;
   }
 }
 
