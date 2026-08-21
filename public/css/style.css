@@ -1292,9 +1292,22 @@ nav {
   }
   footer .footer-col a {
     display: inline-block;
-    padding: 0.65rem 0;
+    padding: 0.85rem 0;
     line-height: 1.2;
   }
+
+  /* The hero title size is admin-set and rendered inline
+     (views/index.ejs:94 — style="font-size:<%= ht.title_size %>px"), so it needs
+     !important to cap here. At its current 55px the headline wrapped to four lines
+     and stood 292px tall on a 390px screen, pushing the whole hero past the
+     viewport. That value was chosen while the hero was desktop-only, so it had
+     never been seen at phone width. Desktop keeps the admin setting untouched. */
+  .hero-v2 h1 { font-size: 1.9rem !important; letter-spacing: -0.5px; }
+
+  /* A 480px rule hides .hero-actions. That was reasonable when the hero was a
+     decorative banner, but a restored hero with no call to action is half a hero. */
+  .hero-v2 .hero-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .hero-v2 .hero-actions .btn { min-height: 44px; display: inline-flex; align-items: center; }
 }
 
 /* GAME GRID */
