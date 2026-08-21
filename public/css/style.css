@@ -1035,9 +1035,14 @@ nav {
 /* ── HOMEPAGE: SPOTLIGHT ────────────────────────────────────────────────── */
 .spotlight-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .spotlight-card {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
+  /* No max-width of its own — the parent .spotlight-section already caps at
+     1400px, same as .tier-section above it, so the card lines up with the price
+     tier grid instead of sitting 336px narrower. The cover column is capped
+     instead, so a wider card gives the text room rather than inflating the
+     PS Plus logo. */
+  display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 2rem; align-items: center;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem;
-  max-width: 1000px; margin: 0 auto;
+  margin: 0 auto;
 }
 .spotlight-cover { border-radius: 14px; overflow: hidden; aspect-ratio: 4/3; background: #111; display: flex; align-items: center; justify-content: center; }
 .spotlight-cover img { width: 100%; height: 100%; object-fit: contain; }
