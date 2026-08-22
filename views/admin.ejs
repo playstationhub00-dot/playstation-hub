@@ -94,6 +94,7 @@
   <div class="admin-tabs" id="adminTabs">
     <button class="admin-tab" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
     <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')">💬 Messaging</button>
     <button class="admin-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Announcements</button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
@@ -106,6 +107,7 @@
 
   <!-- ═══════════════ SETTINGS TAB ═══════════════ -->
   <%- include('partials/admin/settings') %>
+  <%- include('partials/admin/messaging') %>
 
   <!-- ═══════════════ ANNOUNCEMENTS TAB ═══════════════ -->
   <%- include('partials/admin/announcements') %>
@@ -139,7 +141,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['dashboard','settings','announcements','games','customers','orders','psplus','security'];
+const tabs = ['dashboard','settings','messaging','announcements','games','customers','orders','psplus','security'];
 // Tab ids retired in later phases of the admin reorganisation. A browser that
 // still has one of these in localStorage, or a bookmark carrying one in
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
