@@ -65,6 +65,17 @@ One document per **title**, not per vote:
 Storing voters as an array is what makes the waiting list possible. A bare counter
 would rank titles but could never tell the owner whom to message.
 
+### What is public about a voter
+
+The public board shows **first names only** — "requested by Marc, Aya, Paulo +9" —
+derived by taking the first whitespace-separated token of `fb_name`. Never the full
+name, and never any contact detail.
+
+Showing names rather than a bare count makes the demand read as real people rather
+than a number the site could have invented, and it encourages others to add theirs
+to something visible. The full `fb_name` is visible only in the admin panel, which
+is where the waiting-list value actually lives.
+
 ## Three-way matching
 
 As the customer types, the input is checked against three things in order:
