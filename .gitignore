@@ -5,3 +5,4 @@ public/hero-bg-image.*
 public/hero-bg-video.*
 public/logo-custom.*
 .env
+.claude/
