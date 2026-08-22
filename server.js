@@ -2407,6 +2407,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     await orders.advanceEndedRentals();
   } catch (e) { console.error('[order sweep]', e.message); }
   const orderQueue = await orders.listByStates(orders.OWNER_STATES);
+  const gameRequestRows = await gameRequests.listForAdmin();
   const refundsOwed = (await orders.listByStates(['closed']))
     .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
   // "Started but didn't pay" — every order stuck before payment is verified.
@@ -2614,7 +2615,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
