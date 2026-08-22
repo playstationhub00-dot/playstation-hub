@@ -102,7 +102,6 @@
     <a class="admin-tab" href="/admin/accounts" style="text-decoration:none;line-height:1.2;">🗂️ Accounts</a>
     <a class="admin-tab" href="/admin/posters" style="text-decoration:none;line-height:1.2;">📸 Posters</a>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
-    <button class="admin-tab" data-tab="security" onclick="switchTab('security')">🔒 Security</button>
   </div>
 
   <!-- ═══════════════ SETTINGS TAB ═══════════════ -->
@@ -127,7 +126,6 @@
   <%- include('partials/admin/dashboard') %>
 
   <!-- ═══════════════ SECURITY TAB ═══════════════ -->
-  <%- include('partials/admin/security') %>
 
 </div><!-- /admin-container -->
 
@@ -141,7 +139,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['dashboard','settings','messaging','content','games','customers','orders','psplus','security'];
+const tabs = ['dashboard','settings','messaging','content','games','customers','orders','psplus'];
 // Tab ids retired in later phases of the admin reorganisation. A browser that
 // still has one of these in localStorage, or a bookmark carrying one in
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
@@ -194,8 +192,8 @@ function switchTab(name) {
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
     month_log_saved:'dashboard', month_log_deleted:'dashboard',
-    settings_saved:'settings', promo_saved:'settings', popup_saved:'content', password_changed:'security',
-    wrong_password:'security', password_mismatch:'security', password_too_short:'security',
+    settings_saved:'settings', promo_saved:'settings', popup_saved:'content', password_changed:'settings',
+    wrong_password:'settings', password_mismatch:'settings', password_too_short:'settings',
     signin_step_saved:'content', signin_step_deleted:'content',
     request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games'
   };
