@@ -77,10 +77,13 @@
   var hint = document.getElementById('reqHint');
   if (!input || !hint) return;
   var catalog = null;
-  // `<` is escaped to < so a title containing "</script>" cannot break out
-  // of this block. Titles are customer-typed, and although only approved ones
-  // reach this page, the escape means approving a hostile title can never turn
-  // into script injection.
+  // `<` is escaped to < so a title containing a closing script tag cannot
+  // break out of this block. Titles are customer-typed, and although only
+  // approved ones reach this page, the escape means approving a hostile title
+  // can never turn into script injection. (This comment avoids writing the
+  // literal tag text itself — the HTML parser ends a <script> block on that
+  // exact sequence even inside a comment or string, which silently truncated
+  // this script until this line was reworded.)
   var requested = <%- JSON.stringify(requests.map(r => ({ slug: r.slug, title: r.title, votes: (r.voters || []).length }))).replace(/</g, '\\u003c') %>;
 
   function slugify(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
