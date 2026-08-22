@@ -1210,6 +1210,11 @@
           <% gameRequestRows.forEach(r => { const votes = (r.voters || []).length; %>
           <div style="display:flex;align-items:flex-start;gap:0.85rem;background:#111;border:1px solid <%= r.status === 'pending' ? '#7a5c00' : '#222' %>;border-radius:10px;padding:0.8rem 1rem;margin-bottom:0.6rem;">
             <span style="font-size:1.1rem;font-weight:900;color:var(--ps-blue);min-width:2rem;text-align:center;"><%= votes %></span>
+            <% if (r.cover_image) { %>
+              <img src="<%= r.cover_image %>" alt="" style="width:40px;height:60px;min-width:40px;border-radius:5px;object-fit:cover;background:#151515;">
+            <% } else { %>
+              <div style="width:40px;height:60px;min-width:40px;border-radius:5px;border:1px dashed #2e2e2e;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#3d3d3d;">🎮</div>
+            <% } %>
             <div style="flex:1;min-width:0;">
               <div style="font-weight:700;color:#fff;font-size:0.9rem;">
                 <%= r.title %>
@@ -1230,6 +1235,10 @@
               <form method="POST" action="/admin/requests/<%= r.slug %>/delete" style="display:inline" onsubmit="return confirm('Delete this request permanently?');"><button type="submit" class="btn-delete">🗑</button></form>
             </div>
           </div>
+          <form method="POST" action="/admin/requests/<%= r.slug %>/image" enctype="multipart/form-data" style="display:flex;gap:0.4rem;align-items:center;margin:-0.3rem 0 0.6rem 2.85rem;">
+            <input type="file" name="cover_image" accept="image/*" style="font-size:0.72rem;color:#888;max-width:220px;">
+            <button type="submit" class="btn-edit" style="font-size:0.72rem;padding:0.3rem 0.7rem;"><%= r.cover_image ? 'Replace cover' : 'Add cover' %></button>
+          </form>
           <% }) %>
         </div>
       </div>
@@ -3490,7 +3499,7 @@ function switchTab(name) {
     settings_saved:'settings', promo_saved:'settings', popup_saved:'settings', password_changed:'security',
     wrong_password:'security', password_mismatch:'security', password_too_short:'security',
     signin_step_saved:'settings', signin_step_deleted:'settings',
-    request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games'
+    request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games'
   };
 
   const initial = urlTab || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'settings';
@@ -3498,7 +3507,7 @@ function switchTab(name) {
 
   // Toast notifications
   if (msg) {
-    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', promo_saved:'🎉 Promo settings saved!', popup_saved:'🪧 Popup settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!', signin_step_saved:'✅ Step saved!', signin_step_deleted:'🗑 Step deleted!', order_marked_paid:'✅ Order marked as paid!', order_cancelled:'🚫 Order cancelled.', request_approved:'✅ Request approved!', request_rejected:'🚫 Request rejected.', request_stocked:'📦 Marked as stocked!', request_deleted:'🗑 Request deleted.' };
+    const messages = { added:'✅ Game added!', updated:'✅ Game updated!', deleted:'🗑 Game deleted!', announcement:'📢 Announcement saved!', upcoming_added:'🔜 Upcoming game added!', upcoming_updated:'✅ Upcoming game updated!', upcoming_deleted:'🗑 Upcoming game deleted!', game_released:'🚀 Game released to Available Games!', psplus_added:'⭐ Monthly entry added!', psplus_updated:'✅ Monthly entry updated!', psplus_deleted:'🗑 Monthly entry deleted!', psplus_prices:'💰 PS Plus prices saved!', popular_added:'🔥 Game added to Most Played!', popular_updated:'✅ Most Played game updated!', popular_deleted:'🗑 Game removed from Most Played!', settings_saved:'⚙️ Settings saved!', promo_saved:'🎉 Promo settings saved!', popup_saved:'🪧 Popup settings saved!', password_changed:'🔒 Password changed!', wrong_password:'❌ Current password is wrong!', password_mismatch:'❌ Passwords do not match!', password_too_short:'❌ Password must be at least 4 characters!', cat_added:'🏷️ Category created!', cat_updated:'🏷️ Category updated!', cat_deleted:'🗑 Category deleted!', customer_added:'👤 Customer added!', customer_updated:'✅ Customer updated!', customer_deleted:'🗑 Customer deleted!', month_log_saved:'📣 Month log saved!', month_log_deleted:'🗑 Month log deleted!', signin_step_saved:'✅ Step saved!', signin_step_deleted:'🗑 Step deleted!', order_marked_paid:'✅ Order marked as paid!', order_cancelled:'🚫 Order cancelled.', request_approved:'✅ Request approved!', request_rejected:'🚫 Request rejected.', request_stocked:'📦 Marked as stocked!', request_deleted:'🗑 Request deleted.', request_image:'🖼️ Cover image saved!' };
     const text = messages[msg];
     if (text) {
       const toast = document.createElement('div');
