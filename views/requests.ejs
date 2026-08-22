@@ -68,6 +68,11 @@
   <% requests.forEach(r => { const votes = (r.voters || []).length; %>
   <div class="req-row<%= r.status === 'stocked' ? ' req-row-stocked' : '' %>">
     <span class="req-votes<%= r.status === 'stocked' ? ' req-votes-stocked' : '' %>"><%= votes %></span>
+    <% if (r.cover_image) { %>
+      <img class="req-cover" src="<%= r.cover_image %>" alt="">
+    <% } else { %>
+      <div class="req-cover req-cover-empty">🎮</div>
+    <% } %>
     <div class="req-main">
       <div class="req-title"><%= r.title %></div>
       <% if (r.status === 'stocked') { %>
