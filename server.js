@@ -3338,18 +3338,6 @@ function findEndDateFix() {
     .map(c => ({ c, shifted: correctEndDate(c.start_date, c.days) }))
     .filter(({ c, shifted }) => c.end_date === oneDayBefore(shifted));
 }
-app.get('/admin/fix-end-dates', requireAuth, (req, res) => {
-  const affected = findEndDateFix();
-  res.render('fix-end-dates', { affected, settings: getSiteSettings() });
-});
-app.post('/admin/fix-end-dates', requireAuth, (req, res) => {
-  const affected = findEndDateFix();
-  affected.forEach(({ c, shifted }) => {
-    db.get('customers').find({ id: c.id }).assign({ end_date: shifted }).write();
-  });
-  res.redirect('/admin?tab=customers&msg=end_dates_fixed');
-});
-
 app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const customer = getCustomer(req.params.id);
   if (!customer) return res.redirect('/admin?tab=customers');
