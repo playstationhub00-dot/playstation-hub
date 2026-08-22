@@ -883,7 +883,16 @@ app.post('/requests/add', async (req, res) => {
   const already = getGames().find(g => gameSlug(g.title) === slug);
   if (already) return res.redirect('/game/' + slug);
 
-  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null });
+  // Free auto-inherit: if this title matches something already in Coming Soon or
+  // PS Plus popular, copy its cover so the request never starts with a blank
+  // thumbnail. Available-catalogue titles are excluded by the guard above, so
+  // only these two lists are worth checking here.
+  const inheritedCover =
+    (getUpcoming().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
+    (getPsplusPopular().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
+    '';
+
+  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover });
   if (r.ok) return res.redirect('/requests?msg=submitted');
   if (r.reason === 'exists') {
     // Someone already asked for this — add their vote rather than refusing.
@@ -2088,15 +2097,39 @@ app.post('/admin/requests/:slug/reject', requireAuth, async (req, res) => {
 // stock a game before its catalogue row exists.
 app.post('/admin/requests/:slug/stock', requireAuth, async (req, res) => {
   const gameId = parseInt(req.body.game_id);
-  await gameRequests.setStatus(req.params.slug, 'stocked', {
-    game_id: Number.isFinite(gameId) ? gameId : null
-  });
+  const validGameId = Number.isFinite(gameId) ? gameId : null;
+  await gameRequests.setStatus(req.params.slug, 'stocked', { game_id: validGameId });
+
+  // Free auto-inherit: a stocked request now has a real catalogue row, which
+  // already carries the correct cover — copy it rather than asking the owner to
+  // upload art they just uploaded. Only fills a cover that's still empty; never
+  // overwrites one already set by hand.
+  if (validGameId) {
+    const existing = await gameRequests.getBySlug(req.params.slug);
+    if (existing && !existing.cover_image) {
+      const linkedGame = getGames().find(g => g.id === validGameId);
+      if (linkedGame && linkedGame.cover_image) {
+        await gameRequests.setCoverImage(req.params.slug, linkedGame.cover_image);
+      }
+    }
+  }
+
   res.redirect('/admin?tab=games&msg=request_stocked');
 });
 
 app.post('/admin/requests/:slug/delete', requireAuth, async (req, res) => {
   await gameRequests.remove(req.params.slug);
   res.redirect('/admin?tab=games&msg=request_deleted');
+});
+
+// Manual cover upload — the only path for a title the catalogue has never heard
+// of. Available on every row regardless of status (not just at approval), since
+// requests can already be approved with no cover and need a way to get one.
+app.post('/admin/requests/:slug/image', requireAuth, upload.single('cover_image'), async (req, res) => {
+  if (!req.file) return res.redirect('/admin?tab=games&msg=request_image');
+  const coverPath = await processUploadedImage(req.file, 900);
+  await gameRequests.setCoverImage(req.params.slug, coverPath);
+  res.redirect('/admin?tab=games&msg=request_image');
 });
 
 app.post('/admin/online', requireAuth, (req, res) => {
