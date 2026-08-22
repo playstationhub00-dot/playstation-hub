@@ -2903,3 +2903,40 @@ label.buy-tier:hover { border-color: #444; }
   .bundle-layout { grid-template-columns: 1fr; }
   .bundle-side { position: static; }
 }
+
+/* REQUEST BOARD */
+.req-page { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+.req-h1 { font-size: 1.9rem; font-weight: 900; margin-bottom: 0.35rem; }
+.req-sub { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.75rem; }
+.req-form { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 2rem; align-items: flex-start; }
+.req-field { flex: 1 1 240px; }
+.req-form input {
+  width: 100%; background: #141414; border: 1px solid #2a2a2a; border-radius: 9px;
+  padding: 0.7rem 0.9rem; color: #fff; font-size: 0.9rem; font-family: inherit;
+}
+.req-form > input { flex: 1 1 180px; width: auto; }
+.req-form button { flex-shrink: 0; min-height: 44px; }
+.req-hint { font-size: 0.76rem; margin-top: 0.4rem; line-height: 1.5; min-height: 1rem; }
+.req-hint-have { color: #22c55e; }
+.req-hint-dupe { color: var(--ps-blue); }
+.req-listhead { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; }
+.req-listtitle { font-size: 1rem; font-weight: 800; color: #fff; }
+.req-count { font-size: 0.75rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.15rem 0.6rem; }
+.req-empty { color: #666; font-size: 0.88rem; padding: 2rem 0; text-align: center; }
+.req-row { display: flex; align-items: center; gap: 0.85rem; background: #111; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 0.9rem; margin-bottom: 0.5rem; }
+.req-row-stocked { background: rgba(34,197,94,0.07); border-color: rgba(34,197,94,0.3); }
+.req-votes { font-size: 1.05rem; font-weight: 900; color: var(--ps-blue); min-width: 2rem; text-align: center; }
+.req-votes-stocked { color: #22c55e; }
+.req-main { flex: 1; min-width: 0; }
+.req-title { font-size: 0.9rem; font-weight: 700; color: #fff; }
+.req-voters { font-size: 0.72rem; color: #666; margin-top: 0.1rem; }
+.req-stocked-note { font-size: 0.72rem; color: #22c55e; font-weight: 700; margin-top: 0.1rem; }
+.req-voteform { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+.req-voteform input { width: 110px; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.45rem 0.7rem; color: #fff; font-size: 0.78rem; font-family: inherit; }
+.req-btn { background: #fff; color: #12081f; border: 0; border-radius: 20px; padding: 0.45rem 1rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; display: inline-block; min-height: 36px; line-height: 1.6; }
+.req-btn-rent { background: #22c55e; color: #04120a; }
+@media (max-width: 600px) {
+  .req-row { flex-wrap: wrap; }
+  .req-voteform { width: 100%; }
+  .req-voteform input { flex: 1; width: auto; }
+}

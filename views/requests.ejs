@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Request a Game — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'requests' }) %>
+
+<div class="req-page">
+  <h1 class="req-h1">Request a game</h1>
+  <p class="req-sub">Tell us what you want next. The most requested games get stocked first.</p>
+
+  <% if (msg === 'submitted') { %><div class="ord-flash">Thanks — we'll review it and add it to the list.</div><% } %>
+  <% if (msg === 'voted') { %><div class="ord-flash">Your vote has been counted.</div><% } %>
+  <% if (msg === 'already') { %><div class="ord-flash ord-flash-warn">You've already voted for that one.</div><% } %>
+  <% if (msg === 'missing') { %><div class="ord-flash ord-flash-warn">Please fill in both the game title and your Facebook name.</div><% } %>
+  <% if (msg === 'rate') { %><div class="ord-flash ord-flash-warn">Too many requests — please wait a few minutes.</div><% } %>
+  <% if (msg === 'closed') { %><div class="ord-flash ord-flash-warn">That request is already closed.</div><% } %>
+  <% if (msg === 'error') { %><div class="ord-flash ord-flash-warn">Something went wrong. Please try again.</div><% } %>
+
+  <form method="POST" action="/requests/add" class="req-form" id="reqForm">
+    <div class="req-field">
+      <input type="text" name="title" id="reqTitle" placeholder="Game title" autocomplete="off" required>
+      <div class="req-hint" id="reqHint"></div>
+    </div>
+    <input type="text" name="fb_name" placeholder="Your Facebook name" required>
+    <button type="submit" class="btn btn-primary">Request</button>
+  </form>
+
+  <div class="req-listhead">
+    <span class="req-listtitle">Most requested</span>
+    <span class="req-count"><%= requests.length %> game<%= requests.length !== 1 ? 's' : '' %></span>
+  </div>
+
+  <% if (!requests.length) { %>
+    <div class="req-empty">No requests yet — be the first to ask for a game.</div>
+  <% } %>
+
+  <% requests.forEach(r => { const votes = (r.voters || []).length; %>
+  <div class="req-row<%= r.status === 'stocked' ? ' req-row-stocked' : '' %>">
+    <span class="req-votes<%= r.status === 'stocked' ? ' req-votes-stocked' : '' %>"><%= votes %></span>
+    <div class="req-main">
+      <div class="req-title"><%= r.title %></div>
+      <% if (r.status === 'stocked') { %>
+        <div class="req-stocked-note">Now available — you asked, we stocked it</div>
+      <% } else { %>
+        <div class="req-voters">
+          requested by <%= (r.voters || []).slice(0, 3).map(v => firstName(v.fb_name)).join(', ') %><% if (votes > 3) { %> +<%= votes - 3 %><% } %>
+        </div>
+      <% } %>
+    </div>
+    <% if (r.status === 'stocked' && r.game_id) { %>
+      <a href="/game/<%= r.slug %>" class="req-btn req-btn-rent">Rent</a>
+    <% } else if (r.status !== 'stocked') { %>
+      <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
+        <input type="text" name="fb_name" placeholder="Your name" required>
+        <button type="submit" class="req-btn">Vote</button>
+      </form>
+    <% } %>
+  </div>
+  <% }) %>
+</div>
+
+<%- include('partials/footer') %>
+
+<script>
+// Immediate feedback while typing: tell the customer if we already stock the game,
+// or if someone has already requested it, so they vote instead of creating a
+// duplicate. The server re-checks both — this is convenience, not the guard.
+(function () {
+  var input = document.getElementById('reqTitle');
+  var hint = document.getElementById('reqHint');
+  if (!input || !hint) return;
+  var catalog = null;
+  // `<` is escaped to < so a title containing "</script>" cannot break out
+  // of this block. Titles are customer-typed, and although only approved ones
+  // reach this page, the escape means approving a hostile title can never turn
+  // into script injection.
+  var requested = <%- JSON.stringify(requests.map(r => ({ slug: r.slug, title: r.title, votes: (r.voters || []).length }))).replace(/</g, '\\u003c') %>;
+
+  function slugify(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+
+  fetch('/api/search-index').then(function (r) { return r.json(); })
+    .then(function (d) { catalog = d; }).catch(function () { catalog = []; });
+
+  input.addEventListener('input', function () {
+    var v = input.value.trim();
+    if (v.length < 3) { hint.textContent = ''; hint.className = 'req-hint'; return; }
+    var slug = slugify(v);
+
+    var owned = (catalog || []).find(function (g) { return g.y === 'now' && slugify(g.t) === slug; });
+    if (owned) {
+      hint.innerHTML = 'We already have this — <a href="' + owned.u + '">rent it here</a>.';
+      hint.className = 'req-hint req-hint-have';
+      return;
+    }
+    var already = requested.find(function (r) { return r.slug === slug; });
+    if (already) {
+      hint.textContent = already.votes + ' ' + (already.votes === 1 ? 'person has' : 'people have') + ' already requested this — submitting adds your vote.';
+      hint.className = 'req-hint req-hint-dupe';
+      return;
+    }
+    hint.textContent = '';
+    hint.className = 'req-hint';
+  });
+})();
+</script>
+</body>
+</html>
