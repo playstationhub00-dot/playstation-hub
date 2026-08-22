@@ -130,47 +130,6 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion site-settings -->
 
-    <!-- MAINTENANCE -->
-    <div style="margin:1.5rem 0 0.75rem;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#555;">Maintenance</div>
-    <!-- IMAGE OPTIMIZATION -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🗜️</div>
-          <div>
-            <div class="sa-title">Image Optimization</div>
-            <div class="sa-desc">Shrink existing uploads for faster mobile loading</div>
-          </div>
-        </div>
-        <span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body">
-    <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
-      <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;line-height:1.6;">
-        New uploads are already auto-resized to WebP. This button re-processes every existing cover, gallery, popup, and promo image the same way — safe to run more than once, already-optimized files are skipped.
-      </p>
-      <button type="button" class="btn btn-primary" style="background:#22c55e;" onclick="runImageBackfill(this)">🗜️ Optimize All Images Now</button>
-      <div id="backfillResult" style="margin-top:1rem;font-size:0.85rem;"></div>
-    </div>
-      </div><!-- /accordion-body -->
-    </div><!-- /accordion image-optimization -->
-    <script>
-    function runImageBackfill(btn) {
-      btn.disabled = true;
-      btn.textContent = '⏳ Optimizing… this may take a minute';
-      const resultEl = document.getElementById('backfillResult');
-      resultEl.textContent = '';
-      fetch('/admin/backfill-images', { method: 'POST' })
-        .then(r => r.json())
-        .then(stats => {
-          resultEl.innerHTML = `<span style="color:#22c55e;">✅ Done — ${stats.processed} image${stats.processed!==1?'s':''} shrunk, ${stats.skipped} already optimized${stats.errors ? `, <span style="color:#ef4444;">${stats.errors} failed</span>` : ''}.</span>`;
-        })
-        .catch(() => { resultEl.innerHTML = '<span style="color:#ef4444;">❌ Something went wrong — try again.</span>'; })
-        .finally(() => { btn.disabled = false; btn.textContent = '🗜️ Optimize All Images Now'; });
-    }
-    </script>
-
-
     <!-- PROMO SETTINGS -->
     <%
       const adminPromo = settings.promo || { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100 };
@@ -355,4 +314,44 @@
         </div>
       </form>
     </div>
+
+    <!-- MAINTENANCE -->
+    <div style="margin:1.5rem 0 0.75rem;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#555;">Maintenance</div>
+    <!-- IMAGE OPTIMIZATION -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🗜️</div>
+          <div>
+            <div class="sa-title">Image Optimization</div>
+            <div class="sa-desc">Shrink existing uploads for faster mobile loading</div>
+          </div>
+        </div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
+      <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;line-height:1.6;">
+        New uploads are already auto-resized to WebP. This button re-processes every existing cover, gallery, popup, and promo image the same way — safe to run more than once, already-optimized files are skipped.
+      </p>
+      <button type="button" class="btn btn-primary" style="background:#22c55e;" onclick="runImageBackfill(this)">🗜️ Optimize All Images Now</button>
+      <div id="backfillResult" style="margin-top:1rem;font-size:0.85rem;"></div>
+    </div>
+      </div><!-- /accordion-body -->
+    </div><!-- /accordion image-optimization -->
+    <script>
+    function runImageBackfill(btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ Optimizing… this may take a minute';
+      const resultEl = document.getElementById('backfillResult');
+      resultEl.textContent = '';
+      fetch('/admin/backfill-images', { method: 'POST' })
+        .then(r => r.json())
+        .then(stats => {
+          resultEl.innerHTML = `<span style="color:#22c55e;">✅ Done — ${stats.processed} image${stats.processed!==1?'s':''} shrunk, ${stats.skipped} already optimized${stats.errors ? `, <span style="color:#ef4444;">${stats.errors} failed</span>` : ''}.</span>`;
+        })
+        .catch(() => { resultEl.innerHTML = '<span style="color:#ef4444;">❌ Something went wrong — try again.</span>'; })
+        .finally(() => { btn.disabled = false; btn.textContent = '🗜️ Optimize All Images Now'; });
+    }
+    </script>
   </div><!-- /tab-settings -->

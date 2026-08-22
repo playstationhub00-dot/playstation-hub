@@ -104,11 +104,16 @@
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')">⭐ PS Plus</button>
   </div>
 
+  <!-- ═══════════════ DASHBOARD TAB ═══════════════ -->
+  <%- include('partials/admin/dashboard') %>
+
   <!-- ═══════════════ SETTINGS TAB ═══════════════ -->
   <%- include('partials/admin/settings') %>
+
+  <!-- ═══════════════ MESSAGING TAB ═══════════════ -->
   <%- include('partials/admin/messaging') %>
 
-  <!-- ═══════════════ ANNOUNCEMENTS TAB ═══════════════ -->
+  <!-- ═══════════════ SITE CONTENT TAB ═══════════════ -->
   <%- include('partials/admin/content') %>
 
   <!-- ═══════════════ GAMES TAB ═══════════════ -->
@@ -120,12 +125,8 @@
   <!-- ═══════════════ CUSTOMERS TAB ═══════════════ -->
   <%- include('partials/admin/customers') %>
 
+  <!-- ═══════════════ ORDERS TAB ═══════════════ -->
   <%- include('partials/admin/orders') %>
-
-  <!-- ═══════════════ DASHBOARD TAB ═══════════════ -->
-  <%- include('partials/admin/dashboard') %>
-
-  <!-- ═══════════════ SECURITY TAB ═══════════════ -->
 
 </div><!-- /admin-container -->
 

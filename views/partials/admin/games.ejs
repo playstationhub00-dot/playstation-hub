@@ -396,4 +396,42 @@
     <% } %>
       </div></div><!-- /accordion upcoming -->
 
+    <script>
+    let _gamePlatform = 'all';
+    let _gameNewOnly = false;
+    function filterGamesPlatform(platform) {
+      _gamePlatform = platform;
+      applyGameFilter();
+      ['all','PS5','PS4','PS4/PS5'].forEach(p => {
+        const btn = document.getElementById('gf-'+p);
+        if (!btn) return;
+        btn.style.background = p === platform ? 'var(--ps-blue)' : '';
+        btn.style.color = p === platform ? '#000' : '';
+        btn.style.borderColor = p === platform ? 'var(--ps-blue)' : '';
+      });
+    }
+    function toggleGamesNewOnly() {
+      _gameNewOnly = !_gameNewOnly;
+      const btn = document.getElementById('gf-new');
+      btn.style.background = _gameNewOnly ? '#22c55e' : '';
+      btn.style.color = _gameNewOnly ? '#000' : '';
+      applyGameFilter();
+    }
+    function applyGameFilter() {
+      const q = (document.getElementById('gameSearch')?.value || '').toLowerCase().trim();
+      let shown = 0, total = 0;
+      document.querySelectorAll('.game-row').forEach(r => {
+        total++;
+        const platformOk = _gamePlatform === 'all' || r.dataset.platform === _gamePlatform;
+        const newOk = !_gameNewOnly || r.dataset.new === '1';
+        const searchOk = !q || r.dataset.search.includes(q);
+        const visible = platformOk && newOk && searchOk;
+        r.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+      });
+      const countEl = document.getElementById('gameFilterCount');
+      if (countEl) countEl.textContent = (shown === total) ? '' : ('Showing ' + shown + ' of ' + total + ' games');
+    }
+    </script>
+
   </div><!-- /tab-games -->
