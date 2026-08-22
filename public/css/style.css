@@ -2935,8 +2935,18 @@ label.buy-tier:hover { border-color: #444; }
 .req-voteform input { width: 110px; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.45rem 0.7rem; color: #fff; font-size: 0.78rem; font-family: inherit; }
 .req-btn { background: #fff; color: #12081f; border: 0; border-radius: 20px; padding: 0.45rem 1rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; display: inline-block; min-height: 36px; line-height: 1.6; }
 .req-btn-rent { background: #22c55e; color: #04120a; }
+.req-guide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; background: #111; border: 1px solid #222; border-radius: 10px; padding: 0.9rem; margin-bottom: 1.25rem; }
+.req-guide-step { display: flex; align-items: flex-start; gap: 0.5rem; }
+.req-guide-num { width: 19px; height: 19px; min-width: 19px; border-radius: 50%; background: var(--ps-blue); color: #fff; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 0.05rem; }
+.req-guide-num-done { background: #22c55e; color: #04120a; }
+.req-guide-title { font-size: 0.76rem; font-weight: 700; color: #fff; margin-bottom: 0.15rem; }
+.req-guide-sub { font-size: 0.68rem; color: #7a7a7a; line-height: 1.45; }
 @media (max-width: 600px) {
   .req-row { flex-wrap: wrap; }
   .req-voteform { width: 100%; }
   .req-voteform input { flex: 1; width: auto; }
+  .req-guide { gap: 0.4rem; padding: 0.7rem 0.5rem; }
+  .req-guide-step { flex-direction: column; align-items: center; text-align: center; gap: 0.3rem; }
+  .req-guide-title { font-size: 0.66rem; }
+  .req-guide-sub { font-size: 0.6rem; }
 }

@@ -23,6 +23,30 @@
   <% if (msg === 'closed') { %><div class="ord-flash ord-flash-warn">That request is already closed.</div><% } %>
   <% if (msg === 'error') { %><div class="ord-flash ord-flash-warn">Something went wrong. Please try again.</div><% } %>
 
+  <div class="req-guide">
+    <div class="req-guide-step">
+      <span class="req-guide-num">1</span>
+      <div class="req-guide-text">
+        <div class="req-guide-title">Ask for it</div>
+        <div class="req-guide-sub">Already listed? Vote instead.</div>
+      </div>
+    </div>
+    <div class="req-guide-step">
+      <span class="req-guide-num">2</span>
+      <div class="req-guide-text">
+        <div class="req-guide-title">We check it</div>
+        <div class="req-guide-sub">Appears once approved.</div>
+      </div>
+    </div>
+    <div class="req-guide-step">
+      <span class="req-guide-num req-guide-num-done">3</span>
+      <div class="req-guide-text">
+        <div class="req-guide-title">We message you</div>
+        <div class="req-guide-sub">Use your real Facebook name.</div>
+      </div>
+    </div>
+  </div>
+
   <form method="POST" action="/requests/add" class="req-form" id="reqForm">
     <div class="req-field">
       <input type="text" name="title" id="reqTitle" placeholder="Game title" autocomplete="off" required>
