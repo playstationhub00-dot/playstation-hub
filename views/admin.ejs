@@ -95,7 +95,7 @@
     <button class="admin-tab" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
     <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
     <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')">💬 Messaging</button>
-    <button class="admin-tab" data-tab="announcements" onclick="switchTab('announcements')">📢 Announcements</button>
+    <button class="admin-tab" data-tab="content" onclick="switchTab('content')">🖥️ Site Content</button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')">🎮 Games</button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
     <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')">🧾 Orders <% if (orderQueue.length) { %><span class="oq-count"><%= orderQueue.length %></span><% } %></button>
@@ -110,7 +110,7 @@
   <%- include('partials/admin/messaging') %>
 
   <!-- ═══════════════ ANNOUNCEMENTS TAB ═══════════════ -->
-  <%- include('partials/admin/announcements') %>
+  <%- include('partials/admin/content') %>
 
   <!-- ═══════════════ GAMES TAB ═══════════════ -->
   <%- include('partials/admin/games') %>
@@ -141,7 +141,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['dashboard','settings','messaging','announcements','games','customers','orders','psplus','security'];
+const tabs = ['dashboard','settings','messaging','content','games','customers','orders','psplus','security'];
 // Tab ids retired in later phases of the admin reorganisation. A browser that
 // still has one of these in localStorage, or a bookmark carrying one in
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
@@ -189,14 +189,14 @@ function switchTab(name) {
     added:'games', updated:'games', deleted:'games',
     upcoming_added:'games', upcoming_updated:'games', upcoming_deleted:'games',
     cat_added:'games', cat_updated:'games', cat_deleted:'games',
-    announcement:'announcements',
+    announcement:'content',
     psplus_added:'psplus', psplus_updated:'psplus', psplus_deleted:'psplus',
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers',
     month_log_saved:'dashboard', month_log_deleted:'dashboard',
-    settings_saved:'settings', promo_saved:'settings', popup_saved:'settings', password_changed:'security',
+    settings_saved:'settings', promo_saved:'settings', popup_saved:'content', password_changed:'security',
     wrong_password:'security', password_mismatch:'security', password_too_short:'security',
-    signin_step_saved:'settings', signin_step_deleted:'settings',
+    signin_step_saved:'content', signin_step_deleted:'content',
     request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games'
   };
 
