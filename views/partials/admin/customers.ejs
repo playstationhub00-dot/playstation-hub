@@ -1,0 +1,1511 @@
+  <div class="tab-panel" id="tab-customers">
+
+    <%
+      // Only static/live (not time-filtered) figures stay server-computed:
+      // current-status snapshots and all-time cost/profit (games have no purchase
+      // date, so cost can't be attributed to a year — see dashboard JS for the rest).
+      const activeCustomers = customers.filter(c => c.status === 'renting');
+      const boughtCustomersNow = customers.filter(c => c.status === 'bought');
+      const doneCustomersNow = customers.filter(c => c.status === 'done');
+      const reservationCustomersNow = customers.filter(c => c.status === 'reservation');
+      const totalRevenueAllTime = customers.reduce((s, c) => s + (c.price || 0), 0);
+      const totalGameCosts = games.reduce((s, g) => s + (g.cost || 0), 0);
+      const netProfitAllTime = totalRevenueAllTime - totalGameCosts;
+      const today0 = new Date(); today0.setHours(0,0,0,0);
+      const overdueCustomers = activeCustomers.filter(c => c.end_date && new Date(c.end_date + 'T00:00:00') < today0);
+      const dashNow = new Date();
+    %>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="settings-accordion" style="margin-bottom:1rem;">
+      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">📊</div>
+          <div><div class="sa-title">Business Dashboard</div><div class="sa-desc">Revenue, profit, monthly stats & top games</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body open">
+    <div style="margin-bottom:0;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+        <span style="font-size:1.05rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <select id="dashYearSelect" onchange="renderDashboard()" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.35rem 0.6rem;font-size:0.78rem;"></select>
+          <span style="font-size:0.7rem;color:#444;">as of <%= dashNow.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
+        </div>
+      </div>
+
+      <!-- KPI Row 1 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#22c55e;line-height:1.1;" id="dashTotalEarned">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashTransactions">0 transactions</div>
+        </div>
+        <div style="background:#1a0800;border:1px solid #3a1a00;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Game Costs <span class="dash-tag">all-time</span></div>
+          <div style="font-size:1.55rem;font-weight:900;color:#f59e0b;line-height:1.1;">₱<%= totalGameCosts.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= games.length %> games in library</div>
+        </div>
+        <div style="background:<%= netProfitAllTime >= 0 ? '#060a18' : '#1a0606' %>;border:1px solid <%= netProfitAllTime >= 0 ? '#1a2a4a' : '#3a1a1a' %>;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Net Profit <span class="dash-tag">all-time</span></div>
+          <div style="font-size:1.55rem;font-weight:900;color:<%= netProfitAllTime >= 0 ? 'var(--ps-blue)' : '#ef4444' %>;line-height:1.1;">₱<%= netProfitAllTime.toLocaleString() %></div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;"><%= totalRevenueAllTime > 0 ? Math.round((netProfitAllTime/totalRevenueAllTime)*100) : 0 %>% margin</div>
+        </div>
+      </div>
+
+      <!-- KPI Row 2 -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
+        <div style="background:#100a00;border:1px solid #3a2a00;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Unique Renters</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#fbbf24;line-height:1.1;" id="dashUniqueRenters">0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;">by name — not a verified customer ID</div>
+        </div>
+        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Revenue</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#a78bfa;line-height:1.1;" id="dashRentRevenue">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashRentSub">0 rentals · 0% of total</div>
+        </div>
+        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem 1rem;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
+          <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;" id="dashBuyRevenue">₱0</div>
+          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashBuySub">0 games sold · 0% of total</div>
+        </div>
+      </div>
+
+      <!-- Status Row -->
+      <div style="font-size:0.62rem;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Live Status <span class="dash-tag">now</span></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.65rem;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🟢</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Renting Now</div></div>
+        </div>
+        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🔖</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Reservations</div></div>
+        </div>
+        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">🛒</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Games Sold</div></div>
+        </div>
+        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">✅</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Completed</div></div>
+        </div>
+        <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1e1e1e' %>;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
+          <div style="font-size:1.2rem;">⚠️</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:<%= overdueCustomers.length > 0 ? '#ef4444' : '#555' %>;line-height:1;"><%= overdueCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Overdue</div></div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:0.65rem;margin-bottom:0.65rem;">
+
+        <!-- Monthly Bar Chart -->
+        <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — <span id="dashChartYearLabel"></span> <span style="color:#333;font-weight:500;">(click a month for details)</span></div>
+          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:122px;" id="dashBarChart"></div>
+        </div>
+
+        <!-- Top Games -->
+        <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
+          <div id="dashTopGames"></div>
+        </div>
+
+      </div>
+
+      <!-- Month Drill-Down Panel -->
+      <div id="dashMonthPanel" style="display:none;background:#0a0e18;border:1px solid #1a2a4a;border-radius:12px;padding:1rem;margin-bottom:0.65rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+          <span style="font-size:0.85rem;font-weight:800;color:#fff;" id="dashMonthTitle"></span>
+          <button type="button" onclick="clearMonthSelection()" style="background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.7rem;font-weight:700;cursor:pointer;">✕ Clear</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.85rem;">
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthEarned" style="color:#22c55e;">₱0</div><div class="dash-month-lbl">Total Earned</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthTransactions" style="color:#fff;">0</div><div class="dash-month-lbl">Transactions</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthRenters" style="color:#fbbf24;">0</div><div class="dash-month-lbl">Unique Renters</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthReservations" style="color:#c084fc;">0</div><div class="dash-month-lbl">Reservations</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthBuys" style="color:#60a5fa;">0</div><div class="dash-month-lbl">Games Bought</div></div>
+        </div>
+        <div style="font-size:0.68rem;color:#666;margin-bottom:0.6rem;">🎮 <strong id="dashMonthStillRenting" style="color:#22c55e;">0</strong> rental<span id="dashMonthStillRentingS"></span> still active during this month</div>
+        <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Most Rented This Month</div>
+        <div id="dashMonthTopGames"></div>
+
+        <div style="border-top:1px solid #1a2a3a;margin-top:0.85rem;padding-top:0.85rem;">
+          <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">📣 Month Log <span style="color:#333;font-weight:500;text-transform:none;">— ads &amp; screenshots for this month</span></div>
+          <div id="dashMonthLogArea"></div>
+        </div>
+      </div>
+
+      <!-- Insight Pills -->
+      <div id="dashInsights" style="display:flex;flex-direction:column;gap:0.45rem;"></div>
+
+      <!-- Tooltip -->
+      <div id="dashTip" style="position:fixed;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:0.4rem 0.65rem;font-size:0.72rem;color:#fff;pointer-events:none;z-index:9999;display:none;white-space:nowrap;"></div>
+
+    </div>
+
+      </div></div><!-- /accordion dashboard -->
+
+    <script>
+    (function() {
+      const DASH_DATA = <%- JSON.stringify(dashboardData).replace(/</g, '\\u003c') %>;
+      const MONTH_LOGS = {};
+      (<%- JSON.stringify(monthLogs).replace(/</g, '\\u003c') %>).forEach(function(m) { MONTH_LOGS[m.key] = m; });
+      function monthKeyFor(year, month) { return year + '-' + String(month + 1).padStart(2, '0'); }
+      let dashSelectedMonth = null; // { year, month } or null
+      let dashMonthLogEditMode = false;
+
+      function dashCustDate(c) {
+        const raw = c.start_date || c.created_at;
+        if (!raw) return null;
+        const d = c.start_date ? new Date(c.start_date + 'T00:00:00') : new Date(c.created_at);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      function dashAvailableYears() {
+        // Union of rental-start years and payment years: a year where money
+        // only came in via an extension (no new rental started that year)
+        // still needs to be selectable.
+        const years = new Set();
+        DASH_DATA.forEach(c => { const d = dashCustDate(c); if (d) years.add(d.getFullYear()); });
+        DASH_DATA.forEach(c => {
+          (c.payments || []).forEach(p => {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (!isNaN(d.getTime())) years.add(d.getFullYear());
+          });
+        });
+        return [...years].sort((a, b) => b - a);
+      }
+      function dashUniqueRenters(list) {
+        const set = new Set();
+        list.forEach(c => { if (c.customer_name) set.add(c.customer_name.trim().toLowerCase()); });
+        return set.size;
+      }
+      function dashFilterYear(year) {
+        if (year === 'all') return DASH_DATA;
+        return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year; });
+      }
+      function dashFilterMonth(year, month) {
+        return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year && d.getMonth() === month; });
+      }
+      // Revenue and renter counts come from payments, each carrying its own
+      // date — an extension paid in August counts in August even though the
+      // rental started in June. dashFilterMonth stays as-is: it answers "which
+      // rentals STARTED this month", which is still the right question for
+      // rental-count and top-game figures.
+      function dashPaymentsIn(year, month) {
+        const out = [];
+        DASH_DATA.forEach(function (c) {
+          (c.payments || []).forEach(function (p) {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (isNaN(d.getTime())) return;
+            if (d.getFullYear() === year && d.getMonth() === month) out.push({ c: c, p: p });
+          });
+        });
+        return out;
+      }
+      function dashRevenueInMonth(year, month) {
+        return dashPaymentsIn(year, month).reduce(function (s, x) { return s + (x.p.amount || 0); }, 0);
+      }
+      function dashRentersInMonth(year, month) {
+        const names = new Set();
+        dashPaymentsIn(year, month).forEach(function (x) {
+          if (x.c.customer_name) names.add(String(x.c.customer_name).trim().toLowerCase());
+        });
+        return names.size;
+      }
+      // Same payments-based attribution as dashPaymentsIn/dashRevenueInMonth,
+      // but scoped to a whole year (or all-time when year is null) — used for
+      // the year/all-time totals so they agree with the monthly bars across a
+      // year boundary instead of falling back to price-based, rental-start
+      // attribution.
+      function dashPaymentsInYear(year) {
+        const out = [];
+        DASH_DATA.forEach(function (c) {
+          (c.payments || []).forEach(function (p) {
+            if (!p || !p.date) return;
+            const d = new Date(p.date + 'T00:00:00');
+            if (isNaN(d.getTime())) return;
+            if (year == null || d.getFullYear() === year) out.push({ c: c, p: p });
+          });
+        });
+        return out;
+      }
+      function dashRevenueInYear(year) {
+        return dashPaymentsInYear(year).reduce(function (s, x) { return s + (x.p.amount || 0); }, 0);
+      }
+      // "Still renting" = overlapped the month at all: started by month-end, and
+      // either has no end date yet (ongoing) or ended on/after month-start.
+      function dashOverlapsMonth(c, year, month) {
+        if (c.status !== 'renting' && c.status !== 'done') return false;
+        const start = dashCustDate(c);
+        if (!start) return false;
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+        if (start > monthEnd) return false;
+        if (!c.end_date) return true;
+        const end = new Date(c.end_date + 'T23:59:59');
+        return end >= monthStart;
+      }
+      function dashEscapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+      function dashTopGames(list, limit) {
+        const counts = {};
+        list.forEach(c => { if (c.game_title) counts[c.game_title] = (counts[c.game_title] || 0) + 1; });
+        return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit || 5);
+      }
+      function dashRenderTopGamesList(el, topGames, emptyMsg) {
+        if (!topGames.length) { el.innerHTML = '<div style="color:#333;font-size:0.8rem;text-align:center;padding:1.5rem 0;">' + emptyMsg + '</div>'; return; }
+        const maxCount = topGames[0][1];
+        const medals = ['🥇','🥈','🥉'];
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:0.55rem;">' + topGames.map(([title, count], i) =>
+          '<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">' +
+          '<div style="font-size:0.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%;">' + (medals[i] || (i+1)+'.') + ' ' + dashEscapeHtml(title) + '</div>' +
+          '<div style="font-size:0.72rem;font-weight:800;color:#3b82f6;">' + count + 'x</div></div>' +
+          '<div style="background:#1a1a1a;border-radius:3px;height:5px;"><div style="width:' + Math.round((count/maxCount)*100) + '%;height:100%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;"></div></div></div>'
+        ).join('') + '</div>';
+      }
+
+      function populateYearSelect(preferYear) {
+        const sel = document.getElementById('dashYearSelect');
+        const years = dashAvailableYears();
+        const currentYear = new Date().getFullYear();
+        let opts = '<option value="all">All Time</option>';
+        years.forEach(y => { opts += '<option value="' + y + '">' + y + '</option>'; });
+        sel.innerHTML = opts;
+        const pick = (preferYear && years.includes(preferYear)) ? preferYear : (years.includes(currentYear) ? currentYear : (years.length ? years[0] : null));
+        sel.value = pick != null ? String(pick) : 'all';
+      }
+
+      window.renderDashboard = function() {
+        const raw = document.getElementById('dashYearSelect').value;
+        const yearNum = raw === 'all' ? null : parseInt(raw);
+        const scoped = raw === 'all' ? DASH_DATA : dashFilterYear(yearNum);
+
+        const yearPayments = dashPaymentsInYear(yearNum);
+        const totalEarned = yearPayments.reduce((s, x) => s + (x.p.amount || 0), 0);
+        const rentList = scoped.filter(c => c.status !== 'bought');
+        const buyList = scoped.filter(c => c.status === 'bought');
+        const rentRevenue = yearPayments.filter(x => x.c.status !== 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
+        const buyRevenue = yearPayments.filter(x => x.c.status === 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
+
+        document.getElementById('dashTotalEarned').textContent = '₱' + totalEarned.toLocaleString();
+        document.getElementById('dashTransactions').textContent = scoped.length + ' transaction' + (scoped.length !== 1 ? 's' : '');
+        document.getElementById('dashUniqueRenters').textContent = dashUniqueRenters(scoped);
+        document.getElementById('dashRentRevenue').textContent = '₱' + rentRevenue.toLocaleString();
+        document.getElementById('dashRentSub').textContent = rentList.length + ' rentals · ' + (totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0) + '% of total';
+        document.getElementById('dashBuyRevenue').textContent = '₱' + buyRevenue.toLocaleString();
+        document.getElementById('dashBuySub').textContent = buyList.length + ' game' + (buyList.length !== 1 ? 's' : '') + ' sold · ' + (totalEarned > 0 ? Math.round(buyRevenue/totalEarned*100) : 0) + '% of total';
+
+        dashRenderTopGamesList(document.getElementById('dashTopGames'), dashTopGames(scoped, 5), 'No data yet');
+
+        const years = dashAvailableYears();
+        const chartYear = yearNum || years[0] || new Date().getFullYear();
+        renderDashChart(chartYear);
+        renderDashInsights(scoped, chartYear);
+
+        if (dashSelectedMonth && dashSelectedMonth.year !== chartYear) clearMonthSelection();
+        else if (dashSelectedMonth) renderMonthPanel();
+      };
+
+      const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const MONTH_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+      function renderDashChart(year) {
+        document.getElementById('dashChartYearLabel').textContent = year;
+        const revs = [], renters = [];
+        for (let m = 0; m < 12; m++) {
+          revs.push(dashRevenueInMonth(year, m));
+          renters.push(dashRentersInMonth(year, m));
+        }
+        const maxRev = Math.max(...revs, 1);
+        const now = new Date();
+        const container = document.getElementById('dashBarChart');
+        container.innerHTML = MONTH_SHORT.map((lbl, i) => {
+          const pct = revs[i] > 0 ? Math.max(Math.round(revs[i] / maxRev * 100), 3) : 0;
+          const isCurrent = year === now.getFullYear() && i === now.getMonth();
+          const isPeak = revs[i] === maxRev && maxRev > 0;
+          const isSelected = dashSelectedMonth && dashSelectedMonth.year === year && dashSelectedMonth.month === i;
+          const barColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#2a2a2a';
+          const valColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#555';
+          const valStr = revs[i] >= 1000 ? (revs[i]/1000).toFixed(1) + 'k' : revs[i];
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;height:100%;">' +
+            '<div style="flex:1;display:flex;align-items:flex-end;width:100%;">' +
+            '<div onclick="selectDashMonth(' + year + ',' + i + ')" ' +
+            'onmouseenter="showDashTip(event,\'' + lbl + ' ' + year + ': ₱' + revs[i].toLocaleString() + ' · ' + renters[i] + ' renter' + (renters[i]!==1?'s':'') + '\')" ' +
+            'onmouseleave="hideDashTip()" onmousemove="moveDashTip(event)" ' +
+            'style="width:100%;height:' + pct + '%;background:' + barColor + ';border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;' + (isSelected ? 'box-shadow:0 0 0 2px #F0A500;' : '') + '"></div></div>' +
+            '<div style="font-size:0.58rem;color:#444;white-space:nowrap;">' + lbl + '</div>' +
+            (revs[i] > 0 ? '<div style="font-size:0.58rem;font-weight:700;color:' + valColor + ';">₱' + valStr + '</div>' : '<div style="font-size:0.58rem;">&nbsp;</div>') +
+            (renters[i] > 0 ? '<div style="font-size:0.52rem;color:#555;">👤' + renters[i] + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
+            ((MONTH_LOGS[monthKeyFor(year, i)] && MONTH_LOGS[monthKeyFor(year, i)].ad_count > 0) ? '<div style="font-size:0.52rem;color:#F0A500;">📣' + MONTH_LOGS[monthKeyFor(year, i)].ad_count + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
+            '</div>';
+        }).join('');
+      }
+
+      window.selectDashMonth = function(year, month) {
+        dashSelectedMonth = { year, month };
+        dashMonthLogEditMode = false;
+        renderDashChart(year);
+        renderMonthPanel();
+      };
+      window.clearMonthSelection = function() {
+        dashSelectedMonth = null;
+        dashMonthLogEditMode = false;
+        document.getElementById('dashMonthPanel').style.display = 'none';
+        const raw = document.getElementById('dashYearSelect').value;
+        const yearNum = raw === 'all' ? null : parseInt(raw);
+        const years = dashAvailableYears();
+        renderDashChart(yearNum || years[0] || new Date().getFullYear());
+      };
+
+      function renderMonthPanel() {
+        if (!dashSelectedMonth) return;
+        const { year, month } = dashSelectedMonth;
+        const list = dashFilterMonth(year, month);
+        const totalEarned = dashRevenueInMonth(year, month);
+        const reservations = list.filter(c => c.status === 'reservation');
+        const buys = list.filter(c => c.status === 'bought');
+        const stillRenting = DASH_DATA.filter(c => dashOverlapsMonth(c, year, month));
+
+        document.getElementById('dashMonthTitle').textContent = '📅 ' + MONTH_LONG[month] + ' ' + year;
+        document.getElementById('dashMonthEarned').textContent = '₱' + totalEarned.toLocaleString();
+        document.getElementById('dashMonthTransactions').textContent = list.length;
+        document.getElementById('dashMonthRenters').textContent = dashRentersInMonth(year, month);
+        document.getElementById('dashMonthReservations').textContent = reservations.length;
+        document.getElementById('dashMonthBuys').textContent = buys.length;
+        document.getElementById('dashMonthStillRenting').textContent = stillRenting.length;
+        document.getElementById('dashMonthStillRentingS').textContent = stillRenting.length !== 1 ? 's were' : ' was';
+        dashRenderTopGamesList(document.getElementById('dashMonthTopGames'), dashTopGames(list, 5), 'No rentals this month');
+        renderMonthLogArea();
+
+        document.getElementById('dashMonthPanel').style.display = 'block';
+      }
+
+      function renderMonthLogArea() {
+        if (!dashSelectedMonth) return;
+        const key = monthKeyFor(dashSelectedMonth.year, dashSelectedMonth.month);
+        const log = MONTH_LOGS[key];
+        const area = document.getElementById('dashMonthLogArea');
+        if (dashMonthLogEditMode) {
+          area.innerHTML = buildMonthLogForm(key, log);
+        } else if (log) {
+          area.innerHTML = buildMonthLogView(log);
+        } else {
+          area.innerHTML = '<button type="button" onclick="toggleMonthLogEdit(true)" style="background:#161616;border:1px dashed #333;color:#888;border-radius:8px;padding:0.6rem 1rem;font-size:0.78rem;cursor:pointer;width:100%;">＋ Add month log — track ads &amp; upload screenshots</button>';
+        }
+      }
+
+      function buildMonthLogView(log) {
+        let html = '<div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.6rem;">';
+        html += '<span style="background:rgba(240,165,0,0.12);border:1px solid rgba(240,165,0,0.35);color:#F0A500;border-radius:20px;padding:0.2rem 0.65rem;font-size:0.72rem;font-weight:700;">📣 ' + log.ad_count + ' ad' + (log.ad_count !== 1 ? 's' : '') + '</span>';
+        if (log.ad_spend > 0) html += '<span style="color:#888;font-size:0.72rem;">₱' + log.ad_spend.toLocaleString() + ' spent</span>';
+        html += '<button type="button" onclick="toggleMonthLogEdit(true)" style="margin-left:auto;background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:20px;padding:0.2rem 0.65rem;font-size:0.68rem;cursor:pointer;">✏️ Edit</button>';
+        html += '</div>';
+        if (log.note) html += '<div style="font-size:0.75rem;color:#ccc;margin-bottom:0.6rem;line-height:1.4;">' + dashEscapeHtml(log.note) + '</div>';
+        if (log.images.length) {
+          html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' + log.images.map(img =>
+            '<a href="' + img + '" target="_blank" rel="noopener"><img src="' + img + '" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #2a2a2a;"></a>'
+          ).join('') + '</div>';
+        }
+        return html;
+      }
+
+      function buildMonthLogForm(key, log) {
+        const adCount = log ? log.ad_count : 0;
+        const adSpend = log && log.ad_spend ? log.ad_spend : '';
+        const note = log ? dashEscapeHtml(log.note) : '';
+        const slotsLeft = 6 - (log ? log.images.length : 0);
+        let html = '<form method="POST" action="/admin/month-log" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:0.5rem;">';
+        html += '<input type="hidden" name="month_key" value="' + key + '">';
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Ads Run</label><input type="number" name="ad_count" min="0" value="' + adCount + '" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;"></div>';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Ad Spend (₱, optional)</label><input type="number" name="ad_spend" min="0" value="' + adSpend + '" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;"></div>';
+        html += '</div>';
+        html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Note</label><textarea name="note" rows="2" style="width:100%;box-sizing:border-box;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#fff;padding:0.4rem 0.5rem;font-size:0.8rem;resize:vertical;">' + note + '</textarea></div>';
+        if (slotsLeft > 0) html += '<div><label style="font-size:0.62rem;color:#666;display:block;margin-bottom:0.2rem;">Add Screenshots (' + slotsLeft + ' slot' + (slotsLeft !== 1 ? 's' : '') + ' left, 6 max)</label><input type="file" name="images" accept="image/*" multiple style="width:100%;font-size:0.75rem;color:#999;"></div>';
+        if (log && log.images.length) {
+          html += '<div style="display:flex;gap:0.5rem;flex-wrap:wrap;">' + log.images.map(img =>
+            '<div style="position:relative;"><img src="' + img + '" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid #2a2a2a;">' +
+            '<button type="button" onclick="deleteMonthLogImage(\'' + key + '\',\'' + img + '\')" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:0.6rem;cursor:pointer;line-height:1;padding:0;">✕</button></div>'
+          ).join('') + '</div>';
+        }
+        html += '<div style="display:flex;gap:0.5rem;align-items:center;">';
+        html += '<button type="submit" style="background:#166534;color:#fff;border:none;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;font-weight:700;cursor:pointer;">Save</button>';
+        html += '<button type="button" onclick="toggleMonthLogEdit(false)" style="background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;cursor:pointer;">Cancel</button>';
+        if (log) html += '<button type="button" onclick="deleteMonthLog(\'' + key + '\')" style="margin-left:auto;background:#1a0a0a;border:1px solid #3a1a1a;color:#ef4444;border-radius:8px;padding:0.5rem 1rem;font-size:0.78rem;cursor:pointer;">Delete Log</button>';
+        html += '</div></form>';
+        return html;
+      }
+
+      window.toggleMonthLogEdit = function(edit) { dashMonthLogEditMode = edit; renderMonthLogArea(); };
+      window.deleteMonthLogImage = function(key, imgPath) {
+        if (!confirm('Remove this screenshot?')) return;
+        const f = document.createElement('form');
+        f.method = 'POST'; f.action = '/admin/month-log/image/delete';
+        const k = document.createElement('input'); k.type = 'hidden'; k.name = 'month_key'; k.value = key;
+        const p = document.createElement('input'); p.type = 'hidden'; p.name = 'image_path'; p.value = imgPath;
+        f.appendChild(k); f.appendChild(p);
+        document.body.appendChild(f); f.submit();
+      };
+      window.deleteMonthLog = function(key) {
+        if (!confirm('Delete this month\'s log (ads, spend, note, and all screenshots)?')) return;
+        const f = document.createElement('form');
+        f.method = 'POST'; f.action = '/admin/month-log/delete';
+        const k = document.createElement('input'); k.type = 'hidden'; k.name = 'month_key'; k.value = key;
+        f.appendChild(k);
+        document.body.appendChild(f); f.submit();
+      };
+
+      function renderDashInsights(scoped, chartYear) {
+        const chartYearPayments = dashPaymentsInYear(chartYear);
+        const rentRevenue = chartYearPayments.filter(x => x.c.status !== 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
+        const totalEarned = chartYearPayments.reduce((s, x) => s + (x.p.amount || 0), 0);
+        const rentPct = totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0;
+        const topGames = dashTopGames(scoped, 1);
+
+        let revs = [];
+        for (let m = 0; m < 12; m++) revs.push(dashRevenueInMonth(chartYear, m));
+        const peakVal = Math.max(...revs);
+        const peakMonth = MONTH_SHORT[revs.indexOf(peakVal)];
+
+        const pills = [];
+        if (peakVal > 0) pills.push(['📈', '<strong style="color:#fff;">Best month: ' + peakMonth + ' ' + chartYear + '</strong> — ₱' + peakVal.toLocaleString() + '. Identify what worked and repeat it.', '#111', '#1e1e1e']);
+        if (<%= overdueCustomers.length %> > 0) pills.push(['⚠️', '<strong style="color:#ef4444;"><%= overdueCustomers.length %> overdue rental<%= overdueCustomers.length !== 1 ? "s" : "" %></strong> — follow up immediately to recover games or collect late fees.', '#1a0a0a', '#3a1a1a']);
+        if (rentPct > 90 && totalEarned > 0) pills.push(['💰', '<strong style="color:#fff;">Game sales are only ' + (100 - rentPct) + '% of revenue</strong> — push buy options to returning renters to grow this.', '#111', '#1e1e1e']);
+        if (topGames.length > 0) pills.push(['🎮', '<strong style="color:#fff;">' + dashEscapeHtml(topGames[0][0]) + ' is your #1 game</strong> — ' + topGames[0][1] + 'x rented/sold. Keep it stocked and front-and-center on your site.', '#111', '#1e1e1e']);
+        if (<%= doneCustomersNow.length %> > <%= activeCustomers.length %> * 5) pills.push(['📉', '<strong style="color:#fff;"><%= doneCustomersNow.length %> past customers</strong> vs <%= activeCustomers.length %> active — most renters don\'t return. A Messenger follow-up campaign could recover many of them.', '#111', '#1e1e1e']);
+
+        document.getElementById('dashInsights').innerHTML = pills.map(([icon, text, bg, border]) =>
+          '<div style="background:' + bg + ';border:1px solid ' + border + ';border-radius:8px;padding:0.55rem 0.85rem;font-size:0.72rem;color:#aaa;display:flex;align-items:flex-start;gap:0.5rem;line-height:1.4;">' +
+          '<span style="flex-shrink:0;">' + icon + '</span><span>' + text + '</span></div>'
+        ).join('');
+      }
+
+      function showDashTip(e, text) { var t=document.getElementById('dashTip'); t.textContent=text; t.style.display='block'; moveDashTip(e); }
+      function hideDashTip() { document.getElementById('dashTip').style.display='none'; }
+      function moveDashTip(e) { var t=document.getElementById('dashTip'); t.style.left=(e.clientX+12)+'px'; t.style.top=(e.clientY-28)+'px'; }
+      window.showDashTip = showDashTip; window.hideDashTip = hideDashTip; window.moveDashTip = moveDashTip;
+
+      // Reopen a specific month's drill-down after a month-log save redirects back
+      // with ?month=YYYY-MM, so the panel doesn't just close on you after saving.
+      let dashPreferYear = null;
+      const dashMonthParam = new URLSearchParams(window.location.search).get('month');
+      if (dashMonthParam && /^\d{4}-\d{2}$/.test(dashMonthParam)) {
+        const parts = dashMonthParam.split('-').map(Number);
+        dashSelectedMonth = { year: parts[0], month: parts[1] - 1 };
+        dashPreferYear = parts[0];
+      }
+      populateYearSelect(dashPreferYear);
+      renderDashboard();
+    })();
+    </script>
+
+    <!-- Message Blast -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f43f5e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(244,63,94,0.15);">📢</div>
+          <div><div class="sa-title">Message Blast</div><div class="sa-desc">Generate personalized messages for past customers</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div style="padding:1.25rem;">
+
+      <!-- AUTO BLAST SECTION -->
+      <div style="background:linear-gradient(135deg,rgba(244,63,94,0.08),rgba(168,85,247,0.08));border:1px solid #3a1a2a;border-radius:14px;padding:1.25rem;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;">
+          <div style="font-size:1.2rem;">⚡</div>
+          <div>
+            <div style="font-weight:800;font-size:0.9rem;color:#f43f5e;">Auto Send via Messenger API</div>
+            <div style="font-size:0.72rem;color:#555;margin-top:0.1rem;">Sends only to contacts who messaged in the last 24 hours — Messenger's rule, not a limit we set</div>
+          </div>
+          <div style="margin-left:auto;background:#111;border:1px solid #2a2a2a;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.72rem;color:#aaa;" id="blastContactCount">
+            Loading contacts...
+          </div>
+        </div>
+        <textarea id="autoBlastMsg" rows="5" style="width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.83rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;margin-bottom:0.75rem;">Kamusta! 👋 PlayStation Hub dito!
+
+Nag-aalok kami ng mga bagong laro ngayon! 🎮
+
+Mayroon kaming mga PS5 exclusives at dagdag pang mga titles. Pumunta sa aming website para makita ang lahat:
+
+👉 https://playstation-hub-production.up.railway.app
+
+Mag-message lang para mag-reserve ng slot! 😊</textarea>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <button onclick="sendAutoBlast()" id="autoBlastBtn" style="background:linear-gradient(135deg,#f43f5e,#a855f7);color:#fff;border:none;border-radius:9px;padding:0.6rem 1.25rem;font-weight:800;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
+            ⚡ Send to Reachable Contacts
+          </button>
+          <div id="autoBlastStatus" style="font-size:0.8rem;color:#555;"></div>
+        </div>
+        <div id="autoBlastResult" style="display:none;margin-top:0.85rem;background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;font-size:0.82rem;line-height:1.7;"></div>
+        <div style="margin-top:0.65rem;font-size:0.68rem;color:#333;line-height:1.5;">
+          ℹ️ Messenger only allows sending this kind of message to someone within <strong style="color:#444;">24 hours</strong> of their last message to your Page — that's a platform rule, not something we can widen. Contacts are collected automatically from your Page's Messenger inbox. For everyone outside that window, use the copy-paste tool below instead.
+        </div>
+      </div>
+
+      <!-- RECURRING NOTIFICATIONS SECTION -->
+      <div style="background:linear-gradient(135deg,rgba(34,197,94,0.08),rgba(59,130,246,0.08));border:1px solid #1a3a2a;border-radius:14px;padding:1.25rem;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.85rem;">
+          <div style="font-size:1.2rem;">📅</div>
+          <div>
+            <div style="font-weight:800;font-size:0.9rem;color:#22c55e;">Recurring Notifications (Monthly Opt-In)</div>
+            <div style="font-size:0.72rem;color:#555;margin-top:0.1rem;">Sends to contacts who opted in via the bot — not limited by the 24-hour window above</div>
+          </div>
+          <div style="margin-left:auto;background:#111;border:1px solid #2a2a2a;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.72rem;color:#aaa;" id="notifOptinCount">
+            Loading...
+          </div>
+        </div>
+        <textarea id="notifBlastMsg" rows="4" style="width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.83rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;margin-bottom:0.75rem;">🎮 New games just dropped at PlayStation Hub!
+
+{promo}
+
+Check it out: https://playstation-hub.com</textarea>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <button onclick="sendNotifBlast()" id="notifBlastBtn" style="background:linear-gradient(135deg,#22c55e,#3b82f6);color:#fff;border:none;border-radius:9px;padding:0.6rem 1.25rem;font-weight:800;font-size:0.85rem;cursor:pointer;">
+            📅 Send to Opted-In Contacts
+          </button>
+          <div id="notifBlastStatus" style="font-size:0.8rem;color:#555;"></div>
+        </div>
+        <div id="notifBlastResult" style="display:none;margin-top:0.85rem;background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.85rem;font-size:0.82rem;line-height:1.7;"></div>
+        <div style="margin-top:0.65rem;font-size:0.68rem;color:#333;line-height:1.5;">
+          ℹ️ Requires Meta's Recurring Notifications permission to be approved for this Page — sends will fail with a logged error until that's granted. See <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;">docs/messenger-recurring-notifications.md</code> for setup.
+        </div>
+      </div>
+
+      <div style="border-top:1px solid #1a1a1a;padding-top:1rem;margin-bottom:1rem;">
+        <div style="font-size:0.7rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.75rem;">Manual Copy-Paste Tool (for older contacts)</div>
+      </div>
+
+      <!-- Stats bar -->
+      <%
+        const doneC = customers.filter(c => c.status === 'done');
+        const uniqueNames = [...new Set(doneC.map(c => c.customer_name))];
+        const blastToday = new Date(); blastToday.setHours(0,0,0,0);
+        const blastData = uniqueNames.map(name => {
+          const records = doneC.filter(c => c.customer_name === name);
+          const lastRecord = records[records.length - 1];
+          const lastGame = lastRecord?.game_title || '';
+          const totalRentals = records.length;
+          // end_date is the meaningful "last active" date; a record missing it
+          // (never happens for a normal rental, but Excel-imported rows can be
+          // incomplete) falls back to start_date rather than being untimed.
+          const lastDateStr = lastRecord?.end_date || lastRecord?.start_date || null;
+          const daysSinceLastRental = lastDateStr
+            ? Math.floor((blastToday - new Date(lastDateStr + 'T00:00:00')) / 86400000)
+            : null;
+          return { name, lastGame, totalRentals, daysSinceLastRental };
+        }).sort((a,b) => b.totalRentals - a.totalRentals);
+
+        // {promo} and {new_games} tokens for the blast template — computed once
+        // here so the admin never hand-types this month's numbers into the
+        // textarea, and next month's promo change needs no template edit.
+        const blastPromo = settings.promo || {};
+        const blastPromoDurations = [7, 30].filter(d => getPromoDiscountPct(blastPromo, d) > 0);
+        const blastPromoText = blastPromoDurations.length
+          ? blastPromoDurations.map(d => getPromoDiscountPct(blastPromo, d) + '% OFF ' + (d === 7 ? 'weekly' : 'monthly') + ' rentals').join(' and ')
+          : '';
+        // Same "is this new" window every other new-game badge in the app already
+        // uses (game.new_window_days || 11 days since created_at).
+        const blastNewGames = games.filter(g => {
+          if (!g.created_at) return false;
+          const windowDays = g.new_window_days || 11;
+          const daysSinceAdded = Math.floor((Date.now() - new Date(g.created_at).getTime()) / 86400000);
+          return daysSinceAdded < windowDays;
+        }).slice(0, 5).map(g => g.title);
+        const blastNewGamesText = blastNewGames.join(', ');
+      %>
+      %>
+      <div style="display:flex;gap:0.65rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.65rem 1rem;flex:1;min-width:120px;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Past Customers</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#22c55e;"><%= uniqueNames.length %></div>
+        </div>
+        <div style="background:#100a00;border:1px solid #3a2a00;border-radius:10px;padding:0.65rem 1rem;flex:1;min-width:120px;">
+          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Total Past Rentals</div>
+          <div style="font-size:1.4rem;font-weight:900;color:#fbbf24;"><%= doneC.length %></div>
+        </div>
+        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.65rem 1rem;flex:2;min-width:180px;display:flex;align-items:center;gap:0.75rem;">
+          <div style="font-size:1.5rem;">💡</div>
+          <div style="font-size:0.75rem;color:#555;line-height:1.5;">Copy a customer's message and paste it in <strong style="color:#aaa;">Facebook Messenger</strong> to reach them individually.</div>
+        </div>
+      </div>
+
+      <!-- Message Template Composer -->
+      <div style="margin-bottom:1rem;">
+        <label style="font-size:0.75rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:0.5rem;">Message Template</label>
+        <div style="font-size:0.72rem;color:#555;margin-bottom:0.75rem;">Use <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{name}</code>, <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#a78bfa;">{game}</code>, <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#22c55e;">{promo}</code>, and <code style="background:#1a1a1a;padding:0.1rem 0.35rem;border-radius:4px;color:#22c55e;">{new_games}</code> as placeholders — the last two are filled in automatically from your current promo and new-arrival games below, so this template stays correct as those change.</div>
+
+        <!-- AI Generator -->
+        <div style="background:linear-gradient(135deg,rgba(168,85,247,0.08),rgba(59,130,246,0.06));border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem;margin-bottom:0.85rem;">
+          <div style="font-size:0.72rem;font-weight:700;color:#a855f7;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.35rem;">
+            <span>✨</span> AI Message Generator
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <input type="text" id="aiPrompt" placeholder='e.g. "encourage them to come back for holidays" or "promote our Buy permanent option"'
+              style="flex:1;background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.55rem 0.85rem;font-size:0.8rem;min-width:0;">
+            <button onclick="generateAITemplate()" id="aiGenBtn"
+              style="background:linear-gradient(135deg,#7b2ff7,#3b82f6);color:#fff;border:none;border-radius:8px;padding:0.55rem 1rem;font-weight:700;font-size:0.8rem;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+              ✨ Generate
+            </button>
+          </div>
+          <div id="aiGenStatus" style="font-size:0.72rem;color:#555;margin-top:0.4rem;min-height:1rem;"></div>
+        </div>
+        <textarea id="blastTemplate" rows="5" style="width:100%;background:#111;border:1px solid #333;border-radius:10px;color:#fff;padding:0.85rem;font-size:0.85rem;line-height:1.6;resize:vertical;font-family:inherit;box-sizing:border-box;">Hey {name}! 👋
+
+Kamusta na? Just wanted to reach out — we have new games available at PlayStation Hub! 🎮
+
+Last time you rented {game} — we've got even more titles now including {new_games}!
+
+{promo} this month 🎉
+
+Check it out: https://playstation-hub-production.up.railway.app
+
+Message us anytime to reserve your slot! 😊</textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.65rem;flex-wrap:wrap;">
+          <button onclick="generateBlast()" style="background:linear-gradient(135deg,#f43f5e,#e11d48);color:#fff;border:none;border-radius:8px;padding:0.55rem 1.1rem;font-weight:700;font-size:0.82rem;cursor:pointer;">⚡ Generate Messages</button>
+          <button onclick="copyAllNames()" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 1.1rem;font-weight:700;font-size:0.82rem;cursor:pointer;">📋 Copy All Names</button>
+          <button onclick="filterBlast('all')" id="blastFilterAll" style="background:var(--ps-blue);color:#000;border:none;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">All</button>
+          <button onclick="filterBlast('top')" id="blastFilterTop" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">Top Renters</button>
+          <button onclick="filterBlast('inactive30')" id="blastFilterInactive30" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">30+ Days Inactive</button>
+          <button onclick="filterBlast('inactive90')" id="blastFilterInactive90" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">90+ Days Inactive</button>
+          <button onclick="toggleUncopiedOnly()" id="blastFilterUncopied" style="background:#1a1a1a;color:#aaa;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">👁️ Show uncopied only</button>
+          <button onclick="resetCopiedList()" style="background:#1a1a1a;color:#666;border:1px solid #333;border-radius:8px;padding:0.55rem 0.85rem;font-weight:700;font-size:0.78rem;cursor:pointer;">↺ Reset copied list</button>
+          <input type="text" id="blastSearch" oninput="filterBlastSearch(this.value)" placeholder="Search name..." style="background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;padding:0.5rem 0.85rem;font-size:0.82rem;flex:1;min-width:140px;">
+        </div>
+      </div>
+
+      <!-- Copied toast -->
+      <div id="blastToast" style="display:none;background:#22c55e;color:#000;font-weight:700;font-size:0.8rem;padding:0.4rem 1rem;border-radius:20px;text-align:center;margin-bottom:0.75rem;">✅ Copied!</div>
+
+      <!-- Customer List -->
+      <div id="blastList" style="display:flex;flex-direction:column;gap:0.5rem;max-height:520px;overflow-y:auto;">
+        <% blastData.forEach((c, i) => { %>
+        <div class="blast-row" data-name="<%= c.name.toLowerCase() %>" data-display-name="<%= c.name.replace(/"/g,'&quot;') %>" data-rentals="<%= c.totalRentals %>"
+          data-days-since="<%= c.daysSinceLastRental != null ? c.daysSinceLastRental : '' %>"
+          style="background:#111;border:1px solid #1e1e1e;border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:center;gap:0.85rem;">
+          <div style="font-size:0.75rem;font-weight:900;color:#333;min-width:22px;text-align:right;">#<%= i+1 %></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:0.88rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><%= c.name %> <span class="blast-copied-badge" style="display:none;font-size:0.65rem;font-weight:700;color:#22c55e;">✓ Copied</span></div>
+            <div style="font-size:0.7rem;color:#555;margin-top:0.1rem;">Last: <%= c.lastGame %> &nbsp;·&nbsp; <%= c.totalRentals %> rental<%= c.totalRentals !== 1 ? 's' : '' %><% if (c.daysSinceLastRental != null) { %> &nbsp;·&nbsp; <%= c.daysSinceLastRental %>d ago<% } %></div>
+          </div>
+          <button onclick="copyBlastMsg('<%= c.name.replace(/'/g,"\\'") %>','<%= c.lastGame.replace(/'/g,"\\'") %>', this)"
+            style="background:#1a1a1a;color:#aaa;border:1px solid #2a2a2a;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            📋 Copy Msg
+          </button>
+          <button onclick="openFBSearch('<%= c.name.replace(/'/g,"\\'") %>')"
+            style="background:#1877f2;color:#fff;border:none;border-radius:7px;padding:0.4rem 0.75rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+            📘 Find
+          </button>
+        </div>
+        <% }) %>
+        <% if (blastData.length === 0) { %>
+        <div style="text-align:center;padding:2rem;color:#333;font-size:0.85rem;">No past customers yet.</div>
+        <% } %>
+      </div>
+
+      <script>
+      // Filled server-side once per page load from the current promo/new-game
+      // state — see the {promo}/{new_games} computation above the stats bar.
+      const BLAST_PROMO_TEXT = <%- JSON.stringify(blastPromoText) %>;
+      const BLAST_NEW_GAMES_TEXT = <%- JSON.stringify(blastNewGamesText) %>;
+      // Keyed by year-month so "already copied" naturally resets when a new
+      // month's promo campaign starts, instead of carrying over stale state.
+      const BLAST_COPIED_KEY = 'blastCopied_' + new Date().toISOString().slice(0, 7);
+
+      function getCopiedSet() {
+        try { return new Set(JSON.parse(localStorage.getItem(BLAST_COPIED_KEY) || '[]')); }
+        catch (e) { return new Set(); }
+      }
+      function saveCopiedSet(set) {
+        localStorage.setItem(BLAST_COPIED_KEY, JSON.stringify([...set]));
+      }
+      function markRowCopied(name, btn) {
+        const set = getCopiedSet();
+        set.add(name);
+        saveCopiedSet(set);
+        applyCopiedMark(btn.closest('.blast-row'));
+      }
+      function applyCopiedMark(row) {
+        const badge = row.querySelector('.blast-copied-badge');
+        if (badge) badge.style.display = '';
+        row.style.opacity = '0.55';
+      }
+      function restoreCopiedMarks() {
+        const set = getCopiedSet();
+        document.querySelectorAll('.blast-row').forEach(row => {
+          if (set.has(row.dataset.displayName)) applyCopiedMark(row);
+        });
+      }
+      document.addEventListener('DOMContentLoaded', restoreCopiedMarks);
+
+      let _blastUncopiedOnly = false;
+      function toggleUncopiedOnly() {
+        _blastUncopiedOnly = !_blastUncopiedOnly;
+        const btn = document.getElementById('blastFilterUncopied');
+        btn.style.background = _blastUncopiedOnly ? 'var(--ps-blue)' : '#1a1a1a';
+        btn.style.color = _blastUncopiedOnly ? '#000' : '#aaa';
+        applyBlastFilters();
+      }
+      function resetCopiedList() {
+        if (!confirm('Clear the "already copied" marks for this month? This does not un-send any messages, it only resets the tracking.')) return;
+        localStorage.removeItem(BLAST_COPIED_KEY);
+        document.querySelectorAll('.blast-row').forEach(row => {
+          const badge = row.querySelector('.blast-copied-badge');
+          if (badge) badge.style.display = 'none';
+          row.style.opacity = '';
+        });
+        showBlastToast('↺ Copied list reset for this month');
+      }
+
+      async function generateAITemplate() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        if (!prompt) { document.getElementById('aiGenStatus').textContent = 'Please describe what kind of message you want.'; return; }
+        const btn = document.getElementById('aiGenBtn');
+        const status = document.getElementById('aiGenStatus');
+        btn.disabled = true; btn.textContent = '⏳ Generating...';
+        status.textContent = 'AI is writing your message...';
+        try {
+          const resp = await fetch('/admin/ai-generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'prompt=' + encodeURIComponent(prompt)
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            document.getElementById('blastTemplate').value = data.message;
+            document.getElementById('autoBlastMsg').value = data.message;
+            status.innerHTML = '<span style="color:#22c55e;">✅ Message generated! You can edit it before sending.</span>';
+          } else {
+            status.innerHTML = '<span style="color:#f43f5e;">❌ ' + (data.error || 'Failed') + '</span>';
+          }
+        } catch(e) {
+          status.innerHTML = '<span style="color:#f43f5e;">❌ Network error.</span>';
+        }
+        btn.disabled = false; btn.textContent = '✨ Generate';
+      }
+
+      // Load contact count — reachable (inside Messenger's 24h window) vs total ever saved
+      fetch('/admin/blast/contacts').then(r=>r.json()).then(d=>{
+        document.getElementById('blastContactCount').textContent = d.reachable + ' reachable now · ' + d.total + ' total';
+        document.getElementById('blastContactCount').style.color = d.reachable > 0 ? '#22c55e' : '#f43f5e';
+      }).catch(()=>{});
+
+      // Load opted-in count for the Recurring Notifications section
+      fetch('/admin/notifications/optins').then(r=>r.json()).then(d=>{
+        document.getElementById('notifOptinCount').textContent = d.active + ' opted in';
+        document.getElementById('notifOptinCount').style.color = d.active > 0 ? '#22c55e' : '#f43f5e';
+      }).catch(()=>{});
+
+      async function sendNotifBlast() {
+        const msg = document.getElementById('notifBlastMsg').value.trim()
+          .replace(/\{promo\}/g, BLAST_PROMO_TEXT).replace(/\{new_games\}/g, BLAST_NEW_GAMES_TEXT);
+        if (!msg) return showBlastToast('Please write a message first!');
+        const btn = document.getElementById('notifBlastBtn');
+        const status = document.getElementById('notifBlastStatus');
+        const result = document.getElementById('notifBlastResult');
+        if (!confirm('Send this month\'s update to everyone who opted in?\n\nThis cannot be undone.')) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+        status.textContent = 'Please wait...';
+        result.style.display = 'none';
+        try {
+          const resp = await fetch('/admin/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'message=' + encodeURIComponent(msg)
+          });
+          const data = await resp.json();
+          result.style.display = 'block';
+          if (data.ok) {
+            result.innerHTML = '<strong style="color:#22c55e;">✅ Send Complete!</strong><br>' +
+              '📤 Sent: <strong style="color:#22c55e;">' + data.sent + '</strong> &nbsp;|&nbsp; ' +
+              '❌ Failed: <strong style="color:' + (data.failed>0?'#f43f5e':'#555') + '">' + data.failed + '</strong> &nbsp;|&nbsp; ' +
+              '👥 Total opted-in: <strong>' + data.total + '</strong>';
+            status.textContent = '';
+          } else {
+            result.innerHTML = '<strong style="color:#f43f5e;">❌ ' + (data.error || 'Send failed') + '</strong>';
+            status.textContent = '';
+          }
+        } catch(e) {
+          result.style.display = 'block';
+          result.innerHTML = '<strong style="color:#f43f5e;">❌ Network error. Try again.</strong>';
+          status.textContent = '';
+        }
+        btn.disabled = false;
+        btn.textContent = '📅 Send to Opted-In Contacts';
+      }
+
+      async function sendAutoBlast() {
+        const msg = document.getElementById('autoBlastMsg').value.trim();
+        if (!msg) return showBlastToast('Please write a message first!');
+        const btn = document.getElementById('autoBlastBtn');
+        const status = document.getElementById('autoBlastStatus');
+        const result = document.getElementById('autoBlastResult');
+        if (!confirm('Send this message to everyone currently inside Messenger\'s 24-hour reachable window?\n\nThis cannot be undone.')) return;
+        btn.disabled = true;
+        btn.textContent = '⏳ Sending...';
+        status.textContent = 'Please wait...';
+        result.style.display = 'none';
+        try {
+          const resp = await fetch('/admin/blast', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'message=' + encodeURIComponent(msg)
+          });
+          const data = await resp.json();
+          result.style.display = 'block';
+          if (data.ok) {
+            result.innerHTML = '<strong style="color:#22c55e;">✅ Blast Complete!</strong><br>' +
+              '📤 Sent: <strong style="color:#22c55e;">' + data.sent + '</strong> &nbsp;|&nbsp; ' +
+              '❌ Failed: <strong style="color:' + (data.failed>0?'#f43f5e':'#555') + '">' + data.failed + '</strong> &nbsp;|&nbsp; ' +
+              '👥 Reachable contacts: <strong>' + data.total + '</strong>';
+            status.textContent = '';
+          } else {
+            result.innerHTML = '<strong style="color:#f43f5e;">❌ ' + (data.error || 'Send failed') + '</strong>';
+            status.textContent = '';
+          }
+        } catch(e) {
+          result.style.display = 'block';
+          result.innerHTML = '<strong style="color:#f43f5e;">❌ Network error. Try again.</strong>';
+          status.textContent = '';
+        }
+        btn.disabled = false;
+        btn.textContent = '⚡ Send to Reachable Contacts';
+      }
+
+      const _blastData = <%- JSON.stringify(blastData) %>;
+
+      function generateBlast() {
+        const tmpl = document.getElementById('blastTemplate').value;
+        document.querySelectorAll('.blast-preview').forEach(e => e.remove());
+        showBlastToast('⚡ Messages ready — click Copy Msg on each customer!');
+      }
+
+      function copyBlastMsg(name, game, btn) {
+        const tmpl = document.getElementById('blastTemplate').value;
+        const msg = tmpl.replace(/\{name\}/g, name).replace(/\{game\}/g, game || 'a game')
+          .replace(/\{promo\}/g, BLAST_PROMO_TEXT).replace(/\{new_games\}/g, BLAST_NEW_GAMES_TEXT);
+        navigator.clipboard.writeText(msg).then(() => {
+          showBlastToast('✅ Copied message for ' + name + '!');
+          if (btn) markRowCopied(name, btn);
+        });
+      }
+
+      function copyAllNames() {
+        const rows = document.querySelectorAll('.blast-row:not([style*="display: none"]):not([style*="display:none"])');
+        const names = [...rows].map(r => r.dataset.displayName).filter(Boolean);
+        navigator.clipboard.writeText(names.join('\n')).then(() => showBlastToast('✅ Copied ' + names.length + ' names!'));
+      }
+
+      function showBlastToast(msg) {
+        const t = document.getElementById('blastToast');
+        t.textContent = msg; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 2500);
+      }
+
+      let _blastFilter = 'all';
+      function filterBlast(type) {
+        _blastFilter = type;
+        ['All','Top','Inactive30','Inactive90'].forEach(k => {
+          const btn = document.getElementById('blastFilter' + k);
+          const active = type === k.charAt(0).toLowerCase() + k.slice(1);
+          btn.style.background = active ? 'var(--ps-blue)' : '#1a1a1a';
+          btn.style.color = active ? '#000' : '#aaa';
+        });
+        applyBlastFilters();
+      }
+
+      function filterBlastSearch(q) { applyBlastFilters(q); }
+
+      function openFBSearch(name) {
+        navigator.clipboard.writeText(name).catch(()=>{});
+        window.open('https://www.facebook.com/messages/search/?query=' + encodeURIComponent(name), '_blank');
+        showBlastToast('📘 Opening Messenger search for ' + name);
+      }
+
+      function applyBlastFilters(q) {
+        q = (q || document.getElementById('blastSearch').value || '').toLowerCase().trim();
+        const copiedSet = _blastUncopiedOnly ? getCopiedSet() : null;
+        document.querySelectorAll('.blast-row').forEach(row => {
+          const nameMatch = !q || row.dataset.name.includes(q);
+          const topMatch = _blastFilter !== 'top' || parseInt(row.dataset.rentals) >= 3;
+          const daysSince = row.dataset.daysSince === '' ? null : parseInt(row.dataset.daysSince);
+          // A customer with no recorded date at all doesn't match either
+          // inactive filter — there's no evidence either way, so it's excluded
+          // rather than guessed into "inactive."
+          const inactive30Match = _blastFilter !== 'inactive30' || (daysSince != null && daysSince >= 30);
+          const inactive90Match = _blastFilter !== 'inactive90' || (daysSince != null && daysSince >= 90);
+          const uncopiedMatch = !copiedSet || !copiedSet.has(row.dataset.displayName);
+          row.style.display = (nameMatch && topMatch && inactive30Match && inactive90Match && uncopiedMatch) ? '' : 'none';
+        });
+      }
+      </script>
+
+    </div>
+      </div></div><!-- /accordion message-blast -->
+
+    <!-- Import Customers from Excel -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #818cf8;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(129,140,248,0.15);">📥</div>
+          <div><div class="sa-title">Import from Excel</div><div class="sa-desc">Bulk-import customer records via .xlsx file</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div class="form-card" style="border-color:rgba(99,102,241,0.35);background:linear-gradient(135deg,#0d0d1f,#0a0a0a);">
+      <h2 style="display:none;">📥 Import Customers from Excel</h2>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 1rem;">
+        Upload an Excel file (.xlsx) to bulk-import customer records. Existing customers are kept — only new rows are added.
+      </p>
+      <% if (locals.msg) { %>
+        <% if (String(msg).startsWith('imported_')) { %>
+          <%
+            const parts = String(msg).split('_');
+            const importedN = parts[1] || '?';
+            const skippedN = parts[3] || '0';
+          %>
+          <div style="background:rgba(34,197,94,0.12);border:1px solid #22c55e;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;color:#22c55e;font-weight:600;">
+            ✅ Successfully imported <%= importedN %> customer(s)<% if (parseInt(skippedN) > 0) { %>, <%= skippedN %> row(s) skipped (blank name)<% } %>.
+          </div>
+        <% } else if (String(msg).includes('import_error') || String(msg) === 'error') { %>
+          <div style="background:rgba(239,68,68,0.12);border:1px solid #ef4444;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;color:#ef4444;font-weight:600;">
+            ❌ Import failed. Make sure the file is a valid .xlsx using the sample format.
+          </div>
+        <% } %>
+      <% } %>
+      <form method="POST" action="/admin/customers/import" enctype="multipart/form-data">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <label style="flex:1;min-width:240px;">
+            <span style="color:var(--text-secondary);font-size:0.8rem;display:block;margin-bottom:0.35rem;">Select Excel File (.xlsx)</span>
+            <input type="file" name="import_file" accept=".xlsx,.xls" required
+              style="width:100%;padding:0.5rem 0.75rem;background:#111;border:1px solid #333;border-radius:8px;color:#eee;font-size:0.85rem;cursor:pointer;">
+          </label>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;padding-top:0.4rem;">
+            <button type="submit" class="btn btn-primary" style="background:#4f46e5;min-width:130px;">📤 Import</button>
+            <a href="/admin/customers/sample" class="btn btn-outline" style="text-align:center;font-size:0.8rem;min-width:130px;">⬇️ Sample File</a>
+          </div>
+        </div>
+      </form>
+      <div style="margin-top:1rem;padding:0.85rem 1rem;background:#0d0d0d;border-radius:8px;border:1px solid #222;">
+        <p style="font-size:0.78rem;color:var(--text-secondary);margin:0 0 0.4rem;font-weight:700;">Required columns in your Excel file:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
+          <% ['customer_name','game_title','days','account_type','start_date','end_date','price','status','notes'].forEach(col => { %>
+            <code style="background:#1a1a1a;border:1px solid #333;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.75rem;color:#a78bfa;"><%= col %></code>
+          <% }) %>
+        </div>
+        <p style="font-size:0.75rem;color:#666;margin:0.5rem 0 0;">account_type: <b style="color:#ccc">nt</b> / <b style="color:#ffc400">tr</b> / <b style="color:#60a5fa">ps4</b> &nbsp;|&nbsp; status: <b style="color:#ccc">renting</b> / <b style="color:#ccc">done</b> / <b style="color:#ccc">bought</b> / <b style="color:#ccc">reservation</b> &nbsp;|&nbsp; dates: YYYY-MM-DD</p>
+      </div>
+      </div></div><!-- /accordion import -->
+
+    <!-- Add Customer Form -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">👤</div>
+          <div><div class="sa-title">Add New Customer</div><div class="sa-desc">Log a rental, sale, or reservation manually</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
+      <h2 style="display:none;">👤 Add New Customer</h2>
+      <form method="POST" action="/admin/customers/add">
+        <div class="form-grid">
+
+          <div class="form-group full">
+            <label>Customer Name *</label>
+            <input type="text" name="customer_name" placeholder="e.g. Juan dela Cruz" required>
+          </div>
+
+          <div class="form-group full">
+            <label id="cust_game_label">Game Rented *</label>
+            <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
+              <option value="">— Select a game —</option>
+              <!-- Regular games (shown for renting/done/bought) -->
+              <optgroup label="Available Games" id="cust_optgroup_regular">
+                <% games.forEach(g => { %>
+                <option value="<%= g.id %>" data-type="regular"
+                  data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
+                  data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
+                  data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
+                  data-slots="<%= g.available_slots %>">
+                  <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
+                </option>
+                <% }) %>
+              </optgroup>
+              <!-- Upcoming games (shown for reservation) -->
+              <optgroup label="Coming Soon Games" id="cust_optgroup_upcoming" style="display:none;">
+                <% upcoming.forEach(g => { %>
+                <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>"
+                  data-nt7="<%= g.nt_price_7d||0 %>" data-nt30="<%= g.nt_price_30d||0 %>"
+                  data-tr7="<%= g.tr_price_7d||0 %>" data-tr30="<%= g.tr_price_30d||0 %>">
+                  🔜 <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
+                </option>
+                <% }) %>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="form-group" id="cust_days_group">
+            <label>Rental Duration</label>
+            <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
+              <option value="7">Weekly</option>
+              <option value="30">Monthly</option>
+              <option value="custom">✏️ Custom...</option>
+            </select>
+            <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365" placeholder="Enter number of days"
+              hidden oninput="updateCustEndDate()">
+          </div>
+
+          <div class="form-group">
+            <label>Account Type</label>
+            <select name="account_type" id="cust_type" onchange="updateCustPrice()">
+              <option value="nt">🎮 Non-Trophy</option>
+              <option value="tr">🏆 Trophy Account</option>
+              <option value="ps4">🕹️ PS4 Primary</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" name="start_date" id="cust_start" onchange="updateCustEndDate()">
+          </div>
+
+          <div class="form-group">
+            <label>End Date <span style="color:#555;font-size:0.72rem;">(auto-calculated)</span></label>
+            <input type="date" name="end_date" id="cust_end">
+          </div>
+
+          <div class="form-group">
+            <label>Price (₱) <span style="color:#555;font-size:0.72rem;">(auto-filled)</span></label>
+            <input type="number" name="price" id="cust_price" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" id="cust_status" onchange="toggleCustStatus(this.value)">
+              <option value="renting">🟢 Currently Renting</option>
+              <option value="reservation">🔖 Reservation</option>
+              <option value="done">✅ Done</option>
+              <option value="bought">🛒 Bought</option>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label>🗂️ Assign to Account Slot <span style="color:#555;font-size:0.72rem;">(optional — marks that slot rented/buyed on the Accounts dashboard)</span></label>
+            <% const SLOT_LBL = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
+            <select name="account_assign">
+              <option value="">— None —</option>
+              <% (accounts||[]).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => { const s=a.slots[t]; if (s && s.enabled && s.status==='open') { %>
+                <option value="<%= a.id %>:<%= t %>"><%= a.label %> — <%= SLOT_LBL[t] %></option>
+              <% } }) }) %>
+            </select>
+          </div>
+
+          <div class="form-group full">
+            <label>Notes <span style="color:#555;font-size:0.72rem;">(optional)</span></label>
+            <input type="text" name="notes" placeholder="e.g. Paid via GCash, needs follow-up...">
+          </div>
+
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" style="background:#166534;">Add Customer</button>
+          <button type="reset" class="btn btn-outline">Clear</button>
+        </div>
+      </form>
+      <script>
+      // Same promo the game-detail page applies — an admin-entered price should
+      // land on the number a walk-in customer actually pays today, not the base
+      // rate. PS4 Primary borrows the Non-Trophy price/discount: games have no
+      // PS4-specific price fields of their own (matches computeSwapReferencePrice
+      // in server.js, the other place that needs a PS4 reference price).
+      const ADMIN_PROMO = <%- JSON.stringify({
+        enabled: (settings.promo || {}).enabled || false,
+        discounts: (settings.promo || {}).discounts || {},
+        buyPromoEnabled: (settings.promo || {}).buy_promo_enabled || false,
+        buyPromoPct: (settings.promo || {}).buy_promo_pct || 0
+      }) %>;
+      function getCustDays() {
+        const sel = document.getElementById('cust_days');
+        if (sel.value === 'custom') return parseInt(document.getElementById('cust_custom_days').value) || 0;
+        return parseInt(sel.value) || 0;
+      }
+      function toggleCustCustomDays(val) {
+        const inp = document.getElementById('cust_custom_days');
+        if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
+        else inp.setAttribute('hidden', '');
+      }
+      function toggleCustStatus(status) {
+        const daysGroup = document.getElementById('cust_days_group');
+        const gameLabel = document.getElementById('cust_game_label');
+        const grpRegular = document.getElementById('cust_optgroup_regular');
+        const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
+        const gameSel = document.getElementById('cust_game');
+
+        const currentIsUpcoming = gameSel.value.startsWith('upcoming_');
+
+        if (status === 'reservation') {
+          // Show only coming soon games
+          daysGroup.removeAttribute('hidden');
+          grpRegular.style.display = 'none';
+          grpUpcoming.style.display = '';
+          gameLabel.textContent = 'Coming Soon Game *';
+          // Only reset if the current selection isn't already an upcoming game —
+          // switching between non-reservation statuses (e.g. renting -> done)
+          // shouldn't blank out a selection that's still valid.
+          if (!currentIsUpcoming) gameSel.value = '';
+        } else {
+          // Show only regular games
+          grpRegular.style.display = '';
+          grpUpcoming.style.display = 'none';
+          gameLabel.textContent = 'Game Rented *';
+          if (currentIsUpcoming) gameSel.value = '';
+          if (status === 'bought') {
+            daysGroup.setAttribute('hidden', '');
+          } else {
+            daysGroup.removeAttribute('hidden');
+            updateCustEndDate();
+          }
+        }
+        // Bought uses a flat buy price, not a per-duration rent price — the
+        // price field needs recomputing whenever status crosses that line.
+        updateCustPrice();
+      }
+      function updateCustPrice() {
+        const sel = document.getElementById('cust_game');
+        const opt = sel.options[sel.selectedIndex];
+        const days = document.getElementById('cust_days').value;
+        const type = document.getElementById('cust_type').value === 'ps4' ? 'nt' : document.getElementById('cust_type').value;
+        const status = document.getElementById('cust_status').value;
+        if (!opt.value) return;
+
+        let base = 0;
+        let pct = 0;
+        if (status === 'bought') {
+          base = parseInt(opt.dataset['buy' + type], 10) || 0;
+          pct = ADMIN_PROMO.buyPromoEnabled ? ADMIN_PROMO.buyPromoPct : 0;
+        } else if (days !== 'custom') {
+          // Only auto-fill price for standard durations — a custom day count
+          // has no matching promo bracket, so it's left to manual entry.
+          base = parseInt(opt.dataset[type + days], 10) || 0;
+          pct = ADMIN_PROMO.enabled ? (ADMIN_PROMO.discounts[days] || 0) : 0;
+        }
+        if (base > 0) {
+          const final = pct > 0 ? Math.round(base * (1 - pct / 100)) : base;
+          document.getElementById('cust_price').value = final;
+        }
+        updateCustEndDate();
+      }
+      function updateCustEndDate() {
+        const start = document.getElementById('cust_start').value;
+        const days = getCustDays();
+        if (!start || !days) return;
+        const d = new Date(start + 'T00:00:00');
+        d.setDate(d.getDate() + days);
+        // toISOString() converts to UTC first — in a positive-offset timezone
+        // (this business runs on Manila time, UTC+8) local midnight becomes
+        // 16:00 the PREVIOUS day in UTC, silently shifting the date back by
+        // one. Format from the Date object's own local fields instead.
+        const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+        document.getElementById('cust_end').value = y + '-' + m + '-' + dd;
+      }
+      // Set today as default start date
+      document.getElementById('cust_start').value = new Date().toISOString().slice(0,10);
+      updateCustEndDate();
+      </script>
+    </div>
+
+      </div></div><!-- /accordion add-customer -->
+
+    <!-- Customers Table -->
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
+          <div><div class="sa-title">All Customers (<%= customers.length %>)</div><div class="sa-desc">View, filter, edit & manage all rental records</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+    <div class="table-card" style="margin-top:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+        <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
+        <div style="position:relative;flex:0 0 260px;">
+          <input type="text" id="custSearch" placeholder="Search name or game..." oninput="searchCustomers(this.value)"
+            style="width:100%;padding:0.45rem 0.9rem 0.45rem 2.2rem;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;font-size:0.85rem;box-sizing:border-box;">
+          <span style="position:absolute;left:0.6rem;top:50%;transform:translateY(-50%);color:#555;font-size:0.9rem;pointer-events:none;">🔍</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <button onclick="filterCustomers('all')" id="cf-all" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">All</button>
+        <button onclick="filterCustomers('renting')" id="cf-renting" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#166534;color:#22c55e;">🟢 Renting</button>
+        <button onclick="filterCustomers('reservation')" id="cf-reservation" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#4a1a6a;color:#c084fc;">🔖 Reservation</button>
+        <button onclick="filterCustomers('bought')" id="cf-bought" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;border-color:#1e3a5f;color:#60a5fa;">🛒 Bought</button>
+        <% if (showHistory) { %>
+        <button onclick="filterCustomers('done')" id="cf-done" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;">✅ Done</button>
+        <a href="/admin?tab=customers" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;text-decoration:none;margin-left:auto;">⚡ Hide finished (faster)</a>
+        <% } else { %>
+        <a href="/admin?tab=customers&history=1" class="btn btn-outline" style="padding:0.3rem 0.85rem;font-size:0.78rem;font-weight:700;text-decoration:none;margin-left:auto;">✅ Show finished (<%= customers.filter(c => c.status === 'done').length %>)</a>
+        <% } %>
+      </div>
+      <% if (!showHistory) { %>
+      <div style="font-size:0.78rem;color:#555;margin-bottom:0.85rem;">
+        Showing live rentals only. <%= customers.filter(c => c.status === 'done').length %> finished rentals are hidden to keep this page fast — all totals and reports still include them.
+      </div>
+      <% } %>
+
+      <% if (customers.length === 0) { %>
+        <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
+      <% } else { %>
+            <%
+              // Pre-render every message server-side so lib/templates.js stays the
+              // single implementation of the substitution rules — the browser only
+              // copies a finished string.
+              const p = settings.promo || {};
+              const tplDeposit = p.deposit != null ? p.deposit : 100;
+              const tplLateFee = p.late_fee_per_day != null ? p.late_fee_per_day : 20;
+              const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit, lateFeePerDay: tplLateFee }, extra));
+            %>
+            <%
+              // Reuses the same day arithmetic the table rows below already do,
+              // rather than introducing a second definition of "due tomorrow".
+              // dl <= 1 covers overdue (negative) too: a rental still marked
+              // 'renting' past its end date is an account nobody has returned,
+              // which is exactly who most needs chasing. The ascending sort then
+              // puts the most-overdue first without any extra ordering rule.
+              const remToday = new Date(); remToday.setHours(0,0,0,0);
+              const needsReminder = customers.filter(c => {
+                if (c.status !== 'renting' || !c.end_date) return false;
+                const end = new Date(c.end_date + 'T00:00:00');
+                const dl = Math.ceil((end - remToday) / 86400000);
+                return dl <= 1;
+              }).map(c => {
+                const end = new Date(c.end_date + 'T00:00:00');
+                const dl = Math.ceil((end - remToday) / 86400000);
+                const kind = dl < 0 ? 'expiry_overdue' : dl === 0 ? 'expiry_today' : 'expiry_tomorrow';
+                return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
+              }).sort((a, b) => a.dl - b.dl);
+            %>
+            <% if (needsReminder.length) { %>
+            <div class="rem-panel">
+              <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
+              <% needsReminder.forEach(r => { %>
+              <div class="rem-row">
+                <div class="rem-info">
+                  <span class="rem-name"><%= r.c.customer_name %></span>
+                  <span class="rem-badge <%= r.dl < 0 ? 'rem-overdue' : r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl < 0 ? 'Overdue by ' + r.overdueBy + 'd' : r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
+                  <div class="rem-meta"><%= r.c.game_title %> · <%= r.c.account_type === 'tr' ? 'Trophy' : r.c.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %> · <%= r.c.days %> days</div>
+                </div>
+                <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c, { daysOverdue: r.overdueBy }) %>"><%= r.dl < 0 ? '📋 Copy overdue notice' : '📋 Copy reminder' %></button>
+              </div>
+              <% }) %>
+            </div>
+            <% } %>
+      <div style="max-height:520px;overflow-y:auto;overflow-x:auto;border-radius:8px;">
+        <table class="games-table" id="customersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Game</th>
+              <th>Duration</th>
+              <th>Type</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Price</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%
+              // Only the rendered rows are narrowed — `customers` itself stays whole
+              // so every count, total, and dashboard figure above is unaffected.
+              const tableCustomers = showHistory ? customers : customers.filter(c => c.status !== 'done');
+            %>
+            <% tableCustomers.forEach(c => {
+              const isRenting = c.status === 'renting';
+              const isBought = c.status === 'bought';
+              const isReservation = c.status === 'reservation';
+              const endDate = c.end_date ? new Date(c.end_date + 'T00:00:00') : null;
+              const today = new Date(); today.setHours(0,0,0,0);
+              const isOverdue = isRenting && endDate && endDate < today;
+              const daysLeft = endDate ? Math.ceil((endDate - today) / 86400000) : null;
+            %>
+            <tr class="cust-row" data-status="<%= c.status %>" data-name="<%= c.customer_name.toLowerCase() %>" data-game="<%= c.game_title.toLowerCase() %>" style="<%= isOverdue ? 'background:rgba(239,68,68,0.06);' : '' %>">
+              <td>
+                <div style="font-weight:700;"><%= c.customer_name %></div>
+                <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
+              </td>
+              <td style="font-size:0.85rem;">
+                <strong><%= c.game_title %></strong>
+                <% if (isReservation && String(c.game_id).startsWith('upcoming_')) { %>
+                <div style="margin-top:0.2rem;"><span style="background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:6px;padding:0.1rem 0.45rem;font-size:0.65rem;color:#a855f7;font-weight:700;">🔜 Coming Soon</span></div>
+                <% } %>
+                <% if (c.swap_history && c.swap_history.length) { const lastSwap = c.swap_history[c.swap_history.length - 1]; %>
+                <div style="margin-top:0.2rem;font-size:0.68rem;color:#888;" title="Swapped from <%= lastSwap.from_game_title %> to <%= lastSwap.to_game_title %> on <%= new Date(lastSwap.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) %>">
+                  🔄 Swapped from <%= lastSwap.from_game_title %><% if (lastSwap.top_up > 0) { %> <span style="color:#fbbf24;font-weight:700;">(+₱<%= lastSwap.top_up %>)</span><% } %>
+                </div>
+                <% } %>
+              </td>
+              <td style="color:#aaa;font-size:0.85rem;"><%= (isBought || isReservation) ? '—' : c.days + ' days' %></td>
+              <td>
+                <% if (c.account_type === 'tr') { %>
+                  <span style="color:#ffc400;font-size:0.78rem;font-weight:700;">🏆 Trophy</span>
+                <% } else if (c.account_type === 'ps4') { %>
+                  <span style="color:#60a5fa;font-size:0.78rem;font-weight:700;">🕹️ PS4 Primary</span>
+                <% } else { %>
+                  <span style="color:#aaa;font-size:0.78rem;">🎮 Non-Trophy</span>
+                <% } %>
+              </td>
+              <td style="font-size:0.82rem;color:#aaa;"><%= c.start_date ? new Date(c.start_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—' %></td>
+              <td style="font-size:0.82rem;">
+                <% if (c.end_date) { %>
+                  <span style="color:<%= isOverdue ? '#ef4444' : (daysLeft !== null && daysLeft <= 2 && isRenting ? '#f59e0b' : '#aaa') %>;">
+                    <%= new Date(c.end_date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) %>
+                  </span>
+                  <% if (isRenting && daysLeft !== null) { %>
+                    <div style="font-size:0.68rem;color:<%= isOverdue ? '#ef4444' : (daysLeft <= 2 ? '#f59e0b' : '#555') %>;">
+                      <%= isOverdue ? 'Overdue by '+Math.abs(daysLeft)+'d' : daysLeft === 0 ? 'Due today' : daysLeft+'d left' %>
+                    </div>
+                  <% } %>
+                <% } else { %>—<% } %>
+              </td>
+              <td style="font-weight:700;color:var(--ps-blue);">₱<%= c.price || 0 %></td>
+              <td>
+                <form method="POST" action="/admin/customers/status/<%= c.id %>" style="display:inline;">
+                  <% if (isRenting) { %>
+                    <input type="hidden" name="status" value="done">
+                    <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Done">🟢 Renting</button>
+                  <% } else if (isReservation) { %>
+                    <span style="background:#2d1a4a;color:#c084fc;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🔖 Reserved</span>
+                  <% } else if (isBought) { %>
+                    <span style="background:#1e3a5f;color:#60a5fa;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🛒 Bought</span>
+                  <% } else { %>
+                    <input type="hidden" name="status" value="renting">
+                    <button type="submit" style="background:#222;color:#aaa;border:1px solid #333;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Renting">✅ Done</button>
+                  <% } %>
+                </form>
+              </td>
+              <td>
+                <div class="action-btns">
+                  <% if (isRenting || isReservation) { %>
+                  <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('confirmation', c) %>" title="Copy confirmation message">📋</button>
+                  <% } %>
+                  <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
+                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
+                    <button type="submit" class="btn-delete">🗑</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+
+    <script>
+    let _custStatus = 'all';
+    function filterCustomers(status) {
+      _custStatus = status;
+      applyCustomerFilter();
+      ['all','renting','reservation','bought','done'].forEach(s => {
+        const btn = document.getElementById('cf-'+s);
+        if (!btn) return;
+        btn.style.background = s === status ? 'var(--ps-blue)' : '';
+        btn.style.color = s === status ? '#000' : '';
+        btn.style.borderColor = s === status ? 'var(--ps-blue)' : '';
+      });
+    }
+    function searchCustomers(q) { applyCustomerFilter(); }
+    function applyCustomerFilter() {
+      const q = (document.getElementById('custSearch')?.value || '').toLowerCase().trim();
+      document.querySelectorAll('.cust-row').forEach(r => {
+        const statusOk = _custStatus === 'all' || r.dataset.status === _custStatus;
+        const searchOk = !q || r.dataset.name.includes(q) || r.dataset.game.includes(q);
+        r.style.display = (statusOk && searchOk) ? '' : 'none';
+      });
+    }
+    </script>
+    <script>
+    let _gamePlatform = 'all';
+    let _gameNewOnly = false;
+    function filterGamesPlatform(platform) {
+      _gamePlatform = platform;
+      applyGameFilter();
+      ['all','PS5','PS4','PS4/PS5'].forEach(p => {
+        const btn = document.getElementById('gf-'+p);
+        if (!btn) return;
+        btn.style.background = p === platform ? 'var(--ps-blue)' : '';
+        btn.style.color = p === platform ? '#000' : '';
+        btn.style.borderColor = p === platform ? 'var(--ps-blue)' : '';
+      });
+    }
+    function toggleGamesNewOnly() {
+      _gameNewOnly = !_gameNewOnly;
+      const btn = document.getElementById('gf-new');
+      btn.style.background = _gameNewOnly ? '#22c55e' : '';
+      btn.style.color = _gameNewOnly ? '#000' : '';
+      applyGameFilter();
+    }
+    function applyGameFilter() {
+      const q = (document.getElementById('gameSearch')?.value || '').toLowerCase().trim();
+      let shown = 0, total = 0;
+      document.querySelectorAll('.game-row').forEach(r => {
+        total++;
+        const platformOk = _gamePlatform === 'all' || r.dataset.platform === _gamePlatform;
+        const newOk = !_gameNewOnly || r.dataset.new === '1';
+        const searchOk = !q || r.dataset.search.includes(q);
+        const visible = platformOk && newOk && searchOk;
+        r.style.display = visible ? '' : 'none';
+        if (visible) shown++;
+      });
+      const countEl = document.getElementById('gameFilterCount');
+      if (countEl) countEl.textContent = (shown === total) ? '' : ('Showing ' + shown + ' of ' + total + ' games');
+    }
+    </script>
+    <script>
+    (function(){
+      // navigator.clipboard needs a secure context. Production is HTTPS so this
+      // works, but on plain-http localhost the API is absent — fall back to a
+      // visible textarea the owner can copy from manually rather than doing nothing.
+      function fallbackCopy(text, btn) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;left:1rem;right:1rem;bottom:1rem;height:9rem;z-index:9999;font-size:0.8rem;';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        if (ok) { ta.remove(); flash(btn, '✅ Copied'); }
+        else { flash(btn, '⬇ Copy from the box'); setTimeout(() => ta.remove(), 15000); }
+      }
+      function flash(btn, text) {
+        if (!btn.dataset.original) btn.dataset.original = btn.textContent;
+        const original = btn.dataset.original;
+        btn.textContent = text;
+        clearTimeout(btn._flashTimer);
+        btn._flashTimer = setTimeout(() => { btn.textContent = original; }, 1800);
+      }
+      document.addEventListener('click', function(e){
+        const btn = e.target.closest('.rem-copy');
+        if (!btn) return;
+        const msg = btn.dataset.msg || '';
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(msg).then(() => flash(btn, '✅ Copied')).catch(() => fallbackCopy(msg, btn));
+        } else {
+          fallbackCopy(msg, btn);
+        }
+      });
+    })();
+    </script>
+      </div></div></div><!-- /accordion customers-table -->
+
+  </div><!-- /tab-customers -->
