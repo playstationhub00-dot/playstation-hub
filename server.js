@@ -9,6 +9,7 @@ const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
 const orders = require('./lib/orders');
+const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 
@@ -520,6 +521,12 @@ db.write = function() {
 // blob sync already maintains rather than opening a second pool.
 orders.init(_getMongoDb);
 
+// Game requests are customer-written too, so they follow orders onto MongoDB
+// rather than the blob. The unique slug index is what stops two simultaneous
+// requests for the same title creating two rows.
+gameRequests.init(_getMongoDb);
+gameRequests.ensureIndexes().catch(e => console.error('[requests] ensureIndexes', e.message));
+
 function normalizeCustomer(c) {
   if (!c) return c;
   c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
@@ -846,6 +853,55 @@ function computeSwapReferencePrice(game, { days, accountType, isBought, promo })
 
 app.get('/how-it-works', (req, res) => {
   res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+// Public request board. Shows approved and stocked entries ranked by votes;
+// pending entries stay hidden until the owner approves them.
+app.get('/requests', async (req, res) => {
+  const rows = await gameRequests.listPublic();
+  res.render('requests', {
+    requests: rows,
+    firstName: gameRequests.firstName,
+    settings: getSiteSettings(),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    msg: req.query.msg || null
+  });
+});
+
+app.post('/requests/add', async (req, res) => {
+  if (rateLimited('request_add', clientIp(req), 5, 10 * 60 * 1000)) {
+    return res.redirect('/requests?msg=rate');
+  }
+  const title = (req.body.title || '').trim();
+  const fb_name = (req.body.fb_name || '').trim();
+  if (!title || !fb_name) return res.redirect('/requests?msg=missing');
+
+  // Guard: never let a game we already stock become a request. The client checks
+  // this too for immediate feedback, but the client can be bypassed.
+  const slug = gameRequests.slugify(title);
+  const already = getGames().find(g => gameSlug(g.title) === slug);
+  if (already) return res.redirect('/game/' + slug);
+
+  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null });
+  if (r.ok) return res.redirect('/requests?msg=submitted');
+  if (r.reason === 'exists') {
+    // Someone already asked for this — add their vote rather than refusing.
+    const v = await gameRequests.addVote(r.slug, { fb_name, session_id: req.sessionId || null });
+    return res.redirect('/requests?msg=' + (v.ok ? 'voted' : v.reason === 'duplicate' ? 'already' : 'error'));
+  }
+  return res.redirect('/requests?msg=error');
+});
+
+app.post('/requests/:slug/vote', async (req, res) => {
+  if (rateLimited('request_vote', clientIp(req), 15, 10 * 60 * 1000)) {
+    return res.redirect('/requests?msg=rate');
+  }
+  const fb_name = (req.body.fb_name || '').trim();
+  if (!fb_name) return res.redirect('/requests?msg=missing');
+  const v = await gameRequests.addVote(req.params.slug, { fb_name, session_id: req.sessionId || null });
+  if (v.ok) return res.redirect('/requests?msg=voted');
+  return res.redirect('/requests?msg=' + (v.reason === 'duplicate' ? 'already' : v.reason === 'not_found' ? 'error' : 'closed'));
 });
 
 app.get('/how-to-sign-in', (req, res) => {
@@ -2015,6 +2071,32 @@ app.post('/admin/orders/:ref/cancel', requireAuth, async (req, res) => {
   const r = await orders.transition(order.ref, 'cancelled', {});
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_cancelled');
+});
+
+app.post('/admin/requests/:slug/approve', requireAuth, async (req, res) => {
+  await gameRequests.setStatus(req.params.slug, 'approved', {});
+  res.redirect('/admin?tab=games&msg=request_approved');
+});
+
+app.post('/admin/requests/:slug/reject', requireAuth, async (req, res) => {
+  await gameRequests.setStatus(req.params.slug, 'rejected', {});
+  res.redirect('/admin?tab=games&msg=request_rejected');
+});
+
+// Marks a request fulfilled and links it to the catalogue entry, so the board can
+// show "Now available" with a working link. game_id is optional: the owner may
+// stock a game before its catalogue row exists.
+app.post('/admin/requests/:slug/stock', requireAuth, async (req, res) => {
+  const gameId = parseInt(req.body.game_id);
+  await gameRequests.setStatus(req.params.slug, 'stocked', {
+    game_id: Number.isFinite(gameId) ? gameId : null
+  });
+  res.redirect('/admin?tab=games&msg=request_stocked');
+});
+
+app.post('/admin/requests/:slug/delete', requireAuth, async (req, res) => {
+  await gameRequests.remove(req.params.slug);
+  res.redirect('/admin?tab=games&msg=request_deleted');
 });
 
 app.post('/admin/online', requireAuth, (req, res) => {
