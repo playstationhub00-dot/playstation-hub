@@ -1103,6 +1103,26 @@ function adjustPs4Slots(gameId, delta) {
   }).write();
 }
 
+// A Coming Soon game's slot counts are stored as the total the owner
+// configured — they don't shrink on their own when a reservation comes in.
+// This subtracts active reservations (customers rows with status:'reservation'
+// against this game) so "slots left" reflects what's actually still open.
+// Single source of truth for that subtraction — every place that shows a
+// Coming Soon slot count to a customer must go through this, or it'll drift
+// out of sync with reality the way the homepage/browse cards just did.
+function resolveUpcomingSlots(game) {
+  const gameKey = 'upcoming_' + game.id;
+  const reservations = getCustomers().filter(c =>
+    String(c.game_id) === gameKey && c.status === 'reservation'
+  );
+  const reservedNt = reservations.filter(c => c.account_type === 'nt').length;
+  const reservedTr = reservations.filter(c => c.account_type === 'tr').length;
+  return Object.assign({}, game, {
+    non_trophy_slots: Math.max(0, (game.non_trophy_slots || 0) - reservedNt),
+    trophy_slots:     Math.max(0, (game.trophy_slots     || 0) - reservedTr),
+  });
+}
+
 function sortUpcoming(list) {
   return [...list].sort((a, b) => {
     const ra = a.rank || 0;
@@ -1121,7 +1141,7 @@ function sortUpcoming(list) {
 app.get('/', (req, res) => {
   const all = getGames().map(resolveGamePrices).map(resolveSlotDays).sort((a, b) => a.title.localeCompare(b.title));
   const featured = [...all].sort((a, b) => (b.renters || 0) - (a.renters || 0)).slice(0, 10);
-  const upcoming = sortUpcoming(getUpcoming());
+  const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 10);
   const psplusPrices = getPsplusPrices();
   const homePsplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
@@ -1361,7 +1381,7 @@ app.get('/browse', (req, res) => {
   if (newOnly === '1') games = games.filter(isAddedThisMonth);
   games.sort((a, b) => a.title.localeCompare(b.title));
   const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
-  const upcoming = sortUpcoming(getUpcoming());
+  const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   // PS Plus monthly entries sorted newest first
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
@@ -2678,17 +2698,7 @@ app.get('/upcoming/:slug', (req, res) => {
   }
   if (!game) return res.redirect('/browse');
 
-  // Subtract active reservations from slot counts
-  const gameKey = 'upcoming_' + game.id;
-  const reservations = getCustomers().filter(c =>
-    String(c.game_id) === gameKey && c.status === 'reservation'
-  );
-  const reservedNt = reservations.filter(c => c.account_type === 'nt').length;
-  const reservedTr = reservations.filter(c => c.account_type === 'tr').length;
-  const resolvedGame = Object.assign({}, game, {
-    non_trophy_slots: Math.max(0, (game.non_trophy_slots || 0) - reservedNt),
-    trophy_slots:     Math.max(0, (game.trophy_slots     || 0) - reservedTr),
-  });
+  const resolvedGame = resolveUpcomingSlots(game);
 
   res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null });
 });
