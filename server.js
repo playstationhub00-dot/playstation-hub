@@ -2176,7 +2176,7 @@ app.post('/admin/orders/:ref/delete', requireAuth, async (req, res) => {
 
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
-app.get('/api/search-index', (req, res) => {
+app.get('/api/search-index', async (req, res) => {
   const accountSummaryMap = buildAccountSummaryMap();
   const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {
     const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
@@ -2223,7 +2223,24 @@ app.get('/api/search-index', (req, res) => {
       });
     });
   });
-  res.json([...available, ...soon, ...psplus, ...psplusMonthly]);
+  // Approved requests only — pending is unmoderated text that must never reach
+  // a public page, stocked is already a catalogue entry and would just
+  // duplicate that row. Wrapped so a MongoDB failure yields no requested
+  // section rather than breaking this entire endpoint: an unhandled throw
+  // here would silently disable nav search sitewide, a far worse outcome
+  // than the requested section simply being absent for one request.
+  let requested = [];
+  try {
+    const approvedRequests = (await gameRequests.listPublic()).filter(r => r.status === 'approved');
+    requested = approvedRequests.map(r => ({
+      t: r.title, v: (r.voters || []).length, u: '/requests#req-' + r.slug,
+      y: 'requested', img: r.cover_image || ''
+    }));
+  } catch (e) {
+    console.error('[search-index] requests lookup failed', e.message);
+  }
+
+  res.json([...available, ...soon, ...psplus, ...psplusMonthly, ...requested]);
 });
 
 app.get('/game/:slug', (req, res) => {
