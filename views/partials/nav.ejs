@@ -108,6 +108,7 @@
     const now = matches.filter(x => x.y === 'now').slice(0, 6);
     const psplus = matches.filter(x => x.y === 'psplus').slice(0, 3);
     const soon = matches.filter(x => x.y === 'soon').slice(0, 3);
+    const requested = matches.filter(x => x.y === 'requested').slice(0, 3);
 
     let h = '';
     if (now.length) {
@@ -152,16 +153,27 @@
           '<span class="navsearch-badge-soon">SOON</span></a>';
       });
     }
+    if (requested.length) {
+      h += '<div class="navsearch-head">Requested by customers</div>';
+      requested.forEach(x => {
+        const reqThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🙋';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + reqThumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.v + ' vote' + (x.v !== 1 ? 's' : '') + '</span></div></div>' +
+          '<span class="navsearch-badge-requested">REQUESTED</span></a>';
+      });
+    }
     if (!h) {
       h = '<div class="navsearch-empty">' +
         '<div class="navsearch-empty-ico">🔍</div>' +
         '<div class="navsearch-empty-title">No games match &ldquo;' + esc(term.trim()) + '&rdquo;</div>' +
-        '<div class="navsearch-empty-sub">We might still be able to get it for you — message us and we\'ll check.</div>' +
+        '<div class="navsearch-empty-sub">Not in our library yet — request it and we\'ll stock the most-wanted titles first.</div>' +
         '<div class="navsearch-empty-acts">' +
-        '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn">Message Us</a>' +
+        '<a href="/requests?title=' + encodeURIComponent(term.trim()) + '" class="navsearch-empty-btn">Request this game</a>' +
+        '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn2">Message Us</a>' +
         '<a href="/browse" class="navsearch-empty-btn2">Browse All Games</a>' +
         '</div></div>';
-    } else if (matches.length > now.length + psplus.length + soon.length) {
+    } else if (matches.length > now.length + psplus.length + soon.length + requested.length) {
       h += '<a class="navsearch-all" href="/browse?search=' + encodeURIComponent(term.trim()) + '">See all ' + matches.length + ' results →</a>';
     }
     box.innerHTML = h;
