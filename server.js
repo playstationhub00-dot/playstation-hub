@@ -865,7 +865,8 @@ app.get('/requests', async (req, res) => {
     settings: getSiteSettings(),
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),
-    msg: req.query.msg || null
+    msg: req.query.msg || null,
+    prefillTitle: (req.query.title || '').slice(0, 200)
   });
 });
 
