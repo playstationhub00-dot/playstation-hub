@@ -1350,44 +1350,106 @@ app.get('/bundle/:slug', (req, res) => {
   });
 });
 
-app.get('/browse', (req, res) => {
-  const { search, platform, genre, unit, newOnly } = req.query;
-  const accountSummaryMap = buildAccountSummaryMap();
-  let games = getGames().map(resolveGamePrices).map(resolveSlotDays);
-  if (search) {
-    const q = search.toLowerCase();
-    // A bundle also matches on the titles it contains, so searching a game that's
-    // only inside the bundle still surfaces it here as well as in the nav search.
+// Applies the Browse page's filter state to a games array. Shared by the route's
+// own result set and by the per-chip count computation below it, so there is
+// exactly one implementation of what each filter means — the alternative (one
+// copy for "what results show" and a second copy for "what count each chip
+// displays") is exactly the kind of duplicated-logic bug that has already
+// shipped twice this session (Coming Soon slot counts, a filter script split
+// from its markup).
+function applyBrowseFilters(games, state, accountSummaryMap) {
+  let out = games;
+  if (state.search) {
+    const q = state.search.toLowerCase();
     const bundleContains = (g) => {
       const b = resolveBundleInfo(g);
       return b ? b.games.some(bg => bg.title.toLowerCase().includes(q)) : false;
     };
-    games = games.filter(g =>
+    out = out.filter(g =>
       g.title.toLowerCase().includes(q) ||
       (g.description && g.description.toLowerCase().includes(q)) ||
       bundleContains(g)
     );
   }
-  if (platform) games = games.filter(g => g.platform === platform || g.platform === 'PS4/PS5');
-  if (genre) games = games.filter(g => g.genre === genre);
-  // Availability-by-unit filter: PS4 = has an open PS4 Primary slot;
-  // PS5 = has an open Trophy or Non-Trophy slot, regardless of PS4 Primary status.
-  if (unit === 'ps4' || unit === 'ps5') {
-    games = games.filter(g => {
+  if (state.ps4) out = out.filter(g => g.platform === 'PS4' || g.platform === 'PS4/PS5');
+  if (state.genre) out = out.filter(g => g.genre === state.genre);
+  if (state.avail) {
+    out = out.filter(g => {
       const avail = computeAvailability(g, accountSummaryMap[g.id]);
-      return unit === 'ps4' ? (avail.showPs4 && avail.ps4Avail) : (avail.trAvail || avail.ntAvail);
+      // Console-aware: a PS4 owner cannot use a free PS5 trophy/non-trophy slot,
+      // so with the PS4 chip active, "available" must mean PS4 Primary is open —
+      // not "available on some slot type this customer cannot use."
+      return state.ps4 ? (avail.showPs4 && avail.ps4Avail) : (avail.trAvail || avail.ntAvail || (avail.showPs4 && avail.ps4Avail));
     });
   }
-  // Same 11-day "new" window as the site-wide NEW badge (isAddedThisMonth, server.js).
-  if (newOnly === '1') games = games.filter(isAddedThisMonth);
+  if (state.buy) out = out.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
+  if (state.bundle) out = out.filter(g => !!g.is_bundle);
+  if (state.newOnly) out = out.filter(isAddedThisMonth);
+  return out;
+}
+
+app.get('/browse', (req, res) => {
+  const search = req.query.search || '';
+  const genre = req.query.genre || '';
+  const newOnly = req.query.newOnly === '1';
+  // Backward compatibility for bookmarks/links using the old dropdown params.
+  // platform=PS5 / platform=PS4/PS5 is dropped entirely — no chip ever produces
+  // it, and it matched 54 of 55 games, carrying no real filtering information.
+  const legacyUnit = req.query.unit;
+  const avail = req.query.avail === '1' || legacyUnit === 'ps4' || legacyUnit === 'ps5';
+  const ps4 = req.query.ps4 === '1' || req.query.platform === 'PS4' || legacyUnit === 'ps4';
+  const buy = req.query.buy === '1';
+  const bundle = req.query.bundle === '1';
+
+  const accountSummaryMap = buildAccountSummaryMap();
+  const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays);
+  const state = { search, genre, newOnly, avail, ps4, buy, bundle };
+
+  let games = applyBrowseFilters(allGames, state, accountSummaryMap);
   games.sort((a, b) => a.title.localeCompare(b.title));
-  const genres = [...new Set(getGames().map(g => g.genre).filter(Boolean))].sort();
+
+  // Per-chip counts: each computed with that one chip's flag flipped on, every
+  // other currently-active filter left as-is, and never combined with its own
+  // current state — this is what keeps a selected filter switchable instead of
+  // making every other option in its own group collapse to zero.
+  function countWith(overrides) {
+    return applyBrowseFilters(allGames, Object.assign({}, state, overrides), accountSummaryMap).length;
+  }
+  const showChips = [
+    { key: 'avail', label: 'Available now', href: 'avail=1', count: countWith({ avail: true }) },
+    { key: 'newOnly', label: 'New', href: 'newOnly=1', count: countWith({ newOnly: true }) },
+    { key: 'buy', label: 'Can buy', href: 'buy=1', count: countWith({ buy: true }) },
+    { key: 'bundle', label: 'Bundles', href: 'bundle=1', count: countWith({ bundle: true }) }
+  ].filter(c => c.count > 0);
+  const consoleChips = [
+    { key: 'ps4', label: 'Plays on PS4', href: 'ps4=1', count: countWith({ ps4: true }) }
+  ].filter(c => c.count > 0);
+  // A genre only ever appears if the UNFILTERED library has at least 3 games in
+  // it — computed once against allGames, not against the currently filtered
+  // set, so the chip list doesn't shrink further as other filters are applied.
+  const genreCounts = {};
+  allGames.forEach(g => { if (g.genre) genreCounts[g.genre] = (genreCounts[g.genre] || 0) + 1; });
+  const eligibleGenres = Object.keys(genreCounts).filter(g => genreCounts[g] >= 3).sort();
+  const genreChips = eligibleGenres.map(g => ({
+    key: 'genre', label: g, href: 'genre=' + encodeURIComponent(g),
+    // Counted against every active filter except genre itself, so switching
+    // between genres stays possible rather than every other genre reading 0
+    // once one is selected.
+    count: countWith({ genre: g })
+  })).filter(c => c.count > 0);
+
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
-  // PS Plus monthly entries sorted newest first
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   const priceCategories = getPriceCategories();
   const browseSettings = getSiteSettings();
-  res.render('browse', { games, search: search || '', platform: platform || '', genre: genre || '', unit: unit || '', newOnly: newOnly || '', genres, upcoming, psplus, priceCategories, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: browseSettings, promo: browseSettings.promo, accountSummaryMap });
+  const anyFilterActive = !!(search || genre || newOnly || avail || ps4 || buy || bundle);
+  res.render('browse', {
+    games, search, genre, newOnly, avail, ps4, buy, bundle, anyFilterActive,
+    showChips, consoleChips, genreChips,
+    upcoming, psplus, priceCategories,
+    announcement: getAnnouncement(), announcements: getAnnouncements(),
+    settings: browseSettings, promo: browseSettings.promo, accountSummaryMap
+  });
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────
