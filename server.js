@@ -2146,7 +2146,21 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
   if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
     return res.redirect('/admin?tab=orders&msg=order_bad_state');
   }
-  const r = await orders.transition(order.ref, 'awaiting_qr', {});
+  // Reservation orders (Coming Soon downpayments) have no console to sign
+  // into yet, so a Messenger-confirmed payment must settle into 'reserved',
+  // never 'awaiting_qr' — the same distinction POST /order/:ref/payment-proof
+  // already makes for a customer-submitted proof. Neither state machine edge
+  // (awaiting_payment/payment_rejected -> reserved) exists directly, so this
+  // hops through the same intermediate states that route already uses, to
+  // keep the state history honest instead of inventing a new direct edge.
+  if (order.is_reservation) {
+    if (order.state === 'payment_rejected') {
+      await orders.transition(order.ref, 'awaiting_payment', {});
+    }
+    await orders.transition(order.ref, 'verifying_payment', {});
+  }
+  const target = order.is_reservation ? 'reserved' : 'awaiting_qr';
+  const r = await orders.transition(order.ref, target, {});
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_marked_paid');
 });
