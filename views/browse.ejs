@@ -15,39 +15,47 @@
 
 <div class="browse-header">
   <h1>Browse Games</h1>
-  <form class="filters" method="GET" action="/browse">
-    <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
-    <select class="filter-select" name="platform" onchange="this.form.submit()">
-      <option value="">All Platforms</option>
-      <option value="PS5" <%= platform === 'PS5' ? 'selected' : '' %>>PS5</option>
-      <option value="PS4" <%= platform === 'PS4' ? 'selected' : '' %>>PS4</option>
-      <option value="PS4/PS5" <%= platform === 'PS4/PS5' ? 'selected' : '' %>>PS4/PS5</option>
-    </select>
-    <select class="filter-select" name="genre" onchange="this.form.submit()">
-      <option value="">All Genres</option>
-      <% genres.forEach(g => { %>
-        <option value="<%= g %>" <%= genre === g ? 'selected' : '' %>><%= g %></option>
-      <% }) %>
-    </select>
-    <select class="filter-select" name="unit" onchange="this.form.submit()">
-      <option value="">Any Availability</option>
-      <option value="ps4" <%= unit === 'ps4' ? 'selected' : '' %>>🕹️ PS4 Primary Available</option>
-      <option value="ps5" <%= unit === 'ps5' ? 'selected' : '' %>>🏆 PS5 Trophy/Non-Trophy Available</option>
-    </select>
-    <select class="filter-select" name="newOnly" onchange="this.form.submit()">
-      <option value="">All Games</option>
-      <option value="1" <%= newOnly === '1' ? 'selected' : '' %>>🆕 Newly Added Only</option>
-    </select>
-    <button type="submit" class="filter-btn">Search</button>
-    <% if (search || platform || genre || unit || newOnly) { %>
-      <a href="/browse" class="btn-outline btn" style="padding:0.65rem 1rem;font-size:0.875rem;">Clear</a>
+  <div class="chipfilters">
+    <% if (showChips.length) { %>
+    <div class="chipfilters-group">
+      <div class="chipfilters-label">Show</div>
+      <div class="chipfilters-row">
+        <a href="/browse<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="chip<%= !anyFilterActive ? ' chip-active' : '' %>">All games</a>
+        <% showChips.forEach(c => { %>
+          <a href="/browse?<%= c.href %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" class="chip<%=
+            (c.key === 'avail' && avail) || (c.key === 'newOnly' && newOnly) || (c.key === 'buy' && buy) || (c.key === 'bundle' && bundle)
+              ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
+        <% }) %>
+      </div>
+    </div>
     <% } %>
-  </form>
+    <% if (consoleChips.length) { %>
+    <div class="chipfilters-group">
+      <div class="chipfilters-label">Console</div>
+      <div class="chipfilters-row">
+        <% consoleChips.forEach(c => { %>
+          <a href="/browse?<%= c.href %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" class="chip<%= ps4 ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+    <% if (genreChips.length) { %>
+    <div class="chipfilters-group">
+      <div class="chipfilters-label">Genre</div>
+      <div class="chipfilters-row">
+        <% genreChips.forEach(c => { %>
+          <% const isSelected = genre === c.label; %>
+          <a href="<%= isSelected ? '/browse' + (search ? '?search=' + encodeURIComponent(search) : '') : '/browse?' + c.href + (search ? '&search=' + encodeURIComponent(search) : '') %>" class="chip<%= isSelected ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
+  </div>
   <div class="results-count" id="resultsCount"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
 </div>
 
 <!-- UPCOMING GAMES — hidden when searching/filtering -->
-<% if (!search && !platform && !genre && !unit && !newOnly) { %>
+<% if (!anyFilterActive) { %>
 <%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
 <% } %>
 
