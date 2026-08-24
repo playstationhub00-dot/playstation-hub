@@ -9,7 +9,7 @@
 </div>
 <script>
 (function(){
-  const items = <%- JSON.stringify(activeAnnouncements.map(a => a.text)) %>;
+  const items = <%- JSON.stringify(activeAnnouncements.map(a => a.text)).replace(/</g, '\\u003c') %>;
   let idx = 0;
   const textEl = document.getElementById('announcementText');
   const pagerEl = document.getElementById('announcementPager');

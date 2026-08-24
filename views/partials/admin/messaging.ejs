@@ -373,7 +373,11 @@ Message us anytime to reserve your slot! 😊</textarea>
         btn.textContent = '⚡ Send to Reachable Contacts';
       }
 
-      const _blastData = <%- JSON.stringify(blastData) %>;
+      // blastData carries customer_name, which originates from a customer-supplied
+      // fb_name at order time — untrusted text. Escaping '<' to < stops a name
+      // like "</script>..." from breaking out of this inline script and running in
+      // the admin's authenticated session (stored XSS).
+      const _blastData = <%- JSON.stringify(blastData).replace(/</g, '\\u003c') %>;
 
       function generateBlast() {
         const tmpl = document.getElementById('blastTemplate').value;

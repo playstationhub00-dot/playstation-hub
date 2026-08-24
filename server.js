@@ -377,11 +377,26 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// Railway/Cloudflare terminate TLS and forward over http, so Express only sees
+// a secure request via X-Forwarded-Proto — trust the first proxy hop so
+// cookie.secure below actually sends the cookie instead of silently withholding
+// it (which would lock the owner out of login).
+app.set('trust proxy', 1);
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'pshub-secret-2026',
+  // This repo is public, so a hardcoded fallback secret would be world-readable.
+  // Generate a strong random one per boot when the env var is absent — safe by
+  // default. The only cost is that existing sessions don't survive a restart,
+  // which already happens here anyway (sessions live in the default in-memory
+  // store), so the owner simply logs in again after a redeploy.
+  secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 8 } // 8 hours
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 8, // 8 hours
+    httpOnly: true,             // JS can't read the admin cookie (blunts XSS cookie theft)
+    secure: true,              // HTTPS-only — the site is served over HTTPS end to end
+    sameSite: 'lax'            // the admin cookie isn't sent on cross-site POSTs (blunts CSRF)
+  }
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
@@ -977,7 +992,7 @@ app.get('/ps-plus/rent', (req, res) => {
 });
 
 // PS Plus admin CRUD
-app.post('/admin/psplus/add', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/psplus/add', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   if (!year || !month) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? await processUploadedImage(req.file) : '';
@@ -1002,7 +1017,7 @@ app.get('/admin/psplus/edit/:id', requireAuth, (req, res) => {
   res.render('edit-psplus', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/psplus/edit/:id', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { year, month, games_list, notes, nt_slots, tr_slots } = req.body;
   const existing = getPsplusEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
@@ -1031,7 +1046,7 @@ app.post('/admin/psplus/delete/:id', requireAuth, (req, res) => {
 });
 
 // PS Plus Popular CRUD
-app.post('/admin/psplus/popular/add', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/psplus/popular/add', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { title, platform, genre, description, rank } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const cover_image = req.file ? await processUploadedImage(req.file) : '';
@@ -1056,7 +1071,7 @@ app.get('/admin/psplus/popular/edit/:id', requireAuth, (req, res) => {
   res.render('edit-psplus-popular', { entry, settings: getSiteSettings() });
 });
 
-app.post('/admin/psplus/popular/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/psplus/popular/edit/:id', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { title, platform, genre, description, rank, cover_focal_x, cover_focal_y } = req.body;
   const existing = getPsplusPopularEntry(req.params.id);
   if (!existing) return res.redirect('/admin');
@@ -2831,7 +2846,7 @@ app.get('/upcoming/:slug', (req, res) => {
   res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null });
 });
 
-app.post('/admin/upcoming/add', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/upcoming/add', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
@@ -2865,7 +2880,7 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
   res.render('edit-upcoming', { game, settings: getSiteSettings() });
 });
 
-app.post('/admin/upcoming/edit/:id', upload.single('cover_image'), requireAuth, async (req, res) => {
+app.post('/admin/upcoming/edit/:id', requireAuth, upload.single('cover_image'), async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
@@ -4108,7 +4123,7 @@ app.post('/admin/customers/import', requireAuth, importUpload.single('import_fil
 });
 
 // Price category CRUD
-app.post('/admin/price-categories/add', upload.single('image'), requireAuth, async (req, res) => {
+app.post('/admin/price-categories/add', requireAuth, upload.single('image'), async (req, res) => {
   const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
     image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size } = req.body;
   if (!name || !name.trim()) return res.redirect('/admin?msg=error');
@@ -4135,7 +4150,7 @@ app.post('/admin/price-categories/add', upload.single('image'), requireAuth, asy
   res.redirect('/admin?msg=cat_added');
 });
 
-app.post('/admin/price-categories/edit/:id', upload.single('image'), requireAuth, async (req, res) => {
+app.post('/admin/price-categories/edit/:id', requireAuth, upload.single('image'), async (req, res) => {
   const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
     image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size, remove_image } = req.body;
   const cat = getPriceCategory(req.params.id);
