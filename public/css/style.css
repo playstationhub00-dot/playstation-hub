@@ -2320,6 +2320,9 @@ footer {
   .gc2-card .gc2-buy-price,
   .gc2-card .gc2-bundle-note,
   .gc2-card .gc2-cta {
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -2335,6 +2338,7 @@ footer {
   .gc2-card:focus .gc2-buy-price,
   .gc2-card:focus .gc2-bundle-note,
   .gc2-card:focus .gc2-cta {
+    position: static;
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
