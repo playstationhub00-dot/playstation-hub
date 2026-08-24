@@ -2293,7 +2293,11 @@ footer {
 
 @media (hover: hover) and (pointer: fine) {
   .gc2-card .gc2-scrim {
-    background: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.92) 100%);
+    background: linear-gradient(to bottom,
+      transparent 40%,
+      rgba(0,0,0,0.55) 62%,
+      rgba(0,0,0,0.92) 85%,
+      rgba(0,0,0,0.96) 100%);
   }
   .gc2-card:hover .gc2-scrim,
   .gc2-card:focus .gc2-scrim {
