@@ -2321,12 +2321,21 @@ footer {
   .gc2-card .gc2-bundle-note,
   .gc2-card .gc2-cta {
     position: absolute;
-    left: 0.85rem;
-    right: 0.85rem;
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
+  }
+  .gc2-card .gc2-plat,
+  .gc2-card .gc2-status,
+  .gc2-card .gc2-buy-price,
+  .gc2-card .gc2-bundle-note {
+    left: 0.85rem;
+    right: 0.85rem;
+  }
+  .gc2-card .gc2-cta {
+    right: 0.85rem;
+    width: auto;
   }
   .gc2-card:hover .gc2-plat,
   .gc2-card:hover .gc2-status,
