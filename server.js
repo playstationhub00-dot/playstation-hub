@@ -408,6 +408,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Exposes login state to every view so the nav can show the Admin Panel link
+// only to the owner. This is presentation only — /admin is protected by
+// requireAuth below, and hiding a link is not access control: the login page
+// is still reachable by typing the URL. Its value is a nav that isn't
+// cluttered with staff tooling customers can't use.
+app.use((req, res, next) => {
+  res.locals.isAdmin = !!(req.session && req.session.isAdmin);
+  next();
+});
+
 // Auth middleware — protects all /admin routes
 function requireAuth(req, res, next) {
   if (req.session && req.session.isAdmin) return next();
@@ -420,6 +430,17 @@ app.get('/admin/login', (req, res) => {
 });
 
 app.post('/admin/login', (req, res) => {
+  // Without this, the password can be guessed an unlimited number of times as
+  // fast as requests can be made — the one route where that matters most was
+  // the only public POST not using the limiter every other one already does.
+  // Counted per IP: 8 attempts per 15 minutes is far above what a real typo
+  // costs the owner, and far below what brute force needs.
+  if (rateLimited('admin_login', clientIp(req), 8, 15 * 60 * 1000)) {
+    return res.status(429).render('login', {
+      error: 'Too many attempts. Please wait a few minutes and try again.',
+      settings: getSiteSettings()
+    });
+  }
   const { password } = req.body;
   const correct = db.get('admin_password').value();
   if (password === correct) {
