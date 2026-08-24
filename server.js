@@ -1316,7 +1316,15 @@ app.get('/buy', (req, res) => {
         trophy,
         nonTrophy
       };
-    });
+    })
+    // An account can be for_sale with a slot enabled and still not be a
+    // bundle: selling one game permanently is set up exactly that way. Because
+    // buildBundleGames() drops the game sharing the account's own name (so a
+    // bundle doesn't list itself as its own content), such an account resolves
+    // to zero games and rendered as a "0 games" bundle card — while the same
+    // title already had a normal card in Single Games, so it appeared twice.
+    // Containing at least one other game is what makes an account a bundle.
+    .filter(b => b.gameCount > 0);
   const s = getSiteSettings();
   const promo = s.promo || {};
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
@@ -1347,6 +1355,11 @@ app.get('/bundle/:slug', (req, res) => {
   if (!acc) return res.redirect('/buy');
   const name = acc.public_name || acc.label;
   const games = buildBundleGames(acc, allGames);
+  // Same rule /buy applies when building its bundle list: an account holding
+  // no games beyond its own namesake is a single-game sale, not a bundle.
+  // Without this, its URL still served an empty "0 games" bundle page even
+  // once the card stopped being listed.
+  if (!games.length) return res.redirect('/buy');
   const { trophy, nonTrophy } = bundleSlotInfo(acc);
   const prices = [trophy, nonTrophy].filter(x => x && x.price > 0).map(x => x.price);
   const gameCount = games.length;
