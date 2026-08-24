@@ -2290,6 +2290,67 @@ footer {
       rgba(0,0,0,0.88) 72%,
       rgba(0,0,0,0.98) 100%);
 }
+
+@media (hover: hover) and (pointer: fine) {
+  .gc2-card .gc2-scrim {
+    background: linear-gradient(to bottom, transparent 55%, rgba(0,0,0,0.92) 100%);
+  }
+  .gc2-card:hover .gc2-scrim,
+  .gc2-card:focus .gc2-scrim {
+    background: linear-gradient(to bottom,
+      transparent 20%,
+      rgba(0,0,0,0.42) 44%,
+      rgba(0,0,0,0.86) 72%,
+      rgba(0,0,0,0.97) 100%);
+  }
+  .gc2-card .gc2-scrim-dim,
+  .gc2-card:hover .gc2-scrim-dim,
+  .gc2-card:focus .gc2-scrim-dim {
+    background:
+      linear-gradient(rgba(10,10,10,0.55), rgba(10,10,10,0.55)),
+      linear-gradient(to bottom,
+        transparent 20%,
+        rgba(0,0,0,0.48) 44%,
+        rgba(0,0,0,0.88) 72%,
+        rgba(0,0,0,0.98) 100%);
+  }
+
+  .gc2-card .gc2-plat,
+  .gc2-card .gc2-status,
+  .gc2-card .gc2-buy-price,
+  .gc2-card .gc2-bundle-note,
+  .gc2-card .gc2-cta {
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  .gc2-card:hover .gc2-plat,
+  .gc2-card:hover .gc2-status,
+  .gc2-card:hover .gc2-buy-price,
+  .gc2-card:hover .gc2-bundle-note,
+  .gc2-card:hover .gc2-cta,
+  .gc2-card:focus .gc2-plat,
+  .gc2-card:focus .gc2-status,
+  .gc2-card:focus .gc2-buy-price,
+  .gc2-card:focus .gc2-bundle-note,
+  .gc2-card:focus .gc2-cta {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .gc2-card .gc2-plat,
+  .gc2-card .gc2-status,
+  .gc2-card .gc2-buy-price,
+  .gc2-card .gc2-bundle-note,
+  .gc2-card .gc2-cta {
+    transition: none;
+  }
+}
+
 .gc2-badge {
   position: absolute; top: 9px; z-index: 2;
   font-size: 0.62rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
