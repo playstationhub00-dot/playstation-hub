@@ -196,11 +196,13 @@ function getSlots()  { return selectedType === 'tr' ? TR_SLOTS  : NT_SLOTS; }
 
 function onTypeChange() {
   selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
-  selectedDays = null;
-  // highlight selected card
-  document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
+  // renderDurButtons() below re-picks the preferred default (Monthly, same
+  // rule as initial load) every time the type changes, rather than trying to
+  // carry the old duration across two potentially different price tables —
+  // simpler, and it never leaves the summary blank after a type switch.
+  document.querySelectorAll('.rsv-type-pill').forEach(c => c.classList.remove('rsv-type-selected'));
   const checked = document.querySelector('input[name="rental_type"]:checked');
-  if (checked) checked.closest('.gd-type-card').classList.add('gd-type-selected');
+  if (checked) checked.closest('.rsv-type-pill').classList.add('rsv-type-selected');
   renderDurButtons();
   updateSummary();
   updateCta();
@@ -211,21 +213,28 @@ function renderDurButtons() {
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
   const durLabelMap = { 7: 'Weekly', 30: 'Monthly' };
-  RENTAL_DURATIONS.forEach(d => {
-    if (!p[d]) return; // skip days with no price
+  const available = RENTAL_DURATIONS.filter(d => p[d]);
+
+  available.forEach(d => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'gd-dur-btn';
+    btn.className = 'rsv-dur-btn';
     btn.dataset.days = d;
     btn.onclick = () => selectDur(d);
-    btn.innerHTML = `<span class="gd-dur-days">${durLabelMap[d] || d}</span><span class="gd-dur-price">₱${p[d]}</span>`;
+    btn.innerHTML = `<span class="rsv-dur-label">${durLabelMap[d] || d}</span><span class="rsv-dur-price">₱${p[d]}</span>`;
     grid.appendChild(btn);
   });
+
+  // Preselect so the price is visible on load: prefer Monthly (30) when more
+  // than one duration exists, otherwise the single available one. Falls back
+  // to null (existing "no price set" empty state) when neither is priced.
+  const defaultDays = available.includes(30) ? 30 : (available[0] || null);
+  if (defaultDays) selectDur(defaultDays);
 }
 
 function selectDur(days) {
   selectedDays = days;
-  document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
+  document.querySelectorAll('.rsv-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
   updateSummary();
   updateCta();
   updateLinks();
@@ -305,10 +314,10 @@ const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
 
 function shakeDurGrid() {
   const grid = document.getElementById('durGrid');
-  grid.classList.remove('gd-dur-grid-shake');
+  grid.classList.remove('rsv-dur-row-shake');
   void grid.offsetWidth;
-  grid.classList.add('gd-dur-grid-shake');
-  setTimeout(() => grid.classList.remove('gd-dur-grid-shake'), 600);
+  grid.classList.add('rsv-dur-row-shake');
+  setTimeout(() => grid.classList.remove('rsv-dur-row-shake'), 600);
 }
 
 function handleReserveClick(e, mode) {
@@ -333,7 +342,7 @@ function handleReserveSubmit(e) {
 
 // Init
 const initChecked = document.querySelector('input[name="rental_type"]:checked');
-if (initChecked) initChecked.closest('.gd-type-card').classList.add('gd-type-selected');
+if (initChecked) initChecked.closest('.rsv-type-pill').classList.add('rsv-type-selected');
 renderDurButtons();
 updateCta();
 </script>
