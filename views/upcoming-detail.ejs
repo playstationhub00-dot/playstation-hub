@@ -69,134 +69,110 @@
   </div>
 
   <div class="usd-body">
-
-      <!-- Slot state + description -->
-      <div class="usd-chips">
-        <% if (allFull) { %>
-          <span class="usd-chip usd-chip-full">Slots full</span>
-        <% } else { %>
-          <span class="usd-chip usd-chip-ok"><%= totalSlots %> reservation slot<%= totalSlots !== 1 ? 's' : '' %> left</span>
-        <% } %>
+    <% if (allFull) { %>
+    <div class="rsv-full-banner">
+      <span class="rsv-full-icon">🚫</span>
+      <div>
+        <div class="rsv-full-title">All Slots Full</div>
+        <div class="rsv-full-sub">You can still request a slot with a downpayment below, or join the free waitlist.</div>
       </div>
-      <% if (game.description) { %>
-        <p class="usd-desc"><%= game.description %></p>
-      <% } %>
+    </div>
+    <% } %>
 
-      <div style="max-width:480px;">
-      <!-- FULL banner when no slots -->
-      <% if (allFull) { %>
-      <div style="display:flex;align-items:center;gap:0.75rem;background:linear-gradient(135deg,#1a0a0a,#2a0a0a);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.5rem;">
-        <span style="font-size:1.5rem;">🚫</span>
-        <div>
-          <div style="font-weight:800;color:#ef4444;font-size:0.95rem;">All Slots Full</div>
-          <div style="font-size:0.78rem;color:#888;margin-top:0.15rem;">You can still request a slot with a downpayment below, or join the free waitlist.</div>
-        </div>
-      </div>
-      <% } %>
+    <div class="rsv-layout">
 
-      <!-- SELECT RENTAL TYPE -->
-      <% if (hasNt || showTr) { %>
-      <div class="gd-section-label">SELECT RENTAL TYPE</div>
-      <div class="gd-type-options" id="typeOptions">
+      <!-- Reserve card: first in the DOM so it renders first on mobile with
+           no CSS reordering needed. Desktop places it via grid-area instead
+           of relying on source order. -->
+      <div class="rsv-right">
+        <div class="rsv-card">
 
-        <% if (showTr) { %>
-        <div class="gd-type-card" id="typeCard-tr">
-          <label class="gd-type-row-label">
-            <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
-            <span class="gd-type-icon">🏆</span>
-            <span class="gd-type-name">Trophy</span>
-            <% if (trSlots > 0) { %>
-              <span class="gd-type-status gd-status-avail"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> available</span>
-            <% } else { %>
-              <span class="gd-type-status gd-status-rented">Reserved</span>
+          <% if (hasNt || showTr) { %>
+          <div class="rsv-type-row" id="typeOptions">
+            <% if (showTr) { %>
+            <label class="rsv-type-pill" id="typeCard-tr">
+              <input type="radio" name="rental_type" value="tr" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
+              <span class="rsv-type-icon">🏆</span>
+              <span class="rsv-type-label">Trophy</span>
+              <span class="rsv-type-count"><%= trSlots > 0 ? (trSlots + ' left') : 'Reserved' %></span>
+            </label>
             <% } %>
-          </label>
-          <div class="gd-type-desc" style="padding:0 0.75rem 0.75rem 2.65rem;">Perfect for trophy hunters. Play through games at your own pace and earn trophies on your own main account.</div>
-        </div>
-        <% } %>
-
-        <% if (hasNt) { %>
-        <div class="gd-type-card" id="typeCard-nt">
-          <label class="gd-type-row-label">
-            <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
-            <span class="gd-type-icon">🎮</span>
-            <span class="gd-type-name">Non-Trophy</span>
-            <% if (ntSlots > 0) { %>
-              <span class="gd-type-status gd-status-avail"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> available</span>
-            <% } else { %>
-              <span class="gd-type-status gd-status-rented">Reserved</span>
+            <% if (hasNt) { %>
+            <label class="rsv-type-pill" id="typeCard-nt">
+              <input type="radio" name="rental_type" value="nt" id="type-nt" onchange="onTypeChange()" checked>
+              <span class="rsv-type-icon">🎮</span>
+              <span class="rsv-type-label">Non-Trophy</span>
+              <span class="rsv-type-count"><%= ntSlots > 0 ? (ntSlots + ' left') : 'Reserved' %></span>
+            </label>
             <% } %>
-          </label>
-          <div class="gd-type-desc" style="padding:0 0.75rem 0.75rem 2.65rem;">Ideal for casual players focused on the story and experience, without the need for account-linked achievements.</div>
+          </div>
+          <% } %>
+
+          <div class="rsv-dur-row" id="durGrid"></div>
+
+          <div class="rsv-summary" id="orderSummary" style="display:none;">
+            <div class="rsv-summary-row rsv-summary-main">
+              <span id="sumBaseLabel">Base</span><span id="sumBase">—</span>
+            </div>
+            <div class="rsv-summary-row" id="sumDepositRow" style="display:none;">
+              <span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span>
+            </div>
+            <div class="rsv-summary-row rsv-summary-down">
+              <span>⬇️ Pay now (50%)</span><span id="sumDownpayment">—</span>
+            </div>
+            <div class="rsv-summary-row rsv-summary-total">
+              <span>Total</span><span id="sumTotal">—</span>
+            </div>
+          </div>
+
+          <div id="ctaReserve">
+            <div class="rsv-cta-title" id="ctaReserveTitle">Reserve a Slot</div>
+            <div class="rsv-cta-fee" id="ctaHasSlotFee">Select a duration to see downpayment</div>
+            <div class="rsv-cta-dp" id="ctaHasSlotDP" style="display:none;"></div>
+            <div class="rsv-cta-note" id="ctaReserveNote">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
+            <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
+              <input type="hidden" name="game_id" value="<%= game.id %>">
+              <input type="hidden" name="account_type" id="reserveType" value="">
+              <input type="hidden" name="days" id="reserveDays" value="">
+              <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name rsv-name-input" placeholder="Your Facebook name" required>
+              <button type="submit" id="ctaReserveBtn" class="rsv-cta-btn">Reserve Now →</button>
+            </form>
+            <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+               onclick="return handleReserveClick(event,'reserve')" class="rsv-messenger-link">
+              or message us on Facebook instead
+            </a>
+            <% if (order_error === '1') { %>
+            <div class="rsv-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+            <% } %>
+          </div>
+
+          <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
+            <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+               class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+              <div class="gd-reserve-icon">🎮</div>
+              <div class="gd-reserve-name">Fall in Line</div>
+              <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
+              <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+              <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+            </a>
+          </div>
+
         </div>
+      </div>
+
+      <div class="rsv-left">
+        <% if (game.description) { %>
+          <p class="usd-desc"><%= game.description %></p>
         <% } %>
-
-      </div>
-      <% } %>
-
-      <!-- SELECT DURATION -->
-      <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
-      <div class="gd-duration-grid" id="durGrid"></div>
-
-      <!-- ORDER SUMMARY -->
-      <div class="gd-total-box" id="orderSummary" style="display:none;">
-        <div class="gd-total-label">ORDER SUMMARY</div>
-        <div class="gd-total-rows">
-          <div class="gd-total-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
-          <div class="gd-total-row" id="sumDepositRow" style="display:none;"><span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span></div>
-          <div class="gd-total-row" style="color:#22c55e;font-weight:700;"><span>⬇️ 50% Downpayment</span><span id="sumDownpayment">—</span></div>
-        </div>
-        <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;">—</span></div>
-      </div>
-
-      <!-- CHOOSE YOUR OPTION -->
-      <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-
-      <!-- Reserve with 50% downpayment — shown whether or not a slot is free
-           right now. When full, the owner confirms manually and it works
-           exactly like a priority request; when a slot is open, it's
-           confirmed the same way, just usually faster. -->
-      <div id="ctaReserve">
-        <div style="background:linear-gradient(135deg,#0a1a0a,#0d2a0d);border:1px solid #1a4a1a;border-radius:14px;padding:1.5rem;text-align:center;">
-          <div style="font-size:1.5rem;margin-bottom:0.35rem;">⭐</div>
-          <div style="font-weight:800;font-size:1.05rem;color:#fff;margin-bottom:0.25rem;" id="ctaReserveTitle">Reserve a Slot</div>
-          <div id="ctaHasSlotFee" style="font-size:0.88rem;color:#22c55e;font-weight:700;margin-bottom:0.35rem;">Select a duration to see downpayment</div>
-          <div id="ctaHasSlotDP" style="display:none;font-size:0.8rem;color:#aaa;margin-bottom:0.75rem;"></div>
-          <div style="font-size:0.78rem;color:#666;margin-bottom:1rem;" id="ctaReserveNote">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
-          <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
-            <input type="hidden" name="game_id" value="<%= game.id %>">
-            <input type="hidden" name="account_type" id="reserveType" value="">
-            <input type="hidden" name="days" id="reserveDays" value="">
-            <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:280px;margin:0 auto 0.6rem;">
-            <button type="submit" id="ctaReserveBtn" style="display:block;width:100%;max-width:280px;margin:0 auto;background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;font-weight:800;padding:0.75rem 1.5rem;border-radius:50px;border:none;font-size:0.92rem;cursor:pointer;">
-              Reserve Now →
-            </button>
-          </form>
-          <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-             onclick="return handleReserveClick(event,'reserve')"
-             style="display:block;margin-top:0.6rem;font-size:0.78rem;color:#888;text-decoration:underline;">
-            or message us on Facebook instead
-          </a>
-          <% if (order_error === '1') { %>
-          <div style="margin-top:0.75rem;font-size:0.8rem;color:#ef4444;font-weight:600;">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+        <div class="rsv-release-line">
+          <% if (udIsTba) { %>Release date: TBA
+          <% } else if (udDaysLeft > 0) { %><%= udDaysLeft %> day<%= udDaysLeft !== 1 ? 's' : '' %> until release · <%= displayDate %>
+          <% } else { %>Releasing any day now
           <% } %>
         </div>
       </div>
 
-      <!-- Free waitlist — no payment, always available as a fallback when
-           slots are full. -->
-      <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
-        <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-           class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-          <div class="gd-reserve-icon">🎮</div>
-          <div class="gd-reserve-name">Fall in Line</div>
-          <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-          <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-          <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-        </a>
-      </div>
-      </div><!-- /reserve-panel max-width -->
-
+    </div>
   </div><!-- /usd-body -->
 </div><!-- /usd-page -->
 
