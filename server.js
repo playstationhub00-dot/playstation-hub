@@ -2278,6 +2278,24 @@ app.post('/admin/requests/:slug/image', requireAuth, upload.single('cover_image'
   res.redirect('/admin?tab=games&msg=request_image');
 });
 
+// Voter-level edits. Customers type their own Facebook name, and some type junk
+// ("1"), which both reaches the public board and makes that voter unmessageable
+// when the game is stocked. Renaming beats deleting the whole request, which
+// would take every legitimate vote with it.
+app.post('/admin/requests/:slug/voter/rename', requireAuth, async (req, res) => {
+  const r = await gameRequests.renameVoter(req.params.slug, req.body.at, req.body.fb_name);
+  const msg = r.ok ? 'voter_renamed'
+    : r.reason === 'duplicate' ? 'voter_dupe'
+    : r.reason === 'empty' ? 'voter_empty'
+    : 'voter_error';
+  res.redirect('/admin?tab=games&msg=' + msg);
+});
+
+app.post('/admin/requests/:slug/voter/remove', requireAuth, async (req, res) => {
+  const r = await gameRequests.removeVoter(req.params.slug, req.body.at);
+  res.redirect('/admin?tab=games&msg=' + (r.ok ? 'voter_removed' : 'voter_error'));
+});
+
 app.post('/admin/online', requireAuth, (req, res) => {
   const on = req.body.online === 'on';
   db.set('site_settings.owner_online', on).write();

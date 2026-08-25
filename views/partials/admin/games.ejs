@@ -165,8 +165,21 @@
                 <%= r.title %>
                 <span style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-left:0.4rem;color:<%= r.status === 'pending' ? '#f59e0b' : r.status === 'approved' ? 'var(--ps-blue)' : r.status === 'stocked' ? '#22c55e' : '#666' %>;"><%= r.status %></span>
               </div>
-              <div style="font-size:0.72rem;color:#666;margin-top:0.25rem;line-height:1.6;">
-                <%= (r.voters || []).map(v => v.fb_name).join(', ') || 'no voters' %>
+              <div style="font-size:0.72rem;color:#666;margin-top:0.35rem;display:flex;flex-direction:column;gap:0.3rem;">
+                <% if (!(r.voters || []).length) { %>no voters<% } %>
+                <% (r.voters || []).forEach(v => { %>
+                <div style="display:flex;gap:0.3rem;align-items:center;">
+                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/rename" style="display:flex;gap:0.3rem;align-items:center;">
+                    <input type="hidden" name="at" value="<%= v.at %>">
+                    <input type="text" name="fb_name" value="<%= v.fb_name %>" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.25rem 0.4rem;max-width:160px;">
+                    <button type="submit" class="btn-edit" style="font-size:0.68rem;padding:0.25rem 0.6rem;">Save</button>
+                  </form>
+                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" style="display:inline" onsubmit="return confirm('Remove this vote?');">
+                    <input type="hidden" name="at" value="<%= v.at %>">
+                    <button type="submit" class="btn-delete" style="font-size:0.68rem;padding:0.25rem 0.5rem;">✕</button>
+                  </form>
+                </div>
+                <% }) %>
               </div>
             </div>
             <div style="display:flex;gap:0.35rem;flex-wrap:wrap;flex-shrink:0;">
