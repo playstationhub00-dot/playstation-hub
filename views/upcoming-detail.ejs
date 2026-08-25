@@ -45,7 +45,6 @@
        be cropped, blurred, or muddy here, and every Coming Soon page matches. -->
   <div class="usd-hero">
     <div class="usd-hero-placeholder"></div>
-    <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-logo">
     <div class="usd-hero-scrim"></div>
     <div class="usd-hero-in">
       <div class="usd-badge-row">
@@ -54,16 +53,19 @@
         <% if (game.genre) { %><span class="usd-plat-chip"><%= game.genre %></span><% } %>
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
-      <div class="usd-cd-row">
-        <% if (udIsTba) { %>
-          <span class="usd-cd-n" style="font-size:1.4rem;">Date TBA</span>
-        <% } else if (udDaysLeft > 0) { %>
-          <span class="usd-cd-n"><%= udDaysLeft %></span>
-          <span class="usd-cd-u">day<%= udDaysLeft !== 1 ? 's' : '' %> until release</span>
-          <span class="usd-cd-date"><%= displayDate %></span>
-        <% } else { %>
-          <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
-        <% } %>
+      <div class="usd-hero-foot">
+        <div class="usd-cd-row">
+          <% if (udIsTba) { %>
+            <span class="usd-cd-n" style="font-size:1.4rem;">Date TBA</span>
+          <% } else if (udDaysLeft > 0) { %>
+            <span class="usd-cd-n"><%= udDaysLeft %></span>
+            <span class="usd-cd-u">day<%= udDaysLeft !== 1 ? 's' : '' %> until release</span>
+            <span class="usd-cd-date"><%= displayDate %></span>
+          <% } else { %>
+            <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
+          <% } %>
+        </div>
+        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand">
       </div>
     </div>
   </div>
