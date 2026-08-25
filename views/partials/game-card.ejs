@@ -60,7 +60,7 @@
   <% if (isLastSlot) { %>
     <div class="gc2-badge gc2-badge-last">Last slot</div>
   <% } else if (allUnavail) { %>
-    <div class="gc2-badge gc2-badge-rented">Rented</div>
+    <div class="gc2-badge gc2-badge-noslots">No slots</div>
   <% } %>
   <% if (gcIsNew) { %>
     <div class="gc2-badge gc2-badge-new">New</div>
@@ -74,7 +74,7 @@
       <div class="gc2-status gc2-status-muted">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="gc2-icon"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
         <% const gcNextDays = [ntDaysLeft, trDaysLeft, ps4DaysLeft].filter(d => d != null && d > 0); %>
-        <% if (gcNextDays.length) { %>Free in <%= Math.min(...gcNextDays) %>d<% } else { %>Rented<% } %>
+        <% if (gcNextDays.length) { %>Free in <%= Math.min(...gcNextDays) %>d<% } else { %>No date yet<% } %>
       </div>
     <% } else { %>
       <div class="gc2-status">
