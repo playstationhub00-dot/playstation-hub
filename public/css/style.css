@@ -722,10 +722,17 @@ nav {
    hairline rule. The logo sits at full opacity here — it is a deliberate
    sign-off, not the faded watermark it replaced. Natural aspect ratio only:
    the wordmark is 3.27:1 and distorts if ever stretched to fill. */
+/* Solid black bar, full-bleed to the banner edges and flush with its bottom.
+   The logo PNG carries its own black background, so anything other than black
+   here leaves it sitting on a visible rectangle. The negative margins cancel
+   .usd-hero-in's padding, which is re-applied inside so the content still
+   lines up with the title above. */
 .usd-hero-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 0.7rem; margin-top: 0.15rem;
+  background: #000;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 0.4rem calc(-1 * clamp(1.25rem, 4vw, 3rem)) -1.25rem;
+  padding: 0.65rem clamp(1.25rem, 4vw, 3rem);
 }
 .usd-hero-foot .usd-cd-row { min-width: 0; flex: 1; }
 .usd-hero-brand { width: 140px; height: auto; flex-shrink: 0; display: block; }
