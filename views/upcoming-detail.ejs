@@ -39,15 +39,13 @@
 <div class="usd-page">
   <div class="usd-back"><a href="/browse">← Back to Catalog</a></div>
 
-  <!-- Ambient hero: the cover art is blurred into a backdrop here so no crop
-       can ever cut off a poster's title art — the sharp, uncropped poster is
-       rendered separately in .rsv-poster below. -->
+  <!-- Branded hero: a fixed brand gradient rather than the game's own art. The
+       sharp, uncropped poster below carries the game's identity, so this band
+       only has to sit behind the title — which means no cover image can ever
+       be cropped, blurred, or muddy here, and every Coming Soon page matches. -->
   <div class="usd-hero">
-    <% if (game.cover_image) { %>
-      <img src="<%= game.cover_image %>" alt="" aria-hidden="true" class="usd-hero-img">
-    <% } else { %>
-      <div class="usd-hero-placeholder"></div>
-    <% } %>
+    <div class="usd-hero-placeholder"></div>
+    <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-logo">
     <div class="usd-hero-scrim"></div>
     <div class="usd-hero-in">
       <div class="usd-badge-row">

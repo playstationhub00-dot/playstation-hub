@@ -717,8 +717,14 @@ nav {
 .usd-back a:hover { color: var(--ps-blue); }
 
 .usd-hero { position: relative; height: 280px; overflow: hidden; margin-top: 1rem; border-radius: 0; }
-.usd-hero-img, .usd-hero-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; display: block; }
-.usd-hero-img { filter: blur(18px) brightness(0.45); transform: scale(1.06); }
+.usd-hero-placeholder { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* Wordmark watermark, top-right so it stays clear of the title and countdown
+   in the bottom-left. Natural aspect ratio only — the logo is a 3.27:1
+   wordmark and distorts if it is ever stretched to fill. */
+.usd-hero-logo {
+  position: absolute; top: 1.25rem; right: clamp(1.25rem, 4vw, 3rem);
+  width: 150px; height: auto; opacity: 0.12; pointer-events: none; z-index: 1;
+}
 .usd-hero-placeholder { background: linear-gradient(135deg, #0d0015, #1a0030); }
 /* Two overlapping gradients: left-to-right so the text panel is always readable
    regardless of the art underneath, and bottom-to-top so the hero's lower edge
@@ -860,6 +866,7 @@ nav {
 
 @media (max-width: 600px) {
   .usd-hero { height: 200px; margin-top: 0; }
+  .usd-hero-logo { width: 100px; top: 0.9rem; }
   .usd-hero-in { padding: 1.1rem 1rem; }
   .usd-cd-n { font-size: 1.7rem; }
   .usd-back { padding: 1rem 1rem 0; }
