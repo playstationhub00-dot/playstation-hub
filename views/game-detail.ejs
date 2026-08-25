@@ -30,8 +30,11 @@
   const ntNotStocked = neverRented && !hasNtAcc;
   const ps4NotStocked = neverRented && !hasPs4Acc;
   const anyNotStocked = trNotStocked || ntNotStocked || ps4NotStocked;
-  const buyNt = game.buy_nt_price || 0;
-  const buyTr = game.buy_tr_price || 0;
+  // Buy is gated on slot state, not just on a price being set: an account already
+  // sold (or taken offline) must stop being offered, the same way it already stops
+  // being rentable. Each tier is judged against its own slot type.
+  const buyNt = (buyTypeSellable(sum, 'non_trophy') ? (game.buy_nt_price || 0) : 0);
+  const buyTr = (buyTypeSellable(sum, 'trophy') ? (game.buy_tr_price || 0) : 0);
   const hasBuy = buyNt > 0 || buyTr > 0;
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
   const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;

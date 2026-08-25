@@ -326,6 +326,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
 // Expose shared per-game availability computation (accounts-vs-legacy fallback, per slot type)
 app.locals.computeAvailability = computeAvailability;
+// Expose the buy-side availability rule so the detail page's buy panel gates on
+// the same predicate the order route enforces
+app.locals.buyTypeSellable = buyTypeSellable;
 // Expose promo discount lookup so game cards can show the final discounted price, not just the badge
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 // Expose template rendering so admin views can build filled-in customer messages
@@ -583,6 +586,10 @@ function newCustomerId() {
 // ── Accounts (per-account slot inventory) ──────────────────────────────────
 const ACCOUNT_SLOT_TYPES = ['trophy', 'non_trophy', 'ps4_primary'];
 const ACCOUNT_STATUSES = ['open', 'rented', 'buyed', 'na', 'maintenance'];
+// Slot states that can still be sold as permanent access. 'rented' stays sellable
+// on purpose: that rental ends on a known date, so access can be handed over
+// afterward. 'buyed' / 'na' / 'maintenance' mean the slot is genuinely gone.
+const SELLABLE_SLOT_STATUSES = ['open', 'rented'];
 function blankSlot(enabled) {
   return { enabled: enabled !== false, status: 'open', renter_id: null, renter_name: '', start: '', end: '' };
 }
@@ -635,13 +642,14 @@ function slotDaysLeft(slot) {
 function gameAccountSummary(gameId) {
   const gid = parseInt(gameId);
   const summary = {};
-  ACCOUNT_SLOT_TYPES.forEach(t => { summary[t] = { available: 0, total: 0, next_end: null }; });
+  ACCOUNT_SLOT_TYPES.forEach(t => { summary[t] = { available: 0, total: 0, sellable: 0, next_end: null }; });
   getAccounts().forEach(acc => {
     if (!acc.game_ids.includes(gid)) return;
     ACCOUNT_SLOT_TYPES.forEach(t => {
       const s = acc.slots[t];
       if (!s || !s.enabled) return;
       summary[t].total++;
+      if (SELLABLE_SLOT_STATUSES.includes(s.status)) summary[t].sellable++;
       if (s.status === 'open') summary[t].available++;
       else if (s.status === 'rented' && s.end) {
         if (!summary[t].next_end || s.end < summary[t].next_end) summary[t].next_end = s.end;
@@ -656,7 +664,7 @@ function buildAccountSummaryMap() {
   const map = {};
   function blankSummary() {
     const s = {};
-    ACCOUNT_SLOT_TYPES.forEach(t => { s[t] = { available: 0, total: 0, next_end: null }; });
+    ACCOUNT_SLOT_TYPES.forEach(t => { s[t] = { available: 0, total: 0, sellable: 0, next_end: null }; });
     return s;
   }
   getAccounts().forEach(acc => {
@@ -667,6 +675,7 @@ function buildAccountSummaryMap() {
         const s = acc.slots[t];
         if (!s || !s.enabled) return;
         summary[t].total++;
+        if (SELLABLE_SLOT_STATUSES.includes(s.status)) summary[t].sellable++;
         if (s.status === 'open') summary[t].available++;
         else if (s.status === 'rented' && s.end) {
           if (!summary[t].next_end || s.end < summary[t].next_end) summary[t].next_end = s.end;
@@ -675,6 +684,21 @@ function buildAccountSummaryMap() {
     });
   });
   return map;
+}
+
+// Can this game still be sold as permanent access on the given slot type?
+// Single source of truth for every buy surface (the /buy list, the detail page's
+// buy panel, and the POST /order/buy re-check) — this rule living in three
+// separate places, derived from price alone, is what let sold-out accounts stay
+// on sale in the first place.
+//
+// No linked slot of this type means "set up on order": the account is created
+// after the first sale, so it must stay offered rather than being treated as
+// sold out.
+function buyTypeSellable(summary, slotKey) {
+  const s = summary && summary[slotKey];
+  if (!s || !s.total) return true;
+  return s.sellable > 0;
 }
 
 function getPriceCategories() { return db.get('price_categories').value() || []; }
@@ -1343,10 +1367,24 @@ app.get('/buy', (req, res) => {
   const s = getSiteSettings();
   const promo = s.promo || {};
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
+  // A tier is only listed if its slot type can still be sold — an account already
+  // bought (or taken offline) must drop off the buy page, the way it already drops
+  // off the rent side.
+  const buySummaryMap = buildAccountSummaryMap();
   const singleGames = allGames
-    .filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0)
     .map(g => {
-      const base = g.buy_nt_price > 0 ? g.buy_nt_price : g.buy_tr_price;
+      const sum = buySummaryMap[g.id] || null;
+      return {
+        g,
+        ntOk: (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy'),
+        trOk: (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy')
+      };
+    })
+    .filter(x => x.ntOk || x.trOk)
+    .map(({ g, ntOk }) => {
+      // Same NT-then-TR preference as before, but chosen from sellable tiers only,
+      // so the card never advertises the price of a tier that is no longer for sale.
+      const base = ntOk ? g.buy_nt_price : g.buy_tr_price;
       const final = buyPromo ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
       return {
         id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title),
@@ -1720,6 +1758,13 @@ app.post('/order/buy', async (req, res) => {
   if (!game || !type) return res.redirect('/buy?order_error=1');
   const base = type === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
   if (!base) return res.redirect('/buy?order_error=1');
+  // Re-check sellability at order time, exactly as the bundle branch above does —
+  // the page a customer loaded may be stale, and hiding a card is presentation
+  // only. This route is what actually prevents selling an account twice.
+  const slotKey = type === 'tr' ? 'trophy' : 'non_trophy';
+  if (!buyTypeSellable(gameAccountSummary(game.id), slotKey)) {
+    return res.redirect('/buy?order_error=sold');
+  }
   const s = getSiteSettings();
   const promo = s.promo || {};
   const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
