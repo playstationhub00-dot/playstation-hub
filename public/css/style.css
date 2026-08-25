@@ -876,12 +876,19 @@ nav {
 }
 
 @media (max-width: 600px) {
-  .usd-hero { height: 190px; margin-top: 0; }
+  .usd-hero { height: 205px; margin-top: 0; }
   /* The logo now shares the footer row with the countdown rather than floating
      as a watermark, so it stays on mobile — just narrower, and the countdown
-     wraps beside it instead of colliding. */
+     sits beside it instead of colliding. */
   .usd-hero-brand { width: 92px; }
-  .usd-hero-foot { gap: 0.6rem; }
+  /* These margins must cancel .usd-hero-in's MOBILE padding (1.1rem 1rem),
+     not the desktop clamp() — mismatching them breaks the full-bleed and
+     pushes the bar past the banner edge. */
+  .usd-hero-foot {
+    gap: 0.6rem;
+    margin: 0.35rem -1rem -1.1rem;
+    padding: 0.6rem 1rem;
+  }
   .usd-hero-in { padding: 1.1rem 1rem; }
   .usd-cd-n { font-size: 1.7rem; }
   .usd-back { padding: 1rem 1rem 0; }
