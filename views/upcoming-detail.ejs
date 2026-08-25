@@ -39,10 +39,12 @@
 <div class="usd-page">
   <div class="usd-back"><a href="/browse">← Back to Catalog</a></div>
 
-  <!-- Cinematic hero: full-bleed cover art with title + countdown over it -->
+  <!-- Ambient hero: the cover art is blurred into a backdrop here so no crop
+       can ever cut off a poster's title art — the sharp, uncropped poster is
+       rendered separately in .rsv-poster below. -->
   <div class="usd-hero">
     <% if (game.cover_image) { %>
-      <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="usd-hero-img">
+      <img src="<%= game.cover_image %>" alt="" aria-hidden="true" class="usd-hero-img">
     <% } else { %>
       <div class="usd-hero-placeholder"></div>
     <% } %>
@@ -81,9 +83,16 @@
 
     <div class="rsv-layout">
 
-      <!-- Reserve card: first in the DOM so it renders first on mobile with
-           no CSS reordering needed. Desktop places it via grid-area instead
-           of relying on source order. -->
+      <!-- DOM order (poster, reserve card, description) is deliberately the
+           correct mobile order — art before the form, form before the
+           description. Desktop overrides purely via grid-area, so this
+           source order never needs a mobile-only reshuffle. -->
+      <div class="rsv-poster-wrap">
+        <% if (game.cover_image) { %>
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="rsv-poster">
+        <% } %>
+      </div>
+
       <div class="rsv-right">
         <div class="rsv-card">
 
