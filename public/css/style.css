@@ -759,6 +759,88 @@ nav {
 .usd-chip-full { background: #2a0d0d; border: 1px solid #4a1e1e; color: #ef4444; }
 .usd-desc { font-size: 0.9rem; color: #999; line-height: 1.75; max-width: 68ch; margin: 0; }
 
+.rsv-full-banner {
+  display: flex; align-items: center; gap: 0.75rem;
+  background: linear-gradient(135deg, #1a0a0a, #2a0a0a);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+}
+.rsv-full-icon { font-size: 1.5rem; }
+.rsv-full-title { font-weight: 800; color: #ef4444; font-size: 0.95rem; }
+.rsv-full-sub { font-size: 0.78rem; color: #888; margin-top: 0.15rem; }
+
+.rsv-layout { display: flex; flex-direction: column; gap: 1.75rem; }
+.rsv-left, .rsv-right { min-width: 0; }
+
+.rsv-card {
+  background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 14px;
+  padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;
+}
+
+.rsv-type-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.rsv-type-pill {
+  flex: 1 1 140px; display: flex; align-items: center; gap: 0.4rem;
+  background: #121212; border: 1px solid #222; border-radius: 10px;
+  padding: 0.6rem 0.75rem; cursor: pointer; font-size: 0.8rem;
+}
+.rsv-type-pill input { position: absolute; opacity: 0; pointer-events: none; }
+.rsv-type-icon { font-size: 0.95rem; }
+.rsv-type-label { font-weight: 700; color: #eee; }
+.rsv-type-count { margin-left: auto; font-size: 0.68rem; color: #22c55e; white-space: nowrap; }
+.rsv-type-selected { border-color: #f0a500; background: #1a1400; }
+
+.rsv-dur-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.rsv-dur-btn {
+  flex: 1 1 100px; background: #121212; border: 1px solid #222; border-radius: 10px;
+  padding: 0.55rem 0.7rem; color: #ccc; cursor: pointer; display: flex;
+  flex-direction: column; align-items: center; gap: 0.15rem; font-size: 0.78rem;
+}
+.rsv-dur-btn.active { border-color: #f0a500; background: #1a1400; color: #fff; }
+.rsv-dur-price { font-weight: 800; color: #ffc400; }
+.rsv-dur-row-shake { animation: rsv-shake 0.5s; }
+@keyframes rsv-shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+.rsv-summary { background: #111; border-radius: 10px; padding: 0.75rem 0.9rem; font-size: 0.8rem; }
+.rsv-summary-row { display: flex; justify-content: space-between; padding: 0.15rem 0; color: #aaa; }
+.rsv-summary-main { color: #ddd; font-weight: 600; }
+.rsv-summary-down { color: #22c55e; font-weight: 700; }
+.rsv-summary-total {
+  display: flex; justify-content: space-between; margin-top: 0.4rem;
+  padding-top: 0.4rem; border-top: 1px solid #222; font-weight: 800; color: #ffc400;
+}
+
+.rsv-cta-title { font-weight: 800; font-size: 1.05rem; color: #fff; text-align: center; }
+.rsv-cta-fee { font-size: 0.88rem; color: #22c55e; font-weight: 700; text-align: center; }
+.rsv-cta-dp { font-size: 0.8rem; color: #aaa; text-align: center; }
+.rsv-cta-note { font-size: 0.78rem; color: #666; text-align: center; }
+.rsv-name-input { display: block; width: 100%; margin: 0 auto 0.6rem; }
+.rsv-cta-btn {
+  display: block; width: 100%; background: linear-gradient(135deg, #065f46, #22c55e);
+  color: #fff; font-weight: 800; padding: 0.75rem 1.5rem; border-radius: 50px;
+  border: none; font-size: 0.92rem; cursor: pointer;
+}
+.rsv-messenger-link { display: block; margin-top: 0.6rem; font-size: 0.78rem; color: #888; text-decoration: underline; text-align: center; }
+.rsv-error { margin-top: 0.75rem; font-size: 0.8rem; color: #ef4444; font-weight: 600; text-align: center; }
+
+.rsv-release-line { font-size: 0.8rem; color: #888; margin-top: 0.75rem; }
+
+@media (min-width: 900px) {
+  .rsv-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    grid-template-areas: "desc reserve";
+    align-items: start;
+    gap: 2rem;
+  }
+  .rsv-left { grid-area: desc; }
+  .rsv-right { grid-area: reserve; position: sticky; top: 1rem; }
+}
+
 @media (max-width: 600px) {
   .usd-hero { height: 230px; margin-top: 0; }
   .usd-hero-in { padding: 1.1rem 1rem; }
