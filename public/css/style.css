@@ -867,6 +867,11 @@ nav {
 .rsv-gallery-section { margin-top: 2rem; }
 .rsv-gallery-label { font-size: 0.78rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
 .rsv-gallery-img { height: auto; aspect-ratio: 16 / 9; object-position: center; }
+/* Scoped to this gallery only — .gd-thumbs itself stays untouched so the rent
+   page's thumbnail row (which can hold more images and relies on left-aligned
+   scrolling) is unaffected. Still scrolls correctly if the thumbnails ever
+   overflow the container; centering only applies when they fit. */
+.rsv-gallery-section .gd-thumbs { justify-content: center; }
 
 @media (min-width: 900px) {
   .rsv-layout {
