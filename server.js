@@ -1656,12 +1656,7 @@ app.post('/order/create', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
-  const { game_id, account_type, days, fb_name, kind } = req.body;
-  // 'buy' = pre-ordering PERMANENT access to a not-yet-released game. It reuses
-  // this route (not /order/buy) because the money model is the reservation
-  // one — 50% now, remainder on release — and /order/buy only knows about
-  // already-released catalogue rows.
-  const isBuyPreorder = kind === 'buy';
+  const { game_id, account_type, days, fb_name } = req.body;
   const game = getGame(game_id);
   if (!game) return res.redirect('/browse');
 
@@ -1830,8 +1825,7 @@ app.post('/order/create-psplus', async (req, res) => {
       game_id: 'psplus',
       game_title: 'PS Plus Deluxe',
       account_type: type,
-      days: isBuyPreorder ? null : d,
-      is_buy: isBuyPreorder,
+      days: d,
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
@@ -1856,7 +1850,12 @@ app.post('/order/reserve', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
-  const { game_id, account_type, days, fb_name } = req.body;
+  const { game_id, account_type, days, fb_name, kind } = req.body;
+  // 'buy' = pre-ordering PERMANENT access to a not-yet-released game. It reuses
+  // this route (not /order/buy) because the money model is the reservation
+  // one — 50% now, remainder on release — and /order/buy only knows about
+  // already-released catalogue rows.
+  const isBuyPreorder = kind === 'buy';
   const upcoming = getUpcomingGame(game_id);
   const isPsplus = !upcoming && game_id === 'psplus';
   const game = upcoming || (isPsplus ? null : getGame(game_id));
@@ -1941,7 +1940,8 @@ app.post('/order/reserve', async (req, res) => {
       game_id: isPsplus ? 'psplus' : game.id,
       game_title: gameTitle,
       account_type: type,
-      days: d,
+      days: isBuyPreorder ? null : d,
+      is_buy: isBuyPreorder,
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
