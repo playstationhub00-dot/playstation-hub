@@ -398,9 +398,17 @@ function gpGo(i) {
   const track = document.getElementById('gpSliderTrack');
   if (track) track.style.transform = 'translateX(-' + (gpIndex * 100) + '%)';
   document.querySelectorAll('#gpSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gpIndex));
+  const thumbsWrap = document.getElementById('gpThumbs');
   document.querySelectorAll('#gpThumbs .gd-thumb').forEach((t, ti) => {
     t.classList.toggle('active', ti === gpIndex);
-    if (ti === gpIndex) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    // Horizontal-only, scoped to the thumbnail strip itself — scrollIntoView()
+    // can still move the whole page vertically to reveal an element that
+    // isn't fully in the viewport, which is exactly what happened here since
+    // this gallery sits far down the page during autoplay.
+    if (ti === gpIndex && thumbsWrap) {
+      const target = t.offsetLeft - (thumbsWrap.clientWidth - t.clientWidth) / 2;
+      thumbsWrap.scrollTo({ left: target, behavior: 'smooth' });
+    }
   });
 }
 function gpMove(dir) { gpGo(gpIndex + dir); }
