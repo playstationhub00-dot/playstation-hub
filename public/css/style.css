@@ -459,12 +459,15 @@ nav {
   .hero-v2 .hero-actions { justify-content: center; }
   .hero-v2 .hero-pay-methods { justify-content: center; }
   .hero-v2 .hero-stats { justify-content: center; }
-  .hero-cover-picker { right: 1rem; bottom: .9rem; gap: .4rem; }
+  /* Right-anchored (`right: ...`) is what was pushing the last thumbnail past
+     the viewport edge on narrow screens — centered instead, same as the rest
+     of the mobile hero content. */
+  .hero-cover-picker { right: auto; left: 50%; transform: translateX(-50%); bottom: .9rem; gap: .4rem; }
   .hero-cover-thumb { width: 40px; height: 54px; }
 }
 @media (max-width: 480px) {
   .hero-v2 .hero-content p { display: block; }
-  .hero-cover-picker { right: .6rem; bottom: .6rem; gap: .3rem; }
+  .hero-cover-picker { right: auto; left: 50%; transform: translateX(-50%); bottom: .6rem; gap: .3rem; }
   .hero-cover-thumb { width: 32px; height: 43px; }
 }
 
@@ -556,10 +559,9 @@ nav {
   .hero-actions { display: none; }
   .hero-showcase { display: none; }
   .hero-trust-row {
-    display: flex; grid-template-columns: none; overflow-x: auto; gap: 0.5rem;
-    max-width: 100%; padding-bottom: 2px; scrollbar-width: none;
+    display: flex; grid-template-columns: none; flex-wrap: wrap; justify-content: center;
+    overflow-x: visible; gap: 0.5rem; max-width: 100%; padding-bottom: 2px;
   }
-  .hero-trust-row::-webkit-scrollbar { display: none; }
   .hero-trust-item {
     flex: 0 0 auto; font-size: 0.68rem; white-space: nowrap;
     background: rgba(240,165,0,0.08); border: 1px solid rgba(240,165,0,0.25);
