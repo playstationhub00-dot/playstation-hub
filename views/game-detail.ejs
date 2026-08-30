@@ -122,15 +122,16 @@
       <% } else if (noSlot) { %>
         <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
       <% } %>
+      <!-- Description sits below the poster, matching the reservation page —
+           this is also what lets the booking card start flush with the
+           poster's top edge instead of being pushed down by copy text. -->
+      <% if (game.description) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
+      <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-top:0.5rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
     </div>
 
     <!-- RIGHT: Detail + Rental Form -->
     <div class="gd-detail-col">
 
-      <!-- Genre, title and release date now render in the branded banner above
-           .gd-layout — moved, not duplicated, so the page shows one title. -->
-      <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
-      <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-bottom:1.25rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
 
       <%
         const gdBundle = resolveBundleInfo(game);
@@ -211,7 +212,6 @@
         </div>
         <% } %>
 
-        <div class="gd-section-label" style="margin-top:<%= allUnavail ? '1.25rem' : '0' %>;">SELECT RENTAL TYPE</div>
         <div class="gd-type-options" id="typeOptions">
 
           <% if (hasTrophy) { %>
@@ -291,8 +291,7 @@
         </div>
 
         <!-- SELECT DURATION -->
-        <div class="gd-section-label" style="margin-top:1.5rem;">SELECT DURATION</div>
-        <div class="gd-duration-grid" id="durationGrid">
+        <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
           <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = promo.enabled ? ((promo.discounts && promo.discounts[d]) || 0) : 0; %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
             <span class="gd-dur-days"><%= durLabel %></span>

@@ -612,8 +612,17 @@ nav {
 .gd-release-date { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); align-self: center; }
 .gd-title { font-size: 1.6rem; font-weight: 900; line-height: 1.2; margin: 0 0 0.5rem; }
 .gd-desc { font-size: 0.85rem; color: #888; margin: 0 0 1rem; line-height: 1.6; }
+/* Now sits below the poster rather than above the booking card — needs top
+   spacing instead of bottom, and no longer needs bottom margin since nothing
+   in the cover column follows it. */
+.gdh-poster-desc { margin: 0.85rem 0 0; }
 .gd-section-label { font-size: 0.75rem; font-weight: 800; letter-spacing: 1.2px; color: #555; text-transform: uppercase; margin-bottom: 0.75rem; }
-.gd-price-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.8rem 0.95rem; margin-bottom: 1.25rem; }
+/* Hidden rather than removed: updatePrices()/setMode() still write into
+   #phKicker/#phAmount/#phWas/#phSave/#phRider on every price change, and
+   deleting the elements would throw. The reservation-style card already shows
+   this information via the type pills and the order summary below, so the
+   separate box is redundant clutter, not lost information. */
+.gd-price-header { display: none; }
 .gd-ph-kicker { font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 0.15rem; }
 .gd-ph-amount { font-size: 1.55rem; font-weight: 900; color: var(--ps-blue); letter-spacing: -0.01em; line-height: 1; }
 .gd-ph-save-wrap { text-align: right; }
