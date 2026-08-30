@@ -1012,7 +1012,12 @@ app.get('/ps-plus/rent', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : rawSlots;
   const settings = getSiteSettings();
-  res.render('psplus-rent', { prices, slots, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null });
+  // Use the catalogue entry's real cover. The view previously hardcoded
+  // /images/psplus-deluxe-cover.jpg, which has never existed on this deploy —
+  // it 404'd on every page load and only looked right because of the onerror
+  // fallback underneath it.
+  const psplusCover = psplusGame && psplusGame.cover_image ? psplusGame.cover_image : '';
+  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null });
 });
 
 // PS Plus admin CRUD

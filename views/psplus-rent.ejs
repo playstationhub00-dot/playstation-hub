@@ -27,10 +27,12 @@
 
     <!-- LEFT: PS Plus cover -->
     <div class="gd-cover-col">
-      <img src="/images/psplus-deluxe-cover.jpg" alt="PS Plus Deluxe"
+      <% if (psplusCover) { %>
+      <img src="<%= psplusCover %>" alt="PS Plus Deluxe"
         class="gd-cover"
         onerror="this.style.display='none';document.getElementById('psCoverFallback').style.display='flex'">
-      <div id="psCoverFallback" class="gd-cover gd-cover-placeholder" style="display:none;background:linear-gradient(135deg,#1a1000,#2a1f00);align-items:center;justify-content:center;">
+      <% } %>
+      <div id="psCoverFallback" class="gd-cover gd-cover-placeholder" style="display:<%= psplusCover ? 'none' : 'flex' %>;background:linear-gradient(135deg,#1a1000,#2a1f00);align-items:center;justify-content:center;">
         <div style="text-align:center;">
           <div style="font-size:3rem;">🏆</div>
           <div style="font-size:1rem;font-weight:900;color:#FFD700;margin-top:0.5rem;">PS PLUS</div>
