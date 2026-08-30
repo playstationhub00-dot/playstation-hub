@@ -1656,7 +1656,12 @@ app.post('/order/create', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
-  const { game_id, account_type, days, fb_name } = req.body;
+  const { game_id, account_type, days, fb_name, kind } = req.body;
+  // 'buy' = pre-ordering PERMANENT access to a not-yet-released game. It reuses
+  // this route (not /order/buy) because the money model is the reservation
+  // one — 50% now, remainder on release — and /order/buy only knows about
+  // already-released catalogue rows.
+  const isBuyPreorder = kind === 'buy';
   const game = getGame(game_id);
   if (!game) return res.redirect('/browse');
 
@@ -1825,7 +1830,8 @@ app.post('/order/create-psplus', async (req, res) => {
       game_id: 'psplus',
       game_title: 'PS Plus Deluxe',
       account_type: type,
-      days: d,
+      days: isBuyPreorder ? null : d,
+      is_buy: isBuyPreorder,
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
@@ -1868,13 +1874,30 @@ app.post('/order/reserve', async (req, res) => {
     ? (['nt', 'tr'].includes(account_type) ? account_type : null)
     : (['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null);
   const d = parseInt(days);
-  if (!name || !type || !PROMO_DURATIONS.includes(d)) return res.redirect(errRedirect);
+  // A permanent pre-order has no rental duration, so the 7/30-day guard must
+  // not apply to it.
+  if (!name || !type) return res.redirect(errRedirect);
+  if (isBuyPreorder) {
+    if (!isUpcoming) return res.redirect(errRedirect);
+  } else if (!PROMO_DURATIONS.includes(d)) {
+    return res.redirect(errRedirect);
+  }
 
   const s = getSiteSettings();
   const promo = s.promo || {};
   let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
 
-  if (isUpcoming) {
+  if (isBuyPreorder) {
+    // Permanent price, no rental deposit — the customer is buying the account
+    // outright, so there is nothing to return.
+    const base = (type === 'tr' ? game.buy_tr_price : game.buy_nt_price) || 0;
+    if (!base) return res.redirect(errRedirect);
+    depositDue = 0;
+    amountDue = Math.ceil(base * 0.5);
+    remainingDue = base - amountDue;
+    releaseDate = game.release_date || '';
+    upcomingGameId = game.id;
+  } else if (isUpcoming) {
     const priceField = type + '_price_' + d + 'd';
     const base = game[priceField] || 0;
     if (!base) return res.redirect(errRedirect);
@@ -2918,7 +2941,8 @@ app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
-          tr_price_7d, tr_price_30d } = req.body;
+          tr_price_7d, tr_price_30d,
+          buy_nt_price, buy_tr_price } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
   const cover_image = coverFile ? await processUploadedImage(coverFile) : '';
@@ -2940,6 +2964,8 @@ app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image
     nt_price_30d: parseInt(nt_price_30d) || 0,
     tr_price_7d: parseInt(tr_price_7d) || 0,
     tr_price_30d: parseInt(tr_price_30d) || 0,
+    buy_nt_price: parseInt(buy_nt_price) || 0,
+    buy_tr_price: parseInt(buy_tr_price) || 0,
     created_at: new Date().toISOString()
   }).write();
   res.redirect('/admin?msg=upcoming_added');
@@ -2955,7 +2981,8 @@ app.post('/admin/upcoming/edit/:id', requireAuth, upload.fields([{ name: 'cover_
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
-          tr_price_7d, tr_price_30d, remove_gallery } = req.body;
+          tr_price_7d, tr_price_30d, remove_gallery,
+          buy_nt_price, buy_tr_price } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
   const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
@@ -2987,6 +3014,8 @@ app.post('/admin/upcoming/edit/:id', requireAuth, upload.fields([{ name: 'cover_
     nt_price_30d: parseInt(nt_price_30d) || 0,
     tr_price_7d: parseInt(tr_price_7d) || 0,
     tr_price_30d: parseInt(tr_price_30d) || 0,
+    buy_nt_price: parseInt(buy_nt_price) || 0,
+    buy_tr_price: parseInt(buy_tr_price) || 0,
   }).write();
   res.redirect('/admin?msg=upcoming_updated');
 });
@@ -3017,6 +3046,8 @@ app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
     description: game.description || '',
     cover_image: game.cover_image || '',
     gallery: game.gallery || [],
+    buy_nt_price: game.buy_nt_price || 0,
+    buy_tr_price: game.buy_tr_price || 0,
     non_trophy_slots: game.non_trophy_slots || 0,
     trophy_slots: game.trophy_slots || 0,
     nt_price_7d: game.nt_price_7d || 0,

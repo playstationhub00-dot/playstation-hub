@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buy Permanent Access — Playstation Hub</title>
+  <link rel="icon" href="/uploads/favicon-custom.png" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=1787557880000">
+</head>
+<body>
+
+
+
+
+<nav>
+  <a href="/" class="logo"><img src="/uploads/logo-custom.png" alt="Playstation Hub" /></a>
+
+  <div class="nav-links" id="navLinks">
+    <a href="/" class="">Home</a>
+    <a href="/browse" class="">Rent</a>
+    <a href="/buy" class="active">Buy</a>
+    <a href="/requests" class="">Requests</a>
+    <a href="/how-it-works" class="">How It Works</a>
+  </div>
+
+  <div class="navicons">
+    <!-- Search collapses to this icon; tapping it reveals the box below as a
+         full-width dropdown instead of permanently occupying nav space. -->
+    <button type="button" class="navicon-btn" id="navSearchToggle" aria-label="Search" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    </button>
+    
+    <a href="https://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
+  </div>
+
+  <div class="navsearch" id="navSearch">
+    <div class="navsearch-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:15px;height:15px;flex-shrink:0;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="text" id="navSearchInput" placeholder="Search games…" autocomplete="off" aria-label="Search games">
+      <kbd class="navsearch-kbd">/</kbd>
+    </div>
+    <div class="navsearch-results" id="navSearchResults"></div>
+  </div>
+
+  <button type="button" class="nav-hamburger" id="navHamburger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+<div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
+<div class="nav-drawer" id="navDrawer">
+  <a href="/" class="">Home</a>
+  <a href="/browse" class="">Rent</a>
+  <a href="/buy" class="active">Buy</a>
+  <a href="/requests" class="">Requests</a>
+  <a href="/how-it-works" class="">How It Works</a>
+  
+  <a href="https://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
+</div>
+
+<!-- Mobile-only: the nav's own Message Us button scrolls out of reach on a long page —
+     this stays pinned in thumb range regardless of scroll position. -->
+<a href="https://m.me/PlaystationHub00" target="_blank" rel="noopener" class="mobile-fab" aria-label="Message us on Messenger">
+  💬 <span>Message Us</span>
+</a>
+
+<script>
+(function(){
+  const hamburger = document.getElementById('navHamburger');
+  const drawer = document.getElementById('navDrawer');
+  const overlay = document.getElementById('navDrawerOverlay');
+  function openDrawer() {
+    drawer.classList.add('open'); overlay.classList.add('open');
+    hamburger.classList.add('open'); hamburger.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open'); overlay.classList.remove('open');
+    hamburger.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+  hamburger.addEventListener('click', function() {
+    drawer.classList.contains('open') ? closeDrawer() : openDrawer();
+  });
+  overlay.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+})();
+
+(function(){
+  const wrap = document.getElementById('navSearch');
+  const input = document.getElementById('navSearchInput');
+  const box = document.getElementById('navSearchResults');
+  let index = null, items = [], sel = -1, loading = false;
+
+  function esc(s) { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+  function hl(text, term) {
+    const i = text.toLowerCase().indexOf(term.toLowerCase());
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + term.length)) + '</mark>' + esc(text.slice(i + term.length));
+  }
+
+  function loadIndex() {
+    if (index || loading) return;
+    loading = true;
+    fetch('/api/search-index').then(r => r.json()).then(data => { index = data; }).catch(() => { index = []; }).finally(() => { loading = false; });
+  }
+  input.addEventListener('focus', loadIndex, { once: true });
+
+  function render(term) {
+    if (!term.trim() || !index) { box.classList.remove('show'); box.innerHTML = ''; items = []; sel = -1; return; }
+    const t = term.trim().toLowerCase();
+    // Match the title, or a bundle's hidden contained-game keywords, so searching a
+    // title that only lives inside a bundle still surfaces that bundle.
+    const matches = index.filter(x => x.t.toLowerCase().includes(t) || (x.k || '').toLowerCase().includes(t));
+    const now = matches.filter(x => x.y === 'now').slice(0, 6);
+    const psplus = matches.filter(x => x.y === 'psplus').slice(0, 3);
+    const soon = matches.filter(x => x.y === 'soon').slice(0, 3);
+    const requested = matches.filter(x => x.y === 'requested').slice(0, 3);
+
+    let h = '';
+    if (now.length) {
+      h += '<div class="navsearch-head">Available now</div>';
+      now.forEach(x => {
+        const av = x.s > 0
+          ? '<span class="navsearch-avail-yes">' + x.s + ' slot' + (x.s !== 1 ? 's' : '') + ' left</span>'
+          : '<span class="navsearch-avail-no">FULLY BOOKED</span>';
+        const thumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🎮';
+        // A bundle that matched on its contents (not its own name) needs to say why
+        // it's in the results, otherwise the hit looks unrelated to what was typed.
+        const viaContents = x.bn > 0 && !x.t.toLowerCase().includes(t);
+        const bundleNote = x.bn > 0
+          ? '<span class="navsearch-bundle-note">' + (viaContents ? 'includes this · ' : '') + x.bn + ' games</span>'
+          : '';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + thumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.p + '</span>' + bundleNote + av + '</div></div>' +
+          '<div class="navsearch-price-col">' +
+          (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') +
+          (x.bpr ? '<div class="navsearch-buy-price">Buy ₱' + x.bpr + '</div>' : '') +
+          '</div></a>';
+      });
+    }
+    if (psplus.length) {
+      h += '<div class="navsearch-head">PS Plus Deluxe</div>';
+      psplus.forEach(x => {
+        const psThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '➕';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + psThumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.p + '</span></div></div>' +
+          '<span class="navsearch-badge-psplus">PS PLUS</span></a>';
+      });
+    }
+    if (soon.length) {
+      h += '<div class="navsearch-head">Coming soon</div>';
+      soon.forEach(x => {
+        const soonThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🔜';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + soonThumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.p + '</span><span>' + x.d + '</span></div></div>' +
+          '<span class="navsearch-badge-soon">SOON</span></a>';
+      });
+    }
+    if (requested.length) {
+      h += '<div class="navsearch-head">Requested by customers</div>';
+      requested.forEach(x => {
+        const reqThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🙋';
+        h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + reqThumb + '</div>' +
+          '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
+          '<div class="navsearch-meta"><span>' + x.v + ' vote' + (x.v !== 1 ? 's' : '') + '</span></div></div>' +
+          '<span class="navsearch-badge-requested">REQUESTED</span></a>';
+      });
+    }
+    if (!h) {
+      h = '<div class="navsearch-empty">' +
+        '<div class="navsearch-empty-ico">🔍</div>' +
+        '<div class="navsearch-empty-title">No games match &ldquo;' + esc(term.trim()) + '&rdquo;</div>' +
+        '<div class="navsearch-empty-sub">Not in our library yet — request it and we\'ll stock the most-wanted titles first.</div>' +
+        '<div class="navsearch-empty-acts">' +
+        '<a href="/requests?title=' + encodeURIComponent(term.trim()) + '" class="navsearch-empty-btn">Request this game</a>' +
+        '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn2">Message Us</a>' +
+        '<a href="/browse" class="navsearch-empty-btn2">Browse All Games</a>' +
+        '</div></div>';
+    } else if (matches.length > now.length + psplus.length + soon.length + requested.length) {
+      h += '<a class="navsearch-all" href="/browse?search=' + encodeURIComponent(term.trim()) + '">See all ' + matches.length + ' results →</a>';
+    }
+    box.innerHTML = h;
+    box.classList.add('show');
+    items = [...box.querySelectorAll('.navsearch-item')];
+    sel = -1;
+  }
+
+  function move(d) {
+    if (!items.length) return;
+    if (sel >= 0) items[sel].classList.remove('sel');
+    sel = (sel + d + items.length) % items.length;
+    items[sel].classList.add('sel');
+    items[sel].scrollIntoView({ block: 'nearest' });
+  }
+
+  input.addEventListener('input', e => render(e.target.value));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); move(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); move(-1); }
+    else if (e.key === 'Enter' && sel >= 0) { e.preventDefault(); items[sel].click(); }
+    else if (e.key === 'Escape') { input.blur(); box.classList.remove('show'); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== input && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
+      e.preventDefault(); loadIndex(); input.focus();
+    }
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.navsearch')) box.classList.remove('show');
+  });
+  input.addEventListener('focus', () => { if (input.value.trim()) render(input.value); });
+
+  // Mobile search icon: toggles the box open/closed instead of it always occupying
+  // nav width. Desktop never shows the toggle button, so this is inert there.
+  const toggle = document.getElementById('navSearchToggle');
+  function closeMobileSearch() {
+    wrap.classList.remove('navsearch-active');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    const opening = !wrap.classList.contains('navsearch-active');
+    wrap.classList.toggle('navsearch-active', opening);
+    toggle.setAttribute('aria-expanded', String(opening));
+    if (opening) { loadIndex(); input.focus(); }
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.navsearch') && !e.target.closest('.navsearch-toggle')) closeMobileSearch();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileSearch(); });
+})();
+</script>
+
+
+<div class="buy-page">
+  <h1 class="buy-title">Buy permanently</h1>
+  <p class="buy-sub">Own it forever. No return date, no weekly fee.</p>
+
+  
+  
+  
+
+  
+  <div class="buy-section-label">Account bundles — best value</div>
+  <div class="buy-bundle-grid">
+    
+    
+    <div class="buy-bundle-card">
+      <a href="/bundle/ps-hub-main-account" class="buy-bundle-link">
+        <div class="buy-bundle-head">
+          <span class="buy-bundle-name">PS Hub Main Account</span>
+          <span class="buy-bundle-count">12 games</span>
+        </div>
+        <div class="buy-bundle-each">from ₱375 per game</div>
+        <div class="buy-bundle-covers">
+          
+            <img src="/uploads/1782496201428.webp" alt="A Way Out" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1783598628110.webp" alt="Calisto Protocol" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1783598589130.webp" alt="Call of Duty Black Ops 6" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1783598812240.webp" alt="Final Fantasy 16" class="buy-cover-thumb" loading="lazy">
+            
+          
+          <div class="buy-cover-thumb buy-cover-more">+8</div>
+        </div>
+      </a>
+      
+      <div class="buy-bundle-foot">
+        <div class="buy-tier-row">
+          
+            <div class="buy-tier buy-tier-off">
+              <span class="buy-tier-label">Non-Trophy</span>
+              <span class="buy-tier-price">₱4500</span>
+              <span class="buy-tier-status">Rented</span>
+            </div>
+          
+            <div class="buy-tier buy-tier-off">
+              <span class="buy-tier-label">Trophy</span>
+              <span class="buy-tier-price">₱5000</span>
+              <span class="buy-tier-status">Rented</span>
+            </div>
+          
+        </div>
+        
+        <div class="buy-bundle-none">Both tiers taken right now</div>
+        
+      </div>
+    </div>
+    
+    <div class="buy-bundle-card">
+      <a href="/bundle/resident-evil-remake-triology" class="buy-bundle-link">
+        <div class="buy-bundle-head">
+          <span class="buy-bundle-name">Resident Evil Remake Triology</span>
+          <span class="buy-bundle-count">3 games</span>
+        </div>
+        <div class="buy-bundle-each">from ₱500 per game</div>
+        <div class="buy-bundle-covers">
+          
+            <img src="/uploads/1786936303000.webp" alt="RESIDENT EVIL 2 Deluxe Edition" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1786936266405.webp" alt="Resident Evil 3" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1786936215130.webp" alt="Resident Evil 4: Gold Edition" class="buy-cover-thumb" loading="lazy">
+            
+          
+          
+        </div>
+      </a>
+      
+      <div class="buy-bundle-foot">
+        <div class="buy-tier-row">
+          
+            <div class="buy-tier buy-tier-off">
+              <span class="buy-tier-label">Non-Trophy</span>
+              <span class="buy-tier-price">₱1499</span>
+              <span class="buy-tier-status">Rented</span>
+            </div>
+          
+            <div class="buy-tier buy-tier-off">
+              <span class="buy-tier-label">Trophy</span>
+              <span class="buy-tier-price">₱1999</span>
+              <span class="buy-tier-status">Sold</span>
+            </div>
+          
+        </div>
+        
+        <div class="buy-bundle-none">Both tiers taken right now</div>
+        
+      </div>
+    </div>
+    
+    <div class="buy-bundle-card">
+      <a href="/bundle/palworld-squadron" class="buy-bundle-link">
+        <div class="buy-bundle-head">
+          <span class="buy-bundle-name">Palworld / Squadron</span>
+          <span class="buy-bundle-count">2 games</span>
+        </div>
+        <div class="buy-bundle-each">from ₱500 per game</div>
+        <div class="buy-bundle-covers">
+          
+            <img src="/uploads/1784896604774.webp" alt="PALWORLD" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1784896838821.webp" alt="Star Wars Squadron" class="buy-cover-thumb" loading="lazy">
+            
+          
+          
+        </div>
+      </a>
+      
+      <div class="buy-bundle-foot">
+        <div class="buy-tier-row">
+          
+            <div class="buy-tier buy-tier-open">
+              <span class="buy-tier-label">Non-Trophy</span>
+              <span class="buy-tier-price">₱999</span>
+              <span class="buy-tier-status buy-tier-status-open">Available</span>
+            </div>
+          
+            <div class="buy-tier buy-tier-open">
+              <span class="buy-tier-label">Trophy</span>
+              <span class="buy-tier-price">₱1499</span>
+              <span class="buy-tier-status buy-tier-status-open">Available</span>
+            </div>
+          
+        </div>
+        
+        <a href="/bundle/palworld-squadron" class="buy-tier-buy-btn">Buy</a>
+        
+      </div>
+    </div>
+    
+    <div class="buy-bundle-card">
+      <a href="/bundle/assassin-s-creed-legacy-account" class="buy-bundle-link">
+        <div class="buy-bundle-head">
+          <span class="buy-bundle-name">Assassin&#39;s Creed Legacy Account</span>
+          <span class="buy-bundle-count">2 games</span>
+        </div>
+        <div class="buy-bundle-each">from ₱500 per game</div>
+        <div class="buy-bundle-covers">
+          
+            <img src="/uploads/1786933557811.webp" alt="Assassin&#39;s Creed Odyssey Ultimate Edition" class="buy-cover-thumb" loading="lazy">
+            
+          
+            <img src="/uploads/1786933601639.webp" alt="assassin&#39;s creed origins gold edition" class="buy-cover-thumb" loading="lazy">
+            
+          
+          
+        </div>
+      </a>
+      
+      <div class="buy-bundle-foot">
+        <div class="buy-tier-row">
+          
+            <div class="buy-tier buy-tier-open">
+              <span class="buy-tier-label">Non-Trophy</span>
+              <span class="buy-tier-price">₱999</span>
+              <span class="buy-tier-status buy-tier-status-open">Available</span>
+            </div>
+          
+            <div class="buy-tier buy-tier-open">
+              <span class="buy-tier-label">Trophy</span>
+              <span class="buy-tier-price">₱1499</span>
+              <span class="buy-tier-status buy-tier-status-open">Available</span>
+            </div>
+          
+        </div>
+        
+        <a href="/bundle/assassin-s-creed-legacy-account" class="buy-tier-buy-btn">Buy</a>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+
+  
+  <div class="buy-filter-row">
+    <div class="buy-section-label buy-section-label-plain">Single games</div>
+    
+    <label class="buy-avail-toggle">
+      <input type="checkbox" id="buyAvailToggle" onchange="buyToggleAvailability(this.checked)">
+      <span>Available today only</span>
+    </label>
+    
+  </div>
+  
+  <div class="buy-price-section" data-group-count="3" data-group-pending="0">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱499</span>
+      <span class="buy-price-section-count" data-full-count="3">3 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/star-wars-squadron?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1784896838821.webp" alt="Star Wars Squadron" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4 · Action</div>
+          <div class="gc2-title">Star Wars Squadron</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/tekken-7?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496384304.webp" alt="Tekken 7" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Action</div>
+          <div class="gc2-title">Tekken 7</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/ufc-5?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496447176.webp" alt="UFC 5" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Sports</div>
+          <div class="gc2-title">UFC 5</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-price-section" data-group-count="6" data-group-pending="0">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱799</span>
+      <span class="buy-price-section-count" data-full-count="6">6 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/a-way-out?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496201428.webp" alt="A Way Out" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Co-op</div>
+          <div class="gc2-title">A Way Out</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/hitman-world-of-assassination?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496524072.webp" alt="Hitman World of Assassination" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Action</div>
+          <div class="gc2-title">Hitman World of Assassination</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/it-takes-two?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496275206.webp" alt="It Takes Two" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Co-op</div>
+          <div class="gc2-title">It Takes Two</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/marvel-s-spider-man-2?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493401578.webp" alt="Marvel&#39;s Spider-Man 2" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Marvel&#39;s Spider-Man 2</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/red-dead-redemption-2-ultimate-edition?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496332133.webp" alt="Red Dead Redemption 2:  Ultimate Edition" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Action</div>
+          <div class="gc2-title">Red Dead Redemption 2:  Ultimate Edition</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/space-marine-2?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496571875.webp" alt="Space Marine 2" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Space Marine 2</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱799</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-price-section" data-group-count="12" data-group-pending="1">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱999</span>
+      <span class="buy-price-section-count" data-full-count="12">12 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/assasins-creed-shadows?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496613784.webp" alt="Assasins Creed Shadows" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Assasins Creed Shadows</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/assassin-s-creed-legacy-account?mode=buy" class="game-card gc2-card buy-card-pending" data-pending="true">
+        <img src="/uploads/1786933467324.webp" alt="Assassin&#39;s Creed Legacy Account" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        <div class="gc2-badge buy-badge-pending">Set up on order</div>
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Action</div>
+          <div class="gc2-title">Assassin&#39;s Creed Legacy Account</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/black-myth-wukong?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496647263.webp" alt="Black Myth Wukong" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Black Myth Wukong</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/death-stranding-2?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496684881.webp" alt="Death Stranding 2" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Death Stranding 2</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/expedition-33?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496729693.webp" alt="Expedition 33" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Expedition 33</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/forza-horizon-5?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496792496.webp" alt="Forza Horizon 5" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Racing</div>
+          <div class="gc2-title">Forza Horizon 5</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/khazan-the-first-berseker?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496824570.webp" alt="Khazan The First Berseker" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Khazan The First Berseker</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/mafia-the-old-country?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496867884.webp" alt="Mafia The Old Country" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Mafia The Old Country</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/metal-gear-solid-delta-snake-eater?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496902557.webp" alt="Metal Gear Solid Delta: Snake Eater" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Metal Gear Solid Delta: Snake Eater</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/monster-hunter-wilds?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495980562.webp" alt="Monster Hunter Wilds" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Monster Hunter Wilds</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/nba-2k26?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495933078.webp" alt="NBA 2K26" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Sports</div>
+          <div class="gc2-title">NBA 2K26</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/palworld?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1784896604774.webp" alt="PALWORLD" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">PALWORLD</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-price-section" data-group-count="5" data-group-pending="0">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱1,499</span>
+      <span class="buy-price-section-count" data-full-count="5">5 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/little-nightmares-iii-deluxe-edition?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495862956.webp" alt="Little Nightmares III Deluxe Edition" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Horror</div>
+          <div class="gc2-title">Little Nightmares III Deluxe Edition</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/reanimal?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493266975.webp" alt="Reanimal" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Horror</div>
+          <div class="gc2-title">Reanimal</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/resident-evil-remake-triology?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495836209.webp" alt="Resident Evil Remake Triology" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Horror</div>
+          <div class="gc2-title">Resident Evil Remake Triology</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/silent-hill-f?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493380722.webp" alt="Silent Hill f" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Horror</div>
+          <div class="gc2-title">Silent Hill f</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/split-fiction?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493418894.webp" alt="Split Fiction" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Co-op</div>
+          <div class="gc2-title">Split Fiction</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-price-section" data-group-count="11" data-group-pending="0">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱1,999</span>
+      <span class="buy-price-section-count" data-full-count="11">11 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/007-first-light?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782490858966.webp" alt="007 First Light" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">007 First Light</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/assasins-creed-shadows-w-dlc?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496157709.webp" alt="Assasins Creed Shadows w/ DLC" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Assasins Creed Shadows w/ DLC</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/assassin-s-creed-black-flag-resynced?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1785795103921.webp" alt="Assassin&#39;s Creed Black Flag Resynced" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Assassin&#39;s Creed Black Flag Resynced</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/battlefield-6?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496019354.webp" alt="Battlefield 6" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Battlefield 6</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/crimson-desert?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495707184.webp" alt="Crimson Desert" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Crimson Desert</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/dying-light-the-beast?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496112459.webp" alt="Dying Light: The Beast" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Dying Light: The Beast</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/ghost-of-yotei?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782496069357.webp" alt="Ghost of Yotei" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Ghost of Yotei</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/pragmata?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782495681886.webp" alt="PRAGMATA" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">PRAGMATA</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/resident-evil-requiem?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493301342.webp" alt="Resident Evil Requiem" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Horror</div>
+          <div class="gc2-title">Resident Evil Requiem</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/saros?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782493339781.webp" alt="Saros" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">Saros</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/ufc-6?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782633760336.webp" alt="UFC 6" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Sports</div>
+          <div class="gc2-title">UFC 6</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱1999</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-price-section" data-group-count="2" data-group-pending="0">
+    <div class="buy-price-section-head">
+      <span class="buy-price-section-label">₱2,499 and up</span>
+      <span class="buy-price-section-count" data-full-count="2">2 games</span>
+    </div>
+    <div class="buy-single-grid">
+      
+      <a href="/game/marvel-t-kon-fighting-souls?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1786073551836.webp" alt="MARVEL Tōkon: Fighting Souls" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS5 · Action</div>
+          <div class="gc2-title">MARVEL Tōkon: Fighting Souls</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱2499</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="/game/ps-hub-main-account?mode=buy" class="game-card gc2-card" data-pending="false">
+        <img src="/uploads/1782494799291.webp" alt="PS HUB Main Account" class="gc2-cover" loading="lazy" decoding="async" style="object-position: 50% 50%;">
+        
+        <div class="gc2-scrim"></div>
+        
+        <div class="gc2-body">
+          <div class="gc2-plat">PS4/PS5 · Mix</div>
+          <div class="gc2-title">PS HUB Main Account</div>
+          <div class="gc2-foot">
+            <div class="gc2-price">from <b>₱4000</b></div>
+            <div class="gc2-cta">Buy</div>
+          </div>
+        </div>
+      </a>
+      
+    </div>
+  </div>
+  
+  <div class="buy-empty-filtered" id="buyEmptyFiltered" style="display:none;">Everything is set up on order right now.</div>
+  
+
+  <div class="buy-placeholder-grid">
+    <div class="buy-placeholder-card">
+      <div class="buy-placeholder-title">📦 Build your own</div>
+      <p class="buy-placeholder-text">Pick any 3 or more games and save. We put them on one account for you.</p>
+      <a href="https://m.me/PlaystationHub00?text=Hi!%20I%20want%20to%20build%20my%20own%20bundle." target="_blank" rel="noopener" class="buy-placeholder-cta">Start building</a>
+    </div>
+    <div class="buy-placeholder-card buy-placeholder-amber">
+      <div class="buy-placeholder-title">🛒 Don't see it?</div>
+      <p class="buy-placeholder-text">We'll buy it for you. Pay first, we purchase and set up your account.</p>
+      <a href="/requests" class="buy-placeholder-cta">Request a game</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function buyToggleAvailability(showOnly) {
+  const sections = document.querySelectorAll('.buy-price-section');
+  let anyVisible = false;
+  sections.forEach(function (section) {
+    const cards = section.querySelectorAll('.gc2-card');
+    let visibleInSection = 0;
+    cards.forEach(function (card) {
+      const isPending = card.dataset.pending === 'true';
+      const hide = showOnly && isPending;
+      card.style.display = hide ? 'none' : '';
+      if (!hide) visibleInSection++;
+    });
+    section.style.display = visibleInSection > 0 ? '' : 'none';
+    if (visibleInSection > 0) anyVisible = true;
+    const countEl = section.querySelector('.buy-price-section-count');
+    if (countEl) {
+      const fullCount = parseInt(countEl.dataset.fullCount, 10);
+      const shown = showOnly ? visibleInSection : fullCount;
+      countEl.textContent = shown + (shown !== 1 ? ' games' : ' game');
+    }
+  });
+  const empty = document.getElementById('buyEmptyFiltered');
+  if (empty) empty.style.display = (showOnly && !anyVisible) ? '' : 'none';
+}
+</script>
+
+<!-- Game title auto-fit -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.game-title').forEach(function(el) {
+    var maxSize = 0.95, minSize = 0.45, step = 0.02;
+    el.style.whiteSpace = 'nowrap';
+    el.style.fontSize = maxSize + 'rem';
+    while (el.scrollWidth > el.clientWidth && parseFloat(el.style.fontSize) > minSize) {
+      el.style.fontSize = (parseFloat(el.style.fontSize) - step).toFixed(2) + 'rem';
+    }
+  });
+});
+</script>
+
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2184795349041848');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-col footer-brand">
+        <a href="/" class="logo"><img src="/uploads/logo-custom.png" alt="Playstation Hub" style="height:36px;width:auto;"></a>
+        <p>PS5/PS4 digital game rentals in the Philippines — rent longer, pay less, no discs or meetups.</p>
+        <div class="social-icons">
+          <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener" class="social-icon facebook" title="Facebook — PlaystationHub00">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </a>
+          <a href="https://m.me/PlaystationHub00" target="_blank" rel="noopener" class="social-icon messenger" title="Message us on Messenger">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.652V24l4.088-2.242c1.092.3 2.246.464 3.443.464 6.627 0 12-4.974 12-11.111S18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8.6l3.131 3.26L19.752 8.6l-6.561 6.363z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-col-title">Quick Links</div>
+        <a href="/browse">Browse Games</a>
+        <a href="/ps-plus">PS Plus Deluxe</a>
+        <a href="/how-it-works">How It Works</a>
+        <a href="/#how">Rental Steps</a>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-col-title">Get In Touch</div>
+        <a href="https://m.me/PlaystationHub00" target="_blank" rel="noopener">Message Us on Messenger</a>
+        <a href="/how-to-sign-in">How to Sign In</a>
+        <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener">Facebook Page</a>
+        <span class="footer-note">We reply fastest on Messenger.</span>
+      </div>
+
+      <div class="footer-col">
+        <div class="footer-col-title">Payments</div>
+        <div class="footer-pay-badges">
+          <span class="footer-pay-badge">GCash</span>
+          <span class="footer-pay-badge">Maya</span>
+        </div>
+        <span class="footer-note">Refundable deposit on Trophy accounts only.</span>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span class="footer-copy">&copy; 2026 Playstation Hub. All rights reserved.</span>
+      <span class="footer-tagline">PS5/PS4 Digital Game Rentals Philippines</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

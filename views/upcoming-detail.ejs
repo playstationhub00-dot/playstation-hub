@@ -34,6 +34,13 @@
   const trSlots = game.trophy_slots || 0;
   const totalSlots = ntSlots + trSlots;
   const allFull = totalSlots === 0;
+
+  // Permanent pre-order. Same 50%-now / 50%-on-release model as a reservation,
+  // so it rides the existing reserve flow rather than /order/buy (which only
+  // knows about already-released catalogue rows).
+  const udBuyNt = game.buy_nt_price || 0;
+  const udBuyTr = game.buy_tr_price || 0;
+  const udHasBuy = udBuyNt > 0 || udBuyTr > 0;
 %>
 
 <div class="usd-page">
@@ -100,6 +107,21 @@
              to one automatically applies to the other. -->
         <div class="gdh-card">
 
+          <% if (udHasBuy) { %>
+          <!-- Same Rent/Buy toggle markup as the rent page, so the two cards
+               present the choice identically. -->
+          <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
+            <button type="button" id="udToggleRent" onclick="setUpcomingMode('rent')"
+              style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:var(--ps-blue);color:#000;transition:all 0.15s;letter-spacing:0.3px;">
+              ⏱️ Reserve Rental
+            </button>
+            <button type="button" id="udToggleBuy" onclick="setUpcomingMode('buy')"
+              style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:transparent;color:#555;transition:all 0.15s;letter-spacing:0.3px;">
+              ♾️ Buy Permanent
+            </button>
+          </div>
+          <% } %>
+
           <% if (hasNt || showTr) { %>
           <div class="gd-type-options" id="typeOptions">
             <% if (showTr) { %>
@@ -121,7 +143,7 @@
           </div>
           <% } %>
 
-          <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
+          <div id="udDurWrap"><div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div></div>
 
           <div class="gd-total-box" id="orderSummary" style="display:none;">
             <div class="gd-total-label">ORDER SUMMARY</div>
@@ -142,6 +164,7 @@
               <input type="hidden" name="game_id" value="<%= game.id %>">
               <input type="hidden" name="account_type" id="reserveType" value="">
               <input type="hidden" name="days" id="reserveDays" value="">
+              <input type="hidden" name="kind" id="reserveKind" value="">
               <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name rsv-name-input" placeholder="Your Facebook name" required>
               <button type="submit" id="ctaReserveBtn" class="rsv-cta-btn">Reserve Now →</button>
             </form>
@@ -223,12 +246,43 @@ const NT_PRICES  = { 7: <%= game.nt_price_7d||0 %>, 30: <%= game.nt_price_30d||0
 const TR_PRICES  = { 7: <%= game.tr_price_7d||0 %>, 30: <%= game.tr_price_30d||0 %> };
 const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;
 const TR_SLOTS   = <%= game.trophy_slots||0 %>;
+const BUY_PRICES = { nt: <%= udBuyNt %>, tr: <%= udBuyTr %> };
+const HAS_BUY    = <%= udHasBuy ? 'true' : 'false' %>;
 </script>
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 
 let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
 let selectedDays = null;
+// 'rent' = reserve a rental (duration-based). 'buy' = pre-order permanent
+// access (no duration). Both submit through /order/reserve; the buy branch is
+// distinguished by the hidden `kind` field.
+let upcomingMode = 'rent';
+
+function setUpcomingMode(mode) {
+  upcomingMode = mode === 'buy' ? 'buy' : 'rent';
+  const rentBtn = document.getElementById('udToggleRent');
+  const buyBtn  = document.getElementById('udToggleBuy');
+  if (rentBtn && buyBtn) {
+    const on  = 'var(--ps-blue)', onText = '#000', offText = '#555';
+    rentBtn.style.background = upcomingMode === 'rent' ? on : 'transparent';
+    rentBtn.style.color      = upcomingMode === 'rent' ? onText : offText;
+    buyBtn.style.background  = upcomingMode === 'buy' ? on : 'transparent';
+    buyBtn.style.color       = upcomingMode === 'buy' ? onText : offText;
+  }
+  // A permanent purchase has no rental length, so the duration picker is
+  // irrelevant in buy mode.
+  const durWrap = document.getElementById('udDurWrap');
+  if (durWrap) durWrap.style.display = upcomingMode === 'buy' ? 'none' : '';
+  const kindEl = document.getElementById('reserveKind');
+  if (kindEl) kindEl.value = upcomingMode === 'buy' ? 'buy' : '';
+  updateSummary();
+  updateCta();
+  updateLinks();
+}
+
+// Permanent price for the selected type, 0 when that type isn't sold outright.
+function getBuyPrice() { return (selectedType === 'tr' ? BUY_PRICES.tr : BUY_PRICES.nt) || 0; }
 
 function getPrices() { return selectedType === 'tr' ? TR_PRICES : NT_PRICES; }
 function getSlots()  { return selectedType === 'tr' ? TR_SLOTS  : NT_SLOTS; }
@@ -281,6 +335,19 @@ function selectDur(days) {
 
 function updateSummary() {
   const summary = document.getElementById('orderSummary');
+  if (upcomingMode === 'buy') {
+    // Buying the account outright — no rental deposit, nothing to return.
+    const bp = getBuyPrice();
+    if (!bp) { summary.style.display = 'none'; return; }
+    const bDown = Math.ceil(bp * 0.5);
+    document.getElementById('sumBaseLabel').textContent    = 'Permanent access';
+    document.getElementById('sumBase').textContent         = '₱' + bp;
+    document.getElementById('sumDepositRow').style.display = 'none';
+    document.getElementById('sumDownpayment').textContent  = '₱' + bDown;
+    document.getElementById('sumTotal').textContent        = '₱' + bp;
+    summary.style.display = '';
+    return;
+  }
   if (!selectedDays) { summary.style.display = 'none'; return; }
   const price     = getPrices()[selectedDays] || 0;
   const isTrophy  = selectedType === 'tr';
@@ -297,6 +364,22 @@ function updateSummary() {
 }
 
 function updateCta() {
+  if (upcomingMode === 'buy') {
+    const bp = getBuyPrice();
+    const bDown = bp ? Math.ceil(bp * 0.5) : 0;
+    document.getElementById('ctaReserveTitle').textContent = 'Pre-order Permanent Access';
+    document.getElementById('ctaHasSlotFee').textContent = bp ? ('50% Downpayment — ₱' + bDown) : 'Not sold permanently for this type';
+    document.getElementById('ctaReserveNote').textContent = bp
+      ? 'Pay 50% now to lock in permanent access. Remaining balance due when the game releases.'
+      : 'Pick the other account type to buy permanent access.';
+    document.getElementById('ctaReserveBtn').textContent = 'Pre-order Now →';
+    const dp = document.getElementById('ctaHasSlotDP');
+    if (dp) {
+      if (bp) { dp.textContent = 'Total: ₱' + bp + '  •  Pay now: ₱' + bDown + '  •  Remaining: ₱' + (bp - bDown); dp.style.display = ''; }
+      else { dp.style.display = 'none'; }
+    }
+    return;
+  }
   const hasSlot = getSlots() > 0;
   document.getElementById('ctaReserveTitle').textContent = hasSlot ? 'Reserve a Slot' : 'Request a Slot';
   document.getElementById('ctaReserveNote').textContent = hasSlot
@@ -360,6 +443,7 @@ function shakeDurGrid() {
 }
 
 function handleReserveClick(e, mode) {
+  if (upcomingMode === 'buy') return true;
   if (!ALL_FULL && !selectedDays) {
     e.preventDefault();
     shakeDurGrid();
@@ -369,6 +453,15 @@ function handleReserveClick(e, mode) {
 }
 
 function handleReserveSubmit(e) {
+  // Buy mode has no duration to validate — it is gated on the selected type
+  // actually having a permanent price instead.
+  if (upcomingMode === 'buy') {
+    if (!getBuyPrice()) { e.preventDefault(); return false; }
+    document.getElementById('reserveType').value = selectedType;
+    document.getElementById('reserveDays').value = '';
+    document.getElementById('reserveKind').value = 'buy';
+    return true;
+  }
   if (!selectedDays) {
     e.preventDefault();
     shakeDurGrid();
@@ -376,6 +469,7 @@ function handleReserveSubmit(e) {
   }
   document.getElementById('reserveType').value = selectedType;
   document.getElementById('reserveDays').value = selectedDays;
+  document.getElementById('reserveKind').value = '';
   return true;
 }
 
