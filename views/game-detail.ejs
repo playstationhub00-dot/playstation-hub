@@ -102,57 +102,25 @@
 
   <div class="gd-layout">
 
-    <!-- LEFT: Cover + Gameplay Slider -->
-    <%
-      const slides = [];
-      if (game.cover_image) slides.push(game.cover_image);
-      (game.gallery || []).forEach(img => { if (img) slides.push(img); });
-    %>
+    <!-- LEFT: Static poster, matching the reservation page. Gameplay screenshots
+         moved to a full-width section below .gd-layout — see gdhGallery. -->
+    <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
     <div class="gd-cover-col">
-      <% if (slides.length) { %>
-        <div class="gd-slider" id="gdSlider">
-          <div class="gd-slider-track" id="gdSliderTrack">
-            <% slides.forEach((img, i) => { %>
-              <% const isCover = i === 0 && game.cover_image && img === game.cover_image; %>
-              <% const focalStyle = isCover ? ('object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;') : ''; %>
-              <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> screenshot <%= i+1 %>" class="gd-cover" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %> style="<%= focalStyle %>"></div>
-            <% }) %>
-          </div>
-          <div class="gd-platform-badge"><%= game.platform %></div>
-          <% if (isLastSlot) { %>
-            <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
-          <% } else if (noSlot) { %>
-            <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
-          <% } %>
-          <% if (slides.length > 1) { %>
-            <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
-            <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
-            <div class="gd-slider-dots" id="gdSliderDots">
-              <% slides.forEach((img, i) => { %>
-                <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
-              <% }) %>
-            </div>
-          <% } %>
-        </div>
-        <% if (slides.length > 1) { %>
-        <div class="gd-thumbs" id="gdThumbs">
-          <% slides.forEach((img, i) => { %>
-            <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
-          <% }) %>
-        </div>
-        <% } %>
+      <% if (game.cover_image) { %>
+        <% const gdhFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" style="<%= gdhFocal %>">
       <% } else { %>
-        <div class="gd-cover gd-cover-placeholder" style="position:relative;">
+        <div class="gd-cover gd-cover-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
             <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
           </svg>
-          <div class="gd-platform-badge"><%= game.platform %></div>
-          <% if (isLastSlot) { %>
-            <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
-          <% } else if (noSlot) { %>
-            <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
-          <% } %>
         </div>
+      <% } %>
+      <div class="gd-platform-badge"><%= game.platform %></div>
+      <% if (isLastSlot) { %>
+        <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
+      <% } else if (noSlot) { %>
+        <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
       <% } %>
     </div>
 
@@ -517,6 +485,39 @@
 
     </div>
   </div>
+
+  <% if (gdhGallery.length) { %>
+  <!-- Gameplay gallery: reuses .rsv-gallery-section wholesale (wrapper, label,
+       and the scoped centered-thumbs rule) from the reservation page — no new
+       CSS. Still driven by the existing gdGo/gdMove/autoplay below, which are
+       ID-based and never depended on the cover being slide 1. -->
+  <div class="rsv-gallery-section">
+    <div class="rsv-gallery-label">Gameplay</div>
+    <div class="gd-slider" id="gdSlider">
+      <div class="gd-slider-track" id="gdSliderTrack">
+        <% gdhGallery.forEach((img, i) => { %>
+          <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
+        <% }) %>
+      </div>
+      <% if (gdhGallery.length > 1) { %>
+        <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
+        <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
+        <div class="gd-slider-dots" id="gdSliderDots">
+          <% gdhGallery.forEach((img, i) => { %>
+            <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+    <% if (gdhGallery.length > 1) { %>
+    <div class="gd-thumbs" id="gdThumbs">
+      <% gdhGallery.forEach((img, i) => { %>
+        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+      <% }) %>
+    </div>
+    <% } %>
+  </div>
+  <% } %>
 
   <!-- ══ MOBILE STICKY BAR (≤820px) ══ -->
   <div class="gd-sticky-bar" id="gdStickyBar">
@@ -1021,7 +1022,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ── Gameplay image slider ──
 let gdIndex = 0;
-const gdSlideCount = <%= slides.length %>;
+const gdSlideCount = <%= gdhGallery.length %>;
 function gdGo(i) {
   if (gdSlideCount <= 1) return;
   gdIndex = (i + gdSlideCount) % gdSlideCount;

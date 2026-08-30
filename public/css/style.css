@@ -874,6 +874,13 @@ nav {
 /* Booking card — same surface treatment as the reservation page's .rsv-card. */
 .gdh-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 14px; padding: 1.25rem; }
 
+/* Static poster, uncropped, matching the reservation page. Two-class selector
+   deliberately: the mobile media query further down this file sets
+   `.gd-cover { height: 300px }` for the old slider column, and a single-class
+   .gdh-poster rule would lose to it on mobile by source order alone — the
+   exact bug already hit once on the reservation gallery. */
+.gd-cover-col .gdh-poster { height: auto; aspect-ratio: 2 / 3; }
+
 /* Compact rental-type pills. Scoped with .gd-type-pill rather than styling
    .gd-type-card, because the buy panel's cards also carry .gd-type-card and
    must keep their existing full-width form. */
