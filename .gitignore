@@ -6,3 +6,11 @@ public/hero-bg-video.*
 public/logo-custom.*
 .env
 .claude/
+
+# Local scratch/debug page dumps — never part of the app
+*_check.html
+acc*.html
+buy_after.html
+buy_final.html
+buy_v2.html
+pending_ids.json
