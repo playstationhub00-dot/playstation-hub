@@ -88,19 +88,28 @@
     </div>
     <% } %>
 
-    <div class="rsv-layout">
+    <!-- Same layout primitives as the rent page (.gd-layout / .gd-cover-col /
+         .gd-detail-col), not a parallel grid — that is what makes the poster
+         column and card the same width on both pages, and keeps them that way
+         if either is ever resized. -->
+    <div class="gd-layout">
 
-      <!-- DOM order (poster, reserve card, description) is deliberately the
-           correct mobile order — art before the form, form before the
-           description. Desktop overrides purely via grid-area, so this
-           source order never needs a mobile-only reshuffle. -->
-      <div class="rsv-poster-wrap">
+      <div class="gd-cover-col">
         <% if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="rsv-poster">
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster">
         <% } %>
+        <% if (game.description) { %>
+          <p class="gd-desc gdh-poster-desc"><%= game.description %></p>
+        <% } %>
+        <div class="rsv-release-line">
+          <% if (udIsTba) { %>Release date: TBA
+          <% } else if (udDaysLeft > 0) { %><%= udDaysLeft %> day<%= udDaysLeft !== 1 ? 's' : '' %> until release · <%= displayDate %>
+          <% } else { %>Releasing any day now
+          <% } %>
+        </div>
       </div>
 
-      <div class="rsv-right">
+      <div class="gd-detail-col">
         <!-- Shares the rent page's card classes (.gdh-card / .gd-type-pill /
              .gd-duration-grid) rather than a parallel .rsv-* set, so the two
              detail pages stay identical by construction and any future change
@@ -188,18 +197,6 @@
             </a>
           </div>
 
-        </div>
-      </div>
-
-      <div class="rsv-left">
-        <% if (game.description) { %>
-          <p class="usd-desc"><%= game.description %></p>
-        <% } %>
-        <div class="rsv-release-line">
-          <% if (udIsTba) { %>Release date: TBA
-          <% } else if (udDaysLeft > 0) { %><%= udDaysLeft %> day<%= udDaysLeft !== 1 ? 's' : '' %> until release · <%= displayDate %>
-          <% } else { %>Releasing any day now
-          <% } %>
         </div>
       </div>
 

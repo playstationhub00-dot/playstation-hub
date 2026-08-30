@@ -801,21 +801,6 @@ nav {
 .rsv-full-title { font-weight: 800; color: #ef4444; font-size: 0.95rem; }
 .rsv-full-sub { font-size: 0.78rem; color: #888; margin-top: 0.15rem; }
 
-.rsv-layout { display: flex; flex-direction: column; gap: 1.75rem; }
-.rsv-left, .rsv-right, .rsv-poster-wrap { min-width: 0; }
-
-.rsv-poster-wrap:empty { display: none; }
-.rsv-poster {
-  display: block; width: 100%; aspect-ratio: 2 / 3;
-  object-fit: cover; border-radius: 12px; border: 1px solid #1a1a1a;
-}
-/* Below the two-column breakpoint the poster sits in a full-width flex column,
-   so it needs its own cap — without it a 2/3 poster would run the full
-   viewport width and push everything else off the first screen. */
-@media (max-width: 899px) {
-  .rsv-poster { max-width: 260px; margin: 0 auto; }
-}
-
 
 .rsv-dur-row-shake { animation: rsv-shake 0.5s; }
 @keyframes rsv-shake {
@@ -923,21 +908,6 @@ nav {
    overflow the container; centering only applies when they fit. */
 .rsv-gallery-section .gd-thumbs { justify-content: center; }
 
-@media (min-width: 900px) {
-  .rsv-layout {
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      "poster reserve"
-      "desc   reserve";
-    align-items: start;
-    gap: 1.25rem 2rem;
-  }
-  .rsv-poster-wrap { grid-area: poster; }
-  .rsv-left { grid-area: desc; }
-  .rsv-right { grid-area: reserve; position: sticky; top: 1rem; }
-}
 
 @media (max-width: 600px) {
   .usd-hero { height: 205px; margin-top: 0; }
