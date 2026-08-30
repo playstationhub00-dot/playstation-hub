@@ -182,6 +182,10 @@
       </details>
       <% } %>
 
+      <!-- Booking card: everything a customer interacts with to place an order
+           lives in one contained surface, matching the reservation page. -->
+      <div class="gdh-card">
+
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
         <button id="toggleRent" onclick="setMode('rent')"
@@ -243,86 +247,79 @@
         <div class="gd-type-options" id="typeOptions">
 
           <% if (hasTrophy) { %>
-          <div class="gd-type-card" id="label-tr">
-            <div class="gd-type-row">
-              <label class="gd-type-row-label">
-                <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
-                <span class="gd-type-icon">🏆</span>
-                <span class="gd-type-name">Trophy</span>
-                <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> slot<%= trLeft !== 1 ? 's' : '' %> left</span><% } %>
-                <span class="gd-type-status <%= trNotStocked ? 'gd-status-notstocked' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= trNotStocked ? 'Set up on order' : (trAvail ? 'Available' : 'Full Slot') %></span>
-              </label>
-              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for Trophy" onclick="toggleTypeSetup('tr')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-            </div>
-            <div class="gd-type-setup" id="setup-tr" data-open="0">
-              <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
-              <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
-              <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
-              <% if (!trAvail && trSoon != null && trSoon > 0) { %>
-              <p class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
-              <% } %>
-              <% if (trNotStocked) { %>
-              <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-              <% } %>
-            </div>
-          </div>
+          <label class="gd-type-card gd-type-pill" id="label-tr">
+            <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
+            <span class="gd-type-icon">🏆</span>
+            <span class="gd-type-name">Trophy</span>
+            <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> slot<%= trLeft !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= trNotStocked ? 'gd-status-notstocked' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= trNotStocked ? 'Set up on order' : (trAvail ? 'Available' : 'Full Slot') %></span>
+          </label>
           <% } %>
 
-          <div class="gd-type-card" id="label-nt">
-            <div class="gd-type-row">
-              <label class="gd-type-row-label">
-                <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
-                <span class="gd-type-icon">🎮</span>
-                <span class="gd-type-name">Non-Trophy</span>
-                <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> left</span><% } %>
-                <span class="gd-type-status <%= ntNotStocked ? 'gd-status-notstocked' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ntNotStocked ? 'Set up on order' : (ntAvail ? 'Available' : 'Full Slot') %></span>
-              </label>
-              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for Non-Trophy" onclick="toggleTypeSetup('nt')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-            </div>
-            <div class="gd-type-setup" id="setup-nt" data-open="0">
-              <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
-              <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
-              <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
-              <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
-              <p class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
-              <% } %>
-              <% if (ntNotStocked) { %>
-              <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-              <% } %>
-            </div>
-          </div>
+          <label class="gd-type-card gd-type-pill" id="label-nt">
+            <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
+            <span class="gd-type-icon">🎮</span>
+            <span class="gd-type-name">Non-Trophy</span>
+            <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= ntNotStocked ? 'gd-status-notstocked' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ntNotStocked ? 'Set up on order' : (ntAvail ? 'Available' : 'Full Slot') %></span>
+          </label>
 
           <% if (showPs4) { %>
-          <div class="gd-type-card" id="label-ps4">
-            <div class="gd-type-row">
-              <label class="gd-type-row-label">
-                <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
-                <span class="gd-type-icon">🕹️</span>
-                <span class="gd-type-name">PS4 Primary</span>
-                <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> slot<%= ps4Left !== 1 ? 's' : '' %> left</span><% } %>
-                <span class="gd-type-status <%= ps4NotStocked ? 'gd-status-notstocked' : (ps4Avail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ps4NotStocked ? 'Set up on order' : (ps4Avail ? 'Available' : 'Full Slot') %></span>
-              </label>
-              <button type="button" class="gd-type-chev" aria-expanded="false" aria-label="Setup details for PS4 Primary" onclick="toggleTypeSetup('ps4')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-              </button>
-            </div>
-            <div class="gd-type-setup" id="setup-ps4" data-open="0">
-              <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
-              <p style="color:#22c55e;">Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
-              <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
-              <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
-              <% } %>
-              <% if (ps4NotStocked) { %>
-              <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-              <% } %>
-            </div>
-          </div>
+          <label class="gd-type-card gd-type-pill" id="label-ps4">
+            <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
+            <span class="gd-type-icon">🕹️</span>
+            <span class="gd-type-name">PS4 Primary</span>
+            <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> slot<%= ps4Left !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= ps4NotStocked ? 'gd-status-notstocked' : (ps4Avail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ps4NotStocked ? 'Set up on order' : (ps4Avail ? 'Available' : 'Full Slot') %></span>
+          </label>
           <% } %>
 
+        </div>
+
+        <!-- Shared setup guide. Each type's original copy is preserved verbatim;
+             only the selected type's block is shown, so nothing is lost by
+             consolidating the three per-card accordions into one. -->
+        <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
+          <span>How setup works</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
+          <% if (hasTrophy) { %>
+          <div class="gd-setup-block" id="setup-tr">
+            <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
+            <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
+            <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
+            <% if (!trAvail && trSoon != null && trSoon > 0) { %>
+            <p class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (trNotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% } %>
+          <div class="gd-setup-block" id="setup-nt">
+            <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
+            <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
+            <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
+            <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
+            <p class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (ntNotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% if (showPs4) { %>
+          <div class="gd-setup-block" id="setup-ps4">
+            <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
+            <p style="color:#22c55e;">Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
+            <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
+            <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (ps4NotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% } %>
         </div>
 
         <!-- SELECT DURATION -->
@@ -516,6 +513,8 @@
       </div><!-- /buyPanel -->
       <% } %>
 
+      </div><!-- /gdh-card -->
+
     </div>
   </div>
 
@@ -664,19 +663,31 @@ function handleBuyClick(e) {
 // Expand/collapse a type row's setup panel. Independent of selecting that
 // type — the chevron button is a sibling of the <label>, not a descendant,
 // so clicking it never fires the label's native radio-click forwarding.
-function toggleTypeSetup(id) {
-  const panel = document.getElementById('setup-' + id);
-  const chev = panel && panel.previousElementSibling.querySelector('.gd-type-chev');
-  if (!panel || !chev) return;
+// One shared setup panel instead of a per-type accordion: the pills are too
+// compact to carry their own expander, so the wrapper opens once and shows
+// whichever type is selected.
+function toggleSetupPanel() {
+  const panel = document.getElementById('typeSetupWrap');
+  const btn = document.getElementById('setupToggle');
+  if (!panel || !btn) return;
   const open = panel.dataset.open === '1';
   panel.dataset.open = open ? '0' : '1';
-  chev.setAttribute('aria-expanded', String(!open));
+  btn.setAttribute('aria-expanded', String(!open));
+}
+
+// Shows only the selected type's setup block. Called from onTypeChange so the
+// panel's contents always match the pill the customer just picked.
+function syncSetupPanel() {
+  document.querySelectorAll('#typeSetupWrap .gd-setup-block').forEach(b => {
+    b.style.display = (b.id === 'setup-' + selectedType) ? '' : 'none';
+  });
 }
 
 function onTypeChange(radio) {
   selectedType = radio.value;
   document.querySelectorAll('.gd-type-card').forEach(c => c.classList.remove('gd-type-selected'));
   document.getElementById('label-' + selectedType)?.classList.add('gd-type-selected');
+  syncSetupPanel();
   updatePrices();
   updateTotal();
   updateReserveLinks();

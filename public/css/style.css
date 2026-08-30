@@ -871,6 +871,37 @@ nav {
 .gdh-bar-urgent { color: #ef4444; font-weight: 700; }
 /* Status pill variants of .usd-badge — the reservation page only ever needs the
    purple "Coming Soon" default, so these three are added rather than replacing it. */
+/* Booking card — same surface treatment as the reservation page's .rsv-card. */
+.gdh-card { background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 14px; padding: 1.25rem; }
+
+/* Compact rental-type pills. Scoped with .gd-type-pill rather than styling
+   .gd-type-card, because the buy panel's cards also carry .gd-type-card and
+   must keep their existing full-width form. */
+#typeOptions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.gd-type-pill {
+  flex: 1 1 140px; display: flex; align-items: center; gap: 0.4rem;
+  background: #121212; border: 1px solid #222; border-radius: 10px;
+  padding: 0.6rem 0.75rem; cursor: pointer; font-size: 0.8rem; margin: 0;
+}
+.gd-type-pill .gd-type-radio { position: absolute; opacity: 0; pointer-events: none; }
+.gd-type-pill .gd-type-name { font-weight: 700; color: #eee; }
+.gd-type-pill .gd-slots-left { font-size: 0.66rem; color: #22c55e; }
+.gd-type-pill .gd-type-status { margin-left: auto; font-size: 0.66rem; white-space: nowrap; }
+.gd-type-pill.gd-type-selected { border-color: #f0a500; background: #1a1400; }
+
+.gd-setup-toggle {
+  display: flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: #888; font-size: 0.75rem; font-weight: 600;
+}
+.gd-setup-toggle:hover { color: #ccc; }
+.gd-setup-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.gd-setup-toggle svg { transition: transform 0.15s; }
+/* The base .gd-type-setup rule carries a 2.65rem left indent that aligned the
+   old per-card accordion under its type name. As a standalone wrapper it needs
+   normal padding instead. */
+#typeSetupWrap { padding: 0.5rem 0 0; }
+
 .usd-badge-ok { background: linear-gradient(135deg, #065f46, #22c55e); }
 .usd-badge-warn { background: linear-gradient(135deg, #7f1d1d, #ef4444); }
 .usd-badge-off { background: linear-gradient(135deg, #333, #555); }
