@@ -104,7 +104,7 @@
           <div class="gd-type-options" id="typeOptions">
             <% if (showTr) { %>
             <label class="gd-type-card gd-type-pill" id="typeCard-tr">
-              <input type="radio" name="rental_type" value="tr" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
+              <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
               <span class="gd-type-icon">🏆</span>
               <span class="gd-type-name">Trophy</span>
               <span class="gd-slots-left"><%= trSlots > 0 ? (trSlots + ' left') : 'Reserved' %></span>
@@ -112,7 +112,7 @@
             <% } %>
             <% if (hasNt) { %>
             <label class="gd-type-card gd-type-pill" id="typeCard-nt">
-              <input type="radio" name="rental_type" value="nt" id="type-nt" onchange="onTypeChange()" checked>
+              <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
               <span class="gd-type-icon">🎮</span>
               <span class="gd-type-name">Non-Trophy</span>
               <span class="gd-slots-left"><%= ntSlots > 0 ? (ntSlots + ' left') : 'Reserved' %></span>
