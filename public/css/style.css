@@ -877,7 +877,10 @@ nav {
 /* Compact rental-type pills. Scoped with .gd-type-pill rather than styling
    .gd-type-card, because the buy panel's cards also carry .gd-type-card and
    must keep their existing full-width form. */
-#typeOptions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+/* flex-direction must be restated: the base .gd-type-options rule sets
+   `column` for the old stacked cards, and it still applies to any property
+   this rule does not explicitly override. */
+#typeOptions { display: flex; flex-direction: row; gap: 0.5rem; flex-wrap: wrap; }
 .gd-type-pill {
   flex: 1 1 140px; display: flex; align-items: center; gap: 0.4rem;
   background: #121212; border: 1px solid #222; border-radius: 10px;
