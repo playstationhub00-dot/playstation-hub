@@ -113,20 +113,21 @@
              to one automatically applies to the other. -->
         <div class="gdh-card">
 
-          <% if (udHasBuy) { %>
-          <!-- Same Rent/Buy toggle markup as the rent page, so the two cards
-               present the choice identically. -->
+          <!-- Same Rent/Buy toggle markup as the rent page, including when this
+               game has no permanent price: that page still renders the bar with
+               a single button rather than dropping it, so this one does too. -->
           <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
             <button type="button" id="udToggleRent" onclick="setUpcomingMode('rent')"
               style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:var(--ps-blue);color:#000;transition:all 0.15s;letter-spacing:0.3px;">
-              ⏱️ Reserve Rental
+              ⏱️ Rent
             </button>
+            <% if (udHasBuy) { %>
             <button type="button" id="udToggleBuy" onclick="setUpcomingMode('buy')"
               style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:transparent;color:#555;transition:all 0.15s;letter-spacing:0.3px;">
               ♾️ Buy Permanent
             </button>
+            <% } %>
           </div>
-          <% } %>
 
           <% if (hasNt || showTr) { %>
           <div class="gd-type-options" id="typeOptions">
@@ -135,7 +136,8 @@
               <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
               <span class="gd-type-icon">🏆</span>
               <span class="gd-type-name">Trophy</span>
-              <span class="gd-slots-left"><%= trSlots > 0 ? (trSlots + ' left') : 'Reserved' %></span>
+              <% if (trSlots > 0) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
+              <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full Slot' %></span>
             </label>
             <% } %>
             <% if (hasNt) { %>
@@ -143,43 +145,75 @@
               <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
               <span class="gd-type-icon">🎮</span>
               <span class="gd-type-name">Non-Trophy</span>
-              <span class="gd-slots-left"><%= ntSlots > 0 ? (ntSlots + ' left') : 'Reserved' %></span>
+              <% if (ntSlots > 0) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
+              <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full Slot' %></span>
             </label>
             <% } %>
           </div>
           <% } %>
 
-          <div id="udDurWrap"><div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div></div>
-
-          <div class="gd-total-box" id="orderSummary" style="display:none;">
-            <div class="gd-total-label">ORDER SUMMARY</div>
-            <div class="gd-total-rows">
-              <div class="gd-total-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
-              <div class="gd-total-row" id="sumDepositRow" style="display:none;"><span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span></div>
-              <div class="gd-total-row" style="color:#22c55e;font-weight:700;"><span>⬇️ Pay now (50%)</span><span id="sumDownpayment">—</span></div>
+          <!-- Same "How setup works" disclosure as the rent page, reusing its
+               #setupToggle / #typeSetupWrap ids so one set of CSS and one pair
+               of JS handlers cover both pages. The copy is that page's Trophy /
+               Non-Trophy explanation verbatim, minus its stock-specific lines
+               ("next available in N days", "not stocked yet") — neither means
+               anything before a game has released. -->
+          <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
+            <span>How setup works</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
+            <% if (showTr) { %>
+            <div class="gd-setup-block" id="setup-tr">
+              <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
+              <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
             </div>
-            <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;"></span></div>
+            <% } %>
+            <% if (hasNt) { %>
+            <div class="gd-setup-block" id="setup-nt">
+              <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
+              <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
+            </div>
+            <% } %>
           </div>
 
+          <div id="udDurWrap"><div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div></div>
+
+          <!-- Same summary box as the rent page down to the last element: always
+               visible, rows on top, a "To send now" final line, the green rider
+               beneath it and the grey hint below that. Only the rows themselves
+               differ, because a reservation splits into a downpayment now and a
+               balance on release day. -->
+          <div class="gd-total-box" id="orderSummary">
+            <div class="gd-total-label">ORDER SUMMARY</div>
+            <div class="gd-total-rows" id="sumRows"></div>
+            <div class="gd-total-final">
+              <span>To send now</span>
+              <span id="sumFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+            </div>
+            <div class="gd-total-refund" id="sumRider" style="display:none;"></div>
+            <div class="gd-total-hint" id="sumHint" style="display:none;"></div>
+          </div>
+
+          <!-- Same closing stack as the rent page: name field and button inside
+               one form, a sub-line under the button, then the Messenger link.
+               The separate "Reserve a Slot / 50% Downpayment / Total • Pay now
+               • Remaining" header block that used to sit here is gone — every
+               figure it carried now reads off the summary box directly above. -->
           <div id="ctaReserve">
-            <div class="rsv-cta-title" id="ctaReserveTitle">Reserve a Slot</div>
-            <div class="rsv-cta-fee" id="ctaHasSlotFee">Select a duration to see downpayment</div>
-            <div class="rsv-cta-dp" id="ctaHasSlotDP" style="display:none;"></div>
-            <div class="rsv-cta-note" id="ctaReserveNote">Pay 50% now to lock in your slot. Remaining balance due when the game releases.</div>
-            <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
+            <form method="POST" action="/order/reserve" class="gd-order-form" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
               <input type="hidden" name="game_id" value="<%= game.id %>">
               <input type="hidden" name="account_type" id="reserveType" value="">
               <input type="hidden" name="days" id="reserveDays" value="">
               <input type="hidden" name="kind" id="reserveKind" value="">
-              <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name rsv-name-input" placeholder="Your Facebook name" required>
-              <button type="submit" id="ctaReserveBtn" class="rsv-cta-btn">Reserve Now →</button>
+              <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+              <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve Now →</button>
+              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay 50% now via GCash or Maya · balance on release day</div>
             </form>
             <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-               onclick="return handleReserveClick(event,'reserve')" class="rsv-messenger-link">
-              or message us on Facebook instead
-            </a>
+               onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
             <% if (order_error === '1') { %>
-            <div class="rsv-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+            <div class="gd-order-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
             <% } %>
           </div>
 
@@ -257,12 +291,18 @@ function setUpcomingMode(mode) {
   upcomingMode = mode === 'buy' ? 'buy' : 'rent';
   const rentBtn = document.getElementById('udToggleRent');
   const buyBtn  = document.getElementById('udToggleBuy');
-  if (rentBtn && buyBtn) {
-    const on  = 'var(--ps-blue)', onText = '#000', offText = '#555';
+  // Guarded separately, not as a pair: the toggle bar now renders on every
+  // Coming Soon page the way it does on the rent page, so the Rent button is
+  // always present while the Buy button only exists when a permanent price is
+  // set. A combined `rentBtn && buyBtn` check would skip both in that case.
+  const on = 'var(--ps-blue)', onText = '#000', offText = '#555';
+  if (rentBtn) {
     rentBtn.style.background = upcomingMode === 'rent' ? on : 'transparent';
     rentBtn.style.color      = upcomingMode === 'rent' ? onText : offText;
-    buyBtn.style.background  = upcomingMode === 'buy' ? on : 'transparent';
-    buyBtn.style.color       = upcomingMode === 'buy' ? onText : offText;
+  }
+  if (buyBtn) {
+    buyBtn.style.background = upcomingMode === 'buy' ? on : 'transparent';
+    buyBtn.style.color      = upcomingMode === 'buy' ? onText : offText;
   }
   // A permanent purchase has no rental length, so the duration picker is
   // irrelevant in buy mode.
@@ -278,6 +318,24 @@ function setUpcomingMode(mode) {
 // Permanent price for the selected type, 0 when that type isn't sold outright.
 function getBuyPrice() { return (selectedType === 'tr' ? BUY_PRICES.tr : BUY_PRICES.nt) || 0; }
 
+// Setup-panel handlers, same behaviour as the rent page's: the disclosure
+// opens once and shows whichever type is currently selected, rather than each
+// pill carrying its own accordion.
+function toggleSetupPanel() {
+  const panel = document.getElementById('typeSetupWrap');
+  const btn = document.getElementById('setupToggle');
+  if (!panel || !btn) return;
+  const open = panel.dataset.open === '1';
+  panel.dataset.open = open ? '0' : '1';
+  btn.setAttribute('aria-expanded', String(!open));
+}
+
+function syncSetupPanel() {
+  document.querySelectorAll('#typeSetupWrap .gd-setup-block').forEach(b => {
+    b.style.display = (b.id === 'setup-' + selectedType) ? '' : 'none';
+  });
+}
+
 function getPrices() { return selectedType === 'tr' ? TR_PRICES : NT_PRICES; }
 function getSlots()  { return selectedType === 'tr' ? TR_SLOTS  : NT_SLOTS; }
 
@@ -290,6 +348,7 @@ function onTypeChange() {
   document.querySelectorAll('.gd-type-pill').forEach(c => c.classList.remove('gd-type-selected'));
   const checked = document.querySelector('input[name="rental_type"]:checked');
   if (checked) checked.closest('.gd-type-pill').classList.add('gd-type-selected');
+  syncSetupPanel();
   renderDurButtons();
   updateSummary();
   updateCta();
@@ -327,59 +386,109 @@ function selectDur(days) {
   updateLinks();
 }
 
+// Mirrors the rent page's updateTotal(): the box never hides, the rows are
+// rebuilt as innerHTML, the final line is what the customer sends right now,
+// and the green rider / grey hint sit underneath it. The arithmetic below is
+// unchanged from before — only where each figure is printed has moved.
 function updateSummary() {
-  const summary = document.getElementById('orderSummary');
+  const rowsEl  = document.getElementById('sumRows');
+  const finalEl = document.getElementById('sumFinal');
+  const riderEl = document.getElementById('sumRider');
+  const hintEl  = document.getElementById('sumHint');
+  if (!rowsEl || !finalEl) return;
+
   if (upcomingMode === 'buy') {
     // Buying the account outright — no rental deposit, nothing to return.
     const bp = getBuyPrice();
-    if (!bp) { summary.style.display = 'none'; return; }
+    if (!bp) {
+      rowsEl.innerHTML = '';
+      finalEl.textContent = '—';
+      riderEl.style.display = 'none';
+      hintEl.textContent = 'Not sold permanently for this type — pick the other one.';
+      hintEl.style.display = '';
+      return;
+    }
     const bDown = Math.ceil(bp * 0.5);
-    document.getElementById('sumBaseLabel').textContent    = 'Permanent access';
-    document.getElementById('sumBase').textContent         = '₱' + bp;
-    document.getElementById('sumDepositRow').style.display = 'none';
-    document.getElementById('sumDownpayment').textContent  = '₱' + bDown;
-    document.getElementById('sumTotal').textContent        = '₱' + bp;
-    summary.style.display = '';
+    rowsEl.innerHTML =
+      '<div class="gd-total-row"><span>Permanent access</span><span>₱' + bp + '</span></div>' +
+      '<div class="gd-total-row"><span>Total</span><span>₱' + bp + '</span></div>';
+    finalEl.textContent = '₱' + bDown;
+    riderEl.textContent = '↩ Remaining ₱' + (bp - bDown) + ' due when the game releases.';
+    riderEl.style.display = '';
+    hintEl.style.display = 'none';
     return;
   }
-  if (!selectedDays) { summary.style.display = 'none'; return; }
+
+  if (!selectedDays) {
+    rowsEl.innerHTML = '';
+    finalEl.textContent = '—';
+    riderEl.style.display = 'none';
+    hintEl.textContent = 'Pick a duration to see your exact total.';
+    hintEl.style.display = '';
+    return;
+  }
+
   const price     = getPrices()[selectedDays] || 0;
   const isTrophy  = selectedType === 'tr';
   const deposit   = isTrophy ? 100 : 0;
   const total     = price + deposit;
+  const downpay   = Math.ceil(total * 0.5);
 
-  const downpay = Math.ceil(total * 0.5);
-  document.getElementById('sumBaseLabel').textContent    = 'Base (' + selectedDays + ' days)';
-  document.getElementById('sumBase').textContent         = price ? '₱' + price : '—';
-  document.getElementById('sumDepositRow').style.display = isTrophy ? '' : 'none';
-  document.getElementById('sumDownpayment').textContent  = total ? '₱' + downpay : '—';
-  document.getElementById('sumTotal').textContent        = total ? '₱' + total : '—';
-  summary.style.display = '';
+  rowsEl.innerHTML =
+    '<div class="gd-total-row"><span>Base (' + selectedDays + ' days)</span><span>' + (price ? '₱' + price : '—') + '</span></div>' +
+    '<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱' + deposit + '</span></div>' +
+    '<div class="gd-total-row"><span>Total</span><span>' + (total ? '₱' + total : '—') + '</span></div>';
+  finalEl.textContent = total ? '₱' + downpay : '—';
+  riderEl.textContent = '↩ Remaining ₱' + (total - downpay) + ' due when the game releases.' +
+    (deposit ? ' ₱' + deposit + ' of that comes back when you finish.' : '');
+  riderEl.style.display = total ? '' : 'none';
+  hintEl.style.display = 'none';
 }
 
+// The rent page's CTA pattern: one button that either states the missing
+// choice and stays disabled, or names the action. The wording that used to
+// live in a separate header block above the form now rides on the button's
+// sub-line, and its figures come off the summary box above.
+// The rent page's updateCtaState() pattern, one for one: while the choice is
+// incomplete the button names the missing step, greys out via .gd-cta-wait and
+// the sub-line stays hidden; once complete it names the action and carries the
+// amount the customer sends right now. Buy mode mirrors that page's buy panel,
+// whose button states the action without a figure and leaves the amount to the
+// summary box.
 function updateCta() {
+  const btn = document.getElementById('ctaReserveBtn');
+  const sub = document.getElementById('ctaReserveSub');
+  if (!btn) return;
+
+  const setWait = (label) => {
+    btn.textContent = label;
+    btn.disabled = true;
+    btn.classList.add('gd-cta-wait');
+    if (sub) sub.style.display = 'none';
+  };
+  const setReady = (label, subText) => {
+    btn.textContent = label;
+    btn.disabled = false;
+    btn.classList.remove('gd-cta-wait');
+    if (sub) { sub.textContent = subText; sub.style.display = ''; }
+  };
+
   if (upcomingMode === 'buy') {
-    const bp = getBuyPrice();
-    const bDown = bp ? Math.ceil(bp * 0.5) : 0;
-    document.getElementById('ctaReserveTitle').textContent = 'Pre-order Permanent Access';
-    document.getElementById('ctaHasSlotFee').textContent = bp ? ('50% Downpayment — ₱' + bDown) : 'Not sold permanently for this type';
-    document.getElementById('ctaReserveNote').textContent = bp
-      ? 'Pay 50% now to lock in permanent access. Remaining balance due when the game releases.'
-      : 'Pick the other account type to buy permanent access.';
-    document.getElementById('ctaReserveBtn').textContent = 'Pre-order Now →';
-    const dp = document.getElementById('ctaHasSlotDP');
-    if (dp) {
-      if (bp) { dp.textContent = 'Total: ₱' + bp + '  •  Pay now: ₱' + bDown + '  •  Remaining: ₱' + (bp - bDown); dp.style.display = ''; }
-      else { dp.style.display = 'none'; }
-    }
-    return;
+    if (!getBuyPrice()) return setWait('Not sold permanently for this type');
+    return setReady('📘 Pre-order Permanent Access',
+      'Pay 50% now via GCash or Maya · balance on release day');
   }
+
+  if (!selectedDays) return setWait('Pick a duration');
+
+  const price   = getPrices()[selectedDays] || 0;
+  const deposit = selectedType === 'tr' ? 100 : 0;
+  const downpay = Math.ceil((price + deposit) * 0.5);
   const hasSlot = getSlots() > 0;
-  document.getElementById('ctaReserveTitle').textContent = hasSlot ? 'Reserve a Slot' : 'Request a Slot';
-  document.getElementById('ctaReserveNote').textContent = hasSlot
-    ? 'Pay 50% now to lock in your slot. Remaining balance due when the game releases.'
-    : 'No slots free right now — pay 50% to request one. We\'ll confirm as soon as it opens, or refund you if it doesn\'t.';
-  document.getElementById('ctaReserveBtn').textContent = hasSlot ? 'Reserve Now →' : 'Request Now →';
+  setReady((hasSlot ? '🎮 Reserve now — ₱' : '🎮 Request now — ₱') + downpay,
+    hasSlot
+      ? 'Pay 50% now via GCash or Maya · balance on release day'
+      : 'No slots free right now — pay 50% to request one. We refund you if one never opens.');
 }
 
 function updateLinks() {
@@ -411,17 +520,6 @@ function updateLinks() {
   const priceStr = total ? '₱' + total : 'TBD';
   const dpStr    = downpay2 ? '₱' + downpay2 : 'TBD';
   const hasSlot  = getSlots() > 0;
-
-  // Update Reserve a Slot CTA fee display (has-slot section)
-  const feeLabel = document.getElementById('ctaHasSlotFee');
-  const dpDetail = document.getElementById('ctaHasSlotDP');
-  if (feeLabel && downpay2) {
-    feeLabel.textContent = '50% Downpayment — ₱' + downpay2;
-    if (dpDetail) {
-      dpDetail.textContent = 'Total: ₱' + total + '  •  Pay now: ₱' + downpay2 + '  •  Remaining: ₱' + (total - downpay2);
-      dpDetail.style.display = '';
-    }
-  }
 
   const msg = encodeURIComponent(
     'Hi! I want to ' + (hasSlot ? 'RESERVE' : 'REQUEST') + ' a slot for:\n' +
@@ -489,7 +587,13 @@ function handleReserveSubmit(e) {
 // Init
 const initChecked = document.querySelector('input[name="rental_type"]:checked');
 if (initChecked) initChecked.closest('.gd-type-pill').classList.add('gd-type-selected');
+syncSetupPanel();
 renderDurButtons();
+// renderDurButtons() reaches updateSummary() through selectDur(), but only when
+// at least one duration is priced. Calling it here as well means a game with no
+// prices set still shows the summary box with its "Pick a duration" hint rather
+// than an empty shell.
+updateSummary();
 updateCta();
 
 // ── Gameplay gallery slider ──

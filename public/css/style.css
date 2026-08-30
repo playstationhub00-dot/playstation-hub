@@ -817,18 +817,11 @@ nav {
   40%, 60% { transform: translateX(5px); }
 }
 
-.rsv-cta-title { font-weight: 800; font-size: 1.05rem; color: #fff; text-align: center; }
-.rsv-cta-fee { font-size: 0.88rem; color: #22c55e; font-weight: 700; text-align: center; }
-.rsv-cta-dp { font-size: 0.8rem; color: #aaa; text-align: center; }
-.rsv-cta-note { font-size: 0.78rem; color: #666; text-align: center; }
-.rsv-name-input { display: block; width: 100%; margin: 0 auto 0.6rem; }
-.rsv-cta-btn {
-  display: block; width: 100%; background: linear-gradient(135deg, #065f46, #22c55e);
-  color: #fff; font-weight: 800; padding: 0.75rem 1.5rem; border-radius: 50px;
-  border: none; font-size: 0.92rem; cursor: pointer;
-}
-.rsv-messenger-link { display: block; margin-top: 0.6rem; font-size: 0.78rem; color: #888; text-decoration: underline; text-align: center; }
-.rsv-error { margin-top: 0.75rem; font-size: 0.8rem; color: #ef4444; font-weight: 600; text-align: center; }
+/* The Coming Soon CTA used to have its own .rsv-cta-* / .rsv-name-input /
+   .rsv-messenger-link / .rsv-error set. It now uses the rent page's
+   .gd-order-form / .gd-order-name / .gd-order-btn / .gd-order-sub /
+   .gd-cta-link / .gd-order-error, so the two cards can only ever look the
+   same, and those rules are gone rather than left behind unused. */
 
 
 /* Rent-page banner. Reuses .usd-hero* wholesale; only the geometry differs,
