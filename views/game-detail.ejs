@@ -1029,9 +1029,18 @@ function gdGo(i) {
   const track = document.getElementById('gdSliderTrack');
   if (track) track.style.transform = 'translateX(-' + (gdIndex * 100) + '%)';
   document.querySelectorAll('#gdSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gdIndex));
+  const gdThumbsWrap = document.getElementById('gdThumbs');
   document.querySelectorAll('#gdThumbs .gd-thumb').forEach((t, ti) => {
     t.classList.toggle('active', ti === gdIndex);
-    if (ti === gdIndex) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    // Horizontal-only, scoped to the thumbnail strip itself — scrollIntoView()
+    // can still move the whole page vertically to reveal an element that
+    // isn't fully in the viewport. This gallery now sits at the bottom of the
+    // page (previously it was near the top, in the 380px cover column), which
+    // is exactly the condition that caused this on the reservation page.
+    if (ti === gdIndex && gdThumbsWrap) {
+      const target = t.offsetLeft - (gdThumbsWrap.clientWidth - t.clientWidth) / 2;
+      gdThumbsWrap.scrollTo({ left: target, behavior: 'smooth' });
+    }
   });
 }
 function gdMove(dir) { gdGo(gdIndex + dir); }
