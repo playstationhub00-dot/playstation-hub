@@ -389,6 +389,25 @@ function updateCta() {
 }
 
 function updateLinks() {
+  const typeNameB = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
+  // Buy mode has its own figures. updateCta() already wrote the correct
+  // permanent downpayment into the fee line, and this function used to
+  // overwrite it with the RENTAL downpayment — showing "Pay ₱350" under a
+  // "Total ₱1999" summary. It also has no duration to report to Messenger.
+  if (upcomingMode === 'buy') {
+    const bp = getBuyPrice();
+    const bDown = bp ? Math.ceil(bp * 0.5) : 0;
+    const buyMsg = encodeURIComponent(
+      'Hi! I want to PRE-ORDER PERMANENT ACCESS for:\n' +
+      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
+      'Type: ' + typeNameB + '\n' +
+      'Permanent Total: ' + (bp ? '₱' + bp : 'TBD') + '\n' +
+      '50% Downpayment: ' + (bDown ? '₱' + bDown : 'TBD')
+    );
+    const be = document.getElementById('reserveLinkSlot');
+    if (be) be.href = 'http://m.me/PlaystationHub00?text=' + buyMsg;
+    return;
+  }
   if (!selectedDays) return;
   const typeName = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
   const price    = getPrices()[selectedDays] || 0;
