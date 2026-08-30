@@ -745,7 +745,10 @@ nav {
 }
 .usd-hero-foot .usd-cd-row { min-width: 0; flex: 1; }
 .usd-hero-brand { width: 140px; height: auto; flex-shrink: 0; display: block; }
-.usd-hero-placeholder { background: linear-gradient(135deg, #0d0015, #1a0030); }
+/* Vertical, not diagonal: a 135deg gradient across a very wide, short banner
+   (~1030x210px) reads as a visible diagonal seam/curve near the top rather
+   than flat atmosphere — that seam is what was reported as a stray border. */
+.usd-hero-placeholder { background: linear-gradient(180deg, #1a0030, #0d0015); }
 /* Two overlapping gradients: left-to-right so the text panel is always readable
    regardless of the art underneath, and bottom-to-top so the hero's lower edge
    blends into the body panel instead of ending on a hard line. */
