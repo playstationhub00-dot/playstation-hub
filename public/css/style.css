@@ -866,7 +866,11 @@ nav {
    480px poster height) are new. */
 .rsv-gallery-section { margin-top: 2rem; }
 .rsv-gallery-label { font-size: 0.78rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
-.rsv-gallery-img { height: auto; aspect-ratio: 16 / 9; object-position: center; }
+/* Two-class selector deliberately: the mobile media query further down this
+   file sets `.gd-cover { height: 300px }` for the rent page's poster column,
+   and with equal specificity it would win there by source order alone,
+   breaking this gallery's 16:9 ratio on mobile. */
+.rsv-gallery-section .rsv-gallery-img { height: auto; aspect-ratio: 16 / 9; object-position: center; }
 /* Scoped to this gallery only — .gd-thumbs itself stays untouched so the rent
    page's thumbnail row (which can hold more images and relies on left-aligned
    scrolling) is unaffected. Still scrolls correctly if the thumbnails ever
