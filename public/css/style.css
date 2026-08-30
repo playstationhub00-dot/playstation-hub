@@ -901,10 +901,18 @@ nav {
   flex: 1 1 140px; display: flex; align-items: center; gap: 0.4rem;
   background: #121212; border: 1px solid #222; border-radius: 10px;
   padding: 0.6rem 0.75rem; cursor: pointer; font-size: 0.8rem; margin: 0;
+  flex-wrap: wrap; min-width: 0;
 }
 .gd-type-pill .gd-type-radio { position: absolute; opacity: 0; pointer-events: none; }
-.gd-type-pill .gd-type-name { font-weight: 700; color: #eee; }
-.gd-type-pill .gd-slots-left { font-size: 0.66rem; color: #22c55e; }
+.gd-type-pill .gd-type-name { font-weight: 700; color: #eee; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-type-pill .gd-slots-left { font-size: 0.66rem; color: #22c55e; margin-left: auto; white-space: nowrap; }
+/* .gd-type-status ("Available") is redundant next to .gd-slots-left ("2 slots
+   left") — both render whenever a type is available, and on a narrow pill
+   that duplication is exactly what was overflowing. Hidden here, not deleted,
+   the same way the price header is hidden: .gd-status-rented and
+   .gd-status-notstocked still show, since those cases have no slots-left
+   text to duplicate. */
+.gd-type-pill .gd-slots-left ~ .gd-type-status.gd-status-avail { display: none; }
 .gd-type-pill .gd-type-status { margin-left: auto; font-size: 0.66rem; white-space: nowrap; }
 .gd-type-pill.gd-type-selected { border-color: #f0a500; background: #1a1400; }
 
