@@ -98,15 +98,12 @@
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster">
         <% } %>
+        <!-- Description only, matching the rent page. The release countdown used
+             to repeat here, but the banner directly above already states it
+             verbatim ("16 DAYS UNTIL RELEASE · September 15, 2026"). -->
         <% if (game.description) { %>
           <p class="gd-desc gdh-poster-desc"><%= game.description %></p>
         <% } %>
-        <div class="rsv-release-line">
-          <% if (udIsTba) { %>Release date: TBA
-          <% } else if (udDaysLeft > 0) { %><%= udDaysLeft %> day<%= udDaysLeft !== 1 ? 's' : '' %> until release · <%= displayDate %>
-          <% } else { %>Releasing any day now
-          <% } %>
-        </div>
       </div>
 
       <div class="gd-detail-col">

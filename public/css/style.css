@@ -830,7 +830,6 @@ nav {
 .rsv-messenger-link { display: block; margin-top: 0.6rem; font-size: 0.78rem; color: #888; text-decoration: underline; text-align: center; }
 .rsv-error { margin-top: 0.75rem; font-size: 0.8rem; color: #ef4444; font-weight: 600; text-align: center; }
 
-.rsv-release-line { font-size: 0.8rem; color: #888; margin-top: 0.75rem; }
 
 /* Rent-page banner. Reuses .usd-hero* wholesale; only the geometry differs,
    because .gd-page puts 1.25rem of horizontal padding on the container itself
