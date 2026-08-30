@@ -859,6 +859,22 @@ nav {
 
 .rsv-release-line { font-size: 0.8rem; color: #888; margin-top: 0.75rem; }
 
+/* Rent-page banner. Reuses .usd-hero* wholesale; only the geometry differs,
+   because .gd-page puts 1.25rem of horizontal padding on the container itself
+   while .usd-page has none. These negative margins cancel that padding so the
+   band runs full-bleed, and the re-applied 1.25rem inside keeps the banner
+   title aligned with the page content below it. */
+.gdh-hero { margin-left: -1.25rem; margin-right: -1.25rem; }
+.gdh-hero .usd-hero-in { padding: 1.5rem 1.25rem 1.25rem; }
+.gdh-hero .usd-hero-foot { margin: 0.4rem -1.25rem -1.25rem; padding: 0.65rem 1.25rem; }
+.gdh-bar-text { font-size: 0.8rem; color: #bbb; min-width: 0; flex: 1; }
+.gdh-bar-urgent { color: #ef4444; font-weight: 700; }
+/* Status pill variants of .usd-badge — the reservation page only ever needs the
+   purple "Coming Soon" default, so these three are added rather than replacing it. */
+.usd-badge-ok { background: linear-gradient(135deg, #065f46, #22c55e); }
+.usd-badge-warn { background: linear-gradient(135deg, #7f1d1d, #ef4444); }
+.usd-badge-off { background: linear-gradient(135deg, #333, #555); }
+
 /* Gameplay gallery: reuses .gd-slider/.gd-slide/.gd-slider-arrow/.gd-dot/.gd-thumb
    verbatim from the rent page's slider — those classes carry no rent-specific
    styling, only the layout/chrome, so no new slider CSS is needed here. Only

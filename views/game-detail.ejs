@@ -63,6 +63,43 @@
 <div class="gd-page">
   <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
 
+  <%
+    // Branded banner, sharing the reservation page's .usd-hero classes so the two
+    // detail pages stay visually identical by construction rather than by two
+    // copies that can drift apart.
+    const gdhStatus = allUnavail
+      ? { label: 'Sold Out', cls: 'usd-badge-off' }
+      : (isLastSlot ? { label: 'Last Slot', cls: 'usd-badge-warn' }
+                    : { label: 'Available', cls: 'usd-badge-ok' });
+    // Urgency first, release date otherwise — the bar earns its space on the
+    // games where a customer needs to hurry, and falls back to the date (or a
+    // slot count, so it is never half-empty) on everything else.
+    let gdhBarText, gdhBarUrgent = false;
+    if (allUnavail) { gdhBarText = 'Sold out — all slots rented'; gdhBarUrgent = true; }
+    else if (isLastSlot) { gdhBarText = 'Only 1 slot left'; gdhBarUrgent = true; }
+    else if (game.release_date && game.release_date !== 'TBA') {
+      gdhBarText = 'Released ' + new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } else {
+      gdhBarText = totalSlots + ' slot' + (totalSlots !== 1 ? 's' : '') + ' available';
+    }
+  %>
+  <div class="usd-hero gdh-hero">
+    <div class="usd-hero-placeholder"></div>
+    <div class="usd-hero-scrim"></div>
+    <div class="usd-hero-in">
+      <div class="usd-badge-row">
+        <span class="usd-badge <%= gdhStatus.cls %>"><%= gdhStatus.label %></span>
+        <span class="usd-plat-chip"><%= game.platform %></span>
+        <% if (game.genre) { game.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
+      </div>
+      <h1 class="usd-title"><%= game.title %></h1>
+      <div class="usd-hero-foot">
+        <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>
+        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand">
+      </div>
+    </div>
+  </div>
+
   <div class="gd-layout">
 
     <!-- LEFT: Cover + Gameplay Slider -->
@@ -122,16 +159,8 @@
     <!-- RIGHT: Detail + Rental Form -->
     <div class="gd-detail-col">
 
-      <!-- Genre + Title -->
-      <% if (game.genre || (game.release_date && game.release_date !== 'TBA')) { %>
-      <div class="gd-genres">
-        <% if (game.genre) { game.genre.split('/').forEach(g => { %><span class="gd-genre-tag"><%= g.trim().toUpperCase() %></span><% }) } %>
-        <% if (game.release_date && game.release_date !== 'TBA') { %>
-        <span class="gd-release-date">Released <%= new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
-        <% } %>
-      </div>
-      <% } %>
-      <h1 class="gd-title"><%= game.title %></h1>
+      <!-- Genre, title and release date now render in the branded banner above
+           .gd-layout — moved, not duplicated, so the page shows one title. -->
       <% if (game.description) { %><p class="gd-desc"><%= game.description %></p><% } %>
       <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-bottom:1.25rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
 
