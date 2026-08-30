@@ -94,44 +94,43 @@
       </div>
 
       <div class="rsv-right">
-        <div class="rsv-card">
+        <!-- Shares the rent page's card classes (.gdh-card / .gd-type-pill /
+             .gd-duration-grid) rather than a parallel .rsv-* set, so the two
+             detail pages stay identical by construction and any future change
+             to one automatically applies to the other. -->
+        <div class="gdh-card">
 
           <% if (hasNt || showTr) { %>
-          <div class="rsv-type-row" id="typeOptions">
+          <div class="gd-type-options" id="typeOptions">
             <% if (showTr) { %>
-            <label class="rsv-type-pill" id="typeCard-tr">
+            <label class="gd-type-card gd-type-pill" id="typeCard-tr">
               <input type="radio" name="rental_type" value="tr" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
-              <span class="rsv-type-icon">🏆</span>
-              <span class="rsv-type-label">Trophy</span>
-              <span class="rsv-type-count"><%= trSlots > 0 ? (trSlots + ' left') : 'Reserved' %></span>
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name">Trophy</span>
+              <span class="gd-slots-left"><%= trSlots > 0 ? (trSlots + ' left') : 'Reserved' %></span>
             </label>
             <% } %>
             <% if (hasNt) { %>
-            <label class="rsv-type-pill" id="typeCard-nt">
+            <label class="gd-type-card gd-type-pill" id="typeCard-nt">
               <input type="radio" name="rental_type" value="nt" id="type-nt" onchange="onTypeChange()" checked>
-              <span class="rsv-type-icon">🎮</span>
-              <span class="rsv-type-label">Non-Trophy</span>
-              <span class="rsv-type-count"><%= ntSlots > 0 ? (ntSlots + ' left') : 'Reserved' %></span>
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="gd-slots-left"><%= ntSlots > 0 ? (ntSlots + ' left') : 'Reserved' %></span>
             </label>
             <% } %>
           </div>
           <% } %>
 
-          <div class="rsv-dur-row" id="durGrid"></div>
+          <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
 
-          <div class="rsv-summary" id="orderSummary" style="display:none;">
-            <div class="rsv-summary-row rsv-summary-main">
-              <span id="sumBaseLabel">Base</span><span id="sumBase">—</span>
+          <div class="gd-total-box" id="orderSummary" style="display:none;">
+            <div class="gd-total-label">ORDER SUMMARY</div>
+            <div class="gd-total-rows">
+              <div class="gd-total-row"><span id="sumBaseLabel">Base</span><span id="sumBase">—</span></div>
+              <div class="gd-total-row" id="sumDepositRow" style="display:none;"><span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span></div>
+              <div class="gd-total-row" style="color:#22c55e;font-weight:700;"><span>⬇️ Pay now (50%)</span><span id="sumDownpayment">—</span></div>
             </div>
-            <div class="rsv-summary-row" id="sumDepositRow" style="display:none;">
-              <span>🔒 Security Deposit (refundable)</span><span style="color:#f59e0b;">+₱100</span>
-            </div>
-            <div class="rsv-summary-row rsv-summary-down">
-              <span>⬇️ Pay now (50%)</span><span id="sumDownpayment">—</span>
-            </div>
-            <div class="rsv-summary-row rsv-summary-total">
-              <span>Total</span><span id="sumTotal">—</span>
-            </div>
+            <div class="gd-total-final"><span>Total</span><span id="sumTotal" style="color:#ffc400;"></span></div>
           </div>
 
           <div id="ctaReserve">
@@ -240,9 +239,9 @@ function onTypeChange() {
   // rule as initial load) every time the type changes, rather than trying to
   // carry the old duration across two potentially different price tables —
   // simpler, and it never leaves the summary blank after a type switch.
-  document.querySelectorAll('.rsv-type-pill').forEach(c => c.classList.remove('rsv-type-selected'));
+  document.querySelectorAll('.gd-type-pill').forEach(c => c.classList.remove('gd-type-selected'));
   const checked = document.querySelector('input[name="rental_type"]:checked');
-  if (checked) checked.closest('.rsv-type-pill').classList.add('rsv-type-selected');
+  if (checked) checked.closest('.gd-type-pill').classList.add('gd-type-selected');
   renderDurButtons();
   updateSummary();
   updateCta();
@@ -258,10 +257,10 @@ function renderDurButtons() {
   available.forEach(d => {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'rsv-dur-btn';
+    btn.className = 'gd-dur-btn';
     btn.dataset.days = d;
     btn.onclick = () => selectDur(d);
-    btn.innerHTML = `<span class="rsv-dur-label">${durLabelMap[d] || d}</span><span class="rsv-dur-price">₱${p[d]}</span>`;
+    btn.innerHTML = `<span class="gd-dur-days">${durLabelMap[d] || d}</span><span class="gd-dur-price">₱${p[d]}</span>`;
     grid.appendChild(btn);
   });
 
@@ -274,7 +273,7 @@ function renderDurButtons() {
 
 function selectDur(days) {
   selectedDays = days;
-  document.querySelectorAll('.rsv-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
+  document.querySelectorAll('.gd-dur-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.days) === days));
   updateSummary();
   updateCta();
   updateLinks();
@@ -382,7 +381,7 @@ function handleReserveSubmit(e) {
 
 // Init
 const initChecked = document.querySelector('input[name="rental_type"]:checked');
-if (initChecked) initChecked.closest('.rsv-type-pill').classList.add('rsv-type-selected');
+if (initChecked) initChecked.closest('.gd-type-pill').classList.add('gd-type-selected');
 renderDurButtons();
 updateCta();
 
