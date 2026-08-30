@@ -784,6 +784,10 @@ nav {
 .usd-cd-u { font-size: 0.78rem; font-weight: 700; color: #a99bc0; text-transform: uppercase; letter-spacing: 0.05em; }
 .usd-cd-date { font-size: 0.78rem; color: #888; margin-left: 0.15rem; }
 
+/* .usd-body already supplies the top spacing under the banner, so .gd-layout's
+   own margin-top would double it (48px vs the rent page's 24px). */
+.usd-body > .gd-layout { margin-top: 0; }
+
 /* Flat 1.25rem gutters, matching .gd-page — a clamp() here made the body
    narrower than the rent page at desktop widths, which shrank the booking
    card even though the poster column matched. */
