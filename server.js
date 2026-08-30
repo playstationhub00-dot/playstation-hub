@@ -2909,13 +2909,15 @@ app.get('/upcoming/:slug', (req, res) => {
   res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null });
 });
 
-app.post('/admin/upcoming/add', requireAuth, upload.single('cover_image'), async (req, res) => {
+app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
           tr_price_7d, tr_price_30d } = req.body;
   if (!title || !title.trim()) return res.redirect('/admin?msg=error');
-  const cover_image = req.file ? await processUploadedImage(req.file) : '';
+  const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
+  const cover_image = coverFile ? await processUploadedImage(coverFile) : '';
+  const gallery = await Promise.all((req.files && req.files.gallery ? req.files.gallery : []).map(f => processUploadedImage(f)));
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').push({
     id: newUpcomingId(),
@@ -2925,6 +2927,7 @@ app.post('/admin/upcoming/add', requireAuth, upload.single('cover_image'), async
     release_date: finalDate,
     description: description || '',
     cover_image,
+    gallery,
     rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
@@ -2943,18 +2946,35 @@ app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
   res.render('edit-upcoming', { game, settings: getSiteSettings() });
 });
 
-app.post('/admin/upcoming/edit/:id', requireAuth, upload.single('cover_image'), async (req, res) => {
+app.post('/admin/upcoming/edit/:id', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {
   const { title, platform, genre, release_date, release_date_tba_val, description,
           non_trophy_slots, trophy_slots, rank,
           nt_price_7d, nt_price_30d,
-          tr_price_7d, tr_price_30d } = req.body;
+          tr_price_7d, tr_price_30d, remove_gallery } = req.body;
   const existing = getUpcomingGame(req.params.id);
   if (!existing) return res.redirect('/admin');
-  const cover_image = req.file ? await processUploadedImage(req.file) : existing.cover_image;
+  const coverFile = req.files && req.files.cover_image ? req.files.cover_image[0] : null;
+  const cover_image = coverFile ? await processUploadedImage(coverFile) : existing.cover_image;
+
+  // Gallery: keep existing minus removed, then append newly uploaded. Only ever
+  // delete files that are actually in THIS game's own gallery — a submitted
+  // remove_gallery entry naming any other file (tampered or stale) is ignored.
+  const requestedRemove = Array.isArray(remove_gallery) ? remove_gallery : (remove_gallery ? [remove_gallery] : []);
+  const existingGallery = existing.gallery || [];
+  const toRemove = requestedRemove.filter(img => existingGallery.includes(img));
+  let gallery = existingGallery.filter(img => !toRemove.includes(img));
+  toRemove.forEach(img => {
+    const fp = path.join(uploadsDir, path.basename(img));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  });
+  const newGallery = await Promise.all((req.files && req.files.gallery ? req.files.gallery : []).map(f => processUploadedImage(f)));
+  gallery = gallery.concat(newGallery);
+
   const finalDate = release_date_tba_val === 'TBA' ? 'TBA' : (release_date || 'TBA');
   db.get('upcoming').find({ id: parseInt(req.params.id) }).assign({
     title: title.trim(), platform, genre: genre || '',
     release_date: finalDate, description: description || '', cover_image,
+    gallery,
     rank: parseInt(rank) || 0,
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
     trophy_slots: parseInt(trophy_slots) || 0,
@@ -2972,6 +2992,10 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
     const fp = path.join(uploadsDir, path.basename(game.cover_image));
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
+  (game?.gallery || []).forEach(img => {
+    const fp = path.join(uploadsDir, path.basename(img));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  });
   db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?msg=upcoming_deleted');
 });
@@ -2987,6 +3011,7 @@ app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
     genre: game.genre || '',
     description: game.description || '',
     cover_image: game.cover_image || '',
+    gallery: game.gallery || [],
     non_trophy_slots: game.non_trophy_slots || 0,
     trophy_slots: game.trophy_slots || 0,
     nt_price_7d: game.nt_price_7d || 0,

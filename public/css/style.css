@@ -859,6 +859,15 @@ nav {
 
 .rsv-release-line { font-size: 0.8rem; color: #888; margin-top: 0.75rem; }
 
+/* Gameplay gallery: reuses .gd-slider/.gd-slide/.gd-slider-arrow/.gd-dot/.gd-thumb
+   verbatim from the rent page's slider — those classes carry no rent-specific
+   styling, only the layout/chrome, so no new slider CSS is needed here. Only
+   the section wrapper and the 16:9 image sizing (overriding .gd-cover's fixed
+   480px poster height) are new. */
+.rsv-gallery-section { margin-top: 2rem; }
+.rsv-gallery-label { font-size: 0.78rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem; }
+.rsv-gallery-img { height: auto; aspect-ratio: 16 / 9; object-position: center; }
+
 @media (min-width: 900px) {
   .rsv-layout {
     display: grid;

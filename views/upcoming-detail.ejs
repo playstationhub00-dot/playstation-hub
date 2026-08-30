@@ -182,6 +182,37 @@
       </div>
 
     </div>
+
+    <% const gpGallery = (game.gallery || []).filter(Boolean); %>
+    <% if (gpGallery.length) { %>
+    <div class="rsv-gallery-section">
+      <div class="rsv-gallery-label">Gameplay</div>
+      <div class="gd-slider" id="gpSlider">
+        <div class="gd-slider-track" id="gpSliderTrack">
+          <% gpGallery.forEach((img, i) => { %>
+            <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
+          <% }) %>
+        </div>
+        <% if (gpGallery.length > 1) { %>
+          <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gpMove(-1)" aria-label="Previous">‹</button>
+          <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gpMove(1)" aria-label="Next">›</button>
+          <div class="gd-slider-dots" id="gpSliderDots">
+            <% gpGallery.forEach((img, i) => { %>
+              <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+      <% if (gpGallery.length > 1) { %>
+      <div class="gd-thumbs" id="gpThumbs">
+        <% gpGallery.forEach((img, i) => { %>
+          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+
   </div><!-- /usd-body -->
 </div><!-- /usd-page -->
 
@@ -354,6 +385,35 @@ const initChecked = document.querySelector('input[name="rental_type"]:checked');
 if (initChecked) initChecked.closest('.rsv-type-pill').classList.add('rsv-type-selected');
 renderDurButtons();
 updateCta();
+
+// ── Gameplay gallery slider ──
+// Deliberately a small standalone copy rather than sharing the rent page's
+// gdGo/gdMove — those are intertwined with rent-only overlays (platform
+// badge, slot banner, cover focal-point handling) that don't apply here.
+let gpIndex = 0;
+const gpSlideCount = <%= gpGallery.length %>;
+function gpGo(i) {
+  if (gpSlideCount <= 1) return;
+  gpIndex = (i + gpSlideCount) % gpSlideCount;
+  const track = document.getElementById('gpSliderTrack');
+  if (track) track.style.transform = 'translateX(-' + (gpIndex * 100) + '%)';
+  document.querySelectorAll('#gpSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gpIndex));
+  document.querySelectorAll('#gpThumbs .gd-thumb').forEach((t, ti) => {
+    t.classList.toggle('active', ti === gpIndex);
+    if (ti === gpIndex) t.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  });
+}
+function gpMove(dir) { gpGo(gpIndex + dir); }
+(function() {
+  const slider = document.getElementById('gpSlider');
+  if (!slider || gpSlideCount <= 1) return;
+  let startX = 0;
+  slider.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+  slider.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 40) gpMove(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>
