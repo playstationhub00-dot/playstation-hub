@@ -1005,7 +1005,7 @@ app.get('/ps-plus', (req, res) => {
   res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
-app.get('/ps-plus/rent', (req, res) => {
+app.get('/ps-plus/rent', async (req, res) => {
   const prices = getPsplusPrices();
   const rawSlots = getPsplusSlots();
   const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
@@ -1018,7 +1018,13 @@ app.get('/ps-plus/rent', (req, res) => {
   // it 404'd on every page load and only looked right because of the onerror
   // fallback underneath it.
   const psplusCover = psplusGame && psplusGame.cover_image ? psplusGame.cover_image : '';
-  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null });
+  // PS Plus waitlist entries are created with the literal game_id 'psplus' by
+  // POST /order/reserve, so the same queue rules apply with no special-casing.
+  let queues = { nt: [], tr: [], ps4: [] };
+  try {
+    queues = queueRules.buildQueue(await orders.listQueueCandidates('psplus'), new Date());
+  } catch (e) { console.error('[psplus queue]', e.message); }
+  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null });
 });
 
 // PS Plus admin CRUD
