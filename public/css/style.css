@@ -3200,3 +3200,31 @@ label.buy-tier:hover { border-color: #444; }
   .req-guide-title { font-size: 0.66rem; }
   .req-guide-sub { font-size: 0.6rem; }
 }
+
+/* Queue position: the count strip on a no-slot card and the popout list it
+   opens. Blue rather than the card's purple so the strip reads as information
+   about the line, not as a third thing to choose. */
+.ql-strip { display: flex; align-items: center; gap: 0.6rem; background: #0f1420; border: 1px solid #23324d; border-radius: 10px; padding: 0.6rem 0.7rem; margin-bottom: 0.5rem; cursor: pointer; }
+.ql-strip:hover, .ql-strip:focus { border-color: #3b5480; outline: none; }
+.ql-strip-icon { font-size: 1rem; line-height: 1; }
+.ql-strip-text { flex: 1; min-width: 0; }
+.ql-strip-count { font-size: 0.8rem; font-weight: 700; color: #93c5fd; }
+.ql-strip-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.1rem; }
+.ql-strip-link { font-size: 0.72rem; color: #60a5fa; white-space: nowrap; }
+
+.ql-modal { position: fixed; inset: 0; z-index: 200; }
+.ql-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.ql-modal-card { position: relative; margin: 10vh auto 0; max-width: 380px; width: calc(100% - 2rem); background: #111116; border: 1px solid #2c2c34; border-radius: 14px; padding: 0.85rem 0.9rem; max-height: 74vh; overflow-y: auto; }
+.ql-modal-head { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; }
+.ql-modal-title { font-size: 0.95rem; font-weight: 800; color: #fff; }
+.ql-modal-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.1rem; }
+.ql-modal-x { margin-left: auto; background: none; border: none; color: #777; font-size: 1rem; cursor: pointer; padding: 0 0.2rem; }
+.ql-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0; border-top: 1px solid #23232b; }
+.ql-row-pos { font-size: 0.72rem; color: #64748b; width: 1.5rem; flex: none; }
+.ql-row-star { width: 1rem; flex: none; font-size: 0.75rem; }
+.ql-row-name { font-size: 0.8rem; color: #ddd; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ql-row-date { font-size: 0.72rem; color: #64748b; flex: none; }
+.ql-row-self { background: #132a1c; border: 1px solid #22c55e; border-radius: 9px; padding: 0.45rem 0.5rem; margin-top: 0.35rem; }
+.ql-row-self .ql-row-name { color: #fff; }
+.ql-row-self .ql-row-pos, .ql-row-self .ql-row-date { color: #4ade80; }
+.ql-modal-foot { border-top: 1px solid #23232b; margin-top: 0.6rem; padding-top: 0.6rem; font-size: 0.72rem; color: #64748b; }

@@ -1,0 +1,122 @@
+<!-- Count strip + popout list of everyone waiting for one account type.
+     Rendered wherever a "no slot" card appears, and on the customer's own order
+     page. The strip shows a count only; the names live behind a deliberate tap
+     so they are not sitting in public view for anyone who scrolls past.
+
+     `suffix` lets this render twice on one page without id collisions — pass ''
+     for the primary block and a second string (e.g. 'All') for the
+     all-types-unavailable block, matching partials/noslot-options.ejs. -->
+<div class="ql-strip" id="qlStrip<%= suffix %>" style="display:none;"
+     role="button" tabindex="0"
+     onclick="qlOpen('<%= suffix %>')"
+     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();qlOpen('<%= suffix %>');}">
+  <span class="ql-strip-icon">👥</span>
+  <div class="ql-strip-text">
+    <div class="ql-strip-count" id="qlCount<%= suffix %>"></div>
+    <div class="ql-strip-sub" id="qlSub<%= suffix %>"></div>
+  </div>
+  <span class="ql-strip-link">View list</span>
+</div>
+
+<div class="ql-modal" id="qlModal<%= suffix %>" style="display:none;"
+     role="dialog" aria-modal="true" aria-labelledby="qlModalTitle<%= suffix %>">
+  <div class="ql-modal-backdrop" onclick="qlClose('<%= suffix %>')"></div>
+  <div class="ql-modal-card">
+    <div class="ql-modal-head">
+      <div>
+        <div class="ql-modal-title" id="qlModalTitle<%= suffix %>"></div>
+        <div class="ql-modal-sub" id="qlModalSub<%= suffix %>"></div>
+      </div>
+      <button type="button" class="ql-modal-x" aria-label="Close" onclick="qlClose('<%= suffix %>')">✕</button>
+    </div>
+    <div class="ql-modal-rows" id="qlRows<%= suffix %>"></div>
+    <div class="ql-modal-foot">⭐ Priority holders are served first.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SUF = <%- JSON.stringify(String(suffix)).replace(/</g, '\\u003c') %>;
+  // Names are masked server-side but are still customer-supplied text, so the
+  // '<' escape below is what stops a name from closing this script tag.
+  var DATA = <%- JSON.stringify(queues || { nt: [], tr: [], ps4: [] }).replace(/</g, '\\u003c') %>;
+  var SELF_REF = <%- JSON.stringify(selfRef || null).replace(/</g, '\\u003c') %>;
+  var SELF_SESSION = <%- JSON.stringify(selfSession || null).replace(/</g, '\\u003c') %>;
+  var LABELS = { nt: 'Non-trophy', tr: 'Trophy', ps4: 'PS4 primary' };
+
+  window.qlState = window.qlState || {};
+  window.qlState[SUF] = { type: <%- JSON.stringify(String(activeType)).replace(/</g, '\\u003c') %> };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function joinedLabel(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  }
+
+  function isSelf(row) {
+    if (SELF_REF && row.ref === SELF_REF) return true;
+    return !!(SELF_SESSION && row.sessionId && row.sessionId === SELF_SESSION);
+  }
+
+  window.qlRender = function(suffix, type) {
+    var st = window.qlState[suffix];
+    if (!st) return;
+    if (type) st.type = type;
+    var rows = (DATA && DATA[st.type]) || [];
+    var strip = document.getElementById('qlStrip' + suffix);
+    if (!strip) return;
+    if (!rows.length) { strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
+
+    var label = (LABELS[st.type] || '').toLowerCase();
+    var mine = null;
+    for (var i = 0; i < rows.length; i++) { if (isSelf(rows[i])) { mine = rows[i]; break; } }
+
+    document.getElementById('qlCount' + suffix).textContent =
+      rows.length + (rows.length === 1 ? ' in line for ' : ' in line for ') + label;
+    document.getElementById('qlSub' + suffix).textContent = mine
+      ? "You're #" + mine.position
+      : "Join now and you'll be #" + (rows.length + 1);
+
+    document.getElementById('qlModalTitle' + suffix).textContent = (LABELS[st.type] || '') + ' line';
+    document.getElementById('qlModalSub' + suffix).textContent =
+      rows.length + (rows.length === 1 ? ' waiting' : ' waiting');
+
+    var html = '';
+    rows.forEach(function(r){
+      var self = isSelf(r);
+      html += '<div class="ql-row' + (self ? ' ql-row-self' : '') + '">'
+        +  '<span class="ql-row-pos">#' + r.position + '</span>'
+        +  '<span class="ql-row-star">' + (r.tier === 'priority' ? '⭐' : '') + '</span>'
+        +  '<span class="ql-row-name">' + esc(r.name) + (self ? ' (you)' : '') + '</span>'
+        +  '<span class="ql-row-date">' + esc(joinedLabel(r.joinedAt)) + '</span>'
+        + '</div>';
+    });
+    document.getElementById('qlRows' + suffix).innerHTML = html;
+  };
+
+  window.qlShow = function(suffix, type) { window.qlRender(suffix, type); };
+
+  window.qlOpen = function(suffix) {
+    var m = document.getElementById('qlModal' + suffix);
+    if (m) m.style.display = 'block';
+  };
+  window.qlClose = function(suffix) {
+    var m = document.getElementById('qlModal' + suffix);
+    if (m) m.style.display = 'none';
+  };
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') window.qlClose(SUF);
+  });
+
+  window.qlRender(SUF, null);
+})();
+</script>
