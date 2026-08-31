@@ -96,4 +96,22 @@ check('resubmitting after a payment rejection is a valid two-hop path', () => {
   assert.strictEqual(orders.canTransition('awaiting_payment', 'verifying_payment'), true);
 });
 
+check('a waitlist entry can start paying to upgrade to priority', () => {
+  // The Fall in Line -> Priority upgrade hops the order into the ordinary
+  // payment flow rather than creating a second order, so the customer keeps
+  // their ref, their link and their place in line.
+  assert.strictEqual(orders.canTransition('waitlisted', 'awaiting_payment'), true);
+  assert.strictEqual(orders.canTransition('waitlisted', 'cancelled'), true);
+});
+
+check('a waitlist entry still cannot skip straight to a paid state', () => {
+  assert.strictEqual(orders.canTransition('waitlisted', 'reserved'), false);
+  assert.strictEqual(orders.canTransition('waitlisted', 'active'), false);
+  assert.strictEqual(orders.canTransition('waitlisted', 'awaiting_qr'), false);
+});
+
+check('exposes a queue-candidate query helper', () => {
+  assert.strictEqual(typeof orders.listQueueCandidates, 'function');
+});
+
 console.log('\n' + passed + ' assertions passed');
