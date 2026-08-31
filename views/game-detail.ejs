@@ -189,17 +189,6 @@
            ════════════════════════════════ -->
       <div id="rentPanel">
 
-        <% if (allUnavail) { %>
-        <!-- NO SLOT banner -->
-        <div class="gd-noslot-banner">
-          <span class="gd-noslot-icon">⏳</span>
-          <div>
-            <div class="gd-noslot-title">No Slots Available Right Now</div>
-            <div class="gd-noslot-sub">All slots for this game are currently rented. Pick your preferred type and duration, then choose how you'd like to get in line.</div>
-          </div>
-        </div>
-        <% } %>
-
         <!-- SELECT RENTAL TYPE -->
         <% if (anyNotStocked) { %>
         <!-- NOT-YET-STOCKED banner -->
@@ -300,6 +289,18 @@
           </button>
           <% }) %>
         </div>
+
+        <% if (allUnavail) { %>
+        <!-- NO SLOT banner: after duration so a customer sees "pick type and
+             duration" before being told to pick type and duration. -->
+        <div class="gd-noslot-banner">
+          <span class="gd-noslot-icon">⏳</span>
+          <div>
+            <div class="gd-noslot-title">No Slots Available Right Now</div>
+            <div class="gd-noslot-sub">All slots for this game are currently rented. Pick your preferred type and duration, then choose how you'd like to get in line.</div>
+          </div>
+        </div>
+        <% } %>
 
         <!-- TOTAL BREAKDOWN -->
         <div class="gd-total-box" id="totalBox">
