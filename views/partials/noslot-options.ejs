@@ -1,0 +1,61 @@
+<!-- Two equal, selectable options sharing one Facebook name field and one
+     button: Priority (₱100, existing paid path) and Fall in Line (free,
+     records a real order in the 'waitlisted' state instead of only opening
+     Messenger). `suffix` lets this partial render twice on one page without
+     id collisions — pass '' for the primary no-slot block and a second
+     string (e.g. 'All') for the all-types-unavailable block. -->
+<div class="gd-noslot-options">
+  <div class="gd-noslot-opt-grid">
+    <button type="button" class="gd-type-pill gd-noslot-opt gd-type-selected" id="noslotOptPriority<%= suffix %>" onclick="setNoslotKind(this, '')">
+      <span class="gd-type-icon">⭐</span>
+      <span class="gd-type-name">Priority</span>
+      <span class="gd-type-status gd-status-avail">₱100</span>
+    </button>
+    <button type="button" class="gd-type-pill gd-noslot-opt" id="noslotOptQueue<%= suffix %>" onclick="setNoslotKind(this, 'queue')">
+      <span class="gd-type-icon">👥</span>
+      <span class="gd-type-name">Fall in line</span>
+      <span class="gd-type-status gd-status-avail">Free</span>
+    </button>
+  </div>
+  <div class="gd-noslot-opt-note" id="noslotOptNote<%= suffix %>">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
+  <form method="POST" action="/order/reserve" id="reserveForm<%= suffix %>" onsubmit="return handleReserveFormSubmit(event, '<%= resValMsgId %>')">
+    <input type="hidden" name="game_id" value="<%= game_id %>">
+    <input type="hidden" name="account_type" id="resType<%= suffix %>" value="">
+    <input type="hidden" name="days" id="resDays<%= suffix %>" value="">
+    <input type="hidden" name="kind" id="resKind<%= suffix %>" value="">
+    <input type="text" name="fb_name" id="resFbName<%= suffix %>" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
+    <button type="submit" class="gd-noslot-submit" id="noslotSubmit<%= suffix %>">
+      Reserve Now — ₱100 →
+    </button>
+  </form>
+  <a id="reserveLink<%= suffix %>" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event, 'reserve', '<%= resValMsgId %>')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
+    or message us on Facebook instead
+  </a>
+  <div id="<%= resValMsgId %>" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+</div>
+
+<script>
+// Toggles which option is selected: swaps the hidden `kind` field between ''
+// (Priority) and 'queue' (Fall in Line), and updates the note + button text
+// to match. Runs once per partial instance because each instance's elements
+// all carry the same `<%= suffix %>` — a click on the "All unavailable"
+// instance never touches the per-type instance's elements, and vice versa.
+function setNoslotKind(btn, kind) {
+  const grid = btn.closest('.gd-noslot-opt-grid');
+  if (!grid) return;
+  grid.querySelectorAll('.gd-noslot-opt').forEach(b => b.classList.remove('gd-type-selected'));
+  btn.classList.add('gd-type-selected');
+  const wrap = btn.closest('.gd-noslot-options');
+  const kindField = wrap.querySelector('input[id^="resKind"]');
+  const note = wrap.querySelector('[id^="noslotOptNote"]');
+  const submitBtn = wrap.querySelector('[id^="noslotSubmit"]');
+  if (kindField) kindField.value = kind;
+  if (kind === 'queue') {
+    if (note) note.textContent = 'Free to join. We\'ll message you the moment a slot opens up.';
+    if (submitBtn) submitBtn.textContent = 'Join Waitlist — Free →';
+  } else {
+    if (note) note.textContent = 'Deducted from your total rent once a slot opens. We\'ll message you when it\'s your turn.';
+    if (submitBtn) submitBtn.textContent = 'Reserve Now — ₱100 →';
+  }
+}
+</script>

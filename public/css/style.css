@@ -872,6 +872,17 @@ nav {
 .gd-type-pill .gd-type-status { margin-left: auto; font-size: 0.66rem; white-space: nowrap; }
 .gd-type-pill.gd-type-selected { border-color: #f0a500; background: #1a1400; }
 
+/* No-slot page: two equal Priority / Fall in Line options sharing one name
+   field and button, reusing .gd-type-pill's selectable-card look so this
+   sits at home next to the rent-type pills higher up the same page. */
+.gd-noslot-options { background: linear-gradient(135deg,#150a26,#1c0d33); border: 1px solid rgba(168,85,247,0.3); border-radius: 14px; padding: 0.85rem 0.9rem; margin-bottom: 0.5rem; }
+.gd-noslot-opt-grid { display: flex; gap: 0.5rem; }
+.gd-noslot-opt { flex: 1 1 0; flex-direction: column; justify-content: center; text-align: center; cursor: pointer; }
+.gd-noslot-opt .gd-type-status { margin-left: 0; margin-top: 0.2rem; }
+.gd-noslot-opt.gd-type-selected { border-color: #a855f7; background: rgba(168,85,247,0.12); }
+.gd-noslot-opt-note { font-size: 0.7rem; color: #888; text-align: center; margin: 0.55rem 0; }
+.gd-noslot-submit { display: block; width: 100%; max-width: 230px; margin: 0 auto; background: linear-gradient(135deg,#6d28d9,#a855f7); color: #fff; font-weight: 800; padding: 0.55rem 1.1rem; border-radius: 50px; border: none; font-size: 0.78rem; cursor: pointer; }
+
 .gd-setup-toggle {
   display: flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;
   background: none; border: none; padding: 0; cursor: pointer;
