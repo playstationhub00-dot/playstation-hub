@@ -323,7 +323,18 @@
 <div class="oq-abandoned">
   <div class="oq-abandoned-title">👥 Waiting for a slot (<%= waitlistOrders.length %>)</div>
   <%
-    const sortedWaitlist = [...waitlistOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // Queue order, not recency: oldest first, matching what the customer is
+    // told on the game page. Sorting newest-first (as this did) meant serving
+    // from the top of this list served the most recently joined person while
+    // the site told them they were last. Positions are per game + account type,
+    // because that is the scope a slot actually opens in.
+    const sortedWaitlist = [...waitlistOrders].sort((a, b) => {
+      const da = Date.parse(a.created_at || '') || 0;
+      const db = Date.parse(b.created_at || '') || 0;
+      if (da !== db) return da - db;
+      return String(a.ref).localeCompare(String(b.ref));
+    });
+    const wlSeen = {};
   %>
   <% sortedWaitlist.forEach(o => {
     const wlTypeLabel = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
@@ -332,9 +343,13 @@
     const wlMsg = '👋 Hi ' + wlFirstName + '! A slot just opened up for ' + o.game_title + ' (' + wlTypeLabel + ', ' + wlDurLabel + ') —\n\n'
       + 'Still want it? Reply here and we\'ll get you set up.\n\n'
       + '🔖 Reference: ' + o.ref;
+    const wlKey = String(o.game_id) + '|' + o.account_type;
+    wlSeen[wlKey] = (wlSeen[wlKey] || 0) + 1;
+    const wlPos = wlSeen[wlKey];
   %>
   <div class="oq-ab-row oq-sv-wait">
     <div>
+      <span class="oq-wl-pos">#<%= wlPos %></span>
       <span class="oq-ref"><%= o.ref %></span>
       <span class="oq-ab-name"><%= o.fb_name %></span>
       <div class="oq-meta">
