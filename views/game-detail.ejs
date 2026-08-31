@@ -344,12 +344,14 @@
               <div class="gd-noslot-sub">Choose how you'd like to get in line for this account type.</div>
             </div>
           </div>
+          <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, selfSession: selfSession, suffix: '' }) %>
           <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
           <%- include('partials/noslot-options', { game_id: game.id, suffix: '', resValMsgId: 'reserveValidationMsg2' }) %>
         </div>
         <% } else { %>
         <!-- All unavail: reservation options shown directly -->
         <div id="reserveSectionAll">
+        <%- include('partials/queue-line', { queues: queues, activeType: (trAvail ? 'tr' : (ntAvail ? 'nt' : 'tr')), selfRef: null, selfSession: selfSession, suffix: 'All' }) %>
         <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
         <%- include('partials/noslot-options', { game_id: game.id, suffix: 'All', resValMsgId: 'reserveValidationMsg1' }) %>
         </div>
@@ -661,6 +663,9 @@ function onTypeChange(radio) {
   updateReserveLinks();
   updateCtaState();
   syncStickyBar();
+  // Swap the queue strip and popout to the newly selected account type. Both
+  // partial instances are updated because only one of them is ever on the page.
+  if (typeof qlShow === 'function') { qlShow('', selectedType); qlShow('All', selectedType); }
 }
 
 function onDurChange(btn) {

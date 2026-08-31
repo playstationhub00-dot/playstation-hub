@@ -9,6 +9,7 @@ const sharp = require('sharp');
 const session = require('express-session');
 const computeAvailability = require('./lib/availability');
 const orders = require('./lib/orders');
+const queueRules = require('./lib/queue');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -2504,7 +2505,7 @@ app.get('/api/search-index', async (req, res) => {
   res.json([...available, ...soon, ...psplus, ...psplusMonthly, ...requested]);
 });
 
-app.get('/game/:slug', (req, res) => {
+app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
   // Support both numeric ID (old links) and slug
   let game = /^\d+$/.test(param)
@@ -2515,7 +2516,13 @@ app.get('/game/:slug', (req, res) => {
   if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
   const resolved = resolveGamePrices(resolveSlotDays(game));
   const gdSettings = getSiteSettings();
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null });
+  // Who is waiting for each account type. A database outage returns [] rather
+  // than throwing, so the page keeps rendering without the queue strip.
+  let queues = { nt: [], tr: [], ps4: [] };
+  try {
+    queues = queueRules.buildQueue(await orders.listQueueCandidates(game.id), new Date());
+  } catch (e) { console.error('[game queue]', e.message); }
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
