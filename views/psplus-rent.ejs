@@ -266,7 +266,12 @@ function updatePrices() {
 
 function updateTotal() {
   const box = document.getElementById('totalBox');
-  if (!selectedType || !selectedDays) { if(box) box.style.display = 'none'; return; }
+  // A type with no slot cannot be booked, so quoting its price would advertise
+  // something unavailable. Guarded here rather than at the call site because
+  // onDurChange() also reaches this function and would otherwise re-show the
+  // box after the type change had hidden it.
+  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
+  if (!selectedType || !selectedDays || !hasSlot) { if(box) box.style.display = 'none'; return; }
   const base = PRICES[selectedType][selectedDays];
   const pct = promoPctFor(selectedDays);
   const discount = pct > 0 ? Math.round(base * pct / 100) : 0;

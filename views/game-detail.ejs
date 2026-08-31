@@ -758,6 +758,12 @@ function updateCtaState() {
   const ctaHint = document.getElementById('ctaHint');
   const ctaMsgLink = document.getElementById('ctaMsgLink');
   const reserveSection = document.getElementById('reserveSection');
+  // The rent form and the price summary both belong to a booking that cannot
+  // happen when the selected type has no slot. Hiding the whole form (not
+  // just its button) is what removes the stranded, unlabelled name input that
+  // used to sit above the no-slot banner with nothing to submit it.
+  const orderForm = document.getElementById('gdOrderForm');
+  const totalBox = document.getElementById('totalBox');
   if (!ctaBtn) return;
 
   const oType = document.getElementById('orderType');
@@ -775,11 +781,17 @@ function updateCtaState() {
     if (ctaSub) ctaSub.style.display = 'none';
     if (ctaHint) ctaHint.style.display = 'none';
     if (ctaMsgLink) ctaMsgLink.style.display = 'none';
+    // Quoting "To send now ₱349" for a type that cannot be booked reads as a
+    // price for something unavailable, so the summary goes with the form.
+    if (orderForm) orderForm.style.display = 'none';
+    if (totalBox) totalBox.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
     return;
   }
   ctaBtn.style.display = '';
   if (ctaMsgLink) ctaMsgLink.style.display = '';
+  if (orderForm) orderForm.style.display = '';
+  if (totalBox) totalBox.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
 
   if (!selectedType) {
