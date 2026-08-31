@@ -518,6 +518,11 @@ function computeRentTotal(type, days) {
   return { base, discount, deposit, pct, total: base - discount + deposit };
 }
 const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %>, ps4: <%= ps4Avail ? 'true' : 'false' %> };
+// When every type is full, #gdOrderForm and #ctaBtn are never rendered at
+// all (see the `<% if (!allUnavail) %>` split around the CTA) — there is no
+// "order directly" path to offer. #totalBox has no such split, so it needs
+// its own flag rather than following ctaBtn's existence.
+const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
 
 let selectedType = null;
 let selectedDays = null;
@@ -764,6 +769,13 @@ function updateCtaState() {
   // used to sit above the no-slot banner with nothing to submit it.
   const orderForm = document.getElementById('gdOrderForm');
   const totalBox = document.getElementById('totalBox');
+  // Every type full: #gdOrderForm and #ctaBtn were never rendered, so the
+  // logic below (which reads them) doesn't apply — only #totalBox needs
+  // hiding here, matching the per-type no-slot case above it.
+  if (ALL_UNAVAIL) {
+    if (totalBox) totalBox.style.display = 'none';
+    return;
+  }
   if (!ctaBtn) return;
 
   const oType = document.getElementById('orderType');
