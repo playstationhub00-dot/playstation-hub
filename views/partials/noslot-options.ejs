@@ -23,12 +23,12 @@
     <input type="hidden" name="account_type" id="resType<%= suffix %>" value="">
     <input type="hidden" name="days" id="resDays<%= suffix %>" value="">
     <input type="hidden" name="kind" id="resKind<%= suffix %>" value="">
-    <input type="text" name="fb_name" id="resFbName<%= suffix %>" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
+    <input type="text" name="fb_name" id="resFbName<%= suffix %>" class="gd-order-name" placeholder="Your Facebook name" required>
     <button type="submit" class="gd-noslot-submit" id="noslotSubmit<%= suffix %>">
       Reserve Now — ₱100 →
     </button>
   </form>
-  <a id="reserveLink<%= suffix %>" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event, 'reserve', '<%= resValMsgId %>')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
+  <a id="reserveLink<%= suffix %>" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event, 'reserve', '<%= resValMsgId %>')" class="gd-noslot-msgr">
     or message us on Facebook instead
   </a>
   <div id="<%= resValMsgId %>" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>

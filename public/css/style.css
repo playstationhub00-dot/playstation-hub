@@ -881,7 +881,15 @@ nav {
 .gd-noslot-opt .gd-type-status { margin-left: 0; margin-top: 0.2rem; }
 .gd-noslot-opt.gd-type-selected { border-color: #a855f7; background: rgba(168,85,247,0.12); }
 .gd-noslot-opt-note { font-size: 0.7rem; color: #888; text-align: center; margin: 0.55rem 0; }
-.gd-noslot-submit { display: block; width: 100%; max-width: 230px; margin: 0 auto; background: linear-gradient(135deg,#6d28d9,#a855f7); color: #fff; font-weight: 800; padding: 0.55rem 1.1rem; border-radius: 50px; border: none; font-size: 0.78rem; cursor: pointer; }
+/* Name field and button both run the full width of the card, matching the
+   rent form's .gd-order-name / .gd-order-btn pair above them. They used to be
+   capped at 230px, which left the input stranded against the left edge: an
+   <input> is inline-block, so its `margin: 0 auto` resolved to 0 rather than
+   centring it once the old inline `text-align:center` on this box was
+   dropped. Full width sidesteps the centring question entirely. */
+.gd-noslot-submit { display: block; width: 100%; margin: 0 auto; background: linear-gradient(135deg,#6d28d9,#a855f7); color: #fff; font-weight: 800; padding: 0.7rem 1.1rem; border-radius: 50px; border: none; font-size: 0.85rem; cursor: pointer; }
+.gd-noslot-msgr { display: block; text-align: center; margin-top: 0.6rem; font-size: 0.75rem; color: #888; text-decoration: underline; }
+.gd-noslot-msgr:hover { color: #aaa; }
 
 .gd-setup-toggle {
   display: flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;
