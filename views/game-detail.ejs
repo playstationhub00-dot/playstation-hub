@@ -344,51 +344,13 @@
             </div>
           </div>
           <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
-          <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:0.85rem 0.9rem;text-align:center;margin-bottom:0.5rem;">
-            <div style="font-size:1.1rem;margin-bottom:0.2rem;">⭐</div>
-            <div style="font-weight:800;font-size:0.85rem;color:#fff;margin-bottom:0.15rem;">Priority Reservation — ₱100 fee</div>
-            <div style="font-size:0.7rem;color:#888;margin-bottom:0.55rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
-            <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
-              <input type="hidden" name="game_id" value="<%= game.id %>">
-              <input type="hidden" name="account_type" id="resType" value="">
-              <input type="hidden" name="days" id="resDays" value="">
-              <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
-              <button type="submit" style="display:block;width:100%;max-width:230px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.55rem 1.1rem;border-radius:50px;border:none;font-size:0.78rem;cursor:pointer;">
-                Reserve Now — ₱100 →
-              </button>
-            </form>
-            <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
-              or message us on Facebook instead
-            </a>
-          <div style="border-top:1px solid rgba(255,255,255,0.08);margin:0.55rem 0 0.45rem;"></div>
-            <div style="font-size:0.68rem;color:#888;">Not ready to pay? <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'queue')" style="color:#93c5fd;text-decoration:underline;">Join the free waitlist →</a></div>
-          </div>
-          <div id="reserveValidationMsg2" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+          <%- include('partials/noslot-options', { game_id: game.id, suffix: '', resValMsgId: 'reserveValidationMsg2' }) %>
         </div>
         <% } else { %>
         <!-- All unavail: reservation options shown directly -->
         <div id="reserveSectionAll">
         <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
-        <div style="background:linear-gradient(135deg,#150a26,#1c0d33);border:1px solid rgba(168,85,247,0.3);border-radius:14px;padding:0.85rem 0.9rem;text-align:center;margin-bottom:0.5rem;">
-          <div style="font-size:1.1rem;margin-bottom:0.2rem;">⭐</div>
-          <div style="font-weight:800;font-size:0.85rem;color:#fff;margin-bottom:0.15rem;">Priority Reservation — ₱100 fee</div>
-          <div style="font-size:0.7rem;color:#888;margin-bottom:0.55rem;">Deducted from your total rent once a slot opens. We'll message you when it's your turn.</div>
-          <form method="POST" action="/order/reserve" id="reserveForm" onsubmit="return handleReserveFormSubmit(event)">
-            <input type="hidden" name="game_id" value="<%= game.id %>">
-            <input type="hidden" name="account_type" id="resType" value="">
-            <input type="hidden" name="days" id="resDays" value="">
-            <input type="text" name="fb_name" id="resFbName" class="gd-order-name" placeholder="Your Facebook name" required style="max-width:230px;margin:0 auto 0.4rem;">
-            <button type="submit" style="display:block;width:100%;max-width:230px;margin:0 auto;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;font-weight:800;padding:0.55rem 1.1rem;border-radius:50px;border:none;font-size:0.78rem;cursor:pointer;">
-              Reserve Now — ₱100 →
-            </button>
-          </form>
-          <a id="reserveLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'reserve')" style="display:block;margin-top:0.4rem;font-size:0.68rem;color:#888;text-decoration:underline;">
-            or message us on Facebook instead
-          </a>
-        <div style="border-top:1px solid rgba(255,255,255,0.08);margin:0.55rem 0 0.45rem;"></div>
-            <div style="font-size:0.68rem;color:#888;">Not ready to pay? <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" onclick="return handleReserveClick(event,'queue')" style="color:#93c5fd;text-decoration:underline;">Join the free waitlist →</a></div>
-          </div>
-        <div id="reserveValidationMsg1" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        <%- include('partials/noslot-options', { game_id: game.id, suffix: 'All', resValMsgId: 'reserveValidationMsg1' }) %>
         </div>
         <% } %>
 
@@ -947,17 +909,23 @@ function updateReserveLinks() {
   if (ctaMsgLink) {
     ctaMsgLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to RENT a game 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine].filter(Boolean).join('\n'));
   }
-  const rLink = document.getElementById('reserveLink');
-  if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to PRIORITY RESERVE a slot ⭐','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine,'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n'));
-  const qLink = document.getElementById('queueLink');
-  if (qLink) qLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to JOIN THE WAITLIST (Fall in Line) 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'','Please notify me when a slot becomes available.'].filter(Boolean).join('\n'));
+  // Both no-slot instances' Messenger fallback links always say PRIORITY
+  // RESERVE — that link is the "message us instead of the form" escape
+  // hatch, not tied to whichever option card happens to be selected right
+  // now (Fall in Line's own path is the form itself, distinguished by the
+  // hidden `kind` field, not a separate link).
+  ['reserveLink', 'reserveLinkAll'].forEach(id => {
+    const rLink = document.getElementById(id);
+    if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to PRIORITY RESERVE a slot ⭐','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine,'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n'));
+  });
 }
 
-function handleReserveFormSubmit(e) {
+function handleReserveFormSubmit(e, valMsgId) {
   if (!selectedDays) {
     e.preventDefault();
     const msg = '⚠️ Please select a rental duration (Weekly or Monthly) before continuing.';
-    ['reserveValidationMsg1','reserveValidationMsg2'].forEach(id => {
+    const ids = valMsgId ? [valMsgId] : ['reserveValidationMsg1','reserveValidationMsg2'];
+    ids.forEach(id => {
       const el = document.getElementById(id);
       if (el && el.offsetParent !== null) { el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display='none', 4000); }
     });
@@ -967,11 +935,12 @@ function handleReserveFormSubmit(e) {
   return true;
 }
 
-function handleReserveClick(e, type) {
+function handleReserveClick(e, type, valMsgId) {
   if (!selectedDays) {
     e.preventDefault();
     const msg = '⚠️ Please select a rental duration (Weekly or Monthly) before continuing.';
-    ['reserveValidationMsg1','reserveValidationMsg2'].forEach(id => {
+    const ids = valMsgId ? [valMsgId] : ['reserveValidationMsg1','reserveValidationMsg2'];
+    ids.forEach(id => {
       const el = document.getElementById(id);
       if (el && el.offsetParent !== null) { el.textContent = msg; el.style.display = 'block'; setTimeout(() => el.style.display='none', 4000); }
     });
