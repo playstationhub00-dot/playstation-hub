@@ -319,6 +319,42 @@
 </div>
 <% } %>
 
+<% if (waitlistOrders && waitlistOrders.length) { %>
+<div class="oq-abandoned">
+  <div class="oq-abandoned-title">👥 Waiting for a slot (<%= waitlistOrders.length %>)</div>
+  <%
+    const sortedWaitlist = [...waitlistOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  %>
+  <% sortedWaitlist.forEach(o => {
+    const wlTypeLabel = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+    const wlDurLabel = o.days === 7 ? 'Weekly' : 'Monthly';
+    const wlFirstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
+    const wlMsg = '👋 Hi ' + wlFirstName + '! A slot just opened up for ' + o.game_title + ' (' + wlTypeLabel + ', ' + wlDurLabel + ') —\n\n'
+      + 'Still want it? Reply here and we\'ll get you set up.\n\n'
+      + '🔖 Reference: ' + o.ref;
+  %>
+  <div class="oq-ab-row oq-sv-wait">
+    <div>
+      <span class="oq-ref"><%= o.ref %></span>
+      <span class="oq-ab-name"><%= o.fb_name %></span>
+      <div class="oq-meta">
+        <%= o.game_title %> · <%= wlTypeLabel %> · <%= wlDurLabel %> · Free entry
+      </div>
+    </div>
+    <div class="oq-ab-right">
+      <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
+      <div class="oq-ab-btns">
+        <button type="button" class="btn-copy rem-copy" data-msg="<%= wlMsg %>" title="Copy slot-open message">📋 Copy</button>
+        <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Remove ' + <%= JSON.stringify(o.ref) %> + ' from the waiting list?');">
+          <button type="submit" class="oq-btn-no" title="Remove this waitlist entry">Remove</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>
+
 <script>
 (function(){
   function tick() {

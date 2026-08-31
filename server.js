@@ -2338,7 +2338,7 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
 app.post('/admin/orders/:ref/cancel', requireAuth, async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
-  if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
+  if (!['awaiting_payment', 'payment_rejected', 'waitlisted'].includes(order.state)) {
     return res.redirect('/admin?tab=orders&msg=order_bad_state');
   }
   const r = await orders.transition(order.ref, 'cancelled', {});
@@ -2746,13 +2746,23 @@ app.get('/admin', requireAuth, async (req, res) => {
   // The form captures a Facebook name before payment, so each row is a named
   // lead the owner can message directly, not just a statistic.
   const abandonedOrders = await orders.listByStates(['awaiting_payment', 'payment_rejected']);
+  // Fall in Line entries, listed separately from the action queue: they have
+  // no completing action the way a payment or return check does, so they
+  // would sit in orderQueue forever and bury real work if merged into it.
+  const waitlistOrders = await orders.listByStates(['waitlisted']);
   // Weekly funnel readout: how many orders started, how many completed
   // (reached active or beyond), and what fraction that is of game-page
   // traffic in the same window. The single number the conversion plan's
   // decision rule is measured against.
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const allOrders = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
-  const allRecentOrders = allOrders.filter(o => new Date(o.created_at) >= weekAgo);
+  // Fall in Line entries are free and unpaid by design — counting them as
+  // "started" orders would inflate the funnel's denominator and misrepresent
+  // conversion, and counting them as "abandoned" would flag every free join
+  // as a failed sale. Both the weekly funnel and the ledger below exclude
+  // them at the source so no downstream stat has to know about the carve-out.
+  const paidPathOrders = allOrders.filter(o => o.state !== 'waitlisted');
+  const allRecentOrders = paidPathOrders.filter(o => new Date(o.created_at) >= weekAgo);
   const startedCount = allRecentOrders.length;
   const completedCount = allRecentOrders.filter(o =>
     !orders.PAID_EXCLUDED_STATES.includes(o.state)
@@ -2780,7 +2790,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   // a tab that is usually opened for the action queue is what made the
   // Customers table need trimming.
   const LEDGER_DEFAULT_MONTHS = 3;
-  const orderPeriods = [...new Set(allOrders
+  const orderPeriods = [...new Set(paidPathOrders
     .map(o => (o.created_at || '').slice(0, 7))
     .filter(p => /^\d{4}-\d{2}$/.test(p))
   )].sort().reverse();
@@ -2790,14 +2800,14 @@ app.get('/admin', requireAuth, async (req, res) => {
   const orderPeriod = /^(\d{4}(-\d{2})?|all)$/.test(rawPeriod) ? rawPeriod : '';
   let ledgerOrders;
   if (orderPeriod === 'all') {
-    ledgerOrders = allOrders;
+    ledgerOrders = paidPathOrders;
   } else if (orderPeriod) {
-    ledgerOrders = allOrders.filter(o => (o.created_at || '').startsWith(orderPeriod));
+    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').startsWith(orderPeriod));
   } else {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - LEDGER_DEFAULT_MONTHS);
     const cutoffStr = cutoff.toISOString().slice(0, 7);
-    ledgerOrders = allOrders.filter(o => (o.created_at || '').slice(0, 7) >= cutoffStr);
+    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').slice(0, 7) >= cutoffStr);
   }
   ledgerOrders = [...ledgerOrders].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
@@ -2947,7 +2957,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
