@@ -2038,6 +2038,16 @@ app.get('/order/:ref', async (req, res) => {
   // exists.
   if (!order || !order.url_key || req.query.k !== order.url_key) return res.redirect('/browse');
   const s = getSiteSettings();
+  // Where this customer sits in line, for a Fall in Line or Priority order.
+  // Pre-orders and ordinary rentals get nulls and render nothing.
+  let queueRows = [], queuePos = null, queueAhead = null, queueExpired = false;
+  try {
+    const built = queueRules.buildQueue(await orders.listQueueCandidates(order.game_id), new Date());
+    queueRows = built[order.account_type] || [];
+    queuePos = queueRules.positionOf(queueRows, order.ref);
+    queueAhead = queueRules.aheadOf(queueRows, order.ref);
+    queueExpired = queueRules.isExpired(order, new Date());
+  } catch (e) { console.error('[order queue]', e.message); }
   res.render('order-status', {
     order,
     settings: s,
@@ -2048,6 +2058,8 @@ app.get('/order/:ref', async (req, res) => {
     announcements: getAnnouncements(),
     msg: req.query.msg || null,
     signinSteps: getSigninSteps(),
+    queueRows, queuePos, queueAhead, queueExpired,
+    queueRules,
   });
 });
 
@@ -2093,6 +2105,57 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=payment_submitted');
+});
+
+// Fall in Line -> Priority. Upgrades the customer's EXISTING order in place
+// rather than cancelling it and creating a new one, which is what lets them
+// keep their ref, their order link and — because created_at is never touched —
+// their place in line. Everything after this hop is existing machinery: the
+// order page renders the payment step because the state is awaiting_payment,
+// and the admin approve route already sends any is_reservation order from
+// verifying_payment into 'reserved'.
+app.post('/order/:ref/upgrade-priority', async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.redirect('/browse?order_error=rate');
+  }
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  const back = '/order/' + order.ref + '?k=' + order.url_key;
+  // Only a live free entry can be upgraded. An expired one is asked to message
+  // us instead, and anything already paid for has nothing to upgrade.
+  if (order.state !== 'waitlisted') return res.redirect(back + '&msg=stale');
+  if (queueRules.isExpired(order, new Date())) return res.redirect(back + '&msg=stale');
+
+  // Recompute from CURRENT prices and promo rather than trusting the
+  // remaining_due stored when they joined — a promo may have started or ended
+  // in the meantime, and the paid paths all quote today's price.
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const isPsplus = order.game_id === 'psplus';
+  const game = isPsplus ? null : getGame(order.game_id);
+  if (!isPsplus && !game) return res.redirect(back + '&msg=stale');
+  const priceType = order.account_type === 'ps4' ? 'nt' : order.account_type;
+  const base = isPsplus
+    ? (getPsplusPrices()[priceType + '_price_' + order.days + 'd'] || 0)
+    : (resolveGamePrices(game)[priceType + '_price_' + order.days + 'd'] || 0);
+  if (!base) return res.redirect(back + '&msg=stale');
+  const pct = getPromoDiscountPct(promo, order.days);
+  const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
+
+  const updated = await orders.transition(order.ref, 'awaiting_payment', {
+    amount_due: 100,
+    deposit_due: 0,
+    is_reservation: true,
+    is_waitlist: false,
+    // Keeps this order in the queue at its original free position while the
+    // ₱100 is in flight, so an upgrading customer never disappears from the
+    // line. lib/queue.js reads this flag.
+    upgraded_from_waitlist: true,
+    remaining_due: Math.max(0, rentAfterPromo - 100) + deposit
+  });
+  if (!updated) return res.redirect(back + '&msg=stale');
+  res.redirect(back + '&msg=upgrade_started');
 });
 
 // QR upload is website-only by design: the countdown is the whole mechanism,

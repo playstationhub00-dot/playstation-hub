@@ -13,7 +13,10 @@
 
 <%
   const STEP_COPY = {
-    waitlisted:        { title: 'You\'re on the list! 👥', sub: 'We\'ll message you the moment a slot opens up.' },
+    waitlisted:        { title: queueExpired ? 'Still want this? 👋' : (queuePos ? 'You\'re #' + queuePos + ' in line' : 'You\'re on the list! 👥'),
+                          sub: queueExpired
+                            ? 'Your entry has been waiting over 30 days. Message us to confirm you still want it and we\'ll put you back in line.'
+                            : 'We\'ll message you the moment a slot opens up.' },
     awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with GCash or Maya, then tell us below.' },
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
     awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
@@ -61,6 +64,7 @@
   <% if (msg === 'qr_sent') { %><div class="ord-flash">QR received — hold tight.</div><% } %>
   <% if (msg === 'return_submitted') { %><div class="ord-flash">Return proof received — we'll confirm shortly.</div><% } %>
   <% if (msg === 'stale') { %><div class="ord-flash ord-flash-warn">That step was already handled — here's your current status.</div><% } %>
+  <% if (msg === 'upgrade_started') { %><div class="ord-flash">Upgraded to priority — send the ₱100 below and we'll move you up.</div><% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -85,6 +89,29 @@
     <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %>.</div>
     <% } %>
   </div>
+
+  <% if (queueRows && queueRows.length && queuePos && !queueExpired) { %>
+  <%- include('partials/queue-line', { queues: { nt: order.account_type === 'nt' ? queueRows : [], tr: order.account_type === 'tr' ? queueRows : [], ps4: order.account_type === 'ps4' ? queueRows : [] }, activeType: order.account_type, selfRef: order.ref, selfSession: null, suffix: '' }) %>
+  <% } %>
+
+  <% if (order.state === 'waitlisted' && !queueExpired && queuePos) { %>
+  <%
+    const upTarget = queueRules.upgradedPosition(queueRows, order.ref);
+  %>
+  <div class="ord-upgrade">
+    <form method="POST" action="/order/<%= order.ref %>/upgrade-priority">
+      <input type="hidden" name="k" value="<%= order.url_key %>">
+      <button type="submit" class="ord-upgrade-btn">Upgrade to priority — ₱100</button>
+    </form>
+    <div class="ord-upgrade-sub">
+      <% if (upTarget < queuePos) { %>
+        Moves you to #<%= upTarget %>. Deducted from your total rent.
+      <% } else { %>
+        Priority holders are served first. Deducted from your total rent.
+      <% } %>
+    </div>
+  </div>
+  <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>
   <div class="ord-step">
