@@ -11,10 +11,11 @@ function check(name, fn) {
   console.log('  ok - ' + name);
 }
 
-check('exposes the eight lifecycle states in order', () => {
+check('exposes the ten lifecycle states in order', () => {
   assert.deepStrictEqual(orders.STATES, [
     'awaiting_payment', 'verifying_payment', 'awaiting_qr', 'qr_pending',
-    'active', 'awaiting_return', 'verifying_return', 'closed'
+    'active', 'awaiting_return', 'verifying_return', 'closed', 'reserved',
+    'waitlisted'
   ]);
 });
 
