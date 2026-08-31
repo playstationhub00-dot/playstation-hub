@@ -1856,6 +1856,11 @@ app.post('/order/reserve', async (req, res) => {
   // one — 50% now, remainder on release — and /order/buy only knows about
   // already-released catalogue rows.
   const isBuyPreorder = kind === 'buy';
+  // Fall in Line: a free, unpaid entry. PS Plus reuses this same route and
+  // the same "This type has no slot right now" UI, so it must be allowed
+  // too — only a Coming Soon pre-order (isUpcoming) is excluded, since that
+  // page keeps its own separate (Messenger-only) waitlist card.
+  const isWaitlist = kind === 'queue';
   const upcoming = getUpcomingGame(game_id);
   const isPsplus = !upcoming && game_id === 'psplus';
   const game = upcoming || (isPsplus ? null : getGame(game_id));
@@ -1878,6 +1883,11 @@ app.post('/order/reserve', async (req, res) => {
   if (!name || !type) return res.redirect(errRedirect);
   if (isBuyPreorder) {
     if (!isUpcoming) return res.redirect(errRedirect);
+  } else if (isWaitlist) {
+    // Coming Soon keeps its own separate (Messenger-only) waitlist card —
+    // this recorded Fall in Line path is only for already-released games
+    // and PS Plus, both of which reach this route with isUpcoming === false.
+    if (isUpcoming || !PROMO_DURATIONS.includes(d)) return res.redirect(errRedirect);
   } else if (!PROMO_DURATIONS.includes(d)) {
     return res.redirect(errRedirect);
   }
@@ -1906,6 +1916,33 @@ app.post('/order/reserve', async (req, res) => {
     remainingDue = total - amountDue;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
+  } else if (isWaitlist) {
+    // Free entry: nothing collected now. remainingDue carries the full price
+    // the customer will owe once the owner manually starts a real order for
+    // them — computed the same way the paid path computes it, minus the ₱100
+    // priority fee subtraction those paths do (there is no fee here).
+    if (isPsplus) {
+      const prices = getPsplusPrices();
+      const base = prices[type + '_price_' + d + 'd'] || 0;
+      if (!base) return res.redirect(errRedirect);
+      const pct = getPromoDiscountPct(promo, d);
+      const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+      const psplusDeposit = type === 'tr' ? (promo.deposit || 0) : 0;
+      remainingDue = rentAfterPromo + psplusDeposit;
+    } else {
+      const resolved = resolveGamePrices(game);
+      const priceType = type === 'ps4' ? 'nt' : type;
+      const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+      if (!base) return res.redirect(errRedirect);
+      const pct = getPromoDiscountPct(promo, d);
+      const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+      const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+      remainingDue = rentAfterPromo + gameDeposit;
+    }
+    amountDue = 0;
+    depositDue = 0;
+    releaseDate = '';
+    upcomingGameId = null;
   } else if (isPsplus) {
     const prices = getPsplusPrices();
     const base = prices[type + '_price_' + d + 'd'] || 0;
@@ -1936,22 +1973,30 @@ app.post('/order/reserve', async (req, res) => {
   }
 
   try {
-    const order = await orders.create({
+    const orderFields = {
       game_id: isPsplus ? 'psplus' : game.id,
       game_title: gameTitle,
       account_type: type,
       days: isBuyPreorder ? null : d,
       is_buy: isBuyPreorder,
+      is_waitlist: isWaitlist,
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
-      is_reservation: true,
+      is_reservation: !isWaitlist,
       is_psplus: isPsplus,
       upcoming_game_id: upcomingGameId,
       release_date: releaseDate,
       remaining_due: remainingDue
-    });
+    };
+    // orders.create() defaults new orders to 'awaiting_payment' — a Fall in
+    // Line entry has nothing to pay, so it starts in its resting state
+    // instead of a payment step it will never complete. Object.assign does
+    // NOT skip an explicit `undefined` value, so the key is omitted rather
+    // than set to `state: undefined` (which would overwrite the default).
+    if (isWaitlist) orderFields.state = 'waitlisted';
+    const order = await orders.create(orderFields);
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order reserve]', e.message);
