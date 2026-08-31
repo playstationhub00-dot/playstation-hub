@@ -57,5 +57,9 @@ function setNoslotKind(btn, kind) {
     if (note) note.textContent = 'Deducted from your total rent once a slot opens. We\'ll message you when it\'s your turn.';
     if (submitBtn) submitBtn.textContent = 'Reserve Now — ₱100 →';
   }
+  // The rent page's fixed bottom bar mirrors this choice (₱100 vs Free), so it
+  // has to be told when the choice changes. Guarded because the PS Plus page
+  // uses this same partial and has no sticky bar.
+  if (typeof syncStickyBar === 'function') syncStickyBar();
 }
 </script>

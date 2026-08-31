@@ -845,10 +845,16 @@ function syncStickyBar() {
 
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
+    // The bar has to quote what its button actually leads to — the cost of
+    // getting in line — not the rent price, which is the one thing you cannot
+    // do for this type. It used to read the game's cheapest rent figure, so a
+    // "Reserve a slot" button sat under a number matching neither option
+    // below it (Priority is a flat ₱100; Fall in Line is free).
+    const kindEl = document.querySelector('.gd-noslot-options input[id^="resKind"]');
+    const isQueue = !!kindEl && kindEl.value === 'queue';
     kEl.textContent = 'No slot right now';
-    const amtEl = document.getElementById('phAmount');
-    aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
-    bEl.textContent = 'Reserve a slot';
+    aEl.textContent = isQueue ? 'Free' : '₱100';
+    bEl.textContent = isQueue ? 'Join waitlist' : 'Reserve a slot';
     bEl.classList.remove('gd-cta-wait');
     return;
   }
