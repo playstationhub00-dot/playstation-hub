@@ -13,6 +13,7 @@
 
 <%
   const STEP_COPY = {
+    waitlisted:        { title: 'You\'re on the list! 👥', sub: 'We\'ll message you the moment a slot opens up.' },
     awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with GCash or Maya, then tell us below.' },
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
     awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
@@ -74,7 +75,9 @@
     <% if (order.deposit_due > 0) { %>
     <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
     <% } %>
+    <% if (!order.is_waitlist) { %>
     <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
+    <% } %>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
     <% } %>
