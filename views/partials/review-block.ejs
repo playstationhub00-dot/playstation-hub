@@ -1,15 +1,16 @@
 <%#
-  One shared pool of reviews, shown on every game page under the order card.
-  Deliberately not per-game: with ~37 customers across 53 games most pages
-  would show zero, and an empty review block is worse than none — it reads as
-  "nobody has rented this". sortForGame floats any review that names THIS
-  game to the top, so the pool still feels relevant where it can be.
+  One shared pool of reviews, shown full-width on every game page — between
+  the order card and the gameplay gallery, filling the space that used to sit
+  empty under the poster description. Deliberately not per-game: with ~37
+  customers across 53 games most pages would show zero, and an empty review
+  block is worse than none — it reads as "nobody has rented this". sortForGame
+  floats any review that names THIS game to the top, so the pool still feels
+  relevant where it can be.
 
-  Redesigned to be compact: a big rating header (the strongest signal) plus
-  two quote rows, not three cards with avatars — this used to run to ~300px
-  and push the gameplay gallery below the fold. Names are masked with the same
-  reviewDisplayName() the queue popout already uses, so a surname never shows
-  here even though the underlying data still has it for admin.
+  The whole pool auto-slides continuously (a "there are more of these than
+  fit" cue, same job the gameplay slider does for screenshots) rather than
+  paging through 2-3 at a time — with every review already visible, a
+  "read all N" link would point at nothing extra.
 
   This is an EJS comment, not an HTML one, on purpose: an HTML comment would
   sit outside the guard below and still be emitted for a game with no reviews,
@@ -18,33 +19,86 @@
   the first close tag it finds, wherever it appears.
 %>
 <% if (reviews && reviews.length) { %>
-<div class="gdr">
-  <div class="gdr-head">
-    <div class="gdr-avg"><%= reviewStats.average.toFixed(1) %></div>
+<div class="gdrq" id="gdrq">
+  <div class="gdrq-head">
+    <div class="gdrq-avg"><%= reviewStats.average.toFixed(1) %></div>
     <div>
-      <div class="gdr-stars">★★★★★</div>
-      <div class="gdr-count">from <%= reviewStats.count %> renter<%= reviewStats.count === 1 ? '' : 's' %></div>
+      <div class="gdrq-stars">★★★★★</div>
+      <div class="gdrq-count">from <%= reviewStats.count %> renter<%= reviewStats.count === 1 ? '' : 's' %></div>
     </div>
   </div>
-  <% reviews.slice(0, 2).forEach(r => { const badge = reviewBadge(r); %>
-  <div class="gdr-row">
-    <p class="gdr-text">"<%= r.text %>"</p>
-    <div class="gdr-foot">
-      <span class="gdr-name"><%= reviewDisplayName(r) %></span>
-      <% if (r.game_rented) { %>
-      <span class="gdr-dot">·</span>
-      <span class="gdr-game"><%= r.game_rented %></span>
-      <% } %>
-      <% if (badge === 'facebook') { %>
-      <svg class="gdr-fb-icon" width="11" height="11" viewBox="0 0 24 24" fill="#60a5fa" aria-label="From Facebook"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
-      <% } else { %>
-      <span class="gdr-badge-verified">Verified</span>
-      <% } %>
+  <div class="gdrq-vp" id="gdrqVp">
+    <div class="gdrq-track" id="gdrqTrack">
+      <%
+        // Rendered twice: a continuous marquee needs a second, identical copy
+        // immediately after the first so the loop can reset invisibly at the
+        // -50% mark instead of snapping back to a visibly different start.
+        // The gdrqBuildCard local lets both passes share one render instead of
+        // two copies of the markup drifting apart later.
+        const gdrqBuildCard = (r, hidden) => {
+          const badge = reviewBadge(r);
+      %>
+      <div class="gdrq-card"<%- hidden ? ' aria-hidden="true"' : '' %>>
+        <div class="gdrq-card-stars">★★★★★</div>
+        <p class="gdrq-text">"<%= r.text %>"</p>
+        <div class="gdrq-foot">
+          <span class="gdrq-name"><%= reviewDisplayName(r) %></span>
+          <% if (r.game_rented) { %>
+          <span class="gdrq-dot">·</span>
+          <span class="gdrq-game"><%= r.game_rented %></span>
+          <% } %>
+          <% if (badge === 'facebook') { %>
+          <svg class="gdrq-fb-icon" width="11" height="11" viewBox="0 0 24 24" fill="#60a5fa" aria-label="From Facebook"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+          <% } else { %>
+          <span class="gdrq-badge-verified">Verified</span>
+          <% } %>
+        </div>
+      </div>
+      <% }; %>
+      <% reviews.forEach(r => gdrqBuildCard(r, false)) %>
+      <% reviews.forEach(r => gdrqBuildCard(r, true)) %>
     </div>
   </div>
-  <% }) %>
-  <% if (reviewStats.count > 2) { %>
-  <a href="/#reviewsSection" class="gdr-more">Read all <%= reviewStats.count %> reviews</a>
-  <% } %>
 </div>
+<script>
+(function(){
+  var vp = document.getElementById('gdrqVp');
+  var track = document.getElementById('gdrqTrack');
+  if (!vp || !track) return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var cardCount = <%= reviews.length %>;
+
+  function layout() {
+    // The track holds two copies back to back, so half its width is one full
+    // pass of the real set — that's what "not overflowing" and the slide
+    // distance are both measured against.
+    var halfWidth = track.scrollWidth / 2;
+    if (reduceMotion || halfWidth <= vp.clientWidth + 1) {
+      // Nothing to slide: either motion is off, or the cards already fit.
+      // Center the single real set and drop the duplicate out of flow so it
+      // can't be tabbed to or take up layout space.
+      track.classList.remove('gdrq-sliding');
+      track.style.animation = 'none';
+      track.style.justifyContent = 'center';
+      return;
+    }
+    track.classList.add('gdrq-sliding');
+    track.style.justifyContent = '';
+    // Constant reading speed regardless of how many reviews exist: ~8s per
+    // card, so 4 reviews and 20 reviews both drift at the same pace rather
+    // than the same fixed loop time getting faster as the pool grows.
+    track.style.setProperty('--gdrq-duration', (cardCount * 8) + 's');
+  }
+
+  layout();
+  window.addEventListener('resize', layout);
+
+  // Touch has no hover, so pause-on-hover does nothing for a phone — a quote
+  // someone touches to read would otherwise keep sliding out from under their
+  // finger the moment they lift it. First touch stops it for good instead.
+  vp.addEventListener('touchstart', function() {
+    track.classList.add('gdrq-stopped');
+  }, { passive: true, once: true });
+})();
+</script>
 <% } %>

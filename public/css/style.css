@@ -3260,25 +3260,54 @@ label.buy-tier:hover { border-color: #444; }
 .rvp-btn:hover { background: #7c3aed; }
 .rvp-fine { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 0.5rem; }
 
-/* Pooled reviews under the order card on a game page — the point of hesitation.
-   Redesigned to be compact: one bordered block, a big rating header (the
-   strongest signal), two quote rows with hairline dividers instead of three
-   cards-in-a-card with avatars, then a link to the full homepage section. */
-.gdr { margin-top: 1rem; border: 1px solid #23232b; border-radius: 12px; overflow: hidden; }
-.gdr-head { display: flex; align-items: center; gap: 0.55rem; padding: 0.7rem 0.75rem; background: #111116; }
-.gdr-avg { font-size: 1.5rem; font-weight: 500; color: #fff; line-height: 1; }
-.gdr-stars { font-size: 0.75rem; color: #f0a500; letter-spacing: 2px; line-height: 1; }
-.gdr-count { font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem; }
-.gdr-row { padding: 0.65rem 0.75rem; border-top: 1px solid #23232b; }
-.gdr-text { font-size: 0.8rem; color: #ddd; line-height: 1.6; margin: 0; }
-.gdr-foot { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.4rem; }
-.gdr-name { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
-.gdr-dot { font-size: 0.72rem; color: #4a4a52; }
-.gdr-game { font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gdr-fb-icon { margin-left: auto; flex-shrink: 0; }
-.gdr-badge-verified { margin-left: auto; flex-shrink: 0; font-size: 0.66rem; color: #4ade80; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 20px; padding: 0.1rem 0.4rem; white-space: nowrap; }
-.gdr-more { display: block; text-align: center; font-size: 0.75rem; color: #60a5fa; text-decoration: none; padding: 0.6rem; border-top: 1px solid #23232b; }
-.gdr-more:hover { text-decoration: underline; }
+/* Full-width auto-sliding review strip — sits between the order card and the
+   gameplay gallery, filling what used to be empty space under the poster
+   description. A big rating header (the strongest signal) stays static; the
+   quote cards form a continuous marquee, the same "there's more than fits"
+   cue the gameplay slider gives screenshots.
+
+   The track renders the review set twice back to back and slides exactly
+   -50%, so the loop resets at a point pixel-identical to its start — no
+   visible snap. Motion is added by JS only once it confirms the cards
+   actually overflow the viewport; a short pool renders as a plain centered
+   row and nothing moves. */
+.gdrq { margin-top: 2rem; border: 1px solid #23232b; border-radius: 12px; overflow: hidden; background: #0d0d0f; }
+.gdrq-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1rem; background: #111116; border-bottom: 1px solid #23232b; }
+.gdrq-avg { font-size: 1.7rem; font-weight: 500; color: #fff; line-height: 1; }
+.gdrq-stars { font-size: 0.8rem; color: #f0a500; letter-spacing: 2px; line-height: 1; }
+.gdrq-count { font-size: 0.74rem; color: #94a3b8; margin-top: 0.25rem; }
+
+.gdrq-vp {
+  overflow: hidden;
+  padding: 0.85rem 0;
+  /* Fades the first/last ~6% of the strip to transparent so a card is never
+     visibly clipped mid-quote at either edge. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.gdrq-track { display: flex; gap: 0.75rem; width: max-content; padding: 0 1rem; }
+.gdrq-track.gdrq-sliding { animation: gdrqSlide var(--gdrq-duration, 32s) linear infinite; }
+.gdrq-vp:hover .gdrq-track.gdrq-sliding,
+.gdrq-vp:focus-within .gdrq-track.gdrq-sliding,
+.gdrq-track.gdrq-sliding.gdrq-stopped { animation-play-state: paused; }
+@keyframes gdrqSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .gdrq-track.gdrq-sliding { animation: none; }
+}
+
+.gdrq-card { width: 300px; flex: none; background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.75rem 0.85rem; }
+.gdrq-card-stars { font-size: 0.75rem; color: #f0a500; letter-spacing: 2px; }
+.gdrq-text { font-size: 0.8rem; color: #ddd; line-height: 1.6; margin: 0.4rem 0 0.55rem; }
+.gdrq-foot { display: flex; align-items: center; gap: 0.3rem; }
+.gdrq-name { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
+.gdrq-dot { font-size: 0.72rem; color: #4a4a52; }
+.gdrq-game { font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gdrq-fb-icon { margin-left: auto; flex-shrink: 0; }
+.gdrq-badge-verified { margin-left: auto; flex-shrink: 0; font-size: 0.66rem; color: #4ade80; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 20px; padding: 0.1rem 0.4rem; white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .gdrq-card { width: 78vw; max-width: 300px; }
+}
 
 /* Homepage counterpart of .gdr-badge-verified — a review submitted on the site
    by someone with a real paid order behind it. */
