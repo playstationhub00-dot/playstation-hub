@@ -1,0 +1,46 @@
+<%#
+  One shared pool of reviews, shown on every game page under the order card.
+  Deliberately not per-game: with ~37 customers across 53 games most pages
+  would show zero, and an empty review block is worse than none — it reads as
+  "nobody has rented this". sortForGame floats any review that names THIS
+  game to the top, so the pool still feels relevant where it can be.
+
+  This is an EJS comment, not an HTML one, on purpose: an HTML comment would
+  sit outside the guard below and still be emitted for a game with no reviews,
+  so "renders literally nothing when the pool is empty" would stop being
+  exactly true. Do not put EJS delimiters inside this block — the parser reads
+  the first close tag it finds, wherever it appears.
+%>
+<% if (reviews && reviews.length) { %>
+<div class="gdr">
+  <div class="gdr-head">
+    <span class="gdr-stars">★★★★★</span>
+    <span class="gdr-avg"><%= reviewStats.average %></span>
+    <span class="gdr-count">· <%= reviewStats.count %> renter<%= reviewStats.count === 1 ? '' : 's' %></span>
+  </div>
+  <% reviews.slice(0, 3).forEach(r => { const badge = reviewBadge(r); %>
+  <div class="gdr-card">
+    <div class="gdr-card-stars"><%= '★'.repeat(r.rating) %></div>
+    <p class="gdr-text">"<%= r.text %>"</p>
+    <div class="gdr-foot">
+      <div class="gdr-avatar"><%= (r.name || '?').charAt(0).toUpperCase() %></div>
+      <div class="gdr-who">
+        <div class="gdr-name"><%= r.name %></div>
+        <% if (r.game_rented) { %><div class="gdr-game"><%= r.game_rented %></div><% } %>
+      </div>
+      <% if (badge === 'facebook') { %>
+      <span class="gdr-badge gdr-badge-fb">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="#60a5fa" aria-hidden="true"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/></svg>
+        Facebook
+      </span>
+      <% } else { %>
+      <span class="gdr-badge gdr-badge-verified">Verified renter</span>
+      <% } %>
+    </div>
+  </div>
+  <% }) %>
+  <% if (reviewStats.count > 3) { %>
+  <a href="/#reviewsSection" class="gdr-more">See all <%= reviewStats.count %> reviews</a>
+  <% } %>
+</div>
+<% } %>

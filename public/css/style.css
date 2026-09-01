@@ -3257,3 +3257,24 @@ label.buy-tier:hover { border-color: #444; }
 .rvp-btn { display: block; width: 100%; background: #6d28d9; color: #fff; font-weight: 800; font-size: 0.88rem; padding: 0.7rem; border: none; border-radius: 50px; cursor: pointer; font-family: inherit; }
 .rvp-btn:hover { background: #7c3aed; }
 .rvp-fine { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 0.5rem; }
+
+/* Pooled reviews under the order card on a game page — the point of hesitation.
+   Compact by design: three cards, then a link to the full homepage section. */
+.gdr { margin-top: 1rem; }
+.gdr-head { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.6rem; }
+.gdr-stars { font-size: 0.8rem; color: #f0a500; letter-spacing: 1px; }
+.gdr-avg { font-size: 0.85rem; font-weight: 800; color: #fff; }
+.gdr-count { font-size: 0.78rem; color: #64748b; }
+.gdr-card { background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.7rem 0.75rem; margin-bottom: 0.5rem; }
+.gdr-card-stars { font-size: 0.78rem; color: #f0a500; letter-spacing: 1.5px; }
+.gdr-text { font-size: 0.82rem; color: #ccc; font-style: italic; line-height: 1.6; margin: 0.35rem 0 0.55rem; }
+.gdr-foot { display: flex; align-items: center; gap: 0.5rem; }
+.gdr-avatar { width: 26px; height: 26px; border-radius: 50%; background: #3b2a5c; color: #c4b5fd; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.gdr-who { flex: 1; min-width: 0; }
+.gdr-name { font-size: 0.8rem; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gdr-game { font-size: 0.72rem; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gdr-badge { font-size: 0.68rem; border-radius: 20px; padding: 0.15rem 0.5rem; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 0.2rem; }
+.gdr-badge-fb { color: #60a5fa; background: rgba(24,119,242,0.1); border: 1px solid rgba(24,119,242,0.25); }
+.gdr-badge-verified { color: #4ade80; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); }
+.gdr-more { display: block; text-align: center; font-size: 0.78rem; color: #60a5fa; text-decoration: none; margin-top: 0.6rem; }
+.gdr-more:hover { text-decoration: underline; }

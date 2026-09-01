@@ -2630,7 +2630,15 @@ app.get('/game/:slug', async (req, res) => {
   try {
     queues = queueRules.buildQueue(await orders.listQueueCandidates(game.id), new Date());
   } catch (e) { console.error('[game queue]', e.message); }
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null });
+  // One shared pool, sorted so any review naming this game surfaces first. The
+  // aggregate counts the whole pool on purpose — it describes the business, so
+  // the same figure is true on every game page.
+  const gdReviews = db.get('reviews').filter({ visible: true }).value() || [];
+  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null,
+    reviews: reviewRules.sortForGame(gdReviews, game.title),
+    reviewStats: reviewRules.aggregate(gdReviews),
+    reviewBadge: reviewRules.badgeFor,
+  });
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────

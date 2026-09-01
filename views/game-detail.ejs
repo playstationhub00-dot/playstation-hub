@@ -447,6 +447,8 @@
 
       </div><!-- /gdh-card -->
 
+      <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge }) %>
+
     </div>
   </div>
 
@@ -778,6 +780,18 @@ function updateCtaState() {
   // Every type full: #gdOrderForm and #ctaBtn were never rendered, so the
   // logic below (which reads them) doesn't apply — only #totalBox needs
   // hiding here, matching the per-type no-slot case above it.
+  // The reserve form's hidden type/days fields exist in two flavours: the
+  // suffix:'' instance (per-type no-slot) and the suffix:'All' instance (every
+  // type sold out). Keep whichever ones are in the DOM in sync with the
+  // current selection — including in the ALL_UNAVAIL branch, which returns
+  // early below before the suffix:'' writes further down.
+  ['', 'All'].forEach(function (sfx) {
+    const rt = document.getElementById('resType' + sfx);
+    const rd = document.getElementById('resDays' + sfx);
+    if (rt) rt.value = selectedType || '';
+    if (rd) rd.value = selectedDays || '';
+  });
+
   if (ALL_UNAVAIL) {
     if (totalBox) totalBox.style.display = 'none';
     return;
@@ -788,10 +802,6 @@ function updateCtaState() {
   const oDays = document.getElementById('orderDays');
   if (oType) oType.value = selectedType || '';
   if (oDays) oDays.value = selectedDays || '';
-  const rType = document.getElementById('resType');
-  const rDays = document.getElementById('resDays');
-  if (rType) rType.value = selectedType || '';
-  if (rDays) rDays.value = selectedDays || '';
 
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
