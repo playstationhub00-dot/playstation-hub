@@ -2843,6 +2843,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   });
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
+  // Who still needs asking for a quote, and who has already been asked or
+  // reviewed. Built from customers rather than orders so manually-added
+  // customers are covered too.
+  const reviewQueue = reviewRules.buildRequestQueue(getCustomers(), reviews, new Date());
+  const reviewQueueSummary = reviewRules.queueSummary(reviewQueue);
   const botTraining = db.get('bot_training').value() || [];
   // Slim payload for the client-side dashboard (year filter + month drill-down) —
   // only the fields it needs, not the full customer records.
@@ -3081,7 +3086,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -5382,6 +5387,28 @@ app.post('/admin/reviews/toggle/:id', requireAuth, (req, res) => {
   const review = db.get('reviews').find({ id: parseInt(req.params.id) }).value();
   if (review) db.get('reviews').find({ id: parseInt(req.params.id) }).assign({ visible: !review.visible }).write();
   res.redirect('/admin#reviews');
+});
+
+// Marks a customer as asked for a quote. Answers JSON rather than redirecting
+// because it fires from the Copy button — working through thirty customers
+// would be miserable if each copy reloaded the admin page and lost your place.
+app.post('/admin/customers/:id/review-asked', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const customer = db.get('customers').find({ id }).value();
+  if (!customer) return res.status(404).json({ ok: false });
+  const at = new Date().toISOString();
+  db.get('customers').find({ id }).assign({ review_asked_at: at }).write();
+  res.json({ ok: true, asked_at: at });
+});
+
+// Undo, for when a copy was a misclick — otherwise that customer silently
+// drops out of the outstanding list and never gets asked.
+app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const customer = db.get('customers').find({ id }).value();
+  if (!customer) return res.status(404).json({ ok: false });
+  db.get('customers').find({ id }).assign({ review_asked_at: null }).write();
+  res.json({ ok: true });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

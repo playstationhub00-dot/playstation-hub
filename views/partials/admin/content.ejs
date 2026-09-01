@@ -349,6 +349,96 @@
         <% } %>
       </div><!-- /accordion-body reviews -->
     </div><!-- /accordion reviews -->
+
+    <%
+      // Ask-for-a-quote queue. Most renters have already said something kind in
+      // Messenger — asking permission to use what they already wrote converts
+      // far better than asking them to sit down and write a review.
+      const rqRows = reviewQueue || [];
+      const rqSum = reviewQueueSummary || { todo: 0, asked: 0, reviewed: 0 };
+      const rqFirstName = n => String(n || '').trim().split(/\s+/)[0] || 'there';
+      const rqAsk = r =>
+        'Hi ' + rqFirstName(r.name) + '! Hope you enjoyed ' + (r.game || 'the game') + ' 🎮\n\n'
+        + 'You mentioned it went well — mind if I put that on the site as "' + r.displayName + '"? '
+        + 'Just helps new customers see we\'re legit.\n\n'
+        + 'And would you say 5 out of 5?\n\n'
+        + 'Totally fine if you\'d rather not!';
+    %>
+    <div class="settings-accordion">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+        <div class="sa-left"><div class="sa-icon" style="background:rgba(34,197,94,0.15);">💬</div><div><div class="sa-title">Ask for reviews</div><div class="sa-desc">Ask permission to quote what customers already told you<%= rqSum.todo ? ' — ' + rqSum.todo + ' not asked yet' : '' %></div></div></div>
+        <span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
+        <% if (!rqRows.length) { %>
+        <div style="color:#555;text-align:center;padding:1.5rem;">No customers yet — this fills up as people rent.</div>
+        <% } else { %>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <div style="flex:1;min-width:110px;background:#1a1204;border:1px solid #4a3a00;border-radius:8px;padding:0.6rem 0.75rem;">
+            <div style="font-size:1.1rem;color:#f59e0b;font-weight:700;line-height:1;"><%= rqSum.todo %></div>
+            <div style="font-size:0.7rem;color:#a08040;margin-top:0.2rem;">not asked yet</div>
+          </div>
+          <div style="flex:1;min-width:110px;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.6rem 0.75rem;">
+            <div style="font-size:1.1rem;color:#94a3b8;font-weight:700;line-height:1;"><%= rqSum.asked %></div>
+            <div style="font-size:0.7rem;color:#777;margin-top:0.2rem;">asked, waiting</div>
+          </div>
+          <div style="flex:1;min-width:110px;background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:0.6rem 0.75rem;">
+            <div style="font-size:1.1rem;color:#4ade80;font-weight:700;line-height:1;"><%= rqSum.reviewed %></div>
+            <div style="font-size:0.7rem;color:#777;margin-top:0.2rem;">already reviewed</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:#666;margin-bottom:0.75rem;line-height:1.6;">
+          Copy marks them as asked so you keep your place. Edit the message to quote their actual words before sending — and only publish the rating if they give you one.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+          <% rqRows.forEach(r => { %>
+          <div style="background:<%= r.status === 'reviewed' ? '#0e0e0e' : '#111' %>;border:1px solid <%= r.status === 'asked' ? '#4a3a00' : (r.status === 'reviewed' ? '#1e1e1e' : '#2a2a2a') %>;border-radius:10px;padding:0.75rem 0.85rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;<%= r.status === 'reviewed' ? 'opacity:0.55;' : '' %>">
+            <div style="flex:1;min-width:150px;">
+              <div style="font-size:0.85rem;color:<%= r.status === 'reviewed' ? '#aaa' : '#fff' %>;font-weight:700;">
+                <%= r.name %>
+                <span style="font-weight:400;color:#666;font-size:0.75rem;">→ shows as <%= r.displayName %></span>
+              </div>
+              <div style="font-size:0.75rem;color:#777;margin-top:0.2rem;">
+                <%= r.game %><% if (r.accountType) { %> · <%= r.accountType === 'tr' ? 'Trophy' : r.accountType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %><% } %><% if (r.daysSinceStart != null) { %> · <%= r.daysSinceStart === 0 ? 'today' : r.daysSinceStart + 'd ago' %><% } %>
+              </div>
+            </div>
+            <% if (r.status === 'reviewed') { %>
+            <span style="font-size:0.7rem;color:#4ade80;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:20px;padding:0.15rem 0.6rem;white-space:nowrap;">✓ reviewed</span>
+            <% } else { %>
+            <% if (r.status === 'asked') { %>
+            <span style="font-size:0.7rem;color:#f59e0b;background:#1a1204;border:1px solid #4a3a00;border-radius:20px;padding:0.15rem 0.6rem;white-space:nowrap;">asked <%= r.daysSinceAsked === 0 ? 'today' : r.daysSinceAsked + 'd ago' %></span>
+            <button type="button" class="rq-unask" data-id="<%= r.id %>" style="background:none;border:none;color:#666;font-size:0.7rem;cursor:pointer;text-decoration:underline;padding:0;">undo</button>
+            <% } %>
+            <button type="button" class="btn-copy rem-copy rq-copy" data-id="<%= r.id %>" data-msg="<%= rqAsk(r) %>" title="Copy the ask and mark as asked">📋 <%= r.status === 'asked' ? 'Again' : 'Copy' %></button>
+            <% } %>
+          </div>
+          <% }) %>
+        </div>
+        <script>
+        (function(){
+          // The .rem-copy handler in the customers partial already puts the text
+          // on the clipboard; this only records that the ask happened. Fired on
+          // the same click rather than by a separate button, because a two-step
+          // "copy then mark" is a step everyone forgets.
+          document.addEventListener('click', function(e){
+            const copy = e.target.closest('.rq-copy');
+            if (copy) {
+              fetch('/admin/customers/' + copy.dataset.id + '/review-asked', { method: 'POST' })
+                .catch(function(){ /* clipboard already worked; the badge just won't update until reload */ });
+              return;
+            }
+            const undo = e.target.closest('.rq-unask');
+            if (undo) {
+              fetch('/admin/customers/' + undo.dataset.id + '/review-unask', { method: 'POST' })
+                .then(function(){ location.reload(); })
+                .catch(function(){});
+            }
+          });
+        })();
+        </script>
+        <% } %>
+      </div><!-- /accordion-body review-requests -->
+    </div><!-- /accordion review-requests -->
     <div class="form-card" style="border-color:rgba(0,112,209,0.4);background:linear-gradient(135deg,#1a1a1a 0%,#0d1a2e 100%);">
       <h2 style="display:flex;align-items:center;gap:0.5rem;">📢 Announcements <span style="font-size:0.78rem;font-weight:400;color:#555;margin-left:0.25rem;">— rotate through multiple banners</span></h2>
 

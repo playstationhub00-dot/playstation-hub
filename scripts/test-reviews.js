@@ -11,6 +11,9 @@ function check(name, fn) {
   console.log('  ok - ' + name);
 }
 
+// Fixed clock so the "N days ago" assertions below don't drift with real time.
+const NOW = new Date('2026-08-31T12:00:00.000Z');
+
 function rev(over) {
   return Object.assign({
     id: 1, name: 'Ram Avila', rating: 5, text: 'Legit seller.',
@@ -141,6 +144,88 @@ check('displayName masks the surname to an initial', () => {
   assert.strictEqual(reviews.displayName(rev({ name: 'Juan' })), 'Juan');
   assert.strictEqual(reviews.displayName(rev({ name: '' })), 'Guest');
   assert.strictEqual(reviews.displayName({}), 'Guest');
+});
+
+function cust(over) {
+  return Object.assign({
+    id: 1, customer_name: 'Ram Avila', game_title: 'Assassins Creed Shadows',
+    account_type: 'tr', status: 'renting', start_date: '2026-08-29'
+  }, over);
+}
+
+check('the queue only includes customers who actually got a game', () => {
+  // A reservation holder has paid for a slot but never played anything, so
+  // there is nothing honest to ask them to be quoted on.
+  const rows = reviews.buildRequestQueue([
+    cust({ id: 1, status: 'renting' }),
+    cust({ id: 2, status: 'done' }),
+    cust({ id: 3, status: 'bought' }),
+    cust({ id: 4, status: 'reservation' })
+  ], [], NOW);
+  assert.deepStrictEqual(rows.map(r => r.id).sort(), [1, 2, 3]);
+});
+
+check('a customer with a matching review is marked reviewed, not asked', () => {
+  const rows = reviews.buildRequestQueue(
+    [cust({ customer_name: 'Ronald M. Fresco' })],
+    [rev({ name: 'Ronald M. Fresco' })],
+    NOW
+  );
+  assert.strictEqual(rows[0].status, 'reviewed');
+});
+
+check('review matching ignores case and stray whitespace', () => {
+  assert.strictEqual(reviews.hasReviewedBy([rev({ name: 'Miggy Lojo' })], '  miggy   LOJO '), true);
+  assert.strictEqual(reviews.hasReviewedBy([rev({ name: 'Miggy Lojo' })], 'Miggy Lojoo'), false);
+  assert.strictEqual(reviews.hasReviewedBy([], 'Miggy Lojo'), false);
+  assert.strictEqual(reviews.hasReviewedBy([rev({ name: 'Miggy Lojo' })], ''), false);
+});
+
+check('having been asked outranks nothing, but a review outranks being asked', () => {
+  const asked = reviews.buildRequestQueue([cust({ review_asked_at: '2026-08-28T00:00:00.000Z' })], [], NOW);
+  assert.strictEqual(asked[0].status, 'asked');
+  assert.strictEqual(asked[0].daysSinceAsked, 3);
+  // Already reviewed wins even if they were also asked at some point.
+  const both = reviews.buildRequestQueue(
+    [cust({ review_asked_at: '2026-08-28T00:00:00.000Z' })],
+    [rev({ name: 'Ram Avila' })],
+    NOW
+  );
+  assert.strictEqual(both[0].status, 'reviewed');
+});
+
+check('outstanding work sorts to the top, freshest rental first', () => {
+  const rows = reviews.buildRequestQueue([
+    cust({ id: 1, customer_name: 'Already Reviewed', start_date: '2026-08-30' }),
+    cust({ id: 2, customer_name: 'Was Asked', start_date: '2026-08-30', review_asked_at: '2026-08-30T00:00:00.000Z' }),
+    cust({ id: 3, customer_name: 'Old Todo', start_date: '2026-08-01' }),
+    cust({ id: 4, customer_name: 'New Todo', start_date: '2026-08-30' })
+  ], [rev({ name: 'Already Reviewed' })], NOW);
+  assert.deepStrictEqual(rows.map(r => r.id), [4, 3, 2, 1]);
+});
+
+check('the row carries the masked name the ask will promise', () => {
+  const row = reviews.buildRequestQueue([cust({ customer_name: 'Ram Avila' })], [], NOW)[0];
+  assert.strictEqual(row.name, 'Ram Avila');
+  assert.strictEqual(row.displayName, 'Ram A.');
+  assert.strictEqual(row.daysSinceStart, 2);
+});
+
+check('queueSummary counts each state', () => {
+  const rows = reviews.buildRequestQueue([
+    cust({ id: 1, customer_name: 'A A' }),
+    cust({ id: 2, customer_name: 'B B' }),
+    cust({ id: 3, customer_name: 'C C', review_asked_at: '2026-08-30T00:00:00.000Z' }),
+    cust({ id: 4, customer_name: 'D D' })
+  ], [rev({ name: 'D D' })], NOW);
+  assert.deepStrictEqual(reviews.queueSummary(rows), { todo: 2, asked: 1, reviewed: 1 });
+  assert.deepStrictEqual(reviews.queueSummary([]), { todo: 0, asked: 0, reviewed: 0 });
+});
+
+check('an unparseable or missing date reports null rather than NaN', () => {
+  const row = reviews.buildRequestQueue([cust({ start_date: '' })], [], NOW)[0];
+  assert.strictEqual(row.daysSinceStart, null);
+  assert.strictEqual(row.daysSinceAsked, null);
 });
 
 console.log('\n' + passed + ' assertions passed');

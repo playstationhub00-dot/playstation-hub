@@ -35,9 +35,13 @@ check('masks a two-word name to first name plus last initial', () => {
   assert.strictEqual(queue.maskName('Jenny Reyes'), 'Jenny R.');
 });
 
-check('leaves a one-word name alone and never re-cases a name', () => {
+check('leaves the given name exactly as typed, but capitalises the initial', () => {
+  // The given name is the customer's own text and is never re-cased. The
+  // trailing initial is a format we generate, so it is always upper-cased —
+  // otherwise a lowercase surname masks to "Bong u.", which reads as a typo.
   assert.strictEqual(queue.maskName('carlo'), 'carlo');
-  assert.strictEqual(queue.maskName('MARIA santos'), 'MARIA s.');
+  assert.strictEqual(queue.maskName('MARIA santos'), 'MARIA S.');
+  assert.strictEqual(queue.maskName('Bong umban'), 'Bong U.');
 });
 
 check('falls back to Guest for a blank name', () => {
