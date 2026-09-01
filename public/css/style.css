@@ -3298,12 +3298,16 @@ label.buy-tier:hover { border-color: #444; }
 .gdrq-card { width: 300px; flex: none; background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.75rem 0.85rem; }
 .gdrq-card-stars { font-size: 0.75rem; color: #f0a500; letter-spacing: 2px; }
 .gdrq-text { font-size: 0.8rem; color: #ddd; line-height: 1.6; margin: 0.4rem 0 0.55rem; }
+/* Icon/badge sits right next to the name, not pinned to the card's far edge —
+   pinning it right made its distance from the name vary with how long the
+   game title was, so cards didn't read consistently. .gdrq-game is the only
+   flexible piece, and it's what truncates if the row runs out of room. */
 .gdrq-foot { display: flex; align-items: center; gap: 0.3rem; }
-.gdrq-name { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; }
-.gdrq-dot { font-size: 0.72rem; color: #4a4a52; }
-.gdrq-game { font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gdrq-fb-icon { margin-left: auto; flex-shrink: 0; }
-.gdrq-badge-verified { margin-left: auto; flex-shrink: 0; font-size: 0.66rem; color: #4ade80; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 20px; padding: 0.1rem 0.4rem; white-space: nowrap; }
+.gdrq-name { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+.gdrq-dot { font-size: 0.72rem; color: #4a4a52; flex-shrink: 0; }
+.gdrq-game { font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gdrq-fb-icon { flex-shrink: 0; }
+.gdrq-badge-verified { flex-shrink: 0; font-size: 0.66rem; color: #4ade80; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.25); border-radius: 20px; padding: 0.1rem 0.4rem; white-space: nowrap; }
 
 @media (max-width: 640px) {
   .gdrq-card { width: 78vw; max-width: 300px; }
