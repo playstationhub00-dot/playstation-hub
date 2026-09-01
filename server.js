@@ -10,6 +10,7 @@ const session = require('express-session');
 const computeAvailability = require('./lib/availability');
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
+const reviewRules = require('./lib/reviews');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -2048,6 +2049,7 @@ app.get('/order/:ref', async (req, res) => {
     queueAhead = queueRules.aheadOf(queueRows, order.ref);
     queueExpired = queueRules.isExpired(order, new Date());
   } catch (e) { console.error('[order queue]', e.message); }
+  const canReview = reviewRules.canPrompt(order, db.get('reviews').value() || []);
   res.render('order-status', {
     order,
     settings: s,
@@ -2060,6 +2062,7 @@ app.get('/order/:ref', async (req, res) => {
     signinSteps: getSigninSteps(),
     queueRows, queuePos, queueAhead, queueExpired,
     queueRules,
+    canReview,
   });
 });
 
@@ -2156,6 +2159,42 @@ app.post('/order/:ref/upgrade-priority', async (req, res) => {
   });
   if (!updated) return res.redirect(back + '&msg=stale');
   res.redirect(back + '&msg=upgrade_started');
+});
+
+// A review written by the customer from their own order page. Always lands
+// unapproved: the site's review section is its trust surface, so nothing
+// reaches it without the owner looking first. Name and game come from the
+// order rather than the form — the customer supplies only a rating and a
+// sentence, so a review can never claim a rental that did not happen.
+app.post('/order/:ref/review', async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.redirect('/browse?order_error=rate');
+  }
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  const back = '/order/' + order.ref + '?k=' + order.url_key;
+  const existing = db.get('reviews').value() || [];
+  // Covers both "this order can't be reviewed yet" and "already reviewed".
+  if (!reviewRules.canPrompt(order, existing)) return res.redirect(back + '&msg=stale');
+  const { rating, text } = reviewRules.normalize(req.body);
+  if (!text) return res.redirect(back + '&msg=review_empty');
+  const id = db.get('nextReviewId').value();
+  db.get('reviews').push({
+    id,
+    name: order.fb_name || 'Guest',
+    rating,
+    text,
+    game_rented: order.game_title || '',
+    // Same default the admin form uses — the owner reorders from admin if a
+    // review is worth featuring.
+    order: 99,
+    visible: false,
+    created_at: new Date().toISOString(),
+    source: 'site',
+    order_ref: order.ref
+  }).write();
+  db.set('nextReviewId', id + 1).write();
+  res.redirect(back + '&msg=review_thanks');
 });
 
 // QR upload is website-only by design: the countdown is the whole mechanism,
