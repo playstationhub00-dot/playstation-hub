@@ -1,0 +1,23 @@
+<!-- Asked on the customer's own order page once they actually have the game.
+     The star picker is five radios in reverse DOM order with a row-reverse
+     flex parent: they display 1-5 left to right, and `input:checked ~ label`
+     then paints every star from the chosen one leftwards. No JavaScript, so it
+     still works in the Facebook in-app browser. -->
+<div class="rvp">
+  <div class="rvp-title">How's it going so far?</div>
+  <div class="rvp-sub">One line helps the next person trust us. Takes 10 seconds.</div>
+  <form method="POST" action="/order/<%= order.ref %>/review">
+    <input type="hidden" name="k" value="<%= order.url_key %>">
+    <div class="rvp-stars">
+      <% [5, 4, 3, 2, 1].forEach(n => { %>
+      <input type="radio" name="rating" id="rvpStar<%= n %>" value="<%= n %>"<%= n === 5 ? ' checked' : '' %>>
+      <label for="rvpStar<%= n %>" aria-label="<%= n %> star<%= n > 1 ? 's' : '' %>">★</label>
+      <% }) %>
+    </div>
+    <textarea name="text" class="rvp-text" rows="2" maxlength="300" required
+              placeholder="e.g. Fast sign-in, super accommodating."></textarea>
+    <div class="rvp-who"><%= order.fb_name %> · <%= order.game_title %></div>
+    <button type="submit" class="rvp-btn">Send review</button>
+    <div class="rvp-fine">We check every review before it goes live.</div>
+  </form>
+</div>

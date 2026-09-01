@@ -65,6 +65,8 @@
   <% if (msg === 'return_submitted') { %><div class="ord-flash">Return proof received — we'll confirm shortly.</div><% } %>
   <% if (msg === 'stale') { %><div class="ord-flash ord-flash-warn">That step was already handled — here's your current status.</div><% } %>
   <% if (msg === 'upgrade_started') { %><div class="ord-flash">Upgraded to priority — send the ₱100 below and we'll move you up.</div><% } %>
+  <% if (msg === 'review_thanks') { %><div class="ord-flash">Thanks — we'll put this up once we've checked it.</div><% } %>
+  <% if (msg === 'review_empty') { %><div class="ord-flash ord-flash-warn">Add a sentence before sending, so it's useful to the next renter.</div><% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -111,6 +113,10 @@
       <% } %>
     </div>
   </div>
+  <% } %>
+
+  <% if (canReview) { %>
+  <%- include('partials/review-prompt', { order: order }) %>
   <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>

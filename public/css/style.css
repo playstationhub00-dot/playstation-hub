@@ -3238,3 +3238,22 @@ label.buy-tier:hover { border-color: #444; }
 /* Queue position on the admin waiting-for-a-slot card. Numbers are per game
    and account type, matching what the customer is shown. */
 .oq-wl-pos { display: inline-block; min-width: 1.6rem; font-weight: 800; font-size: 0.78rem; color: #f0a500; margin-right: 0.3rem; }
+
+/* Review prompt on the customer's own order page. Purple to match the other
+   customer-action cards (priority upgrade, no-slot options) rather than the
+   gold used for buying. */
+.rvp { background: #141018; border: 1px solid #3b2a5c; border-radius: 12px; padding: 0.9rem 0.95rem; margin-bottom: 1.5rem; }
+.rvp-title { font-size: 0.95rem; font-weight: 800; color: #fff; }
+.rvp-sub { font-size: 0.78rem; color: #9b8bbd; margin-top: 0.2rem; line-height: 1.5; }
+.rvp-stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 0.15rem; margin: 0.75rem 0 0.6rem; }
+.rvp-stars input { position: absolute; opacity: 0; width: 0; height: 0; }
+.rvp-stars label { font-size: 1.5rem; line-height: 1; color: #3a3a44; cursor: pointer; transition: color 0.12s; }
+.rvp-stars input:checked ~ label { color: #f0a500; }
+.rvp-stars label:hover, .rvp-stars label:hover ~ label { color: #ffc63d; }
+.rvp-stars input:focus-visible + label { outline: 2px solid var(--ps-blue); outline-offset: 2px; border-radius: 3px; }
+.rvp-text { width: 100%; background: #0b0b0d; border: 1px solid #2a2a32; border-radius: 8px; padding: 0.55rem 0.65rem; color: #eee; font-family: inherit; font-size: 0.85rem; resize: vertical; }
+.rvp-text:focus { outline: none; border-color: #6d28d9; }
+.rvp-who { font-size: 0.75rem; color: #64748b; margin: 0.45rem 0 0.6rem; }
+.rvp-btn { display: block; width: 100%; background: #6d28d9; color: #fff; font-weight: 800; font-size: 0.88rem; padding: 0.7rem; border: none; border-radius: 50px; cursor: pointer; font-family: inherit; }
+.rvp-btn:hover { background: #7c3aed; }
+.rvp-fine { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 0.5rem; }
