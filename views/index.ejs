@@ -535,9 +535,9 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
       <div class="review-stars"><%= '⭐'.repeat(r.rating) %></div>
       <p class="review-text">"<%= r.text %>"</p>
       <div class="review-footer">
-        <div class="review-avatar"><%= r.name.charAt(0).toUpperCase() %></div>
+        <div class="review-avatar"><%= reviewDisplayName(r).charAt(0).toUpperCase() %></div>
         <div>
-          <div class="review-name"><%= r.name %></div>
+          <div class="review-name"><%= reviewDisplayName(r) %></div>
           <% if (r.game_rented) { %><div class="review-game">🎮 <%= r.game_rented %></div><% } %>
         </div>
         <% if (reviewBadge(r) === 'facebook') { %>

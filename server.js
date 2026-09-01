@@ -1238,7 +1238,7 @@ app.get('/', (req, res) => {
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
     .slice(0, 10);
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, reviewDisplayName: reviewRules.displayName, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
 // Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute
@@ -2638,6 +2638,7 @@ app.get('/game/:slug', async (req, res) => {
     reviews: reviewRules.sortForGame(gdReviews, game.title),
     reviewStats: reviewRules.aggregate(gdReviews),
     reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
   });
 });
 

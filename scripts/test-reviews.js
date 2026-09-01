@@ -135,4 +135,12 @@ check('aggregate on an empty pool is zeroed, not NaN', () => {
   assert.deepStrictEqual(reviews.aggregate(null), { count: 0, average: 0 });
 });
 
+check('displayName masks the surname to an initial', () => {
+  assert.strictEqual(reviews.displayName(rev({ name: 'Ronald M. Fresco' })), 'Ronald F.');
+  assert.strictEqual(reviews.displayName(rev({ name: 'Miggy Lojo' })), 'Miggy L.');
+  assert.strictEqual(reviews.displayName(rev({ name: 'Juan' })), 'Juan');
+  assert.strictEqual(reviews.displayName(rev({ name: '' })), 'Guest');
+  assert.strictEqual(reviews.displayName({}), 'Guest');
+});
+
 console.log('\n' + passed + ' assertions passed');
