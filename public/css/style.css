@@ -3295,14 +3295,19 @@ label.buy-tier:hover { border-color: #444; }
   .gdrq-track.gdrq-sliding { animation: none; }
 }
 
-.gdrq-card { width: 300px; flex: none; background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.75rem 0.85rem; }
+/* Column layout with the name row pinned to margin-top:auto — a one-line
+   quote and a two-line quote would otherwise leave the name at two different
+   heights, since it used to sit directly under whatever the quote wrapped to.
+   The track's default flex stretch already gives every card in a row the
+   same height, so "pinned to the bottom" reads as "the same position". */
+.gdrq-card { width: 300px; flex: none; display: flex; flex-direction: column; background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.75rem 0.85rem; }
 .gdrq-card-stars { font-size: 0.75rem; color: #f0a500; letter-spacing: 2px; }
 .gdrq-text { font-size: 0.8rem; color: #ddd; line-height: 1.6; margin: 0.4rem 0 0.55rem; }
 /* Icon/badge sits right next to the name, not pinned to the card's far edge —
    pinning it right made its distance from the name vary with how long the
    game title was, so cards didn't read consistently. .gdrq-game is the only
    flexible piece, and it's what truncates if the row runs out of room. */
-.gdrq-foot { display: flex; align-items: center; gap: 0.3rem; }
+.gdrq-foot { display: flex; align-items: center; gap: 0.3rem; margin-top: auto; padding-top: 0.55rem; }
 .gdrq-name { font-size: 0.72rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
 .gdrq-dot { font-size: 0.72rem; color: #4a4a52; flex-shrink: 0; }
 .gdrq-game { font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
