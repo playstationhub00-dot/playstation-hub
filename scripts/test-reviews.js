@@ -157,10 +157,10 @@ check('the queue only includes customers who actually got a game', () => {
   // A reservation holder has paid for a slot but never played anything, so
   // there is nothing honest to ask them to be quoted on.
   const rows = reviews.buildRequestQueue([
-    cust({ id: 1, status: 'renting' }),
-    cust({ id: 2, status: 'done' }),
-    cust({ id: 3, status: 'bought' }),
-    cust({ id: 4, status: 'reservation' })
+    cust({ id: 1, customer_name: 'A Renting', status: 'renting' }),
+    cust({ id: 2, customer_name: 'B Done', status: 'done' }),
+    cust({ id: 3, customer_name: 'C Bought', status: 'bought' }),
+    cust({ id: 4, customer_name: 'D Reserved', status: 'reservation' })
   ], [], NOW);
   assert.deepStrictEqual(rows.map(r => r.id).sort(), [1, 2, 3]);
 });
@@ -202,6 +202,30 @@ check('outstanding work sorts to the top, freshest rental first', () => {
     cust({ id: 4, customer_name: 'New Todo', start_date: '2026-08-30' })
   ], [rev({ name: 'Already Reviewed' })], NOW);
   assert.deepStrictEqual(rows.map(r => r.id), [4, 3, 2, 1]);
+});
+
+check('a repeat customer is one row, not one per rental', () => {
+  // Real data has someone with fourteen rental records. Fourteen rows would
+  // mean asking the same person fourteen times.
+  const rows = reviews.buildRequestQueue([
+    cust({ id: 1, customer_name: 'Velmor Echivarre', game_title: 'Tekken 8', start_date: '2026-06-01' }),
+    cust({ id: 2, customer_name: 'Velmor Echivarre', game_title: 'UFC 6', start_date: '2026-08-30' }),
+    cust({ id: 3, customer_name: 'velmor  echivarre', game_title: 'NBA 2K26', start_date: '2026-07-01' })
+  ], [], NOW);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].rentalCount, 3);
+  // Keeps the most recent rental, which is the freshest thing to reference.
+  assert.strictEqual(rows[0].game, 'UFC 6');
+  assert.strictEqual(rows[0].daysSinceStart, 1);
+});
+
+check('an ask against any of a repeat customer\'s records counts', () => {
+  const rows = reviews.buildRequestQueue([
+    cust({ id: 1, customer_name: 'Nash Diaz', start_date: '2026-08-01' }),
+    cust({ id: 2, customer_name: 'Nash Diaz', start_date: '2026-08-30', review_asked_at: '2026-08-30T00:00:00.000Z' })
+  ], [], NOW);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].status, 'asked');
 });
 
 check('the row carries the masked name the ask will promise', () => {

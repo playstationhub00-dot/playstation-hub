@@ -387,11 +387,19 @@
             <div style="font-size:0.7rem;color:#777;margin-top:0.2rem;">already reviewed</div>
           </div>
         </div>
+        <%
+          // 325 people is far too many to paint into the admin page at once.
+          // This is a work queue: the outstanding rows sort to the top, and as
+          // each is marked asked it drops away and the next batch surfaces.
+          const RQ_LIMIT = 40;
+          const rqShown = rqRows.slice(0, RQ_LIMIT);
+        %>
         <div style="font-size:0.75rem;color:#666;margin-bottom:0.75rem;line-height:1.6;">
           Copy marks them as asked so you keep your place. Edit the message to quote their actual words before sending — and only publish the rating if they give you one.
+          <% if (rqRows.length > RQ_LIMIT) { %><br>Showing the top <%= RQ_LIMIT %> of <%= rqRows.length %> — work through these and the next batch appears.<% } %>
         </div>
         <div style="display:flex;flex-direction:column;gap:0.5rem;">
-          <% rqRows.forEach(r => { %>
+          <% rqShown.forEach(r => { %>
           <div style="background:<%= r.status === 'reviewed' ? '#0e0e0e' : '#111' %>;border:1px solid <%= r.status === 'asked' ? '#4a3a00' : (r.status === 'reviewed' ? '#1e1e1e' : '#2a2a2a') %>;border-radius:10px;padding:0.75rem 0.85rem;display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;<%= r.status === 'reviewed' ? 'opacity:0.55;' : '' %>">
             <div style="flex:1;min-width:150px;">
               <div style="font-size:0.85rem;color:<%= r.status === 'reviewed' ? '#aaa' : '#fff' %>;font-weight:700;">
@@ -399,7 +407,7 @@
                 <span style="font-weight:400;color:#666;font-size:0.75rem;">→ shows as <%= r.displayName %></span>
               </div>
               <div style="font-size:0.75rem;color:#777;margin-top:0.2rem;">
-                <%= r.game %><% if (r.accountType) { %> · <%= r.accountType === 'tr' ? 'Trophy' : r.accountType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %><% } %><% if (r.daysSinceStart != null) { %> · <%= r.daysSinceStart === 0 ? 'today' : r.daysSinceStart + 'd ago' %><% } %>
+                <%= r.game %><% if (r.accountType) { %> · <%= r.accountType === 'tr' ? 'Trophy' : r.accountType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %><% } %><% if (r.daysSinceStart != null) { %> · <%= r.daysSinceStart === 0 ? 'today' : r.daysSinceStart + 'd ago' %><% } %><% if (r.rentalCount > 1) { %> · <span style="color:#4ade80;">rented <%= r.rentalCount %>×</span><% } %>
               </div>
             </div>
             <% if (r.status === 'reviewed') { %>
