@@ -1238,7 +1238,7 @@ app.get('/', (req, res) => {
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
     .slice(0, 10);
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
 // Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute
@@ -5357,9 +5357,17 @@ app.get('/admin/notifications/optins', requireAuth, (req, res) => {
 // ── Reviews ──────────────────────────────────────────────────────────────────
 
 app.post('/admin/reviews/add', requireAuth, (req, res) => {
-  const { name, rating, text, game_rented, order } = req.body;
+  const { name, rating, text, game_rented, order, source } = req.body;
   const id = db.get('nextReviewId').value();
-  db.get('reviews').push({ id, name, rating: parseInt(rating) || 5, text, game_rented: game_rented || '', order: parseInt(order) || 99, visible: true, created_at: new Date().toISOString() }).write();
+  db.get('reviews').push({
+    id, name, rating: parseInt(rating) || 5, text,
+    game_rented: game_rented || '', order: parseInt(order) || 99,
+    visible: true, created_at: new Date().toISOString(),
+    // Defaults to facebook: copying a real Facebook comment is what this form
+    // is for, and it matches how every pre-existing review should display.
+    source: source === 'site' ? 'site' : 'facebook',
+    order_ref: null
+  }).write();
   db.set('nextReviewId', id + 1).write();
   res.redirect('/admin#reviews');
 });

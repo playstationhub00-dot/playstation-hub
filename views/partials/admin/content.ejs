@@ -289,21 +289,41 @@
     <!-- CUSTOMER REVIEWS -->
     <div class="settings-accordion">
       <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f59e0b;">
-        <div class="sa-left"><div class="sa-icon" style="background:rgba(245,158,11,0.15);">⭐</div><div><div class="sa-title">Customer Reviews</div><div class="sa-desc">Reviews shown on homepage — sourced from your Facebook page</div></div></div>
+        <div class="sa-left"><div class="sa-icon" style="background:rgba(245,158,11,0.15);">⭐</div><div><div class="sa-title">Customer Reviews</div><div class="sa-desc">Shown on your homepage and game pages</div></div></div>
         <span class="sa-arrow">▼</span>
       </div>
       <div class="settings-accordion-body">
-        <div style="font-weight:700;color:#f59e0b;margin-bottom:1rem;">➕ Add Review from Facebook</div>
+        <div style="font-weight:700;color:#f59e0b;margin-bottom:1rem;">➕ Add a review</div>
         <form method="POST" action="/admin/reviews/add">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:1rem;align-items:end;flex-wrap:wrap;">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:1rem;align-items:end;flex-wrap:wrap;">
             <div class="form-group" style="margin:0;"><label>Customer Name *</label><input type="text" name="name" placeholder="e.g. Juan dela Cruz" required></div>
             <div class="form-group" style="margin:0;"><label>Game Rented</label><input type="text" name="game_rented" placeholder="e.g. GTA V"></div>
             <div class="form-group" style="margin:0;"><label>Rating (1–5 ⭐)</label><select name="rating"><option value="5">⭐⭐⭐⭐⭐ 5</option><option value="4">⭐⭐⭐⭐ 4</option><option value="3">⭐⭐⭐ 3</option><option value="2">⭐⭐ 2</option><option value="1">⭐ 1</option></select></div>
+            <div class="form-group" style="margin:0;"><label>Source</label><select name="source"><option value="facebook">Facebook</option><option value="site">Website</option></select></div>
             <div class="form-group" style="margin:0;"><label>Order</label><input type="number" name="order" value="99" min="1" style="width:70px;"></div>
           </div>
           <div class="form-group" style="margin-top:0.75rem;"><label>Review Text *</label><textarea name="text" rows="3" placeholder="Paste the customer's review from Facebook..." required style="width:100%;resize:vertical;"></textarea></div>
           <button type="submit" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;border:none;padding:0.6rem 1.5rem;border-radius:50px;cursor:pointer;margin-top:0.5rem;">➕ Add Review</button>
         </form>
+        <% const pendingReviews = (reviews || []).filter(r => !r.visible); %>
+        <% if (pendingReviews.length) { %>
+        <div style="margin-top:1.5rem;border:1px solid #4a3a00;background:#1a1204;border-radius:10px;padding:1rem;">
+          <div style="font-weight:700;color:#f59e0b;margin-bottom:0.75rem;">⏳ Waiting for your approval (<%= pendingReviews.length %>)</div>
+          <% pendingReviews.forEach(pr => { %>
+          <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:0.85rem;margin-bottom:0.5rem;">
+            <div style="color:#f59e0b;font-size:0.85rem;"><%= '⭐'.repeat(pr.rating) %></div>
+            <div style="color:#ccc;font-size:0.88rem;line-height:1.5;margin:0.35rem 0 0.5rem;">"<%= pr.text %>"</div>
+            <div style="font-size:0.75rem;color:#777;margin-bottom:0.6rem;">
+              <%= pr.name %><% if (pr.game_rented) { %> · <%= pr.game_rented %><% } %><% if (pr.order_ref) { %> · <%= pr.order_ref %><% } %>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+              <form method="POST" action="/admin/reviews/toggle/<%= pr.id %>"><button type="submit" style="background:#14532d;color:#4ade80;border:1px solid #22c55e;border-radius:6px;padding:0.35rem 0.9rem;font-size:0.78rem;cursor:pointer;">✓ Approve</button></form>
+              <form method="POST" action="/admin/reviews/delete/<%= pr.id %>" onsubmit="return confirm('Delete this review?')"><button type="submit" style="background:#2a0000;color:#ef4444;border:1px solid #4a0000;border-radius:6px;padding:0.35rem 0.9rem;font-size:0.78rem;cursor:pointer;">🗑 Delete</button></form>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
         <% if (reviews && reviews.length > 0) { %>
         <div style="display:flex;flex-direction:column;gap:0.75rem;margin-top:1.5rem;">
           <% reviews.forEach(r => { %>
