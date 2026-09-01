@@ -2294,6 +2294,11 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       price: order.amount_due || 0,
       status: 'bought',
       notes: 'Web purchase ' + order.ref,
+      // Stored as real fields, not just inside the notes string, so the review
+      // ask in the expiry message can link straight to this person's own order
+      // page — that link is what makes their review a verified one.
+      order_ref: order.ref,
+      order_key: order.url_key,
       created_at: new Date().toISOString(),
       payments: order.amount_due > 0
         ? [{ amount: order.amount_due, date: patch.start_date, kind: 'purchase' }]
@@ -2334,6 +2339,9 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       price: order.amount_due || 0,
       status: 'renting',
       notes: 'Web order ' + order.ref,
+      // See the purchase branch above — these back the {review_link} token.
+      order_ref: order.ref,
+      order_key: order.url_key,
       created_at: new Date().toISOString(),
       payments: order.amount_due > 0
         ? [{ amount: order.amount_due, date: patch.start_date, kind: 'rental' }]

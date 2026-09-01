@@ -152,4 +152,43 @@ check('trailing blank line from an empty token is trimmed cleanly', () => {
   assert.strictEqual(out, 'a');
 });
 
+const WEB = Object.assign({}, TR, { order_ref: 'PH-0039', order_key: 'abc123def456' });
+
+check('review_link points at the customer own order page', () => {
+  const out = t.render('{review_link}', WEB, TPL, {});
+  assert.strictEqual(out, 'https://site.example/order/PH-0039?k=abc123def456');
+});
+
+check('review_line renders the ask when there is an order to link to', () => {
+  const tpl = Object.assign({}, TPL, { review_line: 'Review us: {review_link}' });
+  assert.strictEqual(t.render('{review_line}', WEB, tpl, {}), 'Review us: https://site.example/order/PH-0039?k=abc123def456');
+});
+
+check('the ask disappears entirely for a customer with no order page', () => {
+  // Every record predating the web ordering flow, and anyone the owner added by
+  // hand, has no ref or key — they must get no line at all rather than a broken
+  // link or a dangling "Review us:".
+  const tpl = Object.assign({}, TPL, { review_line: 'Review us: {review_link}' });
+  assert.strictEqual(t.render('a\n{review_line}', TR, tpl, {}), 'a');
+  assert.strictEqual(t.render('{review_link}', TR, tpl, {}), '');
+});
+
+check('a half-linked customer is treated as unlinked', () => {
+  // A ref without its key would build a URL that fails the url_key check on
+  // /order/:ref and bounce the customer to /browse.
+  const tpl = Object.assign({}, TPL, { review_line: 'Review us: {review_link}' });
+  const refOnly = Object.assign({}, TR, { order_ref: 'PH-0039' });
+  const keyOnly = Object.assign({}, TR, { order_key: 'abc123' });
+  assert.strictEqual(t.render('a\n{review_line}', refOnly, tpl, {}), 'a');
+  assert.strictEqual(t.render('a\n{review_line}', keyOnly, tpl, {}), 'a');
+});
+
+check('the shipped expiry_today asks for a review and confirmation no longer does', () => {
+  // The ask used to sit in the confirmation message, at rental start, pointing
+  // at Facebook — which is why the site's own review section stayed empty.
+  assert.ok(t.DEFAULT_TEMPLATES.expiry_today.includes('{review_line}'));
+  assert.ok(!t.DEFAULT_TEMPLATES.confirmation.includes('{reviews_link}'));
+  assert.ok(t.DEFAULT_TEMPLATES.review_line.includes('{review_link}'));
+});
+
 console.log('\n' + passed + ' assertions passed');
