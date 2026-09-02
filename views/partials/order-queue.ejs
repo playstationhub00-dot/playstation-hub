@@ -287,7 +287,7 @@
     <thead>
       <tr>
         <th>Ref</th><th>Customer</th><th>Game</th><th>Rental</th>
-        <th>Dates</th><th>Total</th><th>Status</th>
+        <th>Dates</th><th>Total</th><th>Status</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -299,7 +299,7 @@
       %>
       <% ledgerGroups.forEach(g => { %>
       <tr class="oq-grp" data-grp="<%= g.key %>">
-        <td colspan="7">
+        <td colspan="8">
           <%= PERIOD_LABEL(g.key) %>
           <span class="oq-grp-sum"><%= g.paidCount %> completed · ₱<%= g.paidTotal.toLocaleString() %></span>
         </td>
@@ -350,6 +350,11 @@
               ⚠ Duplicate slot claim — <%= dupSlotCount %> other order<%= dupSlotCount > 1 ? 's' : '' %> for this slot
             </div>
           <% } %>
+        </td>
+        <td class="oq-lact">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
+            <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
+          </form>
         </td>
       </tr>
       <% }) %>
