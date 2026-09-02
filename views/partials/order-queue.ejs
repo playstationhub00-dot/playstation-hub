@@ -303,6 +303,9 @@
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       <div class="oq-ab-btns">
         <button type="button" class="btn-copy rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+        <% if (process.env.PAYMONGO_SECRET_KEY) { %>
+        <button type="button" class="btn-copy oq-paylink" data-ref="<%= o.ref %>" title="Create a PayMongo checkout link and copy it — paste into Messenger">💳 Payment link</button>
+        <% } %>
         <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
           <button type="submit" class="oq-btn-go" title="Confirm this order was paid outside the site">✅ Mark paid</button>
         </form>
@@ -427,5 +430,57 @@
     });
   }
   formatAge();
+
+  // "💳 Payment link" — asks the server for a fresh PayMongo checkout session
+  // for this order, then copies the URL the same way the .rem-copy buttons
+  // copy a message (see the fallbackCopy handler in admin/customers.ejs,
+  // which is attached globally and reused here rather than duplicated).
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.oq-paylink');
+    if (!btn) return;
+    var original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '… creating link';
+    fetch('/admin/orders/' + encodeURIComponent(btn.dataset.ref) + '/payment-link', { method: 'POST' })
+      .then(function(r) { return r.json().then(function(body) { return { ok: r.ok, body: body }; }); })
+      .then(function(res) {
+        btn.disabled = false;
+        if (!res.ok || !res.body.ok) {
+          btn.textContent = res.body && res.body.reason === 'stale' ? '⚠ already paid/stale' : '⚠ failed — retry';
+          setTimeout(function() { btn.textContent = original; }, 2500);
+          return;
+        }
+        // Reuse the .rem-copy click handler (defined in admin/customers.ejs)
+        // by copying its own logic inline: a synthetic .rem-copy element
+        // would need its own DOM node, so instead copy directly here and
+        // fall back to the same visible-textarea trick on an insecure context.
+        var url = res.body.url;
+        function flashDone() {
+          btn.textContent = '✅ Copied — paste in Messenger';
+          setTimeout(function() { btn.textContent = original; }, 2500);
+        }
+        function fallback() {
+          var ta = document.createElement('textarea');
+          ta.value = url;
+          ta.style.cssText = 'position:fixed;left:1rem;right:1rem;bottom:1rem;height:4rem;z-index:9999;font-size:0.8rem;';
+          document.body.appendChild(ta);
+          ta.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+          if (ok) { ta.remove(); flashDone(); }
+          else { btn.textContent = '⬇ copy from the box'; setTimeout(function() { ta.remove(); btn.textContent = original; }, 15000); }
+        }
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(url).then(flashDone).catch(fallback);
+        } else {
+          fallback();
+        }
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.textContent = '⚠ failed — retry';
+        setTimeout(function() { btn.textContent = original; }, 2500);
+      });
+  });
 })();
 </script>

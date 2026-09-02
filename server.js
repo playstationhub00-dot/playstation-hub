@@ -2219,19 +2219,20 @@ app.post('/order/:ref/review', async (req, res) => {
 // ── Online payments (PayMongo) ───────────────────────────────────────────────
 // Hosted checkout: the customer is redirected to PayMongo, so card details
 // never reach this server and PCI scope stays out of the codebase. Every money
-// rule lives in lib/gateway.js; this route only builds the request.
-app.post('/order/:ref/pay', async (req, res) => {
+// rule lives in lib/gateway.js; this section only builds the request.
+//
+// Shared by both the customer-facing Pay now flow and the admin Payment link
+// button — the same order in the same payable state gets the same checkout
+// session, whichever route created it. Returns { ok: true, url } or
+// { ok: false, reason }, never throws, so both callers can turn a failure
+// into whatever response shape they need (a redirect vs. JSON).
+async function createPaymongoCheckout(order, opts) {
   const secretKey = process.env.PAYMONGO_SECRET_KEY;
-  const order = await orders.getByRef(req.params.ref);
-  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
-  const back = '/order/' + order.ref + '?k=' + order.url_key;
-  // Without a key the button should never have rendered; failing here rather
-  // than throwing keeps the customer on a page that still works.
-  if (!secretKey) return res.redirect(back + '&msg=pay_unavailable');
-  if (!gatewayRules.PAYABLE_STATES.includes(order.state)) return res.redirect(back + '&msg=stale');
+  if (!secretKey) return { ok: false, reason: 'pay_unavailable' };
+  if (!gatewayRules.PAYABLE_STATES.includes(order.state)) return { ok: false, reason: 'stale' };
 
   const amountCentavos = gatewayRules.amountDueCentavos(order);
-  if (amountCentavos <= 0) return res.redirect(back + '&msg=stale');
+  if (amountCentavos <= 0) return { ok: false, reason: 'stale' };
 
   try {
     const r = await fetch(paymongo.CHECKOUT_SESSIONS_URL, {
@@ -2242,24 +2243,53 @@ app.post('/order/:ref/pay', async (req, res) => {
       },
       body: JSON.stringify(paymongo.checkoutPayload(order, {
         amountCentavos,
-        successUrl: SITE_URL + back + '&msg=pay_returned',
-        cancelUrl: SITE_URL + back + '&msg=pay_cancelled'
+        successUrl: opts.successUrl,
+        cancelUrl: opts.cancelUrl
       }))
     });
     const body = await r.json();
     const checkoutUrl = body && body.data && body.data.attributes && body.data.attributes.checkout_url;
     if (!r.ok || !checkoutUrl) {
       console.error('[paymongo checkout]', r.status, JSON.stringify(body && body.errors || body).slice(0, 400));
-      return res.redirect(back + '&msg=pay_failed');
+      return { ok: false, reason: 'pay_failed' };
     }
     // Stored so a webhook can still be tied to this order if the reference and
     // metadata are ever both missing from the payload.
     await orders.setCheckoutSession(order.ref, body.data.id);
-    res.redirect(checkoutUrl);
+    return { ok: true, url: checkoutUrl };
   } catch (e) {
     console.error('[paymongo checkout]', e.message);
-    res.redirect(back + '&msg=pay_failed');
+    return { ok: false, reason: 'pay_failed' };
   }
+}
+
+app.post('/order/:ref/pay', async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  const back = '/order/' + order.ref + '?k=' + order.url_key;
+  const result = await createPaymongoCheckout(order, {
+    successUrl: SITE_URL + back + '&msg=pay_returned',
+    cancelUrl: SITE_URL + back + '&msg=pay_cancelled'
+  });
+  if (!result.ok) return res.redirect(back + '&msg=' + result.reason);
+  res.redirect(result.url);
+});
+
+// Admin "💳 Payment link" button: creates the same hosted checkout session as
+// the customer's own Pay now button, but hands the URL back as JSON so the
+// owner's browser can copy it straight to the clipboard for pasting into
+// Messenger — nothing here is customer-facing. success/cancel both return to
+// the admin orders tab since it's the owner's browser making the request, not
+// the customer's.
+app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.status(404).json({ ok: false, reason: 'not_found' });
+  const result = await createPaymongoCheckout(order, {
+    successUrl: SITE_URL + '/admin?tab=orders&msg=pay_returned',
+    cancelUrl: SITE_URL + '/admin?tab=orders&msg=pay_cancelled'
+  });
+  if (!result.ok) return res.status(422).json({ ok: false, reason: result.reason });
+  res.json({ ok: true, url: result.url });
 });
 
 // PayMongo calls this. Everything it decides comes from lib/gateway.js, so this
