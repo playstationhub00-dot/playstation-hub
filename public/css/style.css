@@ -1128,6 +1128,16 @@ nav {
 /* Homepage only: drop the trailing divider line next to section headers. */
 .home-page .section-title::after, .browse-page .section-title::after { content: none; }
 
+/* Homepage reviews header: pushed to the far edge of the .section-title flex
+   row. Wraps onto its own line on narrow screens rather than squeezing the
+   heading, which is the more important of the two. */
+.home-reviews-count { margin-left: auto; font-size: 0.85rem; font-weight: 500; color: #94a3b8; white-space: nowrap; }
+.home-reviews-count strong { color: #fff; font-weight: 800; font-size: 1.05rem; }
+@media (max-width: 700px) {
+  #reviewsSection .section-title { flex-wrap: wrap; }
+  .home-reviews-count { margin-left: 0; }
+}
+
 .section-viewall {
   display: inline-flex; align-items: center; gap: 0.3rem;
   background: #191919; color: #fff; text-decoration: none;

@@ -1309,7 +1309,10 @@ app.get('/', (req, res) => {
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
     .slice(0, 10);
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, reviewDisplayName: reviewRules.displayName, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
+  // Same milestone figure the review strip shows on every other page, off the
+  // customer list already loaded above rather than a second read.
+  const homeRenterCount = reviewRules.renterMilestone(reviewRules.countRenters(homeCustomers));
+  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, reviewDisplayName: reviewRules.displayName, renterCount: homeRenterCount, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
 });
 
 // Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute

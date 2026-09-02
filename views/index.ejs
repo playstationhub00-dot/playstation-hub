@@ -528,6 +528,15 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
       What Our Customers Say
     </span>
     <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">From renters who paid</span>
+    <%# Kept separate from the card count on purpose: these four cards are
+        reviews, that number is people served. Same figure, same rounding rule
+        as the review strip on every other page. %>
+    <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %>
+    <span class="home-reviews-count">
+      <strong><%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %></strong>
+      renter<%= renterCount.n === 1 ? '' : 's' %> served
+    </span>
+    <% } %>
   </h2>
   <div class="reviews-grid">
     <% reviews.forEach(r => { %>
