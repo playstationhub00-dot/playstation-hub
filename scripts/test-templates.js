@@ -215,6 +215,18 @@ check('both ask lines collapse for a customer with no order link', () => {
   );
 });
 
+check('no shipped template sends reviews to Facebook any more', () => {
+  // The confirmation carried an {reviews_link} ask for months. Pointing renters
+  // at Facebook is exactly what kept the site's own review section empty, and
+  // alongside the new ask it would request a review twice in one message.
+  // server.js strips it from stored templates; this guards the defaults.
+  Object.keys(t.DEFAULT_TEMPLATES).forEach(k => {
+    if (k === 'reviews_link') return;
+    assert.ok(!t.DEFAULT_TEMPLATES[k].includes('{reviews_link}'),
+      k + ' still points reviews at Facebook');
+  });
+});
+
 check('the shipped ask lines are about the service, not the game', () => {
   // The whole reason this moved to sign-in time. If the copy asked "how was
   // the game?" the moment would be wrong again.

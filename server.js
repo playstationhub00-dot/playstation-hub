@@ -905,6 +905,22 @@ function getSiteSettings() {
       db.set('site_settings.message_templates.confirmation', fixed).write();
       s.message_templates.confirmation = fixed;
     }
+    // The confirmation shipped for months with a second, older ask pointing at
+    // the Facebook page ({reviews_link}). Removing it from the defaults never
+    // reached anyone, because the stored copy is what actually gets sent — so
+    // every renter kept being sent to Facebook, which is the whole reason the
+    // site's own review section stayed empty. Left in place it would now ask
+    // twice in one message, for two different destinations. Whole lines only,
+    // and only in this template: {reviews_link} is still a valid token if the
+    // owner deliberately wants it somewhere.
+    const confNow = s.message_templates.confirmation;
+    if (typeof confNow === 'string' && confNow.includes('{reviews_link}')) {
+      const fixed = confNow
+        .split('\n').filter(line => !line.includes('{reviews_link}')).join('\n')
+        .replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '');
+      db.set('site_settings.message_templates.confirmation', fixed).write();
+      s.message_templates.confirmation = fixed;
+    }
     const todayTpl = s.message_templates.expiry_today;
     if (typeof todayTpl === 'string' && todayTpl.includes('{review_line}')) {
       const fixed = todayTpl.replace(/\n*\{review_line\}/g, '').replace(/\s+$/, '');
