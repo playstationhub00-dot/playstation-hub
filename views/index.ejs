@@ -586,7 +586,10 @@ function slideSection(id, dir) {
     // Nothing to advance through if the row already fits on screen.
     if (slider.scrollWidth <= slider.clientWidth + 8) return;
 
-    var timer = null, stopped = false, hovered = false, onScreen = false;
+    // onScreen starts true so a browser where IntersectionObserver never
+    // reports (or reports late) still animates. The observer corrects it on
+    // its first callback, which fires immediately on observe().
+    var timer = null, stopped = false, hovered = false, onScreen = true;
 
     function step() {
       var card = slider.querySelector('.slider-card-wrap');
@@ -609,11 +612,33 @@ function slideSection(id, dir) {
     timer = setInterval(tick, intervalMs);
     slider.addEventListener('mouseenter', function () { hovered = true; });
     slider.addEventListener('mouseleave', function () { hovered = false; });
-    // Real gestures only. A programmatic scrollBy also fires 'scroll', so
-    // listening for that would have the row stopping itself on its first move.
-    ['touchstart', 'pointerdown', 'wheel'].forEach(function (ev) {
-      slider.addEventListener(ev, stop, { passive: true });
-    });
+    // Only gestures aimed ALONG the row count as taking control of it. This is
+    // the whole bug from the first version: reaching these rows means scrolling
+    // the page down, and a vertical wheel or swipe fires on whatever sits under
+    // the cursor or finger — so the animation was being killed every time,
+    // before it had ever moved. Listening for 'scroll' instead is no good
+    // either, since our own scrollBy fires that.
+    slider.addEventListener('wheel', function (e) {
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) stop();
+    }, { passive: true });
+
+    var tx = null, ty = null;
+    slider.addEventListener('touchstart', function (e) {
+      var t = e.touches[0];
+      tx = t.clientX; ty = t.clientY;
+    }, { passive: true });
+    slider.addEventListener('touchmove', function (e) {
+      if (tx === null) return;
+      var t = e.touches[0];
+      if (Math.abs(t.clientX - tx) > Math.abs(t.clientY - ty)) stop();
+    }, { passive: true });
+
+    // A deliberate mouse press on the row. Restricted to mouse because
+    // pointerdown fires for touch too, which would reintroduce the same
+    // vertical-swipe problem.
+    slider.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') stop();
+    }, { passive: true });
     var wrap = slider.closest('.upcoming-slider-wrap');
     if (wrap) wrap.querySelectorAll('.slider-arrow').forEach(function (b) { b.addEventListener('click', stop); });
 
