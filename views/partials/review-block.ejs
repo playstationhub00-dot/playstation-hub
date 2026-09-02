@@ -22,11 +22,12 @@
 <div class="gdrq" id="gdrq">
   <div class="gdrq-head">
     <div class="gdrq-avg"><%= reviewStats.average.toFixed(1) %></div>
+    <%# The review count that used to sit under the stars ("from 4 reviews") is
+        deliberately not shown — owner's call. Worth knowing if it ever comes
+        back: it was there so the average could not be read as covering the
+        renters-served figure to its right. reviewStats.count still holds it. %>
     <div>
       <div class="gdrq-stars">★★★★★</div>
-      <%# "reviews", not "renters": this counts what the 5.0 is averaged from,
-          which is a much smaller number than the people served beside it. %>
-      <div class="gdrq-count">from <%= reviewStats.count %> review<%= reviewStats.count === 1 ? '' : 's' %></div>
     </div>
     <%# Only shown once there is a real figure — a fresh install must not
         advertise "0 renters served". %>

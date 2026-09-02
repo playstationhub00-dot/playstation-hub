@@ -3306,7 +3306,6 @@ label.buy-tier:hover { border-color: #444; }
 .gdrq-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1rem; background: #111116; border-bottom: 1px solid #23232b; }
 .gdrq-avg { font-size: 1.7rem; font-weight: 500; color: #fff; line-height: 1; }
 .gdrq-stars { font-size: 0.8rem; color: #f0a500; letter-spacing: 2px; line-height: 1; }
-.gdrq-count { font-size: 0.74rem; color: #94a3b8; margin-top: 0.25rem; }
 /* Pushed to the far edge with a divider, because it measures something else
    entirely from the rating on its left: people served, not reviews collected. */
 .gdrq-renters { margin-left: auto; padding-left: 0.9rem; border-left: 1px solid #23232b; text-align: right; flex-shrink: 0; }
