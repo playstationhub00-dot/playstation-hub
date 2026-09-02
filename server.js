@@ -1332,7 +1332,6 @@ function sortUpcoming(list) {
 
 app.get('/', (req, res) => {
   const all = getGames().map(resolveGamePrices).map(resolveSlotDays).sort((a, b) => a.title.localeCompare(b.title));
-  const featured = [...all].sort((a, b) => (b.renters || 0) - (a.renters || 0)).slice(0, 10);
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 10);
   const psplusPrices = getPsplusPrices();
@@ -1354,6 +1353,23 @@ app.get('/', (req, res) => {
   const newReleases = all
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
+    .slice(0, 10);
+
+  // Most Popular, with anything already sitting in New Releases taken out —
+  // three of the ten used to appear in both rows, so the same covers showed up
+  // twice on one page. Filtering BEFORE the slice is what keeps this row ten
+  // games long: it backfills with the next most-rented titles rather than
+  // leaving gaps.
+  //
+  // Only excludes when New Releases is actually on the page. That row hides
+  // itself below four games (see index.ejs), and de-duplicating against a row
+  // nobody can see would quietly drop games from this one for no reason.
+  const newReleaseIds = newReleases.length >= 4
+    ? new Set(newReleases.map(g => g.id))
+    : new Set();
+  const featured = [...all]
+    .sort((a, b) => (b.renters || 0) - (a.renters || 0))
+    .filter(g => !newReleaseIds.has(g.id))
     .slice(0, 10);
   // The homepage renders the same review strip partial as every other public
   // page, so it takes the same locals from the same helper.
