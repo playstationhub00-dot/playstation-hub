@@ -3381,7 +3381,18 @@ app.get('/upcoming/:slug', (req, res) => {
 
   const resolvedGame = resolveUpcomingSlots(game);
 
-  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null });
+  // A Coming Soon title has no reviews of its own — nobody has played it yet —
+  // so this shows the same shared pool every released game page shows, sorted
+  // by sortForGame() the same way. It never surfaces as "reviews of this game";
+  // it's the trust signal for the business, which is exactly what a customer
+  // deciding whether to reserve an unreleased game needs to see.
+  const upReviews = db.get('reviews').filter({ visible: true }).value() || [];
+  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null,
+    reviews: reviewRules.sortForGame(upReviews, resolvedGame.title),
+    reviewStats: reviewRules.aggregate(upReviews),
+    reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
+  });
 });
 
 app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {

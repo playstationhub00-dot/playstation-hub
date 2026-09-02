@@ -233,6 +233,8 @@
 
     </div>
 
+    <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+
     <% const gpGallery = (game.gallery || []).filter(Boolean); %>
     <% if (gpGallery.length) { %>
     <div class="rsv-gallery-section">
