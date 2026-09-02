@@ -88,11 +88,50 @@ already works; removing it would be effort, not saving.
   while payment still comes first.
 - No change to deposits, refunds, or how slots are allocated.
 
+## Build status
+
+**Provider chosen: PayMongo.** Philippines-native, covers GCash, Maya and cards,
+simpler onboarding at this size.
+
+**Done (2026-09-02)** — `lib/gateway.js` and `scripts/test-gateway.js`, 15
+assertions, no credentials required to run:
+
+- Peso↔centavo conversion, isolated and tested because inverting it would accept
+  ₱3.49 for a ₱349 rental.
+- Amount due as rent plus deposit.
+- Replay detection on the provider's event id, checked *before* any other rule
+  so a retry never reports as a state error.
+- `PAYABLE_STATES` — only `awaiting_payment` and `payment_rejected`; every other
+  state is asserted to reject a payment.
+- Underpayment never accepted, down to a single centavo.
+- Overpayment accepted but flagged with the difference.
+- A payment with no matching order surfaced rather than discarded.
+- Order refs from intent metadata validated through `orders.parseOrderRef`,
+  since metadata round-trips through the provider and returns untrusted.
+
+**Blocked on merchant keys** — the PayMongo adapter, whose only jobs are:
+
+1. Verify the webhook signature.
+2. Normalise the payload into `{ id, orderRef, amountCentavos, paid }`.
+3. Create a payment intent with `order_ref` in metadata and redirect to hosted
+   checkout.
+
+Everything after step 2 is already decided by `gateway.decide()`, so the adapter
+stays thin and swapping providers never touches the money rules.
+
+**Also outstanding**, deliberately not built ahead of the API:
+
+- Persisting processed event ids and the intent↔order link. Left until the real
+  payload shapes are known rather than guessed.
+- The Pay now button on the order page, behind a settings flag.
+- The admin reconciliation view for orphaned payments.
+
 ## Testing
 
-- Webhook signature verification, replayed events, and unknown-intent payloads
-  covered in a new `scripts/test-payments-gateway.js` — pure functions over
+- `scripts/test-gateway.js` covers the decision rules above — pure functions over
   fixture payloads, no live gateway calls in the suite.
+- Signature verification gains its own tests with the adapter, against captured
+  PayMongo fixtures.
 - Sandbox end-to-end before go-live: successful payment, abandoned checkout,
   duplicate webhook, and a payment for an order that no longer exists.
 
