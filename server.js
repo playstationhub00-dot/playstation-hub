@@ -1291,7 +1291,6 @@ app.get('/', (req, res) => {
   const psplusPrices = getPsplusPrices();
   const homePsplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const homePsplusSlug = homePsplusGame ? gameSlug(homePsplusGame.title) : null;
-  const reviews = db.get('reviews').filter({ visible: true }).value().sort((a, b) => (a.order || 999) - (b.order || 999));
   const s = getSiteSettings();
   // Real counts from actual customer records, not the manually-editable per-game
   // "renters" popularity field (which the homepage stat used to sum — that number
@@ -1309,10 +1308,10 @@ app.get('/', (req, res) => {
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
     .slice(0, 10);
-  // Same milestone figure the review strip shows on every other page, off the
-  // customer list already loaded above rather than a second read.
-  const homeRenterCount = reviewRules.renterMilestone(reviewRules.countRenters(homeCustomers));
-  res.render('index', { featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, reviews, reviewBadge: reviewRules.badgeFor, reviewDisplayName: reviewRules.displayName, renterCount: homeRenterCount, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases });
+  // The homepage renders the same review strip partial as every other public
+  // page, so it takes the same locals from the same helper.
+  res.render('index', Object.assign({ featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases },
+    reviewBlockLocals('')));
 });
 
 // Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute
