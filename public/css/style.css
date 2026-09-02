@@ -3260,6 +3260,19 @@ label.buy-tier:hover { border-color: #444; }
 .rvp-btn:hover { background: #7c3aed; }
 .rvp-fine { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 0.5rem; }
 
+/* Thank-you state, shown once they've reviewed. Green rather than the prompt's
+   purple — this is a completed thing, not another ask. */
+.rvt { background: #0f1a12; border: 1px solid #1e4a2a; border-radius: 12px; padding: 0.9rem 0.95rem; margin-bottom: 1.5rem; }
+.rvt-title { font-size: 0.95rem; font-weight: 800; color: #fff; }
+.rvt-sub { font-size: 0.78rem; color: #7fa88c; margin-top: 0.2rem; line-height: 1.5; }
+.rvt-quote { background: #0b0b0d; border: 1px solid #1e4a2a; border-radius: 8px; padding: 0.6rem 0.7rem; margin: 0.7rem 0; font-size: 0.82rem; color: #ddd; line-height: 1.6; font-style: italic; }
+.rvt-fb { border-top: 1px solid #1e4a2a; padding-top: 0.7rem; }
+.rvt-fb-ask { font-size: 0.78rem; color: #9fb8a8; line-height: 1.55; margin-bottom: 0.6rem; }
+.rvt-copy { display: block; width: 100%; background: #14532d; color: #4ade80; border: 1px solid #22c55e; font-weight: 700; font-size: 0.82rem; padding: 0.6rem; border-radius: 50px; cursor: pointer; font-family: inherit; }
+.rvt-copy:hover { background: #176334; }
+.rvt-fb-link { display: block; text-align: center; font-size: 0.78rem; color: #60a5fa; text-decoration: none; margin-top: 0.55rem; }
+.rvt-fb-link:hover { text-decoration: underline; }
+
 /* Full-width auto-sliding review strip — sits between the order card and the
    gameplay gallery, filling what used to be empty space under the poster
    description. A big rating header (the strongest signal) stays static; the

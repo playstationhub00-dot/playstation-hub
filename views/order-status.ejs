@@ -117,6 +117,8 @@
 
   <% if (canReview) { %>
   <%- include('partials/review-prompt', { order: order }) %>
+  <% } else if (myReview) { %>
+  <%- include('partials/review-thanks', { review: myReview, fbReviewsLink: fbReviewsLink }) %>
   <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>

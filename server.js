@@ -2049,7 +2049,13 @@ app.get('/order/:ref', async (req, res) => {
     queueAhead = queueRules.aheadOf(queueRows, order.ref);
     queueExpired = queueRules.isExpired(order, new Date());
   } catch (e) { console.error('[order queue]', e.message); }
-  const canReview = reviewRules.canPrompt(order, db.get('reviews').value() || []);
+  const allReviews = db.get('reviews').value() || [];
+  const canReview = reviewRules.canPrompt(order, allReviews);
+  // Their own review, if they've already left one. Drives the thank-you state
+  // and lets the Facebook follow-up offer back the exact words they wrote,
+  // so posting it there is a paste rather than writing it a second time.
+  const myReview = allReviews.find(r => r && r.order_ref === order.ref) || null;
+  const fbReviewsLink = (getSiteSettings().message_templates || {}).reviews_link || '';
   res.render('order-status', {
     order,
     settings: s,
@@ -2062,7 +2068,7 @@ app.get('/order/:ref', async (req, res) => {
     signinSteps: getSigninSteps(),
     queueRows, queuePos, queueAhead, queueExpired,
     queueRules,
-    canReview,
+    canReview, myReview, fbReviewsLink,
   });
 });
 

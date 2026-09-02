@@ -1,0 +1,57 @@
+<%#
+  Shown on the customer's order page once they've left a review, in place of
+  the prompt. Two jobs: close the loop so submitting doesn't just make the card
+  vanish, and make the Facebook ask a paste rather than a second piece of
+  writing — they've already found the words, so the only thing standing between
+  them and a Facebook review is retyping it.
+
+  Deliberately asked AFTER the site review rather than alongside it: two asks
+  at once lowers completion of both, and the site one is the one that carries
+  a verified order behind it.
+%>
+<div class="rvt">
+  <div class="rvt-title">Thanks — that really helps 🙏</div>
+  <div class="rvt-sub">We'll put it on the site once we've had a quick look.</div>
+
+  <div class="rvt-quote" id="rvtQuote">"<%= review.text %>"</div>
+
+  <% if (fbReviewsLink) { %>
+  <div class="rvt-fb">
+    <div class="rvt-fb-ask">Mind posting the same thing on our Facebook page? It helps a lot with people finding us.</div>
+    <button type="button" class="rvt-copy" id="rvtCopyBtn">Copy what you wrote</button>
+    <a href="<%= fbReviewsLink %>" target="_blank" rel="noopener" class="rvt-fb-link">Open our Facebook page →</a>
+  </div>
+  <script>
+  (function(){
+    var btn = document.getElementById('rvtCopyBtn');
+    var box = document.getElementById('rvtQuote');
+    if (!btn || !box) return;
+    // Strips the display quotes so what lands on the clipboard is their own
+    // sentence, ready to paste straight into a Facebook review.
+    var text = box.textContent.trim().replace(/^"|"$/g, '');
+    function done() {
+      btn.textContent = 'Copied ✓';
+      setTimeout(function(){ btn.textContent = 'Copy what you wrote'; }, 1800);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Press and hold the text above to copy'; }
+      document.body.removeChild(ta);
+    }
+    btn.addEventListener('click', function(){
+      // Same guard the order page's other copy button uses — navigator.clipboard
+      // needs HTTPS and is blocked in the Facebook in-app browser, which is
+      // exactly where a lot of these customers will be.
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(fallback);
+      } else {
+        fallback();
+      }
+    });
+  })();
+  </script>
+  <% } %>
+</div>
