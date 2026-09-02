@@ -1052,7 +1052,13 @@ app.get('/ps-plus', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : getPsplusSlots();
   const psplusSlug = psplusGame ? gameSlug(psplusGame.title) : null;
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+  const psplusReviews = db.get('reviews').filter({ visible: true }).value() || [];
+  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(),
+    reviews: reviewRules.sortForGame(psplusReviews, psplusGame ? psplusGame.title : ''),
+    reviewStats: reviewRules.aggregate(psplusReviews),
+    reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
+  });
 });
 
 app.get('/ps-plus/rent', async (req, res) => {
