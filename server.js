@@ -603,7 +603,7 @@ function reviewBlockLocals(gameTitle) {
     reviewStats: reviewRules.aggregate(pool),
     reviewBadge: reviewRules.badgeFor,
     reviewDisplayName: reviewRules.displayName,
-    renterCount: reviewRules.countRenters(getCustomers())
+    renterCount: reviewRules.renterMilestone(reviewRules.countRenters(getCustomers()))
   };
 }
 

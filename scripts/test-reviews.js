@@ -283,6 +283,31 @@ check('countRenters only counts people who actually received a game', () => {
   ]), 3);
 });
 
+check('renterMilestone rounds DOWN, so the "+" is always true', () => {
+  // "300+" has to mean at least 300. Rounding up would advertise renters who
+  // do not exist.
+  assert.deepStrictEqual(reviews.renterMilestone(300), { n: 300, plus: true });
+  assert.deepStrictEqual(reviews.renterMilestone(347), { n: 300, plus: true });
+  assert.deepStrictEqual(reviews.renterMilestone(399), { n: 350, plus: true });
+  assert.deepStrictEqual(reviews.renterMilestone(1240), { n: 1200, plus: true });
+});
+
+check('renterMilestone shows a small count exactly, with no "+"', () => {
+  // Below the first milestone there is nothing to round to, and "0+" or "50+"
+  // from 12 renters would both be lies.
+  assert.deepStrictEqual(reviews.renterMilestone(12), { n: 12, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone(49), { n: 49, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone(50), { n: 50, plus: true });
+});
+
+check('renterMilestone survives zero and rubbish input', () => {
+  assert.deepStrictEqual(reviews.renterMilestone(0), { n: 0, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone(-5), { n: 0, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone(null), { n: 0, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone(undefined), { n: 0, plus: false });
+  assert.deepStrictEqual(reviews.renterMilestone('abc'), { n: 0, plus: false });
+});
+
 check('countRenters ignores blank names and bad input', () => {
   assert.strictEqual(reviews.countRenters([cust({ customer_name: '' }), cust({ customer_name: '   ' })]), 0);
   assert.strictEqual(reviews.countRenters([]), 0);

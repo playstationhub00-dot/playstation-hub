@@ -30,10 +30,10 @@
     </div>
     <%# Only shown once there is a real figure — a fresh install must not
         advertise "0 renters served". %>
-    <% if (typeof renterCount !== 'undefined' && renterCount > 0) { %>
+    <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %>
     <div class="gdrq-renters">
-      <div class="gdrq-renters-n"><%= renterCount.toLocaleString() %></div>
-      <div class="gdrq-renters-l">renter<%= renterCount === 1 ? '' : 's' %> served</div>
+      <div class="gdrq-renters-n"><%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %></div>
+      <div class="gdrq-renters-l">renter<%= renterCount.n === 1 ? '' : 's' %> served</div>
     </div>
     <% } %>
   </div>
