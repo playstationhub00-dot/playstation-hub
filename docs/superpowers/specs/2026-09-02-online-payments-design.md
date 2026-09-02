@@ -109,15 +109,40 @@ assertions, no credentials required to run:
 - Order refs from intent metadata validated through `orders.parseOrderRef`,
   since metadata round-trips through the provider and returns untrusted.
 
-**Blocked on merchant keys** — the PayMongo adapter, whose only jobs are:
+**Done (2026-09-02)** — `lib/paymongo.js` and `scripts/test-paymongo.js`, 15
+assertions, no credentials or network required:
 
-1. Verify the webhook signature.
-2. Normalise the payload into `{ id, orderRef, amountCentavos, paid }`.
-3. Create a payment intent with `order_ref` in metadata and redirect to hosted
-   checkout.
+- Checkout Session payload: amount in centavos, `PHP`, and the order ref sent
+  **twice** — as `reference_number` (what the owner sees in PayMongo's
+  dashboard) and in `metadata` (what returns on the webhook), so a payment stays
+  identifiable if either is dropped.
+- HMAC-SHA256 signature verification with a constant-time compare, including a
+  length guard because `timingSafeEqual` throws on mismatched buffers and a
+  short signature must return false rather than crash the handler.
+- Tested against a tampered body carrying a once-valid signature — the specific
+  attack the check exists to stop.
+- Event normalisation into `{ id, orderRef, amountCentavos, paid }`, tolerant of
+  malformed payloads, with the order ref falling back from `reference_number` to
+  `metadata.order_ref`.
 
-Everything after step 2 is already decided by `gateway.decide()`, so the adapter
-stays thin and swapping providers never touches the money rules.
+**Signature scheme — unresolved, must be confirmed before live keys.** PayMongo's
+current documentation says only "compute HMAC-SHA256 of the raw request body";
+their older scheme used a composite `t=…,te=…,li=…` header where the signed
+string was `timestamp.body`. These are incompatible: choosing wrong either
+rejects every genuine webhook or accepts forged ones. **Both are implemented and
+tested**, and the live scheme must be confirmed against a captured payload from
+a real test webhook before this handles live money.
+
+**Still blocked on keys:**
+
+- The HTTP calls themselves — creating the session and reading the response
+  `checkout_url`.
+- **Raw-body capture on the webhook route.** `server.js` applies
+  `express.json()` globally, which re-serialises the body; any byte that shifts
+  breaks the signature on a legitimate request. The webhook route needs the raw
+  bytes mounted ahead of that middleware.
+- Persisting processed event ids and the intent↔order link.
+- The Pay now button and the admin reconciliation view.
 
 **Also outstanding**, deliberately not built ahead of the API:
 
