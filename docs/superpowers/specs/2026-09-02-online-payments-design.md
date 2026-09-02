@@ -1,48 +1,125 @@
-# Online Payments and Sign-In-First Ordering — Design
+# Online Payments — Design
 
-**Goal:** Let customers pay on the site through a real payment gateway, and
-reorder the rental lifecycle to match how the business actually runs — sign the
-customer in first, collect payment second.
+**Goal:** Let customers pay on the site through a real payment gateway, so
+paying stops meaning "send money to a stranger's personal number".
 
-**Status:** drafted 2026-09-02. **Not ready to build** — blocked on a merchant
-account (see Prerequisites). Written now so implementation can start the day
-that clears.
+**Status:** drafted 2026-09-02, restructured into phases the same day.
+**Phase 1 is not ready to build** — blocked on a merchant account (see
+Prerequisites). Written now so implementation can start the day that clears.
+**Phase 2 is deliberately not scheduled** — see the decision gate.
 
 ## Why
 
-Two separate problems, one fix.
+Today the site displays a personal GCash number and a QR image, asks the
+customer to send money to it, and then asks them to prove they did. Sending
+money to a stranger's personal number is precisely the act a nervous buyer
+balks at, and roughly half of started orders never get paid.
 
-**The website contradicts the business.** The order lifecycle is
-`awaiting_payment → verifying_payment → awaiting_qr → qr_pending → active`:
-money first, account second. Actual transactions run the other way — the owner
-signs the customer in, *then* collects payment, deliberately, because handing
-over the game first is how a stranger becomes convinced the business is real.
+A recognised checkout is not mainly about automation. It is the trust signal
+the business currently earns by hand.
 
-Every customer arriving from Messenger has been trained on sign-in-first and
-then meets a site demanding payment up front from a seller who hasn't yet
-delivered anything. Roughly half of started orders never get paid. That gap is
-the most likely explanation.
+## Two phases, and why they are separate
 
-**Payment itself carries no legitimacy.** Today the site displays a personal
-GCash number and a QR image and asks the customer to send money to it, then
-prove they did. Sending money to a stranger's personal number is precisely the
-act a nervous buyer balks at. A recognised checkout is not just automation — it
-is the trust signal the manual sign-in-first workaround was buying.
+The original draft of this spec did both at once: add the gateway **and**
+reorder the lifecycle so customers are signed in before they pay. They have
+been split, because doing both together is two risky changes where one removes
+the reason for the other.
+
+The reorder exists to solve a trust problem — handing over the game first is
+how a stranger becomes convinced the business is real. **The gateway solves
+that same problem**, without costing a slot every time someone doesn't pay. Ship
+it first and the reorder may turn out to be unnecessary.
+
+Splitting also buys a measurement that is otherwise impossible. "Half don't pay"
+currently has at least two explanations: paying is scary, or the site asks
+before it delivers. Ship the gateway alone and the answer separates cleanly.
+Change both at once and it stays permanently ambiguous which one worked.
+
+---
+
+# Phase 1 — Payment gateway
+
+The order lifecycle is **unchanged**. Customers still pay before being signed
+in; the only difference is how they pay.
 
 ## Prerequisites — blocking
 
-A merchant account with **PayMongo** or **Xendit**, approved before any of this
-can go live. Requires business registration documents, government ID, and bank
-details, and takes days to weeks on the provider's side. This work cannot be
-finished without it, though everything below can be built and tested in sandbox
-first.
+A merchant account with **PayMongo** or **Xendit**, approved before this can go
+live. Requires business registration documents, government ID, and bank
+details, and takes days to weeks on the provider's side. Everything below can be
+built and sandbox-tested first, but nothing ships without it.
 
 Fees are roughly 2–3.5% per transaction depending on method and provider, and
 come out of margin on every rental. On a ₱349 weekly rental that is ₱8–12.
 
-## The reordered lifecycle
+## Payment flow
 
-Current, and the shape after this change:
+1. The order reaches `awaiting_payment`, exactly as it does today.
+2. The order page shows a **Pay now** button alongside the existing manual
+   GCash/Maya details.
+3. The button creates a payment intent with the gateway and redirects to hosted
+   checkout — GCash, Maya, or card. The site never handles card details, which
+   keeps PCI scope out of this codebase entirely.
+4. On success the gateway redirects back to the order page.
+5. **The webhook is the source of truth**, not the redirect. A customer closing
+   the tab mid-redirect must not lose a payment that actually completed, and a
+   crafted redirect URL must not be able to mark an order paid.
+6. The webhook verifies the provider's signature, matches the intent to its
+   order, and transitions `awaiting_payment → verifying_payment → awaiting_qr`
+   automatically — the same path the owner walks manually today, so no new
+   states and no changed transitions.
+
+**Idempotency:** gateways retry webhooks. Handling the same event twice must not
+double-record a payment or re-fire notifications, so each event id is recorded
+and replays are ignored.
+
+**Reconciliation:** every intent stores its order ref and every order stores its
+intent id, so a payment arriving without a matching order surfaces in admin
+rather than vanishing.
+
+**The manual path stays.** Some customers will not have a card or e-wallet
+ready, gateways have outages, and the owner needs it for their own bookings. It
+already works; removing it would be effort, not saving.
+
+## What Phase 1 does not change
+
+- No new order states.
+- No payment deadline, reminders, or slot revocation — none of it is needed
+  while payment still comes first.
+- No change to deposits, refunds, or how slots are allocated.
+
+## Testing
+
+- Webhook signature verification, replayed events, and unknown-intent payloads
+  covered in a new `scripts/test-payments-gateway.js` — pure functions over
+  fixture payloads, no live gateway calls in the suite.
+- Sandbox end-to-end before go-live: successful payment, abandoned checkout,
+  duplicate webhook, and a payment for an order that no longer exists.
+
+---
+
+# Decision gate
+
+**Run Phase 1 for about a month before deciding anything about Phase 2.**
+
+The number that matters is the share of started orders that get paid, currently
+around 50%.
+
+- **If it climbs materially**, payment friction was the problem, the gateway
+  fixed it, and Phase 2 should not be built. It would add real risk for a
+  benefit already collected.
+- **If it barely moves**, payment friction was not the cause — and the
+  sign-in-first hypothesis is worth acting on, because something else is
+  stopping people and delivery order is the strongest remaining candidate.
+
+---
+
+# Phase 2 — Sign-in-first ordering
+
+**Only if the decision gate says so.** Recorded in full so nothing is lost, not
+because it is scheduled.
+
+## The reordered lifecycle
 
 | Now | After |
 |---|---|
@@ -52,51 +129,42 @@ Current, and the shape after this change:
 | `qr_pending` | `awaiting_payment` — payment link live, gateway checkout |
 | `active` | `paid` — gateway confirmed, rental proceeds normally |
 
-The customer receives the account before paying, exactly as the owner does it
-manually today.
+`paid` is a genuinely new state. The lifecycle has never needed one, because
+payment always came first and `active` therefore implied paid. After the flip
+`active` means "has the game, may not have paid", so the two must be
+distinguishable. This is the change that ripples furthest through the code.
 
-**The risk this accepts, stated plainly.** An unpaid order now costs a real
-slot: the customer holds a live account having paid nothing. Today an unpaid
-order costs nothing but a lost sale. At the current ~50% non-payment rate this
-would be materially expensive, so the mitigations below are not optional
-extras — they are what makes the reorder survivable.
+## The risk this accepts
 
-**Mitigations:**
+An unpaid order stops costing a lost sale and starts costing **a real slot** —
+someone holding a live account having paid nothing. The mitigations below are
+not optional extras; they are what makes the reorder survivable.
 
-- **A payment deadline.** The account is signed in, and payment is due within a
-  set window (24 hours is the suggested default, owner-configurable). The order
-  page shows the deadline from the moment they are signed in.
+- **A payment deadline.** Payment due within a set window (24 hours suggested,
+  owner-configurable), shown on the order page from the moment they are signed
+  in.
 - **Automatic reminders** at the halfway point and on expiry, reusing the
   existing message-template system.
 - **Owner-triggered revocation.** Past the deadline the owner can reclaim the
-  slot from admin, which returns it to the pool and cancels the order. Not
-  automatic — an account is a real thing to take back and that judgement stays
-  with the owner.
-- **Returning customers only, optionally.** A first-time buyer paying first
-  while a known customer is signed in first is the safest version. Recorded here
-  as a fallback, not the chosen design.
+  slot from admin, returning it to the pool and cancelling the order. Never
+  automatic — taking back an account is a real act and that judgement stays
+  with a person.
 
-## Payment flow
+Access being revocable is what bounds this risk: the owner controls the PSN
+account and can lock a non-payer out. The cost of an unpaid order is days of
+blocked availability plus an awkward conversation, not a lost game.
 
-1. Owner signs the customer in; order reaches `active`.
-2. The order page shows a **Pay now** button and the deadline.
-3. The button creates a payment intent with the gateway and redirects to hosted
-   checkout — GCash, Maya, or card. The site never handles card details, which
-   keeps PCI scope out of this codebase entirely.
-4. On success the gateway redirects back to the order page.
-5. **The webhook is the source of truth**, not the redirect. A customer closing
-   the tab mid-redirect must not lose a payment that actually completed, and a
-   crafted redirect URL must not mark an order paid.
-6. The webhook verifies the provider's signature, matches the intent to the
-   order, and transitions to `paid`.
+## The safer variant, if Phase 2 happens at all
 
-**Idempotency:** gateways retry webhooks. Handling the same event twice must not
-double-record a payment or re-fire notifications, so each event id is recorded
-and replays are ignored.
+**Sign-in-first for returning customers only.** A first-time buyer pays first;
+someone who has already paid before gets signed in first.
 
-**Reconciliation:** every intent stores its order ref, and every order stores its
-intent id, so a payment that arrives without a matching order is visible in
-admin rather than silently lost.
+This is the version worth building. The risk is near zero — these people have a
+payment history — and it reads to the customer as a loyalty perk rather than an
+exposure. It also concentrates the benefit where trust is cheapest to extend.
+
+The cost is a branch in the ordering flow and the "has this person paid before?"
+lookup behind it.
 
 ## Where the review moment fits
 
@@ -104,36 +172,36 @@ Already built and shipped (2026-09-02): the order page asks for a review once
 the customer holds the game, and on submission thanks them and offers to post
 the same words to Facebook.
 
-Under the reordered flow, payment confirmation lands *after* sign-in — so the
-customer has genuinely received the service by then and the confirmation screen
-becomes a legitimate second place to surface the review ask. That is a copy and
-placement change to existing components, not new work.
+Under Phase 2, payment confirmation lands *after* sign-in, so the customer has
+genuinely received the service by then and the payment-confirmation screen
+becomes a second legitimate place to surface the ask. Copy and placement on
+existing components, not new work.
 
-## Out of scope
+Under Phase 1 it stays exactly where it is, since payment still precedes
+delivery and a review at that point would be a review of nothing.
+
+## Testing
+
+`scripts/test-orders.js` gains the reordered transition table, so an illegal hop
+fails a test rather than reaching production.
+
+---
+
+## Out of scope, both phases
 
 - Refunds through the gateway. Deposits stay manual, as now.
 - Saved cards or recurring billing.
 - Automatic slot revocation. Deliberately owner-triggered.
-- Replacing manual payment entirely — the existing GCash-and-proof path stays
-  as a fallback for customers who prefer it and for the owner's own bookings.
+- Replacing the manual GCash-and-proof path.
 - Any change to how deposits are calculated or returned.
-
-## Testing
-
-- `scripts/test-orders.js` gains the reordered transition table, so an illegal
-  hop fails a test rather than reaching production.
-- Webhook signature verification, replayed-event handling, and unknown-intent
-  handling all covered in a new `scripts/test-payments-gateway.js`, all pure
-  functions over fixture payloads — no live gateway calls in the suite.
-- Sandbox end-to-end before go-live: successful payment, abandoned checkout,
-  duplicate webhook, and a payment for an order that no longer exists.
 
 ## Open questions
 
 - **PayMongo or Xendit?** Both cover GCash, Maya and cards in the Philippines.
-  Worth comparing on settlement time and per-transaction cost once the business
+  Worth comparing settlement time and per-transaction cost once the business
   documents are ready to submit.
-- **Payment window length.** 24 hours is a placeholder; the right number depends
-  on how quickly customers actually pay today.
 - **Deposit handling.** Whether the refundable Trophy deposit is collected
   through the gateway or stays manual, given refunds are out of scope.
+- **Payment window length** — Phase 2 only. 24 hours is a placeholder; the right
+  number depends on how quickly customers actually pay once the gateway exists,
+  which Phase 1 will reveal.
