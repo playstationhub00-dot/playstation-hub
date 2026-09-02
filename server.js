@@ -2498,8 +2498,14 @@ app.post('/webhooks/paymongo', async (req, res) => {
   }
   if (!paymongo.verifySignature(req.rawBody, req.get('Paymongo-Signature'), secret)) {
     console.error('[paymongo webhook] bad signature');
+    // Counted so the admin panel can say so. The likeliest cause by far is a
+    // live/test secret mismatch after go-live, and that failure is otherwise
+    // completely silent: the customer is charged, the order never moves, and
+    // only a server log nobody reads mentions it.
+    await orders.noteWebhook(false).catch(() => {});
     return res.status(400).send('bad signature');
   }
+  await orders.noteWebhook(true).catch(() => {});
 
   const event = paymongo.normalizeEvent(req.body);
   const order = event.orderRef ? await orders.getByRef(event.orderRef) : null;
@@ -3223,6 +3229,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   // The form captures a Facebook name before payment, so each row is a named
   // lead the owner can message directly, not just a statistic.
   const abandonedOrders = await orders.listByStates(['awaiting_payment', 'payment_rejected']);
+  // Which mode the gateway is in, and whether its webhook is actually working.
+  // Both are read straight from live state rather than remembered anywhere, so
+  // the badge cannot claim "test" while real money is moving.
+  const paymongoMode = paymongo.keyMode(process.env.PAYMONGO_SECRET_KEY);
+  const paymongoHealth = await orders.webhookHealth().catch(() => null);
   // Fall in Line entries, listed separately from the action queue: they have
   // no completing action the way a payment or return check does, so they
   // would sit in orderQueue forever and bury real work if merged into it.
@@ -3434,7 +3445,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

@@ -2913,6 +2913,16 @@ footer {
 .oq-online-form { margin-bottom: 1.25rem; }
 .oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
 .oq-online-toggle input { accent-color: #22c55e; }
+/* Gateway mode + webhook health. Loud when live, louder when broken — the
+   owner should never have to wonder whether the site is taking real money. */
+.oq-pm { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 0.85rem; }
+.oq-pm-badge { font-size: 0.78rem; font-weight: 800; color: #888; white-space: nowrap; }
+.oq-pm-sub { font-size: 0.75rem; color: #777; line-height: 1.5; }
+.oq-pm-live { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
+.oq-pm-live .oq-pm-badge { color: #f87171; }
+.oq-pm-bad { border-color: #ef4444; background: rgba(239,68,68,0.12); }
+.oq-pm-bad .oq-pm-sub { color: #fca5a5; }
+body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-manual-order { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; margin-top: 0.85rem; padding: 0 1rem; }
 .oq-manual-order summary { cursor: pointer; padding: 0.85rem 0; font-size: 0.85rem; font-weight: 700; color: #aaa; list-style: none; }
 .oq-manual-order summary::-webkit-details-marker { display: none; }

@@ -147,4 +147,21 @@ check('a malformed payload normalises without throwing', () => {
   assert.strictEqual(pm.normalizeEvent({ data: {} }).amountCentavos, 0);
 });
 
+check('keyMode reports which mode the configured key puts the site in', () => {
+  assert.strictEqual(pm.keyMode('sk_live_abc123'), 'live');
+  assert.strictEqual(pm.keyMode('sk_test_abc123'), 'test');
+  assert.strictEqual(pm.keyMode(''), 'none');
+  assert.strictEqual(pm.keyMode(undefined), 'none');
+  assert.strictEqual(pm.keyMode(null), 'none');
+});
+
+check('an unrecognised key never reads as safe', () => {
+  // Guessing 'test' for something unparseable would tell the owner no real
+  // money is moving while it might well be. 'unknown' makes them look.
+  assert.strictEqual(pm.keyMode('pk_live_abc'), 'unknown');
+  assert.strictEqual(pm.keyMode('garbage'), 'unknown');
+  assert.strictEqual(pm.keyMode('SK_LIVE_ABC'), 'unknown');
+  assert.strictEqual(pm.keyMode(' sk_live_abc'), 'unknown');
+});
+
 console.log('\n' + passed + ' assertions passed');

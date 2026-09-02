@@ -56,6 +56,33 @@
   });
 %>
 
+<%
+  // Gateway status. Only rendered once a key is configured — a site not using
+  // PayMongo at all should not carry a badge about it.
+  const pmMode = typeof paymongoMode !== 'undefined' ? paymongoMode : 'none';
+  const pmH = (typeof paymongoHealth !== 'undefined' && paymongoHealth) ? paymongoHealth : null;
+  const pmFails = pmH ? (pmH.fail_count || 0) : 0;
+  const pmOks = pmH ? (pmH.ok_count || 0) : 0;
+  // Failures only matter if they are the MOST RECENT thing that happened —
+  // old ones from before a secret was fixed are history, not a live problem.
+  const pmBroken = pmFails > 0 && (!pmH.last_ok_at || String(pmH.last_fail_at || '') > String(pmH.last_ok_at || ''));
+  const pmWhen = t => { if (!t) return 'never'; const d = new Date(t); return isNaN(d) ? 'never' : d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); };
+%>
+<% if (pmMode !== 'none') { %>
+<div class="oq-pm <%= pmMode === 'live' ? 'oq-pm-live' : '' %><%= pmBroken ? ' oq-pm-bad' : '' %>">
+  <span class="oq-pm-badge"><%= pmMode === 'live' ? '🔴 LIVE — real money' : pmMode === 'test' ? '🧪 TEST mode' : '⚠ Unrecognised key' %></span>
+  <span class="oq-pm-sub">
+    <% if (pmBroken) { %>
+      ⚠ <%= pmFails %> webhook signature failure<%= pmFails === 1 ? '' : 's' %>, last <%= pmWhen(pmH.last_fail_at) %> — PAYMONGO_WEBHOOK_SECRET likely doesn't match this mode, so paid orders won't advance on their own.
+    <% } else if (pmOks > 0) { %>
+      Webhook healthy · <%= pmOks %> verified · last <%= pmWhen(pmH.last_ok_at) %>
+    <% } else { %>
+      No webhook received yet — the first real payment will confirm it works.
+    <% } %>
+  </span>
+</div>
+<% } %>
+
 <form method="POST" action="/admin/online" class="oq-online-form">
   <label class="oq-online-toggle">
     <input type="checkbox" name="online" onchange="this.form.submit()" <%= settings.owner_online ? 'checked' : '' %>>
