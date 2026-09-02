@@ -52,7 +52,7 @@
       <input type="text" name="title" id="reqTitle" placeholder="Game title" autocomplete="off" required value="<%= prefillTitle %>">
       <div class="req-hint" id="reqHint"></div>
     </div>
-    <input type="text" name="fb_name" placeholder="Your Facebook name" required>
+    <input type="text" name="fb_name" placeholder="Your Facebook name" required autocomplete="off">
     <button type="submit" class="btn btn-primary">Request</button>
   </form>
 
@@ -87,7 +87,7 @@
       <a href="/game/<%= r.slug %>" class="req-btn req-btn-rent">Rent</a>
     <% } else if (r.status !== 'stocked') { %>
       <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
-        <input type="text" name="fb_name" placeholder="Your name" required>
+        <input type="text" name="fb_name" placeholder="Your name" required autocomplete="off">
         <button type="submit" class="req-btn">Vote</button>
       </form>
     <% } %>

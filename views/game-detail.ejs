@@ -321,7 +321,7 @@
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
-          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
           <div class="gd-order-sub" id="ctaSub" style="display:none;">Pay via GCash or Maya · no account needed</div>
         </form>
@@ -431,7 +431,7 @@
           <input type="hidden" name="kind" value="game">
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="buyOrderType" value="">
-          <input type="text" name="fb_name" id="buyFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <input type="text" name="fb_name" id="buyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn" id="buyCtaBtn" onclick="return handleBuyClick(event)">
             📘 Buy Permanent Access
           </button>

@@ -75,7 +75,7 @@
           <% }) %>
         </div>
         <% if (firstOpen) { %>
-        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required>
+        <input type="text" name="fb_name" placeholder="Your Facebook name" class="buy-slot-name" required autocomplete="off">
         <button type="submit" class="buy-slot-btn">Buy ₱<%= preselected.slot.price %></button>
         <% } else { %>
         <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>

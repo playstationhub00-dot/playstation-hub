@@ -176,7 +176,7 @@
         <form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" onsubmit="return handleOrderFormSubmit(event)">
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
-          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required>
+          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn" id="ctaBtn">Rent PS Plus Deluxe</button>
           <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
         </form>
