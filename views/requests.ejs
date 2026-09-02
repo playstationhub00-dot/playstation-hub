@@ -93,6 +93,9 @@
     <% } %>
   </div>
   <% }) %>
+
+  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+
 </div>
 
 <%- include('partials/footer') %>

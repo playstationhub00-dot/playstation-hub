@@ -970,6 +970,9 @@ app.get('/how-it-works', (req, res) => {
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
   const rows = await gameRequests.listPublic();
+  // No title in play here (a request is by definition a game we don't stock
+  // yet), so the same shared pool as /buy — recency order, nothing floated.
+  const reqReviews = db.get('reviews').filter({ visible: true }).value() || [];
   res.render('requests', {
     requests: rows,
     firstName: gameRequests.firstName,
@@ -977,7 +980,11 @@ app.get('/requests', async (req, res) => {
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),
     msg: req.query.msg || null,
-    prefillTitle: (req.query.title || '').slice(0, 200)
+    prefillTitle: (req.query.title || '').slice(0, 200),
+    reviews: reviewRules.sortForGame(reqReviews, ''),
+    reviewStats: reviewRules.aggregate(reqReviews),
+    reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
   });
 });
 
