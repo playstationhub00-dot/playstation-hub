@@ -573,51 +573,83 @@ function slideSection(id, dir) {
   slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
 }
 
-// Auto-advance for the two top rows. Steps one card at a time and rests in
-// between rather than crawling continuously: every tile here is a tap target,
-// and a card that is still drifting when a finger arrives is a card that gets
-// mis-tapped. The reviews strip can crawl because nobody clicks a quote.
+// Auto-advance for the two top rows: a slow continuous drift rather than
+// card-by-card jumps, which read as lurching.
+//
+// Three things this has to work around:
+//   - scroll-snap-type on .upcoming-slider is `x mandatory`, which yanks a
+//     continuous scroll back to the nearest card. Snap is switched off while
+//     drifting and restored the moment the visitor takes over.
+//   - Looping has to be invisible, so the card set is cloned once and the
+//     position wraps by exactly half the scroll width — the content under the
+//     wrap point is identical, so nothing appears to move.
+//   - The row stays a real scroll container throughout, so the arrows, manual
+//     swiping and the fade overlay all keep behaving normally.
 (function () {
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function autoSwipe(id, intervalMs) {
+  function autoDrift(id, pxPerSecond) {
     var slider = document.getElementById(id);
     if (!slider || reduced) return;
-    // Nothing to advance through if the row already fits on screen.
+    // Nothing to drift through if the row already fits on screen.
     if (slider.scrollWidth <= slider.clientWidth + 8) return;
 
-    // onScreen starts true so a browser where IntersectionObserver never
-    // reports (or reports late) still animates. The observer corrects it on
-    // its first callback, which fires immediately on observe().
-    var timer = null, stopped = false, hovered = false, onScreen = true;
+    // onScreen starts true so a browser whose IntersectionObserver reports late
+    // (or not at all) still animates; the observer corrects it on its first
+    // callback, which fires immediately on observe().
+    var raf = null, stopped = false, hovered = false, onScreen = true;
+    var last = 0, pos = slider.scrollLeft;
 
-    function step() {
-      var card = slider.querySelector('.slider-card-wrap');
-      return card ? card.offsetWidth + 20 : 220;
+    // A second copy of the cards, so reaching the end of the first set can wrap
+    // to the identical point in the second without anything visibly jumping.
+    // Hidden from assistive tech and taken out of the tab order — they are the
+    // same links twice, and nobody should have to tab through them again.
+    var originals = Array.prototype.slice.call(slider.children);
+    var clones = originals.map(function (node) {
+      var c = node.cloneNode(true);
+      c.setAttribute('aria-hidden', 'true');
+      c.querySelectorAll('a, button').forEach(function (el) { el.setAttribute('tabindex', '-1'); });
+      slider.appendChild(c);
+      return c;
+    });
+
+    slider.style.scrollSnapType = 'none';
+
+    function frame(now) {
+      if (stopped) return;
+      var dt = last ? Math.min(now - last, 100) : 0; // clamp: a backgrounded tab
+      last = now;                                    // must not lurch on return
+      if (!hovered && onScreen && !document.hidden) {
+        pos += (pxPerSecond * dt) / 1000;
+        var half = slider.scrollWidth / 2;
+        if (pos >= half) pos -= half; // identical content, so this is invisible
+        slider.scrollLeft = pos;
+      }
+      raf = requestAnimationFrame(frame);
     }
-    function tick() {
-      if (stopped || hovered || !onScreen || document.hidden) return;
-      var max = slider.scrollWidth - slider.clientWidth;
-      // Rewind rather than dead-ending at the last card.
-      if (slider.scrollLeft >= max - 4) slider.scrollTo({ left: 0, behavior: 'smooth' });
-      else slider.scrollBy({ left: step(), behavior: 'smooth' });
-    }
-    // Once someone takes hold of the row, it is theirs — moving it under them
-    // from that point on is just fighting the person using it.
+
+    // Once someone takes hold of the row it is theirs. Snap goes back on and the
+    // clones are removed, after folding the position back into the real set so
+    // nothing shifts under them.
     function stop() {
+      if (stopped) return;
       stopped = true;
-      if (timer) { clearInterval(timer); timer = null; }
+      if (raf) cancelAnimationFrame(raf);
+      var half = slider.scrollWidth / 2;
+      if (slider.scrollLeft >= half) slider.scrollLeft = slider.scrollLeft - half;
+      clones.forEach(function (c) { c.remove(); });
+      slider.style.scrollSnapType = '';
     }
 
-    timer = setInterval(tick, intervalMs);
+    raf = requestAnimationFrame(frame);
     slider.addEventListener('mouseenter', function () { hovered = true; });
     slider.addEventListener('mouseleave', function () { hovered = false; });
-    // Only gestures aimed ALONG the row count as taking control of it. This is
-    // the whole bug from the first version: reaching these rows means scrolling
-    // the page down, and a vertical wheel or swipe fires on whatever sits under
-    // the cursor or finger — so the animation was being killed every time,
-    // before it had ever moved. Listening for 'scroll' instead is no good
-    // either, since our own scrollBy fires that.
+
+    // Only gestures aimed ALONG the row count as taking control of it. Reaching
+    // these rows means scrolling the page down, and a vertical wheel or swipe
+    // fires on whatever sits under the cursor or finger — treating that as
+    // intent killed the animation before it ever moved. Listening for 'scroll'
+    // is no good either, since our own scrolling fires that every frame.
     slider.addEventListener('wheel', function (e) {
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) stop();
     }, { passive: true });
@@ -634,29 +666,26 @@ function slideSection(id, dir) {
     }, { passive: true });
 
     // A deliberate mouse press on the row. Restricted to mouse because
-    // pointerdown fires for touch too, which would reintroduce the same
+    // pointerdown covers touch too, which would reintroduce the same
     // vertical-swipe problem.
     slider.addEventListener('pointerdown', function (e) {
       if (e.pointerType === 'mouse') stop();
     }, { passive: true });
+
     var wrap = slider.closest('.upcoming-slider-wrap');
     if (wrap) wrap.querySelectorAll('.slider-arrow').forEach(function (b) { b.addEventListener('click', stop); });
 
-    // Only advance while the row is actually in view, so a visitor who scrolls
-    // down to it finds it at the beginning instead of halfway through.
     if (window.IntersectionObserver) {
       new IntersectionObserver(function (entries) {
         onScreen = entries[0].isIntersecting;
-      }, { threshold: 0.35 }).observe(slider);
-    } else {
-      onScreen = true;
+      }, { threshold: 0.2 }).observe(slider);
     }
   }
 
-  // Deliberately different intervals: matching ones would have both rows
-  // lurching in lockstep, which reads as a page glitch rather than motion.
-  autoSwipe('newReleasesSlider', 4000);
-  autoSwipe('popularSlider', 5500);
+  // Slightly different speeds so the two rows never drift in lockstep, which
+  // would read as one big moving block rather than two independent shelves.
+  autoDrift('newReleasesSlider', 30);
+  autoDrift('popularSlider', 24);
 })();
 
 function openReserveModal(title) {
