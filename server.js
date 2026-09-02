@@ -588,6 +588,25 @@ function normalizeCustomer(c) {
   return c;
 }
 function getCustomers() { return (db.get('customers').value() || []).map(normalizeCustomer); }
+
+// Every local partials/review-block.ejs needs, in one place. Five public pages
+// render that partial (game, upcoming, buy, ps-plus, requests) and each used to
+// repeat this list — which meant adding one local was five edits, and forgetting
+// one was a silent render error on whichever page was missed.
+//
+// gameTitle floats reviews naming that game to the top; pass '' on pages that
+// list many games at once (there is no single title to prefer there).
+function reviewBlockLocals(gameTitle) {
+  const pool = db.get('reviews').filter({ visible: true }).value() || [];
+  return {
+    reviews: reviewRules.sortForGame(pool, gameTitle || ''),
+    reviewStats: reviewRules.aggregate(pool),
+    reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
+    renterCount: reviewRules.countRenters(getCustomers())
+  };
+}
+
 function getCustomer(id) {
   const c = db.get('customers').find({ id: parseInt(id) }).value();
   return c ? normalizeCustomer(c) : c;
@@ -970,22 +989,16 @@ app.get('/how-it-works', (req, res) => {
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
   const rows = await gameRequests.listPublic();
-  // No title in play here (a request is by definition a game we don't stock
-  // yet), so the same shared pool as /buy — recency order, nothing floated.
-  const reqReviews = db.get('reviews').filter({ visible: true }).value() || [];
-  res.render('requests', {
+  res.render('requests', Object.assign({
     requests: rows,
     firstName: gameRequests.firstName,
     settings: getSiteSettings(),
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),
     msg: req.query.msg || null,
-    prefillTitle: (req.query.title || '').slice(0, 200),
-    reviews: reviewRules.sortForGame(reqReviews, ''),
-    reviewStats: reviewRules.aggregate(reqReviews),
-    reviewBadge: reviewRules.badgeFor,
-    reviewDisplayName: reviewRules.displayName,
-  });
+    prefillTitle: (req.query.title || '').slice(0, 200)
+    // No title: a request is by definition a game we don't stock yet.
+  }, reviewBlockLocals('')));
 });
 
 app.post('/requests/add', async (req, res) => {
@@ -1059,13 +1072,9 @@ app.get('/ps-plus', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : getPsplusSlots();
   const psplusSlug = psplusGame ? gameSlug(psplusGame.title) : null;
-  const psplusReviews = db.get('reviews').filter({ visible: true }).value() || [];
-  res.render('ps-plus', { byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(),
-    reviews: reviewRules.sortForGame(psplusReviews, psplusGame ? psplusGame.title : ''),
-    reviewStats: reviewRules.aggregate(psplusReviews),
-    reviewBadge: reviewRules.badgeFor,
-    reviewDisplayName: reviewRules.displayName,
-  });
+  // PS Plus has one real catalog entry behind it, so a review naming it floats.
+  res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
+    reviewBlockLocals(psplusGame ? psplusGame.title : '')));
 });
 
 app.get('/ps-plus/rent', async (req, res) => {
@@ -1470,19 +1479,14 @@ app.get('/buy', (req, res) => {
     });
   const priceGroups = groupSingleGamesByPrice(singleGames);
   const pendingCount = singleGames.filter(g => g.pending).length;
-  // Same shared review pool and slider as every game page — a buyer here is
-  // committing to a permanent purchase, the highest-trust decision on the
-  // site, so the review strip belongs here at least as much as on a rental.
-  const buyReviews = db.get('reviews').filter({ visible: true }).value() || [];
-  res.render('buy', {
+  // A buyer here is committing to a permanent purchase, the highest-trust
+  // decision on the site, so the review strip belongs at least as much as on a
+  // rental page. No title: this page lists many games at once.
+  res.render('buy', Object.assign({
     bundles, singleGames, priceGroups, pendingCount, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
     announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
-    orderError: req.query.order_error || null,
-    reviews: reviewRules.sortForGame(buyReviews, ''),
-    reviewStats: reviewRules.aggregate(buyReviews),
-    reviewBadge: reviewRules.badgeFor,
-    reviewDisplayName: reviewRules.displayName,
-  });
+    orderError: req.query.order_error || null
+  }, reviewBlockLocals('')));
 });
 
 app.get('/bundle/:slug', (req, res) => {
@@ -2917,13 +2921,8 @@ app.get('/game/:slug', async (req, res) => {
   // One shared pool, sorted so any review naming this game surfaces first. The
   // aggregate counts the whole pool on purpose — it describes the business, so
   // the same figure is true on every game page.
-  const gdReviews = db.get('reviews').filter({ visible: true }).value() || [];
-  res.render('game-detail', { game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null,
-    reviews: reviewRules.sortForGame(gdReviews, game.title),
-    reviewStats: reviewRules.aggregate(gdReviews),
-    reviewBadge: reviewRules.badgeFor,
-    reviewDisplayName: reviewRules.displayName,
-  });
+  res.render('game-detail', Object.assign({ game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null },
+    reviewBlockLocals(game.title)));
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
@@ -3407,13 +3406,8 @@ app.get('/upcoming/:slug', (req, res) => {
   // by sortForGame() the same way. It never surfaces as "reviews of this game";
   // it's the trust signal for the business, which is exactly what a customer
   // deciding whether to reserve an unreleased game needs to see.
-  const upReviews = db.get('reviews').filter({ visible: true }).value() || [];
-  res.render('upcoming-detail', { game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null,
-    reviews: reviewRules.sortForGame(upReviews, resolvedGame.title),
-    reviewStats: reviewRules.aggregate(upReviews),
-    reviewBadge: reviewRules.badgeFor,
-    reviewDisplayName: reviewRules.displayName,
-  });
+  res.render('upcoming-detail', Object.assign({ game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null },
+    reviewBlockLocals(resolvedGame.title)));
 });
 
 app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {

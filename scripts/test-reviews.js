@@ -252,4 +252,42 @@ check('an unparseable or missing date reports null rather than NaN', () => {
   assert.strictEqual(row.daysSinceAsked, null);
 });
 
+check('countRenters counts people, not rental records', () => {
+  // The number shown publicly says "renters", so someone who rented fourteen
+  // times has to count once. Overstating it would be the whole point of the
+  // figure lost.
+  assert.strictEqual(reviews.countRenters([
+    cust({ id: 1, customer_name: 'Velmor Echivarre' }),
+    cust({ id: 2, customer_name: 'Velmor Echivarre' }),
+    cust({ id: 3, customer_name: 'Velmor Echivarre' }),
+    cust({ id: 4, customer_name: 'Ram Avila' })
+  ]), 2);
+});
+
+check('countRenters matches names the same way the ask queue does', () => {
+  assert.strictEqual(reviews.countRenters([
+    cust({ id: 1, customer_name: 'Ram Avila' }),
+    cust({ id: 2, customer_name: '  ram   avila  ' }),
+    cust({ id: 3, customer_name: 'RAM AVILA' })
+  ]), 1);
+});
+
+check('countRenters only counts people who actually received a game', () => {
+  // Same rule as the ask queue: a reservation holder has paid for a slot but
+  // never played anything, so they are not yet a renter.
+  assert.strictEqual(reviews.countRenters([
+    cust({ id: 1, customer_name: 'A Renting', status: 'renting' }),
+    cust({ id: 2, customer_name: 'B Done', status: 'done' }),
+    cust({ id: 3, customer_name: 'C Bought', status: 'bought' }),
+    cust({ id: 4, customer_name: 'D Reserved', status: 'reservation' })
+  ]), 3);
+});
+
+check('countRenters ignores blank names and bad input', () => {
+  assert.strictEqual(reviews.countRenters([cust({ customer_name: '' }), cust({ customer_name: '   ' })]), 0);
+  assert.strictEqual(reviews.countRenters([]), 0);
+  assert.strictEqual(reviews.countRenters(null), 0);
+  assert.strictEqual(reviews.countRenters(undefined), 0);
+});
+
 console.log('\n' + passed + ' assertions passed');
