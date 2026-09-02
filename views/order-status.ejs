@@ -67,6 +67,10 @@
   <% if (msg === 'upgrade_started') { %><div class="ord-flash">Upgraded to priority — send the ₱100 below and we'll move you up.</div><% } %>
   <% if (msg === 'review_thanks') { %><div class="ord-flash">Thanks — we'll put this up once we've checked it.</div><% } %>
   <% if (msg === 'review_empty') { %><div class="ord-flash ord-flash-warn">Add a sentence before sending, so it's useful to the next renter.</div><% } %>
+  <% if (msg === 'pay_cancelled') { %><div class="ord-flash ord-flash-warn">Checkout cancelled — no payment was taken. Try again below.</div><% } %>
+  <% if (msg === 'pay_failed') { %><div class="ord-flash ord-flash-warn">We couldn't start checkout just now — please try again, or pay manually below.</div><% } %>
+  <% if (msg === 'pay_unavailable') { %><div class="ord-flash ord-flash-warn">Online payment isn't available right now — please pay manually below.</div><% } %>
+  <% if (msg === 'pay_returned') { %><div class="ord-flash">Got it — we're confirming your payment now.</div><% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -122,6 +126,18 @@
   <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>
+  <% if (payViaGateway) { %>
+  <div class="ord-step ord-step-gateway">
+    <div class="ord-step-label">Pay ₱<%= totalDue %> now</div>
+    <p class="ord-help">GCash, Maya or card — you'll be taken to a secure checkout page and brought right back here once it's done.</p>
+    <form method="POST" action="/order/<%= order.ref %>/pay">
+      <input type="hidden" name="k" value="<%= order.url_key %>">
+      <button type="submit" class="ord-btn-primary">💳 Pay now — ₱<%= totalDue %></button>
+    </form>
+  </div>
+  <details class="ord-manual-fallback">
+    <summary>Having trouble? Pay manually instead</summary>
+  <% } %>
   <div class="ord-step">
     <div class="ord-step-label">Step 1 — Send ₱<%= totalDue %></div>
 
@@ -172,6 +188,9 @@
       </form>
     </div>
   </div>
+  <% if (payViaGateway) { %>
+  </details>
+  <% } %>
   <script>
   (function(){
     var tabs = document.querySelectorAll('.ord-pay-tab');

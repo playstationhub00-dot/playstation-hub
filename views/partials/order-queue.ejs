@@ -63,6 +63,118 @@
   </label>
 </form>
 
+<!-- ── Manual Messenger order ──────────────────────────────────────────────
+     For a customer who never touches the site: you sent them your own
+     GCash/Maya QR in chat and already got paid there. This just records the
+     order and hands back its link — the same invoice + review page any
+     site order gets — to paste back into that same thread. -->
+<details class="oq-manual-order">
+  <summary>➕ Create order for a Messenger customer (already paid)</summary>
+  <form id="oqManualForm" class="oq-manual-form">
+    <div class="oq-manual-grid">
+      <label class="oq-manual-field oq-manual-full">
+        <span>Facebook name</span>
+        <input type="text" name="fb_name" placeholder="Their Facebook name" required>
+      </label>
+      <label class="oq-manual-field oq-manual-full">
+        <span>Game</span>
+        <select name="game_id" required>
+          <option value="">— Select a game —</option>
+          <% games.forEach(g => { %>
+          <option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Type</span>
+        <select name="mode" id="oqManualMode">
+          <option value="rent">Rent</option>
+          <option value="buy">Buy (permanent)</option>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Account</span>
+        <select name="account_type" id="oqManualType">
+          <option value="nt">Non-Trophy</option>
+          <option value="tr">Trophy</option>
+          <option value="ps4">PS4 Primary</option>
+        </select>
+      </label>
+      <label class="oq-manual-field" id="oqManualDaysWrap">
+        <span>Duration</span>
+        <select name="days">
+          <option value="7">Weekly</option>
+          <option value="30">Monthly</option>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Paid via</span>
+        <select name="method">
+          <option value="gcash">GCash</option>
+          <option value="maya">Maya</option>
+        </select>
+      </label>
+    </div>
+    <button type="submit" class="oq-btn-go" id="oqManualSubmit">Create order &amp; get link</button>
+    <div class="oq-manual-result" id="oqManualResult" hidden></div>
+  </form>
+</details>
+<script>
+(function(){
+  var modeSel = document.getElementById('oqManualMode');
+  var typeSel = document.getElementById('oqManualType');
+  var daysWrap = document.getElementById('oqManualDaysWrap');
+  var ps4Opt = typeSel ? typeSel.querySelector('option[value="ps4"]') : null;
+  function syncMode() {
+    var isBuy = modeSel.value === 'buy';
+    daysWrap.hidden = isBuy;
+    // PS4 Primary is a rent-only account type — a one-time purchase route
+    // (POST /order/buy's own single-game branch) never accepted it either.
+    if (ps4Opt) ps4Opt.hidden = isBuy;
+    if (isBuy && typeSel.value === 'ps4') typeSel.value = 'nt';
+  }
+  if (modeSel) { modeSel.addEventListener('change', syncMode); syncMode(); }
+
+  var form = document.getElementById('oqManualForm');
+  var result = document.getElementById('oqManualResult');
+  var submitBtn = document.getElementById('oqManualSubmit');
+  if (!form) return;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    submitBtn.disabled = true;
+    var original = submitBtn.textContent;
+    submitBtn.textContent = '… creating';
+    result.hidden = true;
+    fetch('/admin/orders/create-manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form))
+    })
+      .then(function(r){ return r.json().then(function(body){ return { ok: r.ok, body: body }; }); })
+      .then(function(res){
+        submitBtn.disabled = false;
+        submitBtn.textContent = original;
+        result.hidden = false;
+        if (!res.ok || !res.body.ok) {
+          result.className = 'oq-manual-result oq-manual-err';
+          result.textContent = '⚠ Could not create that order — check the game has a price set for this type/duration.';
+          return;
+        }
+        result.className = 'oq-manual-result oq-manual-ok';
+        result.innerHTML = '✅ ' + res.body.ref + ' created — ₱' + res.body.total + '. <button type="button" class="btn-copy rem-copy" data-msg="' +
+          res.body.url.replace(/"/g, '&quot;') + '">📋 Copy link</button>';
+      })
+      .catch(function(){
+        submitBtn.disabled = false;
+        submitBtn.textContent = original;
+        result.hidden = false;
+        result.className = 'oq-manual-result oq-manual-err';
+        result.textContent = '⚠ Something went wrong — try again.';
+      });
+  });
+})();
+</script>
+
 <div class="oq-zone oq-zone-act">Needs you <span class="oq-zone-n"><%= sortedQueue.length %></span></div>
 
 <% if (!sortedQueue.length) { %>

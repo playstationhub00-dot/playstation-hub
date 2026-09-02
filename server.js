@@ -899,6 +899,42 @@ function getPromoDiscountPct(promo, days) {
   return promo.discounts[days] || 0;
 }
 
+// Same rental pricing math as POST /order/create, pulled out so the admin's
+// manual "Messenger order" form prices a rental identically to a customer
+// placing it themselves — one set of numbers, not two that can drift apart.
+// Returns null when there's no reliable price to charge (missing tier data),
+// same as computeSwapReferencePrice does for the same reason.
+function computeRentPricing(game, type, days) {
+  if (!game || !['nt', 'tr', 'ps4'].includes(type) || !PROMO_DURATIONS.includes(days)) return null;
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const resolved = resolveGamePrices(game);
+  const priceType = type === 'ps4' ? 'nt' : type;
+  const base = resolved[priceType + '_price_' + days + 'd'] || 0;
+  if (!base) return null;
+  const pct = getPromoDiscountPct(promo, days);
+  const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+  const cat = game.price_category_id ? getPriceCategory(game.price_category_id) : null;
+  const snapshot = {
+    nt_price_7d: resolved.nt_price_7d || 0, nt_price_30d: resolved.nt_price_30d || 0,
+    tr_price_7d: resolved.tr_price_7d || 0, tr_price_30d: resolved.tr_price_30d || 0
+  };
+  return { amountDue, depositDue, priceTierName: cat ? cat.name : '', snapshot };
+}
+
+// Same one-time-purchase pricing math as POST /order/buy's single-game branch.
+function computeBuyPricing(game, type) {
+  if (!game || !['nt', 'tr'].includes(type)) return null;
+  const base = type === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
+  if (!base) return null;
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
+    ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
+  return { amountDue: price };
+}
+
 // Effective price for `game` at the given duration/account type/status, with the
 // active promo discount applied — the same number a walk-in customer would pay
 // today. Used to price a game swap's top-up. Returns null when there's no reliable
@@ -2073,6 +2109,7 @@ app.get('/order/:ref', async (req, res) => {
     order,
     settings: s,
     payMethods: (s.payment_methods || []).filter(m => m.enabled),
+    payViaGateway: !!process.env.PAYMONGO_SECRET_KEY,
     fbPage: s.fb_page_username || '',
     ownerOnline: !!(s.owner_online),
     announcement: getAnnouncement(),
@@ -2290,6 +2327,66 @@ app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
   });
   if (!result.ok) return res.status(422).json({ ok: false, reason: result.reason });
   res.json({ ok: true, url: result.url });
+});
+
+// Admin "Create order" for a customer who never touches the site — the owner
+// sends their own GCash/Maya QR over Messenger, gets paid there directly, and
+// records the order here afterwards. Priced with the exact same functions the
+// customer-facing /order/create and /order/buy routes use, so a Messenger
+// price never drifts from the site price. Skips straight from creation to
+// awaiting_qr — the same edge POST /admin/orders/:ref/mark-paid already uses
+// for "paid outside the site" — since payment already happened before this
+// order exists at all. Returns the order's own link (JSON, not a redirect)
+// so the owner can copy it straight into the same Messenger thread; that link
+// is also the customer's invoice and, once they've received the game, the
+// review prompt this project already ties to any order with a ref + key.
+app.post('/admin/orders/create-manual', requireAuth, async (req, res) => {
+  const { game_id, account_type, mode, fb_name } = req.body;
+  const game = getGame(game_id);
+  if (!game) return res.status(400).json({ ok: false, reason: 'bad_game' });
+  const name = (fb_name || '').trim();
+  if (!name) return res.status(400).json({ ok: false, reason: 'bad_name' });
+  const method = (req.body.method || '').trim().slice(0, 20) || 'manual';
+
+  let orderInput;
+  if (mode === 'rent') {
+    const type = ['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null;
+    const days = parseInt(req.body.days);
+    const pricing = type && computeRentPricing(game, type, days);
+    if (!pricing) return res.status(400).json({ ok: false, reason: 'bad_pricing' });
+    orderInput = {
+      game_id: game.id, game_title: game.title, account_type: type, days,
+      price_tier_name: pricing.priceTierName, price_snapshot: pricing.snapshot,
+      amount_due: pricing.amountDue, deposit_due: pricing.depositDue,
+      fb_name: name, session_id: null
+    };
+  } else if (mode === 'buy') {
+    const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+    const pricing = type && computeBuyPricing(game, type);
+    if (!pricing) return res.status(400).json({ ok: false, reason: 'bad_pricing' });
+    orderInput = {
+      game_id: game.id, game_title: game.title, account_type: type, days: null,
+      amount_due: pricing.amountDue, deposit_due: 0,
+      fb_name: name, session_id: null, is_buy: true
+    };
+  } else {
+    return res.status(400).json({ ok: false, reason: 'bad_mode' });
+  }
+
+  try {
+    const order = await orders.create(orderInput);
+    const r = await orders.transition(order.ref, 'awaiting_qr', {
+      payment_channel: 'messenger', payment_method: method
+    });
+    if (!r) return res.status(500).json({ ok: false, reason: 'transition_failed' });
+    res.json({
+      ok: true, ref: order.ref, url: SITE_URL + '/order/' + order.ref + '?k=' + order.url_key,
+      total: (order.amount_due || 0) + (order.deposit_due || 0)
+    });
+  } catch (e) {
+    console.error('[admin create-manual order]', e.message);
+    res.status(500).json({ ok: false, reason: 'create_failed' });
+  }
 });
 
 // PayMongo calls this. Everything it decides comes from lib/gateway.js, so this

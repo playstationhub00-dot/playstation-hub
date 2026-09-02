@@ -2888,6 +2888,13 @@ footer {
 .ord-alt-label { font-size: 0.76rem; color: #555; margin-bottom: 0.5rem; }
 .ord-upload input[type="file"] { width: 100%; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
 .ord-sent-form { margin-top: 0.4rem; }
+.ord-step-gateway { border-color: var(--ps-blue); background: rgba(0,112,209,0.06); margin-bottom: 0.9rem; }
+.ord-step-gateway .ord-step-label { color: var(--ps-blue); }
+.ord-manual-fallback { margin-bottom: 0.9rem; }
+.ord-manual-fallback summary { cursor: pointer; font-size: 0.8rem; color: #666; text-decoration: underline; padding: 0.4rem 0; list-style: none; }
+.ord-manual-fallback summary::-webkit-details-marker { display: none; }
+.ord-manual-fallback summary:hover { color: #aaa; }
+.ord-manual-fallback[open] summary { margin-bottom: 0.6rem; }
 
 .ord-online { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; border-radius: 9px; padding: 0.65rem 0.85rem; font-size: 0.82rem; font-weight: 700; margin-bottom: 0.85rem; }
 /* .ord-offline is already defined in Task 4 — do not redeclare it here. */
@@ -2898,6 +2905,20 @@ footer {
 .oq-online-form { margin-bottom: 1.25rem; }
 .oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
 .oq-online-toggle input { accent-color: #22c55e; }
+.oq-manual-order { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; margin-top: 0.85rem; padding: 0 1rem; }
+.oq-manual-order summary { cursor: pointer; padding: 0.85rem 0; font-size: 0.85rem; font-weight: 700; color: #aaa; list-style: none; }
+.oq-manual-order summary::-webkit-details-marker { display: none; }
+.oq-manual-order[open] summary { border-bottom: 1px solid #1a1a1a; }
+.oq-manual-form { padding: 1rem 0 1.1rem; }
+.oq-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-bottom: 0.9rem; }
+.oq-manual-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.72rem; color: #777; font-weight: 700; }
+.oq-manual-full { grid-column: 1 / -1; }
+.oq-manual-field input, .oq-manual-field select { background: #111; border: 1px solid #222; border-radius: 8px; padding: 0.55rem 0.7rem; color: #eee; font-size: 0.85rem; font-family: inherit; font-weight: 500; }
+.oq-manual-result { margin-top: 0.75rem; font-size: 0.82rem; padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.oq-manual-ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; }
+.oq-manual-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+.oq-manual-result .rem-copy { background: #1a1a1a; color: #ddd; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
+@media (max-width: 640px) { .oq-manual-grid { grid-template-columns: 1fr 1fr; } }
 .oq-empty { color: #555; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
 .oq-row { display: flex; gap: 1rem; align-items: flex-start; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 0.7rem; }
 .oq-qr_pending { border-color: rgba(0,112,209,0.4); }
@@ -3001,7 +3022,10 @@ body.light-mode .oq-row,
 body.light-mode .oq-ab-row,
 body.light-mode .oq-refund-row,
 body.light-mode .oq-online-toggle,
+body.light-mode .oq-manual-order,
 body.light-mode .oq-funnel { background: #fff; border-color: #ddd; }
+body.light-mode .oq-manual-field input,
+body.light-mode .oq-manual-field select { background: #f7f7f7; border-color: #ddd; color: #111; }
 body.light-mode .oq-stat-k,
 body.light-mode .oq-stat-s,
 body.light-mode .oq-zone-n,
