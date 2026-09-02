@@ -248,17 +248,8 @@
 </div>
 <% } %>
 
-<!-- MOST POPULAR SLIDER -->
-<div class="section" id="mostPopularSection">
-  <h2 class="section-title">Most Popular <a href="/browse" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></h2>
-  <div class="upcoming-slider-wrap">
-    <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
-    <div class="upcoming-slider" id="popularSlider">
-      <% featured.forEach(game => { %><div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
-    </div>
-    <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
-  </div>
-</div>
+<!-- UPCOMING GAMES (COMING SOON) -->
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true }) %>
 
 <!-- PRICE TIERS -->
 <% if (priceCategories && priceCategories.length) { %>
@@ -358,8 +349,17 @@
 </div>
 <% } %>
 
-<!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true }) %>
+<!-- MOST POPULAR SLIDER -->
+<div class="section" id="mostPopularSection">
+  <h2 class="section-title">Most Popular <a href="/browse" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></h2>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('popularSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="popularSlider">
+      <% featured.forEach(game => { %><div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('popularSlider',1)" aria-label="Next">&#8250;</button>
+  </div>
+</div>
 
 <!-- MOST PLAYED IN PS PLUS SLIDER -->
 <% if (psplusPopular.length > 0) { %>
@@ -684,8 +684,8 @@ function slideSection(id, dir) {
 
   // Slightly different speeds so the two rows never drift in lockstep, which
   // would read as one big moving block rather than two independent shelves.
-  autoDrift('newReleasesSlider', 30);
-  autoDrift('popularSlider', 24);
+  autoDrift('newReleasesSlider', 18);
+  autoDrift('popularSlider', 14);
 })();
 
 function openReserveModal(title) {
