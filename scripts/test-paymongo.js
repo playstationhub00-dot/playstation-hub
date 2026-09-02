@@ -39,7 +39,9 @@ check('checkout payload carries the amount in centavos and both order references
   assert.strictEqual(a.reference_number, 'PH-0039');
   assert.strictEqual(a.metadata.order_ref, 'PH-0039');
   assert.strictEqual(a.success_url, 'https://x/ok');
-  assert.deepStrictEqual(a.payment_method_types, ['gcash', 'paymaya', 'card']);
+  // QRPh first: it is the one active on this account today, and it is what a
+  // GCash or Maya user scans while those wallets await their own approval.
+  assert.deepStrictEqual(a.payment_method_types, ['qrph', 'gcash', 'paymaya', 'card']);
 });
 
 check('a valid plain-scheme signature verifies', () => {
