@@ -2105,9 +2105,14 @@ app.get('/order/:ref', async (req, res) => {
   // so posting it there is a paste rather than writing it a second time.
   const myReview = allReviews.find(r => r && r.order_ref === order.ref) || null;
   const fbReviewsLink = (getSiteSettings().message_templates || {}).reviews_link || '';
+  // "Paid" for display purposes only — deliberately not orders.isPaid(), which
+  // also treats 'waitlisted' as paid (a Fall in Line entry has never taken
+  // money, so it must never show a green Paid total).
+  const isPaidOrder = order.state !== 'waitlisted' && orders.isPaid(order.state);
   res.render('order-status', {
     order,
     settings: s,
+    isPaidOrder,
     payMethods: (s.payment_methods || []).filter(m => m.enabled),
     payViaGateway: !!process.env.PAYMONGO_SECRET_KEY,
     fbPage: s.fb_page_username || '',
@@ -2376,7 +2381,7 @@ app.post('/admin/orders/create-manual', requireAuth, async (req, res) => {
   try {
     const order = await orders.create(orderInput);
     const r = await orders.transition(order.ref, 'awaiting_qr', {
-      payment_channel: 'messenger', payment_method: method
+      payment_channel: 'messenger', payment_method: method, paid_at: new Date().toISOString()
     });
     if (!r) return res.status(500).json({ ok: false, reason: 'transition_failed' });
     res.json({
@@ -2494,6 +2499,13 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   if (order.is_reservation && order.state === 'verifying_payment') to = 'reserved';
   if (!to) return res.redirect('/admin?tab=orders&msg=order_bad_state');
   const patch = {};
+  // Owner confirming a payment is the moment it becomes true, not whenever the
+  // customer originally claimed to have sent it — stamped here so the order
+  // page can show a receipt line, same as the gateway webhook already does.
+  if (order.state === 'verifying_payment') {
+    patch.paid_at = new Date().toISOString();
+    if (!order.payment_method) patch.payment_method = 'manual';
+  }
   if (to === 'active') {
     // The rental clock starts when the owner actually signs them in, not when
     // the order was placed — a customer who paid overnight isn't billed for
@@ -2685,7 +2697,9 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
     await orders.transition(order.ref, 'verifying_payment', {});
   }
   const target = order.is_reservation ? 'reserved' : 'awaiting_qr';
-  const r = await orders.transition(order.ref, target, {});
+  const patch = { paid_at: new Date().toISOString() };
+  if (!order.payment_method) patch.payment_method = 'manual';
+  const r = await orders.transition(order.ref, target, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_marked_paid');
 });

@@ -51,6 +51,13 @@
   // with their PSID, which is the only way we ever learn which Facebook thread
   // belongs to this order.
   const mmLink = fbPage ? 'https://m.me/' + fbPage + '?ref=' + order.ref : '';
+
+  // Receipt line under the paid total. paid_at only exists on orders paid
+  // since this was added (2026-09-02) — older paid orders just show "Paid"
+  // with nothing underneath, since there is no timestamp to recover.
+  const PAY_METHOD_LABEL = { gcash: 'GCash', maya: 'Maya', gateway: 'Online payment', manual: 'Confirmed by us' };
+  const paidMethodLabel = order.payment_method ? (PAY_METHOD_LABEL[order.payment_method] || order.payment_method) : '';
+  const paidWhen = order.paid_at ? new Date(order.paid_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
 %>
 
 <div class="ord-page">
@@ -70,7 +77,10 @@
   <% if (msg === 'pay_cancelled') { %><div class="ord-flash ord-flash-warn">Checkout cancelled — no payment was taken. Try again below.</div><% } %>
   <% if (msg === 'pay_failed') { %><div class="ord-flash ord-flash-warn">We couldn't start checkout just now — please try again, or pay manually below.</div><% } %>
   <% if (msg === 'pay_unavailable') { %><div class="ord-flash ord-flash-warn">Online payment isn't available right now — please pay manually below.</div><% } %>
-  <% if (msg === 'pay_returned') { %><div class="ord-flash">Got it — we're confirming your payment now.</div><% } %>
+  <% if (msg === 'pay_returned' && !isPaidOrder) { %>
+  <div class="ord-flash" id="ordPayConfirming">Confirming your payment — this'll update in a few seconds.</div>
+  <script>setTimeout(function(){ location.reload(); }, 4000);</script>
+  <% } %>
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
@@ -85,7 +95,14 @@
     <% if (order.deposit_due > 0) { %>
     <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
     <% } %>
-    <% if (!order.is_waitlist) { %>
+    <% if (isPaidOrder) { %>
+    <div class="ord-total ord-total-paid">
+      <span>✓ Paid</span><span>₱<%= totalDue %></span>
+    </div>
+    <% if (paidMethodLabel || paidWhen) { %>
+    <div class="ord-paid-meta"><%= [paidMethodLabel, paidWhen].filter(Boolean).join(' · ') %></div>
+    <% } %>
+    <% } else if (!order.is_waitlist) { %>
     <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
     <% } %>
     <% if (order.deposit_due > 0) { %>
@@ -244,7 +261,7 @@
   <% } %>
 
   <% if (order.state === 'awaiting_qr') { %>
-  <div class="ord-step">
+  <div class="ord-step" id="ordQrStep">
     <div class="ord-step-label">Send your sign-in QR</div>
     <% if (ownerOnline) { %>
     <div class="ord-online">🟢 We're online right now — send your QR and we'll scan it straight away.</div>
@@ -324,6 +341,51 @@
   </div>
   <% } %>
 </div>
+
+<% if (isPaidOrder && (order.state === 'awaiting_qr' || order.state === 'reserved')) { %>
+<div class="ord-modal-wrap" id="ordPaidModal" hidden>
+  <div class="ord-modal">
+    <div class="ord-modal-icon">✓</div>
+    <p class="ord-modal-title">Payment received</p>
+    <p class="ord-modal-sub">₱<%= totalDue %> for <%= order.game_title %> · <%= order.ref %></p>
+    <div class="ord-modal-next">
+      <div class="ord-modal-next-label">Next step</div>
+      <% if (order.state === 'awaiting_qr') { %>
+      <p>Send us the sign-in QR from your console so we can set up your account.</p>
+      <% } else { %>
+      <p>Nothing else to do for now — we'll message you here or on Facebook when it's time to set up your account.</p>
+      <% } %>
+    </div>
+    <% if (order.state === 'awaiting_qr') { %>
+    <button type="button" class="ord-btn-primary" id="ordModalShowMe">Show me how</button>
+    <% } %>
+    <button type="button" class="ord-btn-link" id="ordModalLater">I'll do it later</button>
+  </div>
+</div>
+<script>
+(function(){
+  var key = 'ord_paid_seen_<%= order.ref %>';
+  var modal = document.getElementById('ordPaidModal');
+  if (!modal) return;
+  var seen = false;
+  try { seen = !!localStorage.getItem(key); } catch (e) {}
+  if (seen) return;
+  modal.hidden = false;
+  function dismiss() {
+    modal.hidden = true;
+    try { localStorage.setItem(key, '1'); } catch (e) {}
+  }
+  var later = document.getElementById('ordModalLater');
+  if (later) later.addEventListener('click', dismiss);
+  var showMe = document.getElementById('ordModalShowMe');
+  if (showMe) showMe.addEventListener('click', function(){
+    dismiss();
+    var target = document.getElementById('ordQrStep');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+})();
+</script>
+<% } %>
 
 <%- include('partials/footer') %>
 </body>
