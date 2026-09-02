@@ -573,6 +573,67 @@ function slideSection(id, dir) {
   slider.scrollBy({ left: dir * cardW * 2, behavior: 'smooth' });
 }
 
+// Auto-advance for the two top rows. Steps one card at a time and rests in
+// between rather than crawling continuously: every tile here is a tap target,
+// and a card that is still drifting when a finger arrives is a card that gets
+// mis-tapped. The reviews strip can crawl because nobody clicks a quote.
+(function () {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function autoSwipe(id, intervalMs) {
+    var slider = document.getElementById(id);
+    if (!slider || reduced) return;
+    // Nothing to advance through if the row already fits on screen.
+    if (slider.scrollWidth <= slider.clientWidth + 8) return;
+
+    var timer = null, stopped = false, hovered = false, onScreen = false;
+
+    function step() {
+      var card = slider.querySelector('.slider-card-wrap');
+      return card ? card.offsetWidth + 20 : 220;
+    }
+    function tick() {
+      if (stopped || hovered || !onScreen || document.hidden) return;
+      var max = slider.scrollWidth - slider.clientWidth;
+      // Rewind rather than dead-ending at the last card.
+      if (slider.scrollLeft >= max - 4) slider.scrollTo({ left: 0, behavior: 'smooth' });
+      else slider.scrollBy({ left: step(), behavior: 'smooth' });
+    }
+    // Once someone takes hold of the row, it is theirs — moving it under them
+    // from that point on is just fighting the person using it.
+    function stop() {
+      stopped = true;
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    timer = setInterval(tick, intervalMs);
+    slider.addEventListener('mouseenter', function () { hovered = true; });
+    slider.addEventListener('mouseleave', function () { hovered = false; });
+    // Real gestures only. A programmatic scrollBy also fires 'scroll', so
+    // listening for that would have the row stopping itself on its first move.
+    ['touchstart', 'pointerdown', 'wheel'].forEach(function (ev) {
+      slider.addEventListener(ev, stop, { passive: true });
+    });
+    var wrap = slider.closest('.upcoming-slider-wrap');
+    if (wrap) wrap.querySelectorAll('.slider-arrow').forEach(function (b) { b.addEventListener('click', stop); });
+
+    // Only advance while the row is actually in view, so a visitor who scrolls
+    // down to it finds it at the beginning instead of halfway through.
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entries) {
+        onScreen = entries[0].isIntersecting;
+      }, { threshold: 0.35 }).observe(slider);
+    } else {
+      onScreen = true;
+    }
+  }
+
+  // Deliberately different intervals: matching ones would have both rows
+  // lurching in lockstep, which reads as a page glitch rather than motion.
+  autoSwipe('newReleasesSlider', 4000);
+  autoSwipe('popularSlider', 5500);
+})();
+
 function openReserveModal(title) {
   document.getElementById('reserveGameTitle').textContent = title;
   document.getElementById('reserveModal').classList.add('active');
