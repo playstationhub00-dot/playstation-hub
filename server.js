@@ -7,6 +7,7 @@ const fs = require('fs');
 const XLSX = require('xlsx');
 const sharp = require('sharp');
 const session = require('express-session');
+const sessionStore = require('./lib/session-store');
 const computeAvailability = require('./lib/availability');
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
@@ -400,13 +401,24 @@ app.use(express.json({
 // cookie.secure below actually sends the cookie instead of silently withholding
 // it (which would lock the owner out of login).
 app.set('trust proxy', 1);
+// Sessions live in MongoDB and are signed with a secret that is stable across
+// restarts. Railway restarts on every deploy, and with an in-memory store and a
+// per-boot random secret that logged the owner out each time — several times an
+// hour on a busy day. See lib/session-store.js: both halves have to be fixed,
+// since either one alone still invalidates the login.
+const _sessionSecret = sessionStore.resolveSecret(process.env);
+if (_sessionSecret.source === 'ephemeral') {
+  console.warn('[session] no SESSION_SECRET or MONGO_URL — logins will not survive a restart');
+}
+const _sessionStore = sessionStore.createStore(_getMongoDb);
+_sessionStore.ensureIndexes().catch(e => console.error('[session] ensureIndexes', e.message));
+
 app.use(session({
-  // This repo is public, so a hardcoded fallback secret would be world-readable.
-  // Generate a strong random one per boot when the env var is absent — safe by
-  // default. The only cost is that existing sessions don't survive a restart,
-  // which already happens here anyway (sessions live in the default in-memory
-  // store), so the owner simply logs in again after a redeploy.
-  secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
+  // Prefer an explicit SESSION_SECRET; this repo is public so it can never be
+  // hardcoded. Falls back to one derived from MONGO_URL, which is stable and
+  // already secret, then to random-per-boot as a last resort.
+  secret: _sessionSecret.secret,
+  store: _sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
