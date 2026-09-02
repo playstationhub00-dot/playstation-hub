@@ -1457,10 +1457,18 @@ app.get('/buy', (req, res) => {
     });
   const priceGroups = groupSingleGamesByPrice(singleGames);
   const pendingCount = singleGames.filter(g => g.pending).length;
+  // Same shared review pool and slider as every game page — a buyer here is
+  // committing to a permanent purchase, the highest-trust decision on the
+  // site, so the review strip belongs here at least as much as on a rental.
+  const buyReviews = db.get('reviews').filter({ visible: true }).value() || [];
   res.render('buy', {
     bundles, singleGames, priceGroups, pendingCount, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
     announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
-    orderError: req.query.order_error || null
+    orderError: req.query.order_error || null,
+    reviews: reviewRules.sortForGame(buyReviews, ''),
+    reviewStats: reviewRules.aggregate(buyReviews),
+    reviewBadge: reviewRules.badgeFor,
+    reviewDisplayName: reviewRules.displayName,
   });
 });
 
