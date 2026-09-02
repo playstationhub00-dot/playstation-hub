@@ -249,7 +249,7 @@
 <% } %>
 
 <!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true }) %>
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true, viewAllHref: '/browse#comingSoon' }) %>
 
 <!-- PRICE TIERS -->
 <% if (priceCategories && priceCategories.length) { %>
@@ -608,6 +608,10 @@ function slideSection(id, dir) {
     var clones = originals.map(function (node) {
       var c = node.cloneNode(true);
       c.setAttribute('aria-hidden', 'true');
+      // The card itself is the link in the Coming Soon row, while the game rows
+      // wrap theirs in a div — so the clone has to be checked as well as its
+      // descendants, or half the duplicates stay in the tab order.
+      if (c.matches('a, button')) c.setAttribute('tabindex', '-1');
       c.querySelectorAll('a, button').forEach(function (el) { el.setAttribute('tabindex', '-1'); });
       slider.appendChild(c);
       return c;
@@ -685,6 +689,7 @@ function slideSection(id, dir) {
   // Slightly different speeds so the two rows never drift in lockstep, which
   // would read as one big moving block rather than two independent shelves.
   autoDrift('newReleasesSlider', 18);
+  autoDrift('upcomingSlider', 16);
   autoDrift('popularSlider', 14);
 })();
 

@@ -2507,7 +2507,10 @@ footer {
   .gc2-card .gc2-status,
   .gc2-card .gc2-buy-price,
   .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta {
+  .gc2-card .gc2-cta,
+  .upcoming-card .cs-plat,
+  .upcoming-card .cs-meta,
+  .upcoming-card .cs-cta {
     position: absolute;
     opacity: 0;
     transform: translateY(6px);
@@ -2517,11 +2520,14 @@ footer {
   .gc2-card .gc2-plat,
   .gc2-card .gc2-status,
   .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note {
+  .gc2-card .gc2-bundle-note,
+  .upcoming-card .cs-plat,
+  .upcoming-card .cs-meta {
     left: 0.85rem;
     right: 0.85rem;
   }
-  .gc2-card .gc2-cta {
+  .gc2-card .gc2-cta,
+  .upcoming-card .cs-cta {
     right: 0.85rem;
     width: auto;
   }
@@ -2534,7 +2540,13 @@ footer {
   .gc2-card:focus .gc2-status,
   .gc2-card:focus .gc2-buy-price,
   .gc2-card:focus .gc2-bundle-note,
-  .gc2-card:focus .gc2-cta {
+  .gc2-card:focus .gc2-cta,
+  .upcoming-card:hover .cs-plat,
+  .upcoming-card:hover .cs-meta,
+  .upcoming-card:hover .cs-cta,
+  .upcoming-card:focus .cs-plat,
+  .upcoming-card:focus .cs-meta,
+  .upcoming-card:focus .cs-cta {
     position: static;
     opacity: 1;
     transform: translateY(0);
@@ -2547,7 +2559,10 @@ footer {
   .gc2-card .gc2-status,
   .gc2-card .gc2-buy-price,
   .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta {
+  .gc2-card .gc2-cta,
+  .upcoming-card .cs-plat,
+  .upcoming-card .cs-meta,
+  .upcoming-card .cs-cta {
     transition: none;
   }
 }

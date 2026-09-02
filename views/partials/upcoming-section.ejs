@@ -1,14 +1,22 @@
 <% if (upcoming.length > 0) { %>
-<div class="section" data-upcoming="1" style="<%= typeof noBorderTop !== 'undefined' && noBorderTop ? '' : 'border-top:1px solid #1a1a1a;' %>padding-bottom:0;">
+<div class="section" data-upcoming="1" id="comingSoon" style="<%= typeof noBorderTop !== 'undefined' && noBorderTop ? '' : 'border-top:1px solid #1a1a1a;' %>padding-bottom:0;">
   <h2 class="section-title" style="color:#fff;">
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">
       <span style="background:linear-gradient(135deg,#7b2ff7,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1em;">🔜</span>
       Coming Soon
     </span>
     <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">Open for Reservation</span>
+    <%# A page that already lists every Coming Soon game (browse) has nothing to
+        link out to, so it keeps the collapse toggle instead. The homepage shows
+        a trimmed set and passes viewAllHref to get the same View All the other
+        homepage rows use. %>
+    <% if (typeof viewAllHref !== 'undefined' && viewAllHref) { %>
+    <a href="<%= viewAllHref %>" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
+    <% } else { %>
     <button type="button" class="section-toggle-btn" onclick="toggleCollapsible('upcomingBody', this)" aria-label="Collapse Coming Soon">▾</button>
+    <% } %>
   </h2>
-  <div class="collapsible-body" id="upcomingBody">
+  <div class="<%= (typeof viewAllHref !== 'undefined' && viewAllHref) ? '' : 'collapsible-body' %>" id="upcomingBody">
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="upcomingSlider">
