@@ -447,6 +447,11 @@
                   <% if (isRenting || isReservation) { %>
                   <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('confirmation', c) %>" title="Copy confirmation message">📋</button>
                   <% } %>
+                  <%# Once they're done, the useful message is the thank-you that
+                      carries the review ask — the confirmation no longer applies. %>
+                  <% if (c.status === 'done') { %>
+                  <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('return_complete', c) %>" title="Copy thank-you + review ask">⭐</button>
+                  <% } %>
                   <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
                   <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
                     <button type="submit" class="btn-delete">🗑</button>

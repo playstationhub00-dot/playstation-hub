@@ -892,6 +892,25 @@ function getSiteSettings() {
       db.set('site_settings.message_templates.expiry_overdue', fixed).write();
       s.message_templates.expiry_overdue = fixed;
     }
+
+    // Same reason, for the review ask moving moments. The ask now runs at
+    // sign-in and again once the deposit is back; it used to sit at the bottom
+    // of the due-today message, under return steps and the deposit line. Both
+    // of those templates are already stored, so the defaults above would never
+    // reach a live site — only a token swap does. Everything else the owner
+    // has written in either message is left exactly as it is.
+    const confTpl = s.message_templates.confirmation;
+    if (typeof confTpl === 'string' && !confTpl.includes('{review_line_setup}')) {
+      const fixed = confTpl.replace(/\s+$/, '') + '\n\n{review_line_setup}';
+      db.set('site_settings.message_templates.confirmation', fixed).write();
+      s.message_templates.confirmation = fixed;
+    }
+    const todayTpl = s.message_templates.expiry_today;
+    if (typeof todayTpl === 'string' && todayTpl.includes('{review_line}')) {
+      const fixed = todayTpl.replace(/\n*\{review_line\}/g, '').replace(/\s+$/, '');
+      db.set('site_settings.message_templates.expiry_today', fixed).write();
+      s.message_templates.expiry_today = fixed;
+    }
   }
   // Payment methods start disabled: until the owner has uploaded a QR and
   // filled in the account details, showing a customer an empty GCash panel is

@@ -489,6 +489,18 @@ Message us anytime to reserve your slot! 😊</textarea>
               <textarea name="expiry_overdue" rows="12" style="width:100%;font-family:inherit;"><%= messageTemplates.expiry_overdue %></textarea>
             </div>
             <div class="form-group">
+              <label>✅ Return complete — account back, deposit sent <span style="color:#555;font-size:0.7rem;">(where the review ask lands)</span></label>
+              <textarea name="return_complete" rows="9" style="width:100%;font-family:inherit;"><%= messageTemplates.return_complete %></textarea>
+            </div>
+            <div class="form-group">
+              <label>⭐ Review ask — at sign-in <span style="color:#555;font-size:0.7rem;">(goes inside the confirmation message; disappears for customers with no order link)</span></label>
+              <textarea name="review_line_setup" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.review_line_setup %></textarea>
+            </div>
+            <div class="form-group">
+              <label>⭐ Review ask — at return <span style="color:#555;font-size:0.7rem;">(goes inside the return-complete message)</span></label>
+              <textarea name="review_line" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.review_line %></textarea>
+            </div>
+            <div class="form-group">
               <label>💸 Late fee — deposit still has value left</label>
               <textarea name="late_fee_line" rows="4" style="width:100%;font-family:inherit;"><%= messageTemplates.late_fee_line %></textarea>
             </div>

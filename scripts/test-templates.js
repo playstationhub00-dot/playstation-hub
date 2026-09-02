@@ -183,12 +183,43 @@ check('a half-linked customer is treated as unlinked', () => {
   assert.strictEqual(t.render('a\n{review_line}', keyOnly, tpl, {}), 'a');
 });
 
-check('the shipped expiry_today asks for a review and confirmation no longer does', () => {
-  // The ask used to sit in the confirmation message, at rental start, pointing
-  // at Facebook — which is why the site's own review section stayed empty.
-  assert.ok(t.DEFAULT_TEMPLATES.expiry_today.includes('{review_line}'));
+check('the ask ships at exactly two moments: signed in, and returned', () => {
+  // What customers actually review here is the service — "legit and fast",
+  // "zero issues with the activation" — not the game, which they already knew
+  // before renting. Both facts are true by the time they are signed in, so the
+  // ask lands there and again once the deposit is back. Deliberately NOT in
+  // expiry_today as well: three asks in one rental is nagging, and that
+  // message is already doing the work of return steps and the deposit line.
+  assert.ok(t.DEFAULT_TEMPLATES.confirmation.includes('{review_line_setup}'));
+  assert.ok(t.DEFAULT_TEMPLATES.return_complete.includes('{review_line}'));
+  assert.ok(!t.DEFAULT_TEMPLATES.expiry_today.includes('{review_line}'));
+  // Still the site's own review page, never Facebook — that split is what left
+  // the site's review section empty for months.
   assert.ok(!t.DEFAULT_TEMPLATES.confirmation.includes('{reviews_link}'));
   assert.ok(t.DEFAULT_TEMPLATES.review_line.includes('{review_link}'));
+  assert.ok(t.DEFAULT_TEMPLATES.review_line_setup.includes('{review_link}'));
+});
+
+check('both ask lines collapse for a customer with no order link', () => {
+  // ~300 records predate the web ordering flow and carry no ref/key. They must
+  // get a clean message, not a sentence trailing a broken link.
+  const tpl = Object.assign({}, TPL, {
+    review_line: 'Review us: {review_link}',
+    review_line_setup: 'How was setup? {review_link}'
+  });
+  assert.strictEqual(t.render('a\n{review_line_setup}', TR, tpl, {}), 'a');
+  assert.strictEqual(t.render('a\n{review_line}', TR, tpl, {}), 'a');
+  assert.strictEqual(
+    t.render('{review_line_setup}', WEB, tpl, {}),
+    'How was setup? https://site.example/order/PH-0039?k=abc123def456'
+  );
+});
+
+check('the shipped ask lines are about the service, not the game', () => {
+  // The whole reason this moved to sign-in time. If the copy asked "how was
+  // the game?" the moment would be wrong again.
+  const both = t.DEFAULT_TEMPLATES.review_line_setup + ' ' + t.DEFAULT_TEMPLATES.return_complete;
+  assert.ok(!/how was the game|enjoy the game\?/i.test(both));
 });
 
 console.log('\n' + passed + ' assertions passed');
