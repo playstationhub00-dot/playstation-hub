@@ -125,24 +125,37 @@ assertions, no credentials or network required:
   malformed payloads, with the order ref falling back from `reference_number` to
   `metadata.order_ref`.
 
-**Signature scheme — unresolved, must be confirmed before live keys.** PayMongo's
-current documentation says only "compute HMAC-SHA256 of the raw request body";
-their older scheme used a composite `t=…,te=…,li=…` header where the signed
-string was `timestamp.body`. These are incompatible: choosing wrong either
-rejects every genuine webhook or accepts forged ones. **Both are implemented and
-tested**, and the live scheme must be confirmed against a captured payload from
-a real test webhook before this handles live money.
+**Signature scheme — neutralised rather than resolved.** PayMongo's current
+documentation says only "compute HMAC-SHA256 of the raw request body"; their
+older scheme used a composite `t=…,te=…,li=…` header signing `timestamp.body`.
+Choosing wrong either rejects every genuine webhook or accepts forged ones, so
+**both are implemented and both are tested**. A real sandbox webhook verified
+successfully on 2026-09-02, which proves the live scheme is one of the two —
+but not which. Reading it off a delivery in PayMongo's dashboard would settle it
+for the record; nothing depends on knowing, because both paths are covered.
 
-**Still blocked on keys:**
+## Verified end to end in sandbox (2026-09-02)
 
-- The HTTP calls themselves — creating the session and reading the response
-  `checkout_url`.
-- **Raw-body capture on the webhook route.** `server.js` applies
-  `express.json()` globally, which re-serialises the body; any byte that shifts
-  breaks the signature on a legitimate request. The webhook route needs the raw
-  bytes mounted ahead of that middleware.
-- Persisting processed event ids and the intent↔order link.
-- The Pay now button and the admin reconciliation view.
+A real GCash test payment on order PH-0044, ₱199:
+
+- Checkout Session created; PayMongo displayed **₱199.00** from `19900`
+  centavos, confirming the conversion against the live API rather than only in
+  unit tests.
+- `reference_number` surfaced as **PH-0044** in PayMongo's own UI.
+- Webhook delivered, **signature verified**, event normalised, `decide()`
+  returned `accept`, and the order advanced `awaiting_payment → awaiting_qr`.
+- Abandoning checkout left the order untouched at `awaiting_payment`.
+- A second pay attempt on the now-unpayable order was refused with `msg=stale`
+  instead of creating a duplicate session.
+
+**Still to build:**
+
+- The Pay now button on the order page, behind a settings flag. The route works;
+  it currently has no UI, which is why the test drove it by form POST.
+- The admin reconciliation view for payments recorded with `needs_review`
+  (short, orphaned, or arriving against an unpayable order).
+- A live-mode switch: currently the key in `PAYMONGO_SECRET_KEY` decides test
+  versus live implicitly by its prefix.
 
 **Also outstanding**, deliberately not built ahead of the API:
 
