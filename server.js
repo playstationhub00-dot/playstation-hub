@@ -11,6 +11,8 @@ const computeAvailability = require('./lib/availability');
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
 const reviewRules = require('./lib/reviews');
+const gatewayRules = require('./lib/gateway');
+const paymongo = require('./lib/paymongo');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -381,7 +383,18 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 // Serve uploads from persistent data directory
 app.use('/uploads', express.static(uploadsDir));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// A webhook signature is computed over the exact bytes the provider sent, and
+// express.json() re-serialises the body — key order or spacing shifting by one
+// byte breaks verification on a perfectly legitimate request. The verify hook
+// runs before parsing, so it can keep the original bytes. Only stashed for
+// webhook paths, so ordinary requests don't each hold a spare copy of their body.
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl && req.originalUrl.startsWith('/webhooks/')) {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
 // Railway/Cloudflare terminate TLS and forward over http, so Express only sees
 // a secure request via X-Forwarded-Proto — trust the first proxy hop so
 // cookie.secure below actually sends the cookie instead of silently withholding
@@ -2201,6 +2214,101 @@ app.post('/order/:ref/review', async (req, res) => {
   }).write();
   db.set('nextReviewId', id + 1).write();
   res.redirect(back + '&msg=review_thanks');
+});
+
+// ── Online payments (PayMongo) ───────────────────────────────────────────────
+// Hosted checkout: the customer is redirected to PayMongo, so card details
+// never reach this server and PCI scope stays out of the codebase. Every money
+// rule lives in lib/gateway.js; this route only builds the request.
+app.post('/order/:ref/pay', async (req, res) => {
+  const secretKey = process.env.PAYMONGO_SECRET_KEY;
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  const back = '/order/' + order.ref + '?k=' + order.url_key;
+  // Without a key the button should never have rendered; failing here rather
+  // than throwing keeps the customer on a page that still works.
+  if (!secretKey) return res.redirect(back + '&msg=pay_unavailable');
+  if (!gatewayRules.PAYABLE_STATES.includes(order.state)) return res.redirect(back + '&msg=stale');
+
+  const amountCentavos = gatewayRules.amountDueCentavos(order);
+  if (amountCentavos <= 0) return res.redirect(back + '&msg=stale');
+
+  try {
+    const r = await fetch(paymongo.CHECKOUT_SESSIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': paymongo.authHeader(secretKey),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(paymongo.checkoutPayload(order, {
+        amountCentavos,
+        successUrl: SITE_URL + back + '&msg=pay_returned',
+        cancelUrl: SITE_URL + back + '&msg=pay_cancelled'
+      }))
+    });
+    const body = await r.json();
+    const checkoutUrl = body && body.data && body.data.attributes && body.data.attributes.checkout_url;
+    if (!r.ok || !checkoutUrl) {
+      console.error('[paymongo checkout]', r.status, JSON.stringify(body && body.errors || body).slice(0, 400));
+      return res.redirect(back + '&msg=pay_failed');
+    }
+    // Stored so a webhook can still be tied to this order if the reference and
+    // metadata are ever both missing from the payload.
+    await orders.setCheckoutSession(order.ref, body.data.id);
+    res.redirect(checkoutUrl);
+  } catch (e) {
+    console.error('[paymongo checkout]', e.message);
+    res.redirect(back + '&msg=pay_failed');
+  }
+});
+
+// PayMongo calls this. Everything it decides comes from lib/gateway.js, so this
+// handler only verifies the sender, normalises the payload, and applies the
+// decision. Always answers 200 once the signature checks out — a non-2xx makes
+// PayMongo retry, and retrying will not fix an order that is in the wrong state.
+app.post('/webhooks/paymongo', async (req, res) => {
+  const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
+  // Fail closed. With no secret configured every request is unverifiable, and
+  // accepting unverified payment events would let anyone mark orders paid.
+  if (!secret) {
+    console.error('[paymongo webhook] no PAYMONGO_WEBHOOK_SECRET set — rejecting');
+    return res.status(503).send('not configured');
+  }
+  if (!paymongo.verifySignature(req.rawBody, req.get('Paymongo-Signature'), secret)) {
+    console.error('[paymongo webhook] bad signature');
+    return res.status(400).send('bad signature');
+  }
+
+  const event = paymongo.normalizeEvent(req.body);
+  const order = event.orderRef ? await orders.getByRef(event.orderRef) : null;
+  const processed = await orders.wasEventProcessed(event.id) ? [event.id] : [];
+  const decision = gatewayRules.decide({ event, order, processedIds: processed });
+
+  if (decision.action === 'accept' || decision.action === 'accept_over') {
+    // Claim the event before touching the order, so a retry arriving mid-flight
+    // loses the race rather than applying the payment twice.
+    const claimed = await orders.recordEvent(event.id, { order_ref: event.orderRef, amount: event.amountCentavos });
+    if (!claimed) return res.status(200).send('duplicate');
+    // awaiting_payment → awaiting_qr is the existing "payment confirmed outside
+    // the normal verify step" path, which is exactly what a gateway settlement
+    // is — the owner has nothing left to check.
+    await orders.transition(order.ref, 'awaiting_qr', {
+      payment_channel: 'paymongo',
+      payment_method: 'gateway',
+      paid_amount_centavos: decision.paid,
+      paid_at: new Date().toISOString(),
+      overpaid_by_centavos: decision.overBy || 0
+    });
+  } else if (decision.action !== 'duplicate') {
+    // Short, orphaned, unpayable and unsettled events are all recorded and left
+    // for a human. None of them should quietly disappear.
+    console.error('[paymongo webhook]', decision.action, decision.reason, event.orderRef || '(no ref)', event.id);
+    await orders.recordEvent(event.id, {
+      order_ref: event.orderRef, amount: event.amountCentavos,
+      action: decision.action, reason: decision.reason, needs_review: true
+    });
+  }
+  res.status(200).send(decision.action);
 });
 
 // QR upload is website-only by design: the countdown is the whole mechanism,
