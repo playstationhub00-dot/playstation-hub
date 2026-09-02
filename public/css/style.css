@@ -1440,10 +1440,14 @@ nav {
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
   .home-page #newReleasesSection { order: 15; }
-  .home-page #mostPopularSection { order: 20; }
+  /* Coming Soon sits between the two game rows, matching desktop. They share
+     three titles, and back to back that reads as the page repeating itself.
+     Mobile order is set here rather than by DOM position, so swapping the
+     sections in index.ejs does nothing on a phone without this. */
+  .home-page .section[data-upcoming] { order: 20; }
   .home-page .tier-section { order: 30; }
   .home-page .spotlight-section { order: 40; }
-  .home-page .section[data-upcoming] { order: 50; }
+  .home-page #mostPopularSection { order: 50; }
   .home-page #mostPlayedPsplusSection { order: 60; }
   .home-page .promo-section { order: 70; }
   .home-page .why-section { order: 80; }
