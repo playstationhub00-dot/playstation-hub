@@ -380,6 +380,12 @@
           <% } %>
         </td>
         <td class="oq-lact">
+          <%# Only present on orders that can actually be reviewed and haven't
+              been yet — server.js attaches review_msg, and its absence is the
+              whole condition. %>
+          <% if (o.review_msg) { %>
+          <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">📋</button>
+          <% } %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
             <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
           </form>

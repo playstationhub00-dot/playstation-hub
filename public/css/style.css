@@ -3036,6 +3036,15 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-lact { text-align: right; white-space: nowrap; }
 .oq-lact-del { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; line-height: 1; padding: 0.32rem 0.5rem; cursor: pointer; font-family: inherit; }
 .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
+/* Review-ask copy button, paired with the delete button in the same cell. The
+   form is block by default, so it needs to go inline for the two to sit side by
+   side. The .rem-copy chrome is overridden down to the delete button's ghost
+   style so they read as one control group — same precedent as the
+   .oq-manual-result .rem-copy override above. Amber, not red: it is the safe
+   action of the pair. */
+.oq-lact form { display: inline-block; }
+.oq-lact .rem-copy { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; font-weight: 400; line-height: 1; padding: 0.32rem 0.5rem; margin-right: 0.3rem; }
+.oq-lact .rem-copy:hover { border-color: #f59e0b; color: #f59e0b; }
 .oq-st { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
 .oq-st-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: currentColor; }
 .oq-st-live { color: #22c55e; }
@@ -3078,6 +3087,8 @@ body.light-mode .oq-tbl th,
 body.light-mode .oq-grp td { background: #f6f7f9; }
 body.light-mode .oq-lact-del { border-color: #ddd; color: #999; }
 body.light-mode .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
+body.light-mode .oq-lact .rem-copy { border-color: #ddd; color: #999; }
+body.light-mode .oq-lact .rem-copy:hover { border-color: #f59e0b; color: #f59e0b; }
 body.light-mode .oq-period select,
 body.light-mode .oq-search { background: #f8f9fa; border-color: #ccc; color: #111; }
 body.light-mode .oq-chip { border-color: #ccc; color: #555; }

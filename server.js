@@ -3414,6 +3414,35 @@ app.get('/admin', requireAuth, async (req, res) => {
   ledgerOrders = [...ledgerOrders].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   );
+  // A ready-to-paste review ask, attached to the orders that can actually carry
+  // one. Built here rather than in the template so the reviewable-state list and
+  // the wording live in one place — REVIEWABLE_STATES is the same rule the
+  // customer's own order page uses to decide whether to show the review form, so
+  // the button can never offer an ask the page would then refuse to accept.
+  //
+  // The wording itself comes from the stored message templates, not from a
+  // string here: editing it in Admin -> Message Templates changes the Messenger
+  // message and this button together, with no second copy to drift.
+  {
+    const reviewedRefs = new Set((reviews || []).map(r => r && r.order_ref).filter(Boolean));
+    const tpls = getSiteSettings().message_templates || {};
+    const siteUrl = tpls.website_link || '';
+    ledgerOrders.forEach(o => {
+      // No key means no customer-facing page to send them to — the same reason
+      // lib/templates.js collapses the ask for hand-added customers.
+      if (!o || !o.url_key || !siteUrl) return;
+      if (!reviewRules.REVIEWABLE_STATES.includes(o.state)) return;
+      if (reviewedRefs.has(o.ref)) return;
+      // 'closed' is the returned-and-refunded moment, which asks about the whole
+      // rental; everything earlier is still in progress, so it asks about how
+      // ordering and set-up went.
+      const ask = (o.state === 'closed' ? tpls.review_line : tpls.review_line_setup) || '';
+      if (!ask) return;
+      const link = siteUrl + '/order/' + o.ref + '?k=' + o.url_key;
+      const first = String(o.fb_name || '').trim().split(/\s+/)[0] || 'there';
+      o.review_msg = '👋 Hi ' + first + '!\n\n' + ask.replace(/\{review_link\}/g, link);
+    });
+  }
   // Month headers carry their own count and peso subtotal, so the running total
   // always describes the rows directly beneath it. Paid orders only — an order
   // that was never paid contributed no money and must not inflate the subtotal.
