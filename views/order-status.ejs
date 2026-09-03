@@ -153,7 +153,10 @@
     </form>
   </div>
   <details class="ord-manual-fallback">
-    <summary>Having trouble? Pay manually instead</summary>
+    <%# Only name PayPal when it is actually switched on — this link opens the
+        section that holds it, so mentioning it while it is off would promise a
+        method that isn't there. %>
+    <summary><%= paypalQuote ? 'Having trouble? Pay with PayPal or send it manually' : 'Having trouble? Pay manually instead' %></summary>
   <% } %>
   <div class="ord-step">
     <%# The amount differs per method — PayPal adds fees on top — so this
