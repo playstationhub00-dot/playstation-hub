@@ -5513,6 +5513,20 @@ async function handleMessage(senderId, text) {
       const gameList = games.slice(0, 20).map(g =>
         `${g.title} (${g.platform}) — NT: ₱${g.nt_price_7d}/₱${g.nt_price_30d}${g.tr_price_7d ? `, TR: ₱${g.tr_price_7d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
       ).join('\n');
+      // What the bot tells customers about paying, derived from what is
+      // actually switched on rather than written out here. Enabling PayPal or
+      // Maya later updates the bot on its own, the same way the checkout page
+      // picks them up — a hardcoded line went stale the moment the gateway
+      // went live, and told customers to use GCash long after checkout existed.
+      const paySettings = getSiteSettings();
+      const enabledPay = (paySettings.payment_methods || [])
+        .filter(m => m && m.enabled)
+        .map(m => m.label);
+      const manualPay = enabledPay.length ? enabledPay.join(' / ') : '';
+      const payLine = process.env.PAYMONGO_SECRET_KEY
+        ? 'Pay online at checkout — QRPh, scan with GCash, Maya or any bank app'
+          + (manualPay ? '; or send manually via ' + manualPay : '')
+        : (manualPay ? 'Payment via ' + manualPay : 'Payment details are sent with each order');
       const trainingExamples = (db.get('bot_training').value() || []).slice(0, 30);
       const examplesText = trainingExamples.length > 0
         ? '\n\nHere are real examples of how the owner replies to customers (learn this style exactly):\n' +
@@ -5528,10 +5542,10 @@ async function handleMessage(senderId, text) {
 Business info:
 - Rent PS5/PS4 games for Weekly or Monthly durations
 - Non-Trophy account (play on our account) and Trophy account (earn trophies on your own PSN)
-- Payment via GCash
+- ${payLine}
 - FREE 3-hour trial before renting or buying
 - Also offer permanent/lifetime Buy access
-- Website: https://playstation-hub-production.up.railway.app
+- Website: ${SITE}
 ${examplesText}
 
 Available games:
