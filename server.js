@@ -950,6 +950,26 @@ function getSiteSettings() {
     ]).write();
     s.payment_methods = db.get('site_settings.payment_methods').value();
   }
+  // PayPal joins the existing methods rather than getting its own subsystem.
+  // Written as a migration as well as a seed, because every existing install
+  // already has the gcash/maya pair and would otherwise never gain the third.
+  // Idempotent: this runs on every getSiteSettings() call.
+  if (!(s.payment_methods || []).some(m => m && m.key === 'paypal')) {
+    const withPaypal = (s.payment_methods || []).concat([
+      { key: 'paypal', label: 'PayPal', account_name: '', account_number: '', qr_image: '', enabled: false }
+    ]);
+    db.set('site_settings.payment_methods', withPaypal).write();
+    s.payment_methods = withPaypal;
+  }
+  // Fee recovery for PayPal orders. Settings rather than constants because
+  // PayPal's published rates change, and because the first real payment is the
+  // only reliable way to learn what the fee actually lands at.
+  if (s.paypal_fee_percent === undefined) { db.set('site_settings.paypal_fee_percent', 4.4).write(); s.paypal_fee_percent = 4.4; }
+  if (s.paypal_fee_fixed === undefined) { db.set('site_settings.paypal_fee_fixed', 15).write(); s.paypal_fee_fixed = 15; }
+  if (s.paypal_payout_usd === undefined) { db.set('site_settings.paypal_payout_usd', 0.5).write(); s.paypal_payout_usd = 0.5; }
+  // The floor of the FX fallback chain — must always be set, so the dollar
+  // estimate works before the first live fetch ever succeeds.
+  if (s.fx_manual_rate === undefined) { db.set('site_settings.fx_manual_rate', 62.5).write(); s.fx_manual_rate = 62.5; }
   // The m.me handle is a setting rather than a constant because the whole
   // referral link depends on it, and getting it wrong silently breaks PSID
   // capture with no visible symptom on the page.
@@ -3047,7 +3067,8 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
 // existing image in place rather than blanking it.
 app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
   { name: 'qr_gcash', maxCount: 1 },
-  { name: 'qr_maya',  maxCount: 1 }
+  { name: 'qr_maya',  maxCount: 1 },
+  { name: 'qr_paypal', maxCount: 1 }
 ]), async (req, res) => {
   const existing = db.get('site_settings.payment_methods').value() || [];
   const next = [];
