@@ -14,6 +14,8 @@ const queueRules = require('./lib/queue');
 const reviewRules = require('./lib/reviews');
 const gatewayRules = require('./lib/gateway');
 const paymongo = require('./lib/paymongo');
+const surcharge = require('./lib/surcharge');
+const fx = require('./lib/fx');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -2224,6 +2226,7 @@ app.get('/order/:ref', async (req, res) => {
     settings: s,
     isPaidOrder,
     payMethods: (s.payment_methods || []).filter(m => m.enabled),
+    paypalQuote: paypalQuoteFor(order),
     payViaGateway: !!process.env.PAYMONGO_SECRET_KEY,
     fbPage: s.fb_page_username || '',
     ownerOnline: !!(s.owner_online),
@@ -2373,6 +2376,72 @@ app.post('/order/:ref/review', async (req, res) => {
 // never reach this server and PCI scope stays out of the codebase. Every money
 // rule lives in lib/gateway.js; this section only builds the request.
 //
+// Today's USD/PHP rate for the PayPal panel's dollar estimate. Cached in
+// settings rather than in memory so it survives a Railway restart — those are
+// frequent, and a per-boot cache would leave every redeploy briefly rate-less.
+//
+// The in-flight flag stops a stampede: when the cache goes stale, every
+// request that arrives before the first fetch returns would otherwise start
+// its own.
+let _fxFetching = false;
+async function fetchUsdPhpRate() {
+  if (_fxFetching) return;
+  _fxFetching = true;
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch('https://open.er-api.com/v6/latest/USD', { signal: ctl.signal });
+    clearTimeout(timer);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const body = await r.json();
+    const rate = body && body.rates && body.rates.PHP;
+    // Rejected rather than stored. A bad rate cached is a bad rate shown to
+    // every customer for the next 24 hours.
+    if (!fx.isSaneRate(rate)) throw new Error('rate outside sane band: ' + rate);
+    db.set('site_settings.fx_rate_cache', { rate, fetched_at: new Date().toISOString() }).write();
+  } catch (e) {
+    console.error('[fx]', e.message);
+  } finally {
+    _fxFetching = false;
+  }
+}
+
+// The rate to display right now, refreshing in the background when what we
+// have has gone stale. Deliberately synchronous and deliberately NOT awaited
+// anywhere: a slow or dead FX API must cost a slightly old estimate, never a
+// delayed or broken order page.
+function currentFxRate() {
+  const s = getSiteSettings();
+  const picked = fx.pickRate(s.fx_rate_cache || null, s.fx_manual_rate, Date.now());
+  if (picked.source !== 'live') fetchUsdPhpRate();
+  return picked;
+}
+
+// What a PayPal customer is asked to send, or null when the method is off.
+// Computed fresh on every render and never persisted — see the spec's
+// "The surcharge never touches the order".
+function paypalQuoteFor(order) {
+  const s = getSiteSettings();
+  const pm = (s.payment_methods || []).find(m => m && m.key === 'paypal' && m.enabled);
+  if (!pm) return null;
+  // gatewayRules.amountDueCentavos is the single existing definition of "what
+  // is owed" (rent plus deposit); reusing it keeps this from drifting.
+  const due = gatewayRules.amountDueCentavos(order) / 100;
+  const { rate } = currentFxRate();
+  const q = surcharge.computeSurcharge(due, {
+    percent: s.paypal_fee_percent,
+    fixedPeso: s.paypal_fee_fixed,
+    payoutUsd: s.paypal_payout_usd,
+    rate
+  });
+  if (!q.total) return null;
+  return Object.assign({}, q, {
+    feesCombined: q.feePeso + q.payoutPeso,
+    usd: fx.pesosToUsd(q.total, rate),
+    handle: pm.account_number || ''
+  });
+}
+
 // Shared by both the customer-facing Pay now flow and the admin Payment link
 // button — the same order in the same payable state gets the same checkout
 // session, whichever route created it. Returns { ok: true, url } or
