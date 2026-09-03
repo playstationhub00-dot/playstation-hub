@@ -236,6 +236,7 @@
       <% if (o.state === 'verifying_payment') { %>
         <div class="oq-proof">
           <% if (o.payment_method) { %><span class="oq-method"><%= o.payment_method.toUpperCase() %></span><% } %>
+          <% if (o.paypal_expected) { %><span class="oq-expected">expect ₱<%= o.paypal_expected %></span><% } %>
           <% if (o.payment_proof) { %>
             <a href="<%= o.payment_proof %>" target="_blank" rel="noopener">View receipt →</a>
           <% } else { %>

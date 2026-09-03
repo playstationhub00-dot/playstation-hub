@@ -3327,6 +3327,15 @@ app.get('/admin', requireAuth, async (req, res) => {
     await orders.advanceEndedRentals();
   } catch (e) { console.error('[order sweep]', e.message); }
   const orderQueue = await orders.listByStates(orders.OWNER_STATES);
+  // A PayPal customer was asked for the fee-inclusive total, not amount_due —
+  // so the queue must show that number, or the owner compares the receipt
+  // against the wrong figure and rejects a correct payment as an overpayment.
+  orderQueue.forEach(o => {
+    if (o && o.payment_method === 'paypal') {
+      const q = paypalQuoteFor(o);
+      if (q) o.paypal_expected = q.total;
+    }
+  });
   const gameRequestRows = await gameRequests.listForAdmin();
   const refundsOwed = (await orders.listByStates(['closed']))
     .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
