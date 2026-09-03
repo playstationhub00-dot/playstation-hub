@@ -3169,6 +3169,21 @@ app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
   }
   db.set('site_settings.payment_methods', next).write();
   db.set('site_settings.fb_page_username', (req.body.fb_page_username || '').trim().replace(/^@/, '')).write();
+  // Fee settings. Clamped rather than trusted: a negative or absurd value here
+  // would show every PayPal customer a wrong total, and the exchange rate is
+  // held inside the same sane band lib/fx.js enforces everywhere else.
+  const numOr = (v, fallback, min, max) => {
+    // A blank field must fall back, not silently become 0 — Number('') is 0,
+    // which passes a min:0 check and would zero out a fee nobody meant to clear.
+    if (v === undefined || v === null || String(v).trim() === '') return fallback;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < min || n > max) return fallback;
+    return n;
+  };
+  db.set('site_settings.paypal_fee_percent', numOr(req.body.paypal_fee_percent, 4.4, 0, 100)).write();
+  db.set('site_settings.paypal_fee_fixed',   numOr(req.body.paypal_fee_fixed, 15, 0, 10000)).write();
+  db.set('site_settings.paypal_payout_usd',  numOr(req.body.paypal_payout_usd, 0.5, 0, 100)).write();
+  db.set('site_settings.fx_manual_rate',     numOr(req.body.fx_manual_rate, 62.5, fx.RATE_MIN, fx.RATE_MAX)).write();
   res.redirect('/admin?tab=settings&msg=payment_saved');
 });
 

@@ -277,13 +277,24 @@
               <input type="text" name="name_<%= m.key %>" value="<%= m.account_name %>">
             </label>
             <label class="pm-field">
-              <span>Account number</span>
-              <input type="text" name="number_<%= m.key %>" value="<%= m.account_number %>">
+              <span><%= m.key === 'paypal' ? 'PayPal.Me username or business email' : 'Account number' %></span>
+              <input type="text" name="number_<%= m.key %>" value="<%= m.account_number %>"
+                     placeholder="<%= m.key === 'paypal' ? 'playstationhub' : '' %>">
             </label>
+            <% if (m.key === 'paypal') { %>
+            <p class="pm-note">
+              Just the handle, not the whole link — the site builds
+              <code>paypal.me/&lt;handle&gt;/&lt;amount&gt;PHP</code> so the amount is
+              filled in for the customer. Use a PayPal <strong>Business</strong> account:
+              taking payment for goods on a personal one risks a limitation.
+            </p>
+            <% } %>
+            <% if (m.key !== 'paypal') { %>
             <label class="pm-field">
               <span>QR image</span>
               <input type="file" name="qr_<%= m.key %>" accept="image/*">
             </label>
+            <% } %>
             <% if (m.qr_image) { %>
             <div class="pm-qr-preview">
               <img src="<%= m.qr_image %>" alt="<%= m.label %> QR">
@@ -292,6 +303,40 @@
             <% } %>
           </div>
           <% }) %>
+
+          <div class="pm-card">
+            <div class="pm-card-head"><strong>PayPal fees</strong></div>
+            <p class="pm-note">
+              What PayPal and the bank take out, added on top of the rental price for
+              PayPal orders only. These are starting estimates — check what your first
+              real payment actually nets and correct them here.
+            </p>
+            <label class="pm-field">
+              <span>PayPal percentage fee (%)</span>
+              <input type="number" step="0.01" min="0" name="paypal_fee_percent" value="<%= settings.paypal_fee_percent %>">
+            </label>
+            <label class="pm-field">
+              <span>PayPal fixed fee (₱)</span>
+              <input type="number" step="1" min="0" name="paypal_fee_fixed" value="<%= settings.paypal_fee_fixed %>">
+            </label>
+            <label class="pm-field">
+              <span>Bank payout buffer ($)</span>
+              <input type="number" step="0.01" min="0" name="paypal_payout_usd" value="<%= settings.paypal_payout_usd %>">
+            </label>
+            <p class="pm-note">
+              The payout fee is charged per <em>withdrawal</em>, not per order — so
+              recovering it on every order over-collects once you batch several into one
+              transfer. Set it to 0 when that starts happening.
+            </p>
+            <label class="pm-field">
+              <span>Fallback exchange rate (₱ per $1)</span>
+              <input type="number" step="0.01" min="30" max="120" name="fx_manual_rate" value="<%= settings.fx_manual_rate %>">
+            </label>
+            <p class="pm-note">
+              Only used if the live rate can't be fetched. The site refreshes the real
+              rate daily on its own.
+            </p>
+          </div>
 
           <div class="form-actions" style="margin-top:0.75rem;">
             <button type="submit" class="btn btn-primary" style="background:#a855f7;">Save payment methods</button>
