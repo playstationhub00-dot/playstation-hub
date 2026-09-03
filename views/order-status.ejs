@@ -17,7 +17,7 @@
                           sub: queueExpired
                             ? 'Your entry has been waiting over 30 days. Message us to confirm you still want it and we\'ll put you back in line.'
                             : 'We\'ll message you the moment a slot opens up.' },
-    awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with GCash or Maya, then tell us below.' },
+    awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with ' + (payMethods.length ? payMethods.map(m => m.label).join(', ').replace(/, ([^,]*)$/, ' or $1') : 'any method below') + ', then tell us below.' },
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
     awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
     qr_pending:        { title: 'Scanning your QR',        sub: 'Keep the QR on screen — we\'re signing you in.' },
@@ -156,7 +156,9 @@
     <summary>Having trouble? Pay manually instead</summary>
   <% } %>
   <div class="ord-step">
-    <div class="ord-step-label">Step 1 — Send ₱<%= totalDue %></div>
+    <%# The amount differs per method — PayPal adds fees on top — so this
+        figure is driven by the tab script below rather than hard-coded. %>
+    <div class="ord-step-label">Step 1 — Send ₱<span id="ordStepAmt"><%= totalDue %></span></div>
 
     <% if (!payMethods.length) { %>
       <div class="ord-offline">Our payment details aren't set up on the site yet — please message us on Facebook and we'll sort it out with you directly.</div>
@@ -167,13 +169,34 @@
         <% }) %>
       </div>
       <% payMethods.forEach((m, i) => { %>
-      <div class="ord-pay-panel<%= i === 0 ? '' : ' ord-hidden' %>" data-m="<%= m.key %>">
-        <% if (m.qr_image) { %>
-        <img src="<%= m.qr_image %>" alt="<%= m.label %> QR code" class="ord-pay-qr">
+      <div class="ord-pay-panel<%= i === 0 ? '' : ' ord-hidden' %>" data-m="<%= m.key %>"
+           data-amt="<%= (m.key === 'paypal' && paypalQuote) ? paypalQuote.total : totalDue %>">
+        <% if (m.key === 'paypal' && paypalQuote) { %>
+          <div class="ord-pay-row"><span>Rental</span><strong>₱<%= paypalQuote.base %></strong></div>
+          <%# One combined line on purpose. Itemising the PayPal cut and the
+              bank payout separately on a small rental reads as nickel-and-diming
+              and invites line-by-line argument; this carries the same
+              information without inviting it. %>
+          <div class="ord-pay-row"><span>PayPal &amp; bank fees</span><strong>₱<%= paypalQuote.feesCombined %></strong></div>
+          <div class="ord-pay-row ord-pay-row-total"><span>Send</span><strong>₱<%= paypalQuote.total %></strong></div>
+          <% if (paypalQuote.usd) { %>
+          <div class="ord-pay-usd">≈ $<%= paypalQuote.usd.toFixed(2) %> USD</div>
+          <div class="ord-pay-usd-note">Your bank sets the final rate, so the exact dollar amount may differ slightly.</div>
+          <% } %>
+          <% if (paypalQuote.handle) { %>
+          <a class="ord-btn-primary ord-pay-ppbtn" target="_blank" rel="noopener"
+             href="https://paypal.me/<%= encodeURIComponent(paypalQuote.handle) %>/<%= paypalQuote.total %>PHP">
+            Pay ₱<%= paypalQuote.total %> with PayPal
+          </a>
+          <% } %>
+        <% } else { %>
+          <% if (m.qr_image) { %>
+          <img src="<%= m.qr_image %>" alt="<%= m.label %> QR code" class="ord-pay-qr">
+          <% } %>
+          <% if (m.account_name) { %><div class="ord-pay-row"><span>Name</span><strong><%= m.account_name %></strong></div><% } %>
+          <% if (m.account_number) { %><div class="ord-pay-row"><span>Number</span><strong><%= m.account_number %></strong></div><% } %>
+          <div class="ord-pay-row"><span>Amount</span><strong>₱<%= totalDue %></strong></div>
         <% } %>
-        <% if (m.account_name) { %><div class="ord-pay-row"><span>Name</span><strong><%= m.account_name %></strong></div><% } %>
-        <% if (m.account_number) { %><div class="ord-pay-row"><span>Number</span><strong><%= m.account_number %></strong></div><% } %>
-        <div class="ord-pay-row"><span>Amount</span><strong>₱<%= totalDue %></strong></div>
       </div>
       <% }) %>
       <div class="ord-pay-ref">
@@ -220,6 +243,11 @@
           p.classList.toggle('ord-hidden', p.dataset.m !== key);
         });
         if (methodField) methodField.value = key;
+        // Keep the Step 1 heading agreeing with the panel — PayPal's total
+        // includes fees the other methods don't charge.
+        var amtEl = document.getElementById('ordStepAmt');
+        var panel = document.querySelector('.ord-pay-panel[data-m="' + key + '"]');
+        if (amtEl && panel && panel.dataset.amt) amtEl.textContent = panel.dataset.amt;
       });
     });
     var btn = document.getElementById('ordCopyBtn');
