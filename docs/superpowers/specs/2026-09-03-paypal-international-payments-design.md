@@ -102,6 +102,15 @@ computeSurcharge(amountPesos, config) -> { base, feePeso, payoutPeso, total }
 Every rounding goes **up**, to whole pesos. Silent under-recovery is the
 failure mode worth guarding against; over-recovering by a peso is not.
 
+**The percentage must be rounded to 6 decimal places before ceiling.**
+`1500 * 4.4 / 100` evaluates to `66.00000000000001` in JavaScript, and
+`Math.ceil` of that is 67 — a phantom peso charged to the customer every time
+the percentage happens to land on a whole number. `Math.ceil(+(x).toFixed(6))`
+removes it without affecting any genuine fraction.
+
+A base of zero returns all zeros. An order with nothing to send carries no
+fees.
+
 `percent: 0` yields a pure flat fee. `fixedPeso: 0` and `payoutUsd: 0` yield a
 pure percentage. Non-finite, negative, or missing inputs are treated as zero
 rather than throwing — this runs inside a page render.
@@ -263,12 +272,15 @@ Surcharge cases, with the defaults above and `rate: 62.58`:
 | Input | feePeso | payoutPeso | total |
 |---|---|---|---|
 | ₱249 rental | 26 | 32 | **307** |
-| ₱1,500 buy | 82 | 32 | **1614** |
+| ₱1,500 buy | 81 | 32 | **1613** |
+
+The ₱1,500 row is the float-error regression test: a naive
+`Math.ceil(1500 * 4.4 / 100)` yields 82 and 1614, and those numbers are wrong.
 
 Plus: rounding up rather than down (₱249 at 4.4% is 10.956, which must become
 11, not 10); `percent: 0` giving a pure flat fee; `fixedPeso: 0` and
-`payoutUsd: 0` giving a pure percentage; a zero amount; and negative, `NaN`,
-and missing inputs all treated as zero without throwing.
+`payoutUsd: 0` giving a pure percentage; a zero amount returning all zeros; and
+negative, `NaN`, and missing inputs all treated as zero without throwing.
 
 FX cases: `isSaneRate` accepting 62.58 and rejecting `0`, negative values,
 `NaN`, `Infinity`, `'62.58'` as a string, and 5 and 5000 as out-of-band;
