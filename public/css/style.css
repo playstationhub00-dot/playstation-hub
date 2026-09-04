@@ -2988,6 +2988,18 @@ footer {
 .ord-countdown { font-size: 2.4rem; font-weight: 900; color: var(--ps-blue); text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-bottom: 0.6rem; }
 .ord-countdown-done { color: #ef4444; }
 
+/* Telegram alert self-test. Deliberately quiet — it is a diagnostic the owner
+   uses once at setup and again only when something feels wrong. */
+.oq-alert-test { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.oq-alert-btn {
+  background: #1a1a1a; color: #ddd; border: 1px solid #2a2a2a; border-radius: 8px;
+  padding: 0.4rem 0.75rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.oq-alert-btn:hover:not(:disabled) { border-color: var(--ps-blue); color: #fff; }
+.oq-alert-btn:disabled { opacity: 0.55; cursor: default; }
+.oq-alert-msg { font-size: 0.76rem; color: #666; line-height: 1.45; }
+.oq-alert-ok { color: #22c55e; }
+.oq-alert-bad { color: #ef4444; }
 .oq-online-form { margin-bottom: 1.25rem; }
 .oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
 .oq-online-toggle input { accent-color: #22c55e; }

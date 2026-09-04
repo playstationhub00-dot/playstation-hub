@@ -83,12 +83,59 @@
 </div>
 <% } %>
 
+<%# Sits beside the gateway health badge because it answers the same question:
+    is the plumbing behind this page actually working? Alerts are the thing the
+    owner cannot verify by looking — nothing arriving looks identical to nothing
+    happening. %>
+<div class="oq-alert-test">
+  <button type="button" id="oqTestAlert" class="oq-alert-btn">🔔 Send test alert</button>
+  <span class="oq-alert-msg" id="oqTestAlertMsg">Checks that sign-in alerts reach your Telegram.</span>
+</div>
+
 <form method="POST" action="/admin/online" class="oq-online-form">
   <label class="oq-online-toggle">
     <input type="checkbox" name="online" onchange="this.form.submit()" <%= settings.owner_online ? 'checked' : '' %>>
     <span>I'm online now — show a live banner to customers waiting to send a QR</span>
   </label>
 </form>
+
+<script>
+(function () {
+  var btn = document.getElementById('oqTestAlert');
+  var out = document.getElementById('oqTestAlertMsg');
+  if (!btn || !out) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    out.className = 'oq-alert-msg';
+    out.textContent = 'Sending…';
+    fetch('/admin/test-alert', { method: 'POST', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.ok) {
+          out.className = 'oq-alert-msg oq-alert-ok';
+          out.textContent = 'Sent — check Telegram. If it arrived, alerts are working.';
+          return;
+        }
+        out.className = 'oq-alert-msg oq-alert-bad';
+        // Say what to fix, not just that it failed.
+        if (d && d.reason === 'not_configured') {
+          out.textContent = 'Not set up yet — missing ' + (d.missing || []).join(' and ') + ' in Railway.';
+        } else if (d && d.reason === 'api') {
+          out.textContent = 'Telegram refused it: ' + (d.description || ('HTTP ' + d.status))
+            + (/unauthorized/i.test(d.description || '') ? ' — the bot token is wrong or was revoked.' : '')
+            + (/chat not found/i.test(d.description || '') ? ' — the chat ID is wrong, or you have not messaged the bot yet.' : '');
+        } else {
+          out.textContent = 'Could not reach Telegram: ' + ((d && d.description) || 'unknown error');
+        }
+      })
+      .catch(function (e) {
+        out.className = 'oq-alert-msg oq-alert-bad';
+        out.textContent = 'Request failed: ' + e.message;
+      })
+      .then(function () { btn.disabled = false; });
+  });
+})();
+</script>
 
 <!-- ── Manual Messenger order ──────────────────────────────────────────────
      For a customer who never touches the site: you sent them your own

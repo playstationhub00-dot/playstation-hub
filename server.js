@@ -2386,6 +2386,41 @@ app.post('/order/:ref/review', async (req, res) => {
 // Fire and forget, deliberately. This is never awaited, can never throw, and can
 // never fail a submission — if Telegram is down or the token is wrong, the code
 // still submits, the order still transitions, and only the log knows.
+// One send, with the outcome reported rather than swallowed. The sign-in alert
+// ignores the result (see notifyOwnerSignin below); the admin test button shows
+// it, which is the whole reason this returns a shape instead of a boolean —
+// "it didn't arrive" is useless, "Unauthorized" or "chat not found" is a fix.
+//
+// Never returns the token or echoes it into a response: only Telegram's own
+// status and description come back.
+async function sendTelegramMessage(text) {
+  if (!telegram.isConfigured(process.env)) {
+    const missing = [];
+    if (!String(process.env.TELEGRAM_BOT_TOKEN || '').trim()) missing.push('TELEGRAM_BOT_TOKEN');
+    if (!String(process.env.TELEGRAM_CHAT_ID || '').trim()) missing.push('TELEGRAM_CHAT_ID');
+    return { ok: false, reason: 'not_configured', missing };
+  }
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const r = await fetch(telegram.apiUrl(process.env.TELEGRAM_BOT_TOKEN), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(telegram.messagePayload(process.env.TELEGRAM_CHAT_ID, text)),
+      signal: ctl.signal
+    });
+    const body = await r.json().catch(() => null);
+    if (!r.ok || !(body && body.ok)) {
+      return { ok: false, reason: 'api', status: r.status, description: (body && body.description) || null };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: 'network', description: e.message };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function notifyOwnerSignin(order, code) {
   try {
     if (!telegram.isConfigured(process.env)) return;
@@ -2396,16 +2431,11 @@ function notifyOwnerSignin(order, code) {
       expiresAt,
       adminUrl: SITE_URL + '/admin?tab=orders'
     });
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
-    fetch(telegram.apiUrl(process.env.TELEGRAM_BOT_TOKEN), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(telegram.messagePayload(process.env.TELEGRAM_CHAT_ID, text)),
-      signal: ctl.signal
-    })
-      .then(r => { clearTimeout(timer); if (!r.ok) console.error('[telegram] http ' + r.status); })
-      .catch(e => { clearTimeout(timer); console.error('[telegram]', e.message); });
+    // Deliberately not awaited: a slow or dead Telegram must never delay or fail
+    // the customer's submission. The failure goes to the log, never to them.
+    sendTelegramMessage(text).then(r => {
+      if (!r.ok) console.error('[telegram]', r.reason, r.description || r.status || '');
+    });
   } catch (e) {
     console.error('[telegram]', e.message);
   }
@@ -5657,6 +5687,20 @@ app.post('/admin/bot-training/delete/:id', requireAuth, (req, res) => {
 app.post('/admin/settings/bot-ai-fallback', requireAuth, (req, res) => {
   db.set('site_settings.bot_ai_fallback_enabled', req.body.bot_ai_fallback_enabled === 'on').write();
   res.redirect('/admin?tab=settings&msg=bot_ai_fallback_updated');
+});
+
+// Proves the Telegram alert path end to end, on demand. Without this the first
+// real test is a customer's sign-in — and a wrong variable is discovered by
+// missing their ten-minute window. Reports what Telegram actually said rather
+// than claiming success, because "didn't arrive" is not a diagnosis.
+app.post('/admin/test-alert', requireAuth, async (req, res) => {
+  const when = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
+  const result = await sendTelegramMessage(
+    'Test alert — Playstation Hub\n' +
+    'If you can read this, sign-in alerts are working.\n' +
+    'Sent ' + when
+  );
+  res.json(result);
 });
 
 // ── Sign-In QR Guide ──────────────────────────────────────────────────────────
