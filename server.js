@@ -16,6 +16,8 @@ const gatewayRules = require('./lib/gateway');
 const paymongo = require('./lib/paymongo');
 const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
+const signinCode = require('./lib/signin-code');
+const telegram = require('./lib/telegram');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -2376,6 +2378,39 @@ app.post('/order/:ref/review', async (req, res) => {
 // never reach this server and PCI scope stays out of the codebase. Every money
 // rule lives in lib/gateway.js; this section only builds the request.
 //
+// Tells the owner a sign-in is waiting, the moment one arrives. The ten-minute
+// window is the whole reason this exists: before it, a submitted QR sat there
+// expiring unless the owner happened to be looking at the admin page, and a
+// lapsed window costs the customer a full walk back through the console menus.
+//
+// Fire and forget, deliberately. This is never awaited, can never throw, and can
+// never fail a submission — if Telegram is down or the token is wrong, the code
+// still submits, the order still transitions, and only the log knows.
+function notifyOwnerSignin(order, code) {
+  try {
+    if (!telegram.isConfigured(process.env)) return;
+    const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS)
+      .toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
+    const text = telegram.formatQrAlert(order, {
+      code: code || null,
+      expiresAt,
+      adminUrl: SITE_URL + '/admin?tab=orders'
+    });
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    fetch(telegram.apiUrl(process.env.TELEGRAM_BOT_TOKEN), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(telegram.messagePayload(process.env.TELEGRAM_CHAT_ID, text)),
+      signal: ctl.signal
+    })
+      .then(r => { clearTimeout(timer); if (!r.ok) console.error('[telegram] http ' + r.status); })
+      .catch(e => { clearTimeout(timer); console.error('[telegram]', e.message); });
+  } catch (e) {
+    console.error('[telegram]', e.message);
+  }
+}
+
 // Today's USD/PHP rate for the PayPal panel's dollar estimate. Cached in
 // settings rather than in memory so it survives a Railway restart — those are
 // frequent, and a per-boot cache would leave every redeploy briefly rate-less.
@@ -2647,6 +2682,30 @@ app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
     cleanupOrphanedUpload(qrPath);
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
+  notifyOwnerSignin(order, null);
+  res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
+});
+
+// The typed-code alternative to photographing the QR. A separate route rather
+// than a branch inside the upload handler above, so the working photo path is
+// not touched at all — the two are equivalent to the order, which only cares
+// that a sign-in is waiting and the clock is running.
+app.post('/order/:ref/signin-code', express.urlencoded({ extended: false }), async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
+  if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  }
+  if (!signinCode.isValidCode(req.body.code)) {
+    return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=bad_code');
+  }
+  const code = signinCode.normalizeCode(req.body.code);
+  const r = await orders.transition(order.ref, 'qr_pending', {
+    qr_code: code,
+    qr_expires_at: new Date(Date.now() + orders.QR_WINDOW_MS).toISOString()
+  });
+  if (!r) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
+  notifyOwnerSignin(order, code);
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
 });
 

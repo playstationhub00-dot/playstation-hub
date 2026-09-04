@@ -244,7 +244,15 @@
           <% } %>
         </div>
       <% } %>
-      <% if (o.state === 'qr_pending' && o.qr_image) { %>
+      <% if (o.state === 'qr_pending' && o.qr_code) { %>
+        <%# Typed codes go straight into the PlayStation App, so the code itself
+            is the thing the owner needs — big enough to read at a glance and
+            one tap to copy, rather than a link to open. %>
+        <div class="oq-proof oq-signin-code">
+          <code class="oq-code"><%= o.qr_code %></code>
+          <button type="button" class="rem-copy oq-code-copy" data-msg="<%= o.qr_code %>" title="Copy this sign-in code">📋 Copy</button>
+        </div>
+      <% } else if (o.state === 'qr_pending' && o.qr_image) { %>
         <div class="oq-proof"><a href="<%= o.qr_image %>" target="_blank" rel="noopener">Open QR to scan →</a></div>
       <% } %>
       <% if (o.state === 'verifying_return' && o.return_proof) { %>

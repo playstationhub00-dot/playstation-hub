@@ -19,8 +19,8 @@
                             : 'We\'ll message you the moment a slot opens up.' },
     awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with ' + (payMethods.length ? payMethods.map(m => m.label).join(', ').replace(/, ([^,]*)$/, ' or $1') : 'any method below') + ', then tell us below.' },
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
-    awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Open the sign-in QR on your console and send it here.' },
-    qr_pending:        { title: 'Scanning your QR',        sub: 'Keep the QR on screen — we\'re signing you in.' },
+    awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Bring up the sign-in screen on your console and send us the code.' },
+    qr_pending:        { title: 'Signing you in',          sub: 'Keep that screen open on your console — we\'re signing you in now.' },
     active:            { title: 'You\'re all set',         sub: order.is_buy ? 'It\'s yours — enjoy!' : 'Enjoy the game. Return the account by your end date.' },
     awaiting_return:   { title: 'Time to return',          sub: 'Sign out and send us proof to finish up.' },
     verifying_return:  { title: 'Checking your return',    sub: 'Almost done — we\'re confirming it now.' },
@@ -68,7 +68,8 @@
 
   <% if (msg === 'payment_submitted') { %><div class="ord-flash">Thanks — we'll confirm your payment shortly.</div><% } %>
   <% if (msg === 'no_file') { %><div class="ord-flash ord-flash-warn">Pick an image first, or use the Messenger option.</div><% } %>
-  <% if (msg === 'qr_sent') { %><div class="ord-flash">QR received — hold tight.</div><% } %>
+  <% if (msg === 'qr_sent') { %><div class="ord-flash">Sign-in received — hold tight.</div><% } %>
+  <% if (msg === 'bad_code') { %><div class="ord-flash ord-flash-warn">That code doesn't look right — check it and try again, or send the QR photo instead.</div><% } %>
   <% if (msg === 'return_submitted') { %><div class="ord-flash">Return proof received — we'll confirm shortly.</div><% } %>
   <% if (msg === 'stale') { %><div class="ord-flash ord-flash-warn">That step was already handled — here's your current status.</div><% } %>
   <% if (msg === 'upgrade_started') { %><div class="ord-flash">Upgraded to priority — send the ₱100 below and we'll move you up.</div><% } %>
@@ -293,18 +294,30 @@
 
   <% if (order.state === 'awaiting_qr') { %>
   <div class="ord-step" id="ordQrStep">
-    <div class="ord-step-label">Send your sign-in QR</div>
+    <div class="ord-step-label">Send your sign-in code</div>
     <% if (ownerOnline) { %>
-    <div class="ord-online">🟢 We're online right now — send your QR and we'll scan it straight away.</div>
+    <div class="ord-online">🟢 We're online right now — send your code and we'll sign you in straight away.</div>
     <% } else { %>
-    <div class="ord-offline">We're not online at the moment. You can still send your QR — if it expires before we get to it, we'll ask for a fresh one.</div>
+    <div class="ord-offline">We're not online at the moment. You can still send it — if it expires before we get to it, we'll ask for a fresh one.</div>
     <% } %>
     <%- include('partials/signin-guide', { signinSteps, idPrefix: 'qr' }) %>
-    <p class="ord-help" style="margin-top:0.85rem;">Your QR is only good for about 10 minutes — send it right away.</p>
+    <p class="ord-help" style="margin-top:0.85rem;">It's only good for about 10 minutes — send it right away.</p>
+    <%# Typing the code beats photographing a television: no blur, no retry, and
+        it arrives ready to paste straight into the PlayStation App. The photo
+        upload stays below as the fallback for anyone who'd rather snap it. %>
+    <form method="POST" action="/order/<%= order.ref %>/signin-code" class="ord-codeform">
+      <input type="hidden" name="k" value="<%= order.url_key %>">
+      <label class="ord-code-label" for="ordSigninCode">Type the code shown under the QR on your screen</label>
+      <input type="text" name="code" id="ordSigninCode" class="ord-code-input"
+             inputmode="latin" autocomplete="off" autocorrect="off" autocapitalize="characters"
+             spellcheck="false" maxlength="24" placeholder="e.g. ABCD1234" required>
+      <button type="submit" class="ord-btn-primary" style="margin-top:0.6rem;">Send my code</button>
+    </form>
+    <div class="ord-code-or">or send a photo of the QR instead</div>
     <form method="POST" action="/order/<%= order.ref %>/qr" enctype="multipart/form-data" class="ord-upload">
       <input type="hidden" name="k" value="<%= order.url_key %>">
       <input type="file" name="qr" accept="image/*" required>
-      <button type="submit" class="ord-btn-primary" style="margin-top:0.6rem;">Send my QR</button>
+      <button type="submit" class="ord-btn-secondary" style="margin-top:0.6rem;">Send my QR photo</button>
     </form>
     <% if (mmLink) { %>
     <a class="ord-btn-secondary" style="display:block;text-align:center;margin-top:0.6rem;" target="_blank" rel="noopener" href="<%= mmLink %>">Send on Messenger instead</a>
@@ -382,7 +395,7 @@
     <div class="ord-modal-next">
       <div class="ord-modal-next-label">Next step</div>
       <% if (order.state === 'awaiting_qr') { %>
-      <p>Send us the sign-in QR from your console so we can set up your account.</p>
+      <p>Bring up the sign-in screen on your console and send us the code so we can set up your account.</p>
       <% } else { %>
       <p>Nothing else to do for now — we'll message you here or on Facebook when it's time to set up your account.</p>
       <% } %>

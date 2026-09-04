@@ -2955,6 +2955,24 @@ footer {
 .ord-alt { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px solid #1a1a1a; }
 .ord-alt-label { font-size: 0.76rem; color: #555; margin-bottom: 0.5rem; }
 .ord-upload input[type="file"] { width: 100%; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
+/* Sign-in code entry. Monospace and wide letter-spacing because the customer is
+   copying character by character off a television across the room, and an O
+   that looks like a 0 costs them the whole ten-minute window. */
+.ord-code-label { display: block; font-size: 0.78rem; color: #888; margin-bottom: 0.4rem; }
+.ord-code-input {
+  width: 100%; box-sizing: border-box;
+  background: #111; border: 1.5px solid #2a2a2a; border-radius: 10px;
+  color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.05rem; font-weight: 700; letter-spacing: 0.18em; text-align: center;
+  padding: 0.75rem 0.6rem; text-transform: uppercase;
+}
+.ord-code-input:focus { outline: none; border-color: var(--ps-blue); }
+.ord-code-input::placeholder { color: #444; letter-spacing: 0.12em; font-weight: 400; }
+.ord-code-or {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-size: 0.75rem; color: #555; margin: 1rem 0 0.6rem;
+}
+.ord-code-or::before, .ord-code-or::after { content: ""; flex: 1; height: 1px; background: #222; }
 .ord-sent-form { margin-top: 0.4rem; }
 .ord-step-gateway { border-color: var(--ps-blue); background: rgba(0,112,209,0.06); margin-bottom: 0.9rem; }
 .ord-step-gateway .ord-step-label { color: var(--ps-blue); }
@@ -3012,6 +3030,15 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-thread { color: var(--ps-blue); margin-left: 0.4rem; font-size: 0.76rem; }
 .oq-proof { margin-top: 0.5rem; font-size: 0.8rem; }
 .oq-proof a { color: var(--ps-blue); }
+/* The typed sign-in code, sized to be read off the screen while typing it into
+   the PlayStation App on a phone. */
+.oq-signin-code { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.oq-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.05rem; font-weight: 800; letter-spacing: 0.14em; color: #fff;
+  background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.3rem 0.6rem;
+}
+.oq-signin-code .rem-copy { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
 .oq-method { background: #1a1a1a; color: #aaa; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; padding: 0.1rem 0.4rem; border-radius: 4px; margin-right: 0.4rem; }
 /* The fee-inclusive figure a PayPal customer was actually asked to send. */
 .oq-expected { font-size: 0.75rem; opacity: 0.75; margin-left: 0.4rem; white-space: nowrap; }
