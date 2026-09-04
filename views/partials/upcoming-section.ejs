@@ -34,11 +34,16 @@
       }
       const csSlotsLeft = (game.non_trophy_slots||0) + (game.trophy_slots||0);
       const csFull = csSlotsLeft === 0;
+      // A full card gives its top-right corner to the FULL ribbon, so the
+      // countdown badge that normally sits there moves into the meta line as
+      // text. The release date still matters to someone waiting for a slot —
+      // it just stops being the loudest thing on the card.
+      const csCountdownText = csIsTba ? '' : (csDaysLeft > 0 ? csDaysLeft + ' day' + (csDaysLeft !== 1 ? 's' : '') : 'Any day now');
       // Cheapest configured price across every duration/type, for the "from ₱X" line.
       const csPrices = [game.nt_price_7d, game.nt_price_30d, game.tr_price_7d, game.tr_price_30d].filter(p => p > 0);
       const csFromPrice = csPrices.length ? Math.min(...csPrices) : null;
     %>
-    <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
+    <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link<%= csFull ? ' cs-full' : '' %>" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
       <% if (game.cover_image) { %>
         <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
       <% } else { %>
@@ -52,7 +57,11 @@
       <div class="cs-scrim"></div>
       <div class="cs-badge">Coming Soon</div>
       <% if (game.rank) { %><div class="cs-hot">🔥 #<%= game.rank %></div><% } %>
-      <% if (csIsTba) { %>
+      <%# A full game trades its countdown badge for the FULL ribbon — both live
+          in the top-right corner and would otherwise overlap. %>
+      <% if (csFull) { %>
+        <div class="cs-ribbon">Full</div>
+      <% } else if (csIsTba) { %>
         <div class="cs-cd cs-cd-tba"><span class="cs-cd-n">Date<br>TBA</span></div>
       <% } else if (csDaysLeft > 0) { %>
         <div class="cs-cd"><span class="cs-cd-n"><%= csDaysLeft %></span><span class="cs-cd-u">days</span></div>
@@ -64,13 +73,19 @@
         <div class="cs-title"><%= game.title %></div>
         <div class="cs-meta">
           <span><%= csDisplayDate %></span>
-          <span>·</span>
-          <% if (csFull) { %><span class="cs-slots-full">Slots full</span>
-          <% } else { %><span class="cs-slots-ok"><%= csSlotsLeft %> slot<%= csSlotsLeft !== 1 ? 's' : '' %> left</span><% } %>
+          <%# When full, the ribbon already says so — repeating it here in red
+              would state the same thing twice and crowd a three-line card. The
+              countdown takes the slot instead, since it lost its badge. %>
+          <% if (csFull) { %>
+            <% if (csCountdownText) { %><span>·</span><span><%= csCountdownText %></span><% } %>
+          <% } else { %>
+            <span>·</span>
+            <span class="cs-slots-ok"><%= csSlotsLeft %> slot<%= csSlotsLeft !== 1 ? 's' : '' %> left</span>
+          <% } %>
         </div>
         <div class="cs-foot">
           <% if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
-          <div class="cs-cta"><%= csFull ? 'Notify Me' : 'Reserve →' %></div>
+          <div class="cs-cta<%= csFull ? ' cs-cta-ghost' : '' %>"><%= csFull ? 'Notify Me' : 'Reserve →' %></div>
         </div>
       </div>
     </a>

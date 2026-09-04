@@ -2424,6 +2424,47 @@ footer {
 .cs-meta { font-size: 0.68rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .cs-slots-ok { color: #22c55e; font-weight: 700; }
 .cs-slots-full { color: #ef4444; font-weight: 700; }
+
+/* FULLY-RESERVED COMING SOON CARD
+   Three signals working together, so the state reads from across a scrolling
+   row without anyone having to stop and read: the artwork drains of colour, a
+   corner ribbon names the state, and the call to action drops from a solid
+   button to an outline so it stops competing with the cards that can still be
+   reserved. The card stays clickable — a full game still sells a waitlist
+   place and a priority slot, so this dims it rather than disabling it. */
+.cs-full .cs-cover-img,
+.cs-full .cs-cover-placeholder { filter: saturate(0.35) brightness(0.78); }
+/* A drained cover loses the contrast the scrim was relying on, so the top of
+   the gradient comes up to keep the ribbon and title legible. */
+.cs-full .cs-scrim {
+  background: linear-gradient(to bottom,
+    rgba(0,0,0,0.35) 20%,
+    rgba(0,0,0,0.60) 44%,
+    rgba(0,0,0,0.90) 72%,
+    rgba(0,0,0,0.97) 100%);
+}
+.cs-ribbon {
+  position: absolute; z-index: 3; top: 18px; right: -30px;
+  transform: rotate(45deg); transform-origin: center;
+  background: #b91c1c; color: #fff;
+  font-size: 0.58rem; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase;
+  padding: 0.22rem 2.2rem; text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+/* The rank badge normally owns the top-right corner the ribbon now crosses, so
+   it moves under the Coming Soon pill on the left rather than sitting beneath a
+   diagonal band. */
+.cs-full .cs-hot { top: 40px; right: auto; left: 10px; }
+/* Written as a compound selector on purpose: .cs-cta is defined further down
+   this file, so a single-class modifier would lose the cascade to it and only
+   the border would land. */
+.cs-cta.cs-cta-ghost {
+  background: transparent; color: #fff;
+  border: 1px solid rgba(255,255,255,0.5);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+}
+.cs-full .cs-price { color: rgba(255,255,255,0.55); }
+.cs-full .cs-price b { color: rgba(255,255,255,0.8); font-weight: 700; }
 .cs-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.4rem; }
 .cs-price { font-size: 0.72rem; color: rgba(255,255,255,0.75); }
 .cs-price b { color: #fff; font-size: 0.9rem; }
