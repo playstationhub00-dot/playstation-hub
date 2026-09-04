@@ -3372,6 +3372,18 @@ label.buy-tier:hover { border-color: #444; }
 .ql-strip-count { font-size: 0.8rem; font-weight: 700; color: #93c5fd; }
 .ql-strip-sub { font-size: 0.72rem; color: #64748b; margin-top: 0.1rem; }
 .ql-strip-link { font-size: 0.72rem; color: #60a5fa; white-space: nowrap; }
+/* Tier split. Amber only for the paid tier, so the eye lands on the thing that
+   changes someone's position rather than on the count they already read above. */
+.ql-tiers { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.32rem; }
+.ql-pill {
+  font-size: 0.68rem; line-height: 1.4; white-space: nowrap;
+  background: #16161a; color: #94a3b8; border: 1px solid #23232b;
+  border-radius: 20px; padding: 0.1rem 0.5rem;
+}
+.ql-pill-pri { background: rgba(245,158,11,0.15); color: #f59e0b; border-color: rgba(245,158,11,0.35); }
+/* nowrap suits the short count pills, but the sentence-shaped one overflowed the
+   strip on a 320px screen — it wraps instead. */
+.ql-pill-note { white-space: normal; }
 
 .ql-modal { position: fixed; inset: 0; z-index: 200; }
 .ql-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }

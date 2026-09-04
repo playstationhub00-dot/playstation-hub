@@ -14,6 +14,10 @@
   <div class="ql-strip-text">
     <div class="ql-strip-count" id="qlCount<%= suffix %>"></div>
     <div class="ql-strip-sub" id="qlSub<%= suffix %>"></div>
+    <%# The tier split, readable without opening the list. "3 waiting" means two
+        different things depending on whether any of them paid, and that is the
+        exact question someone weighing the priority fee is asking. %>
+    <div class="ql-tiers" id="qlTiers<%= suffix %>"></div>
   </div>
   <span class="ql-strip-link">View list</span>
 </div>
@@ -84,6 +88,19 @@
     document.getElementById('qlSub' + suffix).textContent = mine
       ? "You're #" + mine.position
       : "Join now and you'll be #" + (rows.length + 1);
+
+    var pri = 0;
+    for (var p = 0; p < rows.length; p++) { if (rows[p].tier === 'priority') pri++; }
+    var free = rows.length - pri;
+    var tiersEl = document.getElementById('qlTiers' + suffix);
+    if (tiersEl) {
+      // Counts only — every value here is derived from rows.length, never from
+      // customer text, so there is nothing to escape.
+      tiersEl.innerHTML = pri > 0
+        ? '<span class="ql-pill ql-pill-pri">⭐ ' + pri + ' priority</span>'
+          + (free > 0 ? '<span class="ql-pill">' + free + ' waitlist</span>' : '')
+        : '<span class="ql-pill ql-pill-note">Paying puts you first</span>';
+    }
 
     document.getElementById('qlModalTitle' + suffix).textContent = (LABELS[st.type] || '') + ' line';
     document.getElementById('qlModalSub' + suffix).textContent =
