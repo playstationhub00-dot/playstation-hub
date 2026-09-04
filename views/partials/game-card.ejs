@@ -47,7 +47,7 @@
   const gcBundleParent = findBundleContaining(game);
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
 %>
-<a href="/game/<%= gameSlug %>" class="game-card gc2-card">
+<a href="/game/<%= gameSlug %>" class="game-card gc2-card<%= allUnavail ? ' gc2-full' : '' %>">
   <% if (game.cover_image) { %>
     <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
   <% } else { %>
@@ -63,7 +63,11 @@
   <% if (isLastSlot) { %>
     <div class="gc2-badge gc2-badge-last">Last slot</div>
   <% } else if (allUnavail) { %>
-    <div class="gc2-badge gc2-badge-noslots">No slots</div>
+    <%# The corner ribbon replaces the old "No slots" pill rather than joining
+        it — two labels saying the same thing crowded the card, and this is the
+        same band a sold-out Coming Soon card uses, so every full card on the
+        site now reads identically. %>
+    <div class="card-ribbon">Full</div>
   <% } %>
   <% if (gcIsNew) { %>
     <div class="gc2-badge gc2-badge-new">New</div>
