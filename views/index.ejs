@@ -143,6 +143,9 @@
         <span class="pay-badge pay-maya">Maya</span>
         <span class="pay-badge pay-qrph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>QR Ph</span>
         <span class="pay-badge pay-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 10v9M16 10v9M2 21h20"/></svg>Bank Transfer</span>
+        <% if (payManual.some(m => m.key === 'paypal')) { %>
+        <span class="pay-badge pay-paypal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20l1.5-9h4a3.5 3.5 0 0 0 0-7H8L6 20z"/><path d="M10 16h3.5a3.5 3.5 0 0 0 0-7H12"/></svg>PayPal</span>
+        <% } %>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
@@ -155,12 +158,8 @@
           <div class="hero-stat-label">Starting Price</div>
         </div>
         <div class="hero-stat">
-          <div class="hero-stat-num"><%= activeRenters %>+</div>
-          <div class="hero-stat-label">Active Renters</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-num"><%= gamesPurchased %>+</div>
-          <div class="hero-stat-label">Games Purchased</div>
+          <div class="hero-stat-num"><%= renterCount && renterCount.n ? renterCount.n.toLocaleString() + (renterCount.plus ? '+' : '') : activeRenters + '+' %></div>
+          <div class="hero-stat-label">Total Renters</div>
         </div>
         <div class="hero-stat">
           <div class="hero-stat-num">100%</div>
@@ -209,6 +208,9 @@
         <span class="pay-badge pay-maya">Maya</span>
         <span class="pay-badge pay-qrph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>QR Ph</span>
         <span class="pay-badge pay-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 10v9M16 10v9M2 21h20"/></svg>Bank Transfer</span>
+        <% if (payManual.some(m => m.key === 'paypal')) { %>
+        <span class="pay-badge pay-paypal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20l1.5-9h4a3.5 3.5 0 0 0 0-7H8L6 20z"/><path d="M10 16h3.5a3.5 3.5 0 0 0 0-7H12"/></svg>PayPal</span>
+        <% } %>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
@@ -221,12 +223,8 @@
           <div class="hero-stat-label">Starting Price</div>
         </div>
         <div class="hero-stat">
-          <div class="hero-stat-num"><%= activeRenters %>+</div>
-          <div class="hero-stat-label">Active Renters</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-num"><%= gamesPurchased %>+</div>
-          <div class="hero-stat-label">Games Purchased</div>
+          <div class="hero-stat-num"><%= renterCount && renterCount.n ? renterCount.n.toLocaleString() + (renterCount.plus ? '+' : '') : activeRenters + '+' %></div>
+          <div class="hero-stat-label">Total Renters</div>
         </div>
         <div class="hero-stat">
           <div class="hero-stat-num">100%</div>
@@ -532,20 +530,20 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
     method updates this page on its own. Hidden entirely when nothing is on,
     rather than showing an empty promise. %>
 <% if (payBadges.length) { %>
-<div class="pay-section">
+<div class="paysec">
   <h2 class="section-title">Ways to Pay</h2>
-  <div class="pay-strip">
+  <div class="paysec-strip">
     <% payBadges.forEach(b => { %>
-    <div class="pay-badge<%= b.primary ? ' pay-badge-main' : '' %>">
-      <span class="pay-badge-icon"><%= b.icon %></span>
+    <div class="paysec-item<%= b.primary ? ' paysec-item-main' : '' %>">
+      <span class="paysec-icon"><%= b.icon %></span>
       <span>
-        <span class="pay-badge-label"><%= b.label %></span>
-        <span class="pay-badge-note"><%= b.note %></span>
+        <span class="paysec-label"><%= b.label %></span>
+        <span class="paysec-note"><%= b.note %></span>
       </span>
     </div>
     <% }) %>
   </div>
-  <p class="pay-foot">Refundable deposit on trophy accounts only — you get it back when you return the account.</p>
+  <p class="paysec-foot">Refundable deposit on trophy accounts only — you get it back when you return the account.</p>
 </div>
 <% } %>
 
