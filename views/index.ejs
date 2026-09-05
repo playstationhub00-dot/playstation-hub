@@ -60,6 +60,15 @@
   const trFrom = cheapestOf(['tr_price_7d', 'tr_price_30d']);
   const buyFrom = cheapestOf(['buy_nt_price', 'buy_tr_price']);
   const depositAmt = (promo && promo.deposit) || 0;
+
+  // The slideshow hero shows a text trust strip rather than chips, so it needs
+  // the same information in a sentence. Derived from the same source as the
+  // chips — this line read "GCash · Maya" long after checkout, PayPal and the
+  // rest arrived, and it was the last hardcoded payment copy on the site.
+  const heroPayParts = [];
+  if (typeof payViaGateway !== 'undefined' && payViaGateway) heroPayParts.push('Card & QR Ph');
+  payManual.forEach(m => heroPayParts.push(m.label));
+  const heroPayLine = heroPayParts.length ? heroPayParts.join(', ') : 'Details sent with your order';
 %>
 <% const heroSlides = settings.hero_slides && settings.hero_slides.length > 0 ? settings.hero_slides : null; %>
 <% if (heroSlides) { %>
@@ -107,7 +116,7 @@
 <div class="hero-trust-strip">
   <div class="hero-trust-item"><b>Instant Setup</b>Delivered in minutes</div>
   <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
-  <div class="hero-trust-item"><b>GCash · Maya</b>Pay how you want</div>
+  <div class="hero-trust-item"><b>Flexible Payment</b><%= heroPayLine %></div>
 </div>
 <% } else { %>
 <%
