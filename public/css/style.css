@@ -3000,6 +3000,16 @@ footer {
 .oq-alert-msg { font-size: 0.76rem; color: #666; line-height: 1.45; }
 .oq-alert-ok { color: #22c55e; }
 .oq-alert-bad { color: #ef4444; }
+/* Alert switches. Behind a disclosure because they are set once and then left
+   alone — the test button is the thing worth having permanently in reach. */
+.oq-alert-cfg { margin-bottom: 1rem; }
+.oq-alert-cfg > summary { font-size: 0.78rem; color: #888; cursor: pointer; padding: 0.2rem 0; }
+.oq-alert-cfg > summary:hover { color: #ddd; }
+.oq-alert-cfg form { background: #111; border: 1px solid #222; border-radius: 10px; padding: 0.85rem; margin-top: 0.5rem; }
+.oq-alert-row { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.32rem 0; cursor: pointer; }
+.oq-alert-row input { margin-top: 0.15rem; width: 15px; height: 15px; flex-shrink: 0; accent-color: var(--ps-blue); }
+.oq-alert-name { display: block; font-size: 0.82rem; font-weight: 700; color: #ddd; }
+.oq-alert-note { display: block; font-size: 0.72rem; color: #666; margin-top: 0.05rem; }
 .oq-online-form { margin-bottom: 1.25rem; }
 .oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
 .oq-online-toggle input { accent-color: #22c55e; }

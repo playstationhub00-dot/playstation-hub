@@ -173,4 +173,47 @@ check('a malformed request alert does not throw', () => {
   assert.strictEqual(typeof tg.formatRequestAlert({}, {}), 'string');
 });
 
+check('every alert kind the owner can switch is named in one list', () => {
+  // The admin form, the seeding and the gates all read this, so a kind added
+  // to the code but not here would be unswitchable and invisible.
+  assert.deepStrictEqual(
+    tg.ALERT_KINDS,
+    ['signin', 'order_created', 'order_review', 'order_paid', 'request']
+  );
+});
+
+check('an alert with no setting yet is ON', () => {
+  // The default has to be on in both directions: an owner who never opens the
+  // panel keeps exactly the behaviour they had, and a kind added in a later
+  // release starts working rather than silently staying muted.
+  tg.ALERT_KINDS.forEach(k => {
+    assert.strictEqual(tg.isAlertEnabled({}, k), true, k + ' should default on');
+    assert.strictEqual(tg.isAlertEnabled({ alerts: {} }, k), true, k + ' should default on');
+    assert.strictEqual(tg.isAlertEnabled(null, k), true, k + ' should default on');
+    assert.strictEqual(tg.isAlertEnabled(undefined, k), true, k + ' should default on');
+  });
+});
+
+check('only an explicit false switches an alert off', () => {
+  assert.strictEqual(tg.isAlertEnabled({ alerts: { request: false } }, 'request'), false);
+  assert.strictEqual(tg.isAlertEnabled({ alerts: { request: true } }, 'request'), true);
+  // Anything that is not literally false leaves it on, so a stray string or a
+  // 0 from a mangled settings write cannot mute an alert by accident.
+  [0, '', 'false', null, undefined].forEach(v => {
+    assert.strictEqual(tg.isAlertEnabled({ alerts: { request: v } }, 'request'), true, String(v) + ' should not mute');
+  });
+});
+
+check('switching one alert off leaves the others alone', () => {
+  const s = { alerts: { order_created: false } };
+  assert.strictEqual(tg.isAlertEnabled(s, 'order_created'), false);
+  assert.strictEqual(tg.isAlertEnabled(s, 'order_review'), true);
+  assert.strictEqual(tg.isAlertEnabled(s, 'signin'), true);
+  assert.strictEqual(tg.isAlertEnabled(s, 'request'), true);
+});
+
+check('an unknown kind fails open rather than silently muting', () => {
+  assert.strictEqual(tg.isAlertEnabled({ alerts: {} }, 'something_new'), true);
+});
+
 console.log('\n' + passed + ' assertions passed');

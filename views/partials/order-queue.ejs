@@ -89,8 +89,41 @@
     happening. %>
 <div class="oq-alert-test">
   <button type="button" id="oqTestAlert" class="oq-alert-btn">🔔 Send test alert</button>
-  <span class="oq-alert-msg" id="oqTestAlertMsg">Checks that sign-in alerts reach your Telegram.</span>
+  <span class="oq-alert-msg" id="oqTestAlertMsg">Checks that alerts reach your Telegram.</span>
 </div>
+
+<%
+  // Labels live here rather than in lib/telegram.js — that module builds
+  // messages, and how the owner's own settings panel words a switch is a
+  // presentation choice. Falling back to the raw key means a kind added to
+  // ALERT_KINDS still renders a working toggle before anyone writes copy for it.
+  const ALERT_LABELS = {
+    signin:        { name: 'Sign-in waiting',   note: 'The one that blocks — you have 10 minutes' },
+    order_created: { name: 'New order started', note: 'Noisiest: about half never pay' },
+    order_review:  { name: 'Payment to approve', note: 'Blocks the order until you act' },
+    order_paid:    { name: 'Paid online',       note: 'Money landed; already advanced itself' },
+    request:       { name: 'Game request',      note: 'New titles only, never repeat votes' }
+  };
+  const alertsOn = (settings && settings.alerts) || {};
+%>
+<details class="oq-alert-cfg">
+  <summary>Which alerts reach my phone</summary>
+  <form method="POST" action="/admin/settings/alerts">
+    <% (alertKinds || []).forEach(k => { const L = ALERT_LABELS[k] || { name: k, note: '' }; %>
+    <label class="oq-alert-row">
+      <%# Unset means on, matching lib/telegram.js — so a brand new install and
+          a kind added later both start out checked. %>
+      <input type="checkbox" name="alert_<%= k %>" <%= alertsOn[k] !== false ? 'checked' : '' %>>
+      <span>
+        <span class="oq-alert-name"><%= L.name %></span>
+        <% if (L.note) { %><span class="oq-alert-note"><%= L.note %></span><% } %>
+      </span>
+    </label>
+    <% }) %>
+    <button type="submit" class="oq-alert-btn" style="margin-top:0.5rem;">Save alert settings</button>
+    <div class="oq-alert-msg" style="margin-top:0.4rem;">The test button above ignores these and always sends, so you can check the connection with everything switched off.</div>
+  </form>
+</details>
 
 <form method="POST" action="/admin/online" class="oq-online-form">
   <label class="oq-online-toggle">

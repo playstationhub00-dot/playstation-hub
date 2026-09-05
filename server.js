@@ -974,6 +974,11 @@ function getSiteSettings() {
   // The floor of the FX fallback chain — must always be set, so the dollar
   // estimate works before the first live fetch ever succeeds.
   if (s.fx_manual_rate === undefined) { db.set('site_settings.fx_manual_rate', 62.5).write(); s.fx_manual_rate = 62.5; }
+  // Which Telegram alerts are switched on. Seeded empty rather than with five
+  // explicit trues, because lib/telegram.js treats "unset" as on — so an alert
+  // kind added later starts working instead of being muted by an older blob,
+  // and this seed never has to be edited again.
+  if (s.alerts === undefined) { db.set('site_settings.alerts', {}).write(); s.alerts = {}; }
   // The m.me handle is a setting rather than a constant because the whole
   // referral link depends on it, and getting it wrong silently breaks PSID
   // capture with no visible symptom on the page.
@@ -2455,6 +2460,7 @@ async function sendTelegramMessage(text) {
 function notifyOwnerOrder(order, kind) {
   try {
     if (!telegram.isConfigured(process.env)) return;
+    if (!telegram.isAlertEnabled(getSiteSettings(), 'order_' + kind)) return;
     const text = telegram.formatOrderAlert(order, { kind, adminUrl: SITE_URL + '/admin?tab=orders' });
     sendTelegramMessage(text).then(r => {
       if (!r.ok) console.error('[telegram order]', r.reason, r.description || r.status || '');
@@ -2467,6 +2473,7 @@ function notifyOwnerOrder(order, kind) {
 function notifyOwnerRequest(request) {
   try {
     if (!telegram.isConfigured(process.env)) return;
+    if (!telegram.isAlertEnabled(getSiteSettings(), 'request')) return;
     const text = telegram.formatRequestAlert(request, { adminUrl: SITE_URL + '/admin?tab=requests' });
     sendTelegramMessage(text).then(r => {
       if (!r.ok) console.error('[telegram request]', r.reason, r.description || r.status || '');
@@ -2489,6 +2496,7 @@ async function createOrderNotified(fields) {
 function notifyOwnerSignin(order, code) {
   try {
     if (!telegram.isConfigured(process.env)) return;
+    if (!telegram.isAlertEnabled(getSiteSettings(), 'signin')) return;
     const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS)
       .toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
     const text = telegram.formatQrAlert(order, {
@@ -3804,7 +3812,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -5820,6 +5828,17 @@ app.post('/admin/settings/bot-ai-fallback', requireAuth, (req, res) => {
 // real test is a customer's sign-in — and a wrong variable is discovered by
 // missing their ten-minute window. Reports what Telegram actually said rather
 // than claiming success, because "didn't arrive" is not a diagnosis.
+// Which alerts are switched on. Built from ALERT_KINDS rather than from the
+// posted body, because an unchecked checkbox submits nothing at all — reading
+// only what arrived would leave every switched-off kind untouched and make the
+// toggles one-way.
+app.post('/admin/settings/alerts', requireAuth, (req, res) => {
+  const next = {};
+  telegram.ALERT_KINDS.forEach(k => { next[k] = req.body['alert_' + k] === 'on'; });
+  db.set('site_settings.alerts', next).write();
+  res.redirect('/admin?tab=orders&msg=alerts_saved');
+});
+
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
   const when = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
   const result = await sendTelegramMessage(
