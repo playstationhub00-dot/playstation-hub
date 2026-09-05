@@ -14,6 +14,41 @@
 <%- include('partials/popup') %>
 <%- include('partials/nav', { active: 'home' }) %>
 
+<%
+  // How the shop actually takes money, read from settings rather than written
+  // out here. Two things drive it: whichever payment_methods the owner has
+  // switched on, and whether the gateway key is configured at all.
+  //
+  // The site cannot know which methods PayMongo has approved on the account —
+  // that lives on PayMongo's side — so the online badge names QRPh, which is
+  // what a customer actually scans, rather than listing wallets that may or may
+  // not be active yet.
+  const PAY_ICONS = { gcash: '💙', maya: '💚', paypal: '🅿️' };
+  const payManual = (settings.payment_methods || []).filter(m => m && m.enabled);
+  const payBadges = [];
+  if (typeof payViaGateway !== 'undefined' && payViaGateway) {
+    payBadges.push({
+      icon: '💳', primary: true,
+      label: 'Pay online',
+      note: 'Card, or QRPh scanned with GCash, Maya or any bank app'
+    });
+  }
+  payManual.forEach(m => {
+    payBadges.push({
+      icon: PAY_ICONS[m.key] || '💸',
+      label: m.label,
+      note: m.key === 'paypal' ? 'For customers outside the Philippines' : 'Send it manually, then upload the receipt'
+    });
+  });
+  // The one-line version, for the Why Rent From Us card.
+  const payNames = payManual.map(m => m.label);
+  const payWhyDesc = payBadges.length
+    ? ((payBadges[0].primary ? 'Secure online checkout' : '')
+        + (payBadges[0].primary && payNames.length ? ', or ' : '')
+        + (payNames.length ? payNames.join(' / ') : '')
+        + '. Refundable deposit on trophy accounts only.').replace(/^, or /, '')
+    : 'Payment details are sent with every order. Refundable deposit on trophy accounts only.';
+%>
 <% const heroSlides = settings.hero_slides && settings.hero_slides.length > 0 ? settings.hero_slides : null; %>
 <% if (heroSlides) { %>
 <section class="hero-slideshow" id="heroSlideshow">
@@ -486,10 +521,33 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
     <div class="why-card">
       <div class="why-icon">💳</div>
       <div class="why-title">Pay Locally</div>
-      <div class="why-desc">GCash and Maya. Refundable deposit on trophy accounts only.</div>
+      <div class="why-desc"><%= payWhyDesc %></div>
     </div>
   </div>
 </div>
+
+<%# Rendered from what is actually switched on, never written out by hand. The
+    card above used to read "GCash and Maya" and was still saying it months
+    after online checkout went live — deriving it means enabling PayPal or a new
+    method updates this page on its own. Hidden entirely when nothing is on,
+    rather than showing an empty promise. %>
+<% if (payBadges.length) { %>
+<div class="pay-section">
+  <h2 class="section-title">Ways to Pay</h2>
+  <div class="pay-strip">
+    <% payBadges.forEach(b => { %>
+    <div class="pay-badge<%= b.primary ? ' pay-badge-main' : '' %>">
+      <span class="pay-badge-icon"><%= b.icon %></span>
+      <span>
+        <span class="pay-badge-label"><%= b.label %></span>
+        <span class="pay-badge-note"><%= b.note %></span>
+      </span>
+    </div>
+    <% }) %>
+  </div>
+  <p class="pay-foot">Refundable deposit on trophy accounts only — you get it back when you return the account.</p>
+</div>
+<% } %>
 
 <section class="how-section" id="how">
   <div class="how-inner">

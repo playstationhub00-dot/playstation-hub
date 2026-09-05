@@ -1408,7 +1408,7 @@ app.get('/', (req, res) => {
     .slice(0, 10);
   // The homepage renders the same review strip partial as every other public
   // page, so it takes the same locals from the same helper.
-  res.render('index', Object.assign({ featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases },
+  res.render('index', Object.assign({ featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
     reviewBlockLocals('')));
 });
 
