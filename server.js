@@ -356,6 +356,17 @@ app.locals.assetV = (() => {
   }
 })();
 
+// Whether online checkout is available, exposed to every view. The footer
+// renders on 18 pages and lists what the shop accepts, so passing this from
+// each route would mean every future route remembering to — and the one that
+// forgets shows a footer quietly missing a payment method. res.locals rather
+// than app.locals because app.locals is evaluated once at boot, and this is
+// read from the environment the same way the checkout routes read it.
+app.use((req, res, next) => {
+  res.locals.payViaGateway = !!process.env.PAYMONGO_SECRET_KEY;
+  next();
+});
+
 // ── JPEG renditions for the Meta catalog feed ────────────────────────────────
 // processUploadedImage() stores every cover as .webp, which keeps the site fast
 // on mobile, but Meta's product catalog expects JPEG/PNG. Rather than change the

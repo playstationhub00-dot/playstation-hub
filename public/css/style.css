@@ -2157,6 +2157,9 @@ footer {
   font-size: 0.75rem; font-weight: 700; color: #ccc; background: var(--bg-card);
   border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.7rem;
 }
+/* Online checkout leads, matching how the homepage strip ranks it — it is the
+   route that confirms itself without anyone waiting on a human. */
+.footer-pay-badge-main { color: #f59e0b; border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); }
 .footer-bottom {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
   padding-top: 1.5rem; border-top: 1px solid #141414;

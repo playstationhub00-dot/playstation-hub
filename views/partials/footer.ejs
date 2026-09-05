@@ -69,9 +69,25 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
 
       <div class="footer-col">
         <div class="footer-col-title">Payments</div>
+        <%# Read from settings, not written out. This list said "GCash / Maya"
+            long after online checkout went live and PayPal was switched on —
+            the third place on the site to go stale the same way. payViaGateway
+            comes from res.locals, so the footer works on all 18 pages that
+            include it without each route having to supply it. %>
+        <%
+          const ftPay = (settings.payment_methods || []).filter(m => m && m.enabled);
+          const ftGateway = typeof payViaGateway !== 'undefined' && payViaGateway;
+        %>
         <div class="footer-pay-badges">
-          <span class="footer-pay-badge">GCash</span>
-          <span class="footer-pay-badge">Maya</span>
+          <% if (ftGateway) { %>
+          <span class="footer-pay-badge footer-pay-badge-main">Card &amp; QR Ph</span>
+          <% } %>
+          <% ftPay.forEach(m => { %>
+          <span class="footer-pay-badge"><%= m.label %></span>
+          <% }) %>
+          <% if (!ftGateway && !ftPay.length) { %>
+          <span class="footer-note">Payment details are sent with every order.</span>
+          <% } %>
         </div>
         <span class="footer-note">Refundable deposit on Trophy accounts only.</span>
       </div>
