@@ -1,0 +1,14 @@
+<%
+  // One payment chip. The single definition of what a GCash / Maya / QR Ph /
+  // PayPal pill looks like, so the hero (which renders it twice, once per hero
+  // variant) and the footer cannot drift into three slightly different chips.
+  //
+  // Takes `key` (matches the .pay-<key> colour class) and `label`. An unknown
+  // key still renders — it just gets the neutral chip styling rather than a
+  // brand colour, which is the right outcome for a method added later.
+  const PAY_CHIP_ICONS = {
+    qrph: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/></svg>',
+    bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10l9-6 9 6M4 10v9M20 10v9M8 10v9M16 10v9M2 21h20"/></svg>',
+    paypal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20l1.5-9h4a3.5 3.5 0 0 0 0-7H8L6 20z"/><path d="M10 16h3.5a3.5 3.5 0 0 0 0-7H12"/></svg>'
+  };
+%><span class="pay-badge pay-<%= key %>"><%- PAY_CHIP_ICONS[key] || '' %><%= label %></span>

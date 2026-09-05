@@ -80,10 +80,10 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
         %>
         <div class="footer-pay-badges">
           <% if (ftGateway) { %>
-          <span class="footer-pay-badge footer-pay-badge-main">Card &amp; QR Ph</span>
+          <%- include('pay-chip', { key: 'qrph', label: 'Card & QR Ph' }) %>
           <% } %>
           <% ftPay.forEach(m => { %>
-          <span class="footer-pay-badge"><%= m.label %></span>
+          <%- include('pay-chip', { key: m.key, label: m.label }) %>
           <% }) %>
           <% if (!ftGateway && !ftPay.length) { %>
           <span class="footer-note">Payment details are sent with every order.</span>
