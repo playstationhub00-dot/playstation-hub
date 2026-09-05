@@ -1096,7 +1096,13 @@ app.post('/requests/add', async (req, res) => {
     '';
 
   const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover });
-  if (r.ok) return res.redirect('/requests?msg=submitted');
+  if (r.ok) {
+    // Only a genuinely new title alerts. The 'exists' branch below turns a
+    // repeat into a vote, and a buzz per vote on a popular request would be
+    // exactly the noise that trains someone to ignore the alerts that matter.
+    notifyOwnerRequest({ title, fb_name });
+    return res.redirect('/requests?msg=submitted');
+  }
   if (r.reason === 'exists') {
     // Someone already asked for this — add their vote rather than refusing.
     const v = await gameRequests.addVote(r.slug, { fb_name, session_id: req.sessionId || null });
@@ -1861,7 +1867,7 @@ app.post('/order/create', async (req, res) => {
   };
 
   try {
-    const order = await orders.create({
+    const order = await createOrderNotified({
       game_id: game.id,
       game_title: game.title,
       account_type: type,
@@ -1906,7 +1912,7 @@ app.post('/order/buy', async (req, res) => {
     const price = type === 'tr' ? account.price_permanent_tr : account.price_permanent_nt;
     if (!price) return res.redirect('/buy?order_error=1');
     try {
-      const order = await orders.create({
+      const order = await createOrderNotified({
         game_id: 'bundle_' + account.id,
         game_title: account.public_name || account.label,
         account_type: type,
@@ -1946,7 +1952,7 @@ app.post('/order/buy', async (req, res) => {
   const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
     ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
   try {
-    const order = await orders.create({
+    const order = await createOrderNotified({
       game_id: game.id,
       game_title: game.title,
       account_type: type,
@@ -1992,7 +1998,7 @@ app.post('/order/create-psplus', async (req, res) => {
   const depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
 
   try {
-    const order = await orders.create({
+    const order = await createOrderNotified({
       game_id: 'psplus',
       game_title: 'PS Plus Deluxe',
       account_type: type,
@@ -2167,7 +2173,7 @@ app.post('/order/reserve', async (req, res) => {
     // NOT skip an explicit `undefined` value, so the key is omitted rather
     // than set to `state: undefined` (which would overwrite the default).
     if (isWaitlist) orderFields.state = 'waitlisted';
-    const order = await orders.create(orderFields);
+    const order = await createOrderNotified(orderFields);
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order reserve]', e.message);
@@ -2283,6 +2289,10 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
     cleanupOrphanedUpload(proofPath);
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
+  // The one order alert that actually blocks: nothing moves until the owner
+  // approves it. Sent from `r` rather than `order`, so the payment method the
+  // customer just chose is in the message.
+  notifyOwnerOrder(r, 'review');
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=payment_submitted');
 });
 
@@ -2432,6 +2442,48 @@ async function sendTelegramMessage(text) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+// Order and game-request alerts. Same fire-and-forget contract as the sign-in
+// alert below: never awaited, never able to throw, never able to fail the
+// customer's request that triggered it.
+//
+// Kinds: 'created' (someone started an order), 'review' (they sent proof and it
+// is blocked on the owner), 'paid' (a gateway payment settled and advanced on
+// its own). Only 'review' needs action — the wording keeps them apart so the
+// blocking one stays visible among the others.
+function notifyOwnerOrder(order, kind) {
+  try {
+    if (!telegram.isConfigured(process.env)) return;
+    const text = telegram.formatOrderAlert(order, { kind, adminUrl: SITE_URL + '/admin?tab=orders' });
+    sendTelegramMessage(text).then(r => {
+      if (!r.ok) console.error('[telegram order]', r.reason, r.description || r.status || '');
+    });
+  } catch (e) {
+    console.error('[telegram order]', e.message);
+  }
+}
+
+function notifyOwnerRequest(request) {
+  try {
+    if (!telegram.isConfigured(process.env)) return;
+    const text = telegram.formatRequestAlert(request, { adminUrl: SITE_URL + '/admin?tab=requests' });
+    sendTelegramMessage(text).then(r => {
+      if (!r.ok) console.error('[telegram request]', r.reason, r.description || r.status || '');
+    });
+  } catch (e) {
+    console.error('[telegram request]', e.message);
+  }
+}
+
+// Wraps orders.create so a new-order alert cannot be forgotten at a call site.
+// Used by the five customer-facing creation routes; /admin/orders/create-manual
+// deliberately does NOT use it, because alerting the owner about an order they
+// just typed themselves is pure noise.
+async function createOrderNotified(fields) {
+  const order = await orders.create(fields);
+  notifyOwnerOrder(order, 'created');
+  return order;
 }
 
 function notifyOwnerSignin(order, code) {
@@ -2694,6 +2746,10 @@ app.post('/webhooks/paymongo', async (req, res) => {
       paid_at: new Date().toISOString(),
       overpaid_by_centavos: decision.overBy || 0
     });
+    // Informational: the order already advanced on its own, so this exists only
+    // so the owner sees the money land. Fired after the transition, so it can
+    // never be the reason a settled payment fails to apply.
+    notifyOwnerOrder(order, 'paid');
   } else if (decision.action !== 'duplicate') {
     // Short, orphaned, unpayable and unsettled events are all recorded and left
     // for a human. None of them should quietly disappear.
