@@ -976,6 +976,22 @@ function getSiteSettings() {
     db.set('site_settings.payment_methods', withPaypal).write();
     s.payment_methods = withPaypal;
   }
+  // Bank Transfer became a real, manageable method when the hero stopped
+  // hardcoding its chip list. It was advertised on the hero for months without
+  // existing here, which meant nobody could edit or switch it off — and there
+  // is no "add a method" button in admin, so seeding it is the only way the
+  // owner can ever turn it back on.
+  //
+  // Seeded DISABLED on purpose: the chip should not reappear until real bank
+  // details are filled in, since advertising a transfer with no account number
+  // to send to is worse than not advertising it at all.
+  if (!(s.payment_methods || []).some(m => m && m.key === 'bank')) {
+    const withBank = (s.payment_methods || []).concat([
+      { key: 'bank', label: 'Bank Transfer', account_name: '', account_number: '', qr_image: '', enabled: false }
+    ]);
+    db.set('site_settings.payment_methods', withBank).write();
+    s.payment_methods = withBank;
+  }
   // Fee recovery for PayPal orders. Settings rather than constants because
   // PayPal's published rates change, and because the first real payment is the
   // only reliable way to learn what the fee actually lands at.
@@ -3372,7 +3388,8 @@ app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), as
 app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
   { name: 'qr_gcash', maxCount: 1 },
   { name: 'qr_maya',  maxCount: 1 },
-  { name: 'qr_paypal', maxCount: 1 }
+  { name: 'qr_paypal', maxCount: 1 },
+  { name: 'qr_bank', maxCount: 1 }
 ]), async (req, res) => {
   const existing = db.get('site_settings.payment_methods').value() || [];
   const next = [];

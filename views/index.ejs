@@ -151,13 +151,16 @@
               <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
       </div>
       <div class="hero-pay-methods">
-        <%- include('partials/pay-chip', { key: 'gcash', label: 'GCash' }) %>
-        <%- include('partials/pay-chip', { key: 'maya', label: 'Maya' }) %>
-        <%- include('partials/pay-chip', { key: 'qrph', label: 'QR Ph' }) %>
-        <%- include('partials/pay-chip', { key: 'bank', label: 'Bank Transfer' }) %>
-        <% if (payManual.some(m => m.key === 'paypal')) { %>
-        <%- include('partials/pay-chip', { key: 'paypal', label: 'PayPal' }) %>
+        <%# Driven from settings, like the footer. Online checkout leads because
+            it is the route that confirms itself; the rest are whatever the owner
+            has switched on, so a method enabled or disabled in admin appears and
+            disappears here without an edit. %>
+        <% if (typeof payViaGateway !== 'undefined' && payViaGateway) { %>
+        <%- include('partials/pay-chip', { key: 'qrph', label: 'Card & QR Ph' }) %>
         <% } %>
+        <% payManual.forEach(m => { %>
+        <%- include('partials/pay-chip', { key: m.key, label: m.label }) %>
+        <% }) %>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
@@ -216,13 +219,16 @@
               <div class="hero-trust-item"><b>Trophy Accounts</b>Earn on your profile</div>
       </div>
       <div class="hero-pay-methods">
-        <%- include('partials/pay-chip', { key: 'gcash', label: 'GCash' }) %>
-        <%- include('partials/pay-chip', { key: 'maya', label: 'Maya' }) %>
-        <%- include('partials/pay-chip', { key: 'qrph', label: 'QR Ph' }) %>
-        <%- include('partials/pay-chip', { key: 'bank', label: 'Bank Transfer' }) %>
-        <% if (payManual.some(m => m.key === 'paypal')) { %>
-        <%- include('partials/pay-chip', { key: 'paypal', label: 'PayPal' }) %>
+        <%# Driven from settings, like the footer. Online checkout leads because
+            it is the route that confirms itself; the rest are whatever the owner
+            has switched on, so a method enabled or disabled in admin appears and
+            disappears here without an edit. %>
+        <% if (typeof payViaGateway !== 'undefined' && payViaGateway) { %>
+        <%- include('partials/pay-chip', { key: 'qrph', label: 'Card & QR Ph' }) %>
         <% } %>
+        <% payManual.forEach(m => { %>
+        <%- include('partials/pay-chip', { key: m.key, label: m.label }) %>
+        <% }) %>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
