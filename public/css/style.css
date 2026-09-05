@@ -1375,6 +1375,45 @@ nav {
 /* Ways to Pay. Auto-fit rather than a fixed column count, because the number of
    badges is whatever the owner has switched on — one method or four both have
    to look deliberate. */
+/* Account-type explainer, directly under the hero. Two cards, Trophy accented
+   because it is the one that needs justifying — it costs more, and the reason
+   is the whole point of the section. */
+.acct-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
+.acct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.acct-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; }
+.acct-card-tr { border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.05); }
+.acct-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.acct-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.22rem 0.6rem; border-radius: 20px; }
+.acct-badge-tr { background: rgba(245,158,11,0.18); color: #f59e0b; }
+.acct-badge-nt { background: rgba(147,197,253,0.14); color: #93c5fd; }
+.acct-price { font-size: 0.85rem; font-weight: 800; color: var(--text-primary); }
+.acct-title { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.45rem; }
+.acct-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+.acct-for { font-size: 0.8rem; color: #4ade80; font-weight: 700; margin-top: 0.75rem; }
+.acct-foot { font-size: 0.82rem; color: var(--text-secondary); margin-top: 1rem; line-height: 1.6; }
+.acct-foot a { color: var(--ps-blue); }
+
+/* Three products. Whole card is the link — someone deciding between them is
+   choosing a destination, not reading a paragraph. */
+.ways-section { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
+.ways-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.ways-card { display: block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+.ways-card:hover { border-color: var(--ps-blue); transform: translateY(-3px); }
+.ways-name { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+.ways-price { font-size: 0.8rem; color: #f59e0b; font-weight: 700; margin: 0.2rem 0 0.6rem; }
+.ways-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+.ways-go { font-size: 0.82rem; color: var(--ps-blue); font-weight: 700; margin-top: 0.9rem; }
+
+/* FAQ. Collapsed so the page grows by five lines, not five paragraphs. */
+.faq-section { padding: var(--section-gap) 2rem 0; max-width: 900px; margin: 0 auto; }
+.faq-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.faq-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
+.faq-item > summary { cursor: pointer; padding: 0.95rem 1.15rem; font-size: 0.9rem; font-weight: 700; color: var(--text-primary); list-style: none; }
+.faq-item > summary::-webkit-details-marker { display: none; }
+.faq-item > summary::after { content: '+'; float: right; color: var(--text-secondary); font-weight: 400; }
+.faq-item[open] > summary::after { content: '−'; }
+.faq-item > p { margin: 0; padding: 0 1.15rem 1.05rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.65; }
+
 .paysec { padding: var(--section-gap) 2rem 0; max-width: 1400px; margin: 0 auto; }
 .paysec-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.85rem; }
 .paysec-item {
@@ -1396,6 +1435,7 @@ nav {
 @media (max-width: 900px) {
   .tier-grid, .why-grid { grid-template-columns: repeat(2, 1fr); }
   .spotlight-card { grid-template-columns: 1fr; }
+  .ways-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   /* Two columns, not one. Stacking all four cards made this section 861px on a
@@ -1406,7 +1446,13 @@ nav {
   .why-title { font-size: 0.92rem; }
   .why-desc { font-size: 0.78rem; line-height: 1.5; }
   .why-icon { font-size: 1.5rem; }
-  .tier-section, .spotlight-section, .promo-section, .why-section { padding-left: 1rem; padding-right: 1rem; }
+  /* Both of these carry a paragraph per card, so two columns on a phone would
+     reproduce the blowup described above rather than avoid it. */
+  .acct-grid { grid-template-columns: 1fr; gap: 0.7rem; }
+  .acct-card { padding: 1.1rem 1rem; }
+  .ways-card { padding: 1.1rem 1rem; }
+  .tier-section, .spotlight-section, .promo-section, .why-section,
+  .acct-section, .ways-section, .faq-section, .paysec { padding-left: 1rem; padding-right: 1rem; }
   .spotlight-card { padding: 1.5rem; }
   .promo-band { padding: 1.75rem; flex-direction: column; align-items: flex-start; }
   /* Price tiers as a horizontal-scrolling chip strip instead of 4 stacked full-width

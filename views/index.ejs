@@ -48,6 +48,18 @@
         + (payNames.length ? payNames.join(' / ') : '')
         + '. Refundable deposit on trophy accounts only.').replace(/^, or /, '')
     : 'Payment details are sent with every order. Refundable deposit on trophy accounts only.';
+
+  // Entry prices per account type, for the explainer below the hero. Derived
+  // from the live catalogue rather than written down, so a price change never
+  // leaves the explainer quoting a number the game cards disagree with.
+  const cheapestOf = keys => {
+    const v = games.flatMap(g => keys.map(k => g[k]).filter(p => p > 0));
+    return v.length ? Math.min(...v) : 0;
+  };
+  const ntFrom = cheapestOf(['nt_price_7d', 'nt_price_30d']);
+  const trFrom = cheapestOf(['tr_price_7d', 'tr_price_30d']);
+  const buyFrom = cheapestOf(['buy_nt_price', 'buy_tr_price']);
+  const depositAmt = (promo && promo.deposit) || 0;
 %>
 <% const heroSlides = settings.hero_slides && settings.hero_slides.length > 0 ? settings.hero_slides : null; %>
 <% if (heroSlides) { %>
@@ -269,6 +281,41 @@
      days (created_at). Hidden entirely until at least 4 games have a
      release_date set, so a half-backfilled field never shows a thin section. -->
 <% if (newReleases && newReleases.length >= 4) { %>
+<%# Directly under the hero, before any game card. Every price on this page is
+    labelled Trophy or Non-Trophy, and until now the only explanation lived on
+    /how-it-works — so a first-time visitor met the labels on a price before
+    anything told them what they meant. Prices here come from the catalogue, so
+    they cannot disagree with the cards below. %>
+<div class="acct-section">
+  <h2 class="section-title">Which account type is for you?</h2>
+  <div class="acct-grid">
+    <div class="acct-card acct-card-tr">
+      <div class="acct-head">
+        <span class="acct-badge acct-badge-tr">Trophy</span>
+        <% if (trFrom) { %><span class="acct-price">from ₱<%= trFrom %></span><% } %>
+      </div>
+      <div class="acct-title">Play on your own profile</div>
+      <div class="acct-desc">
+        Trophies and save data land on your own PSN account and stay there after the rental ends.
+        <% if (depositAmt) { %> Includes a refundable ₱<%= depositAmt %> deposit.<% } %>
+      </div>
+      <div class="acct-for">Best if you care about trophies</div>
+    </div>
+    <div class="acct-card">
+      <div class="acct-head">
+        <span class="acct-badge acct-badge-nt">Non-Trophy</span>
+        <% if (ntFrom) { %><span class="acct-price">from ₱<%= ntFrom %></span><% } %>
+      </div>
+      <div class="acct-title">Play on our account</div>
+      <div class="acct-desc">
+        The cheapest way to play. Your progress stays on our account, and there's no deposit to pay.
+      </div>
+      <div class="acct-for">Best if you just want to play the game</div>
+    </div>
+  </div>
+  <p class="acct-foot">Either way you never give us your password — you sign our account into your console using a code from your own screen. <a href="/how-it-works">See how it works</a></p>
+</div>
+
 <div class="section" id="newReleasesSection">
   <h2 class="section-title">New Releases <a href="/browse" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a></h2>
   <div class="upcoming-slider-wrap">
@@ -498,6 +545,33 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 <% } %>
 
 <!-- WHY RENT FROM US -->
+<%# Three products sit in the nav with nothing saying which one a given customer
+    wants. Prices are derived; a product with no price configured still renders,
+    because the choice matters even before the number does. %>
+<div class="ways-section">
+  <h2 class="section-title">Three ways to play</h2>
+  <div class="ways-grid">
+    <a href="/browse" class="ways-card">
+      <div class="ways-name">Rent</div>
+      <div class="ways-price"><% if (ntFrom) { %>from ₱<%= ntFrom %> · <% } %>7 or 30 days</div>
+      <div class="ways-desc">One game for a set stretch of time. Return it when you're done and the slot frees up for someone else.</div>
+      <div class="ways-go">Browse games →</div>
+    </a>
+    <a href="/buy" class="ways-card">
+      <div class="ways-name">Buy</div>
+      <div class="ways-price"><% if (buyFrom) { %>from ₱<%= buyFrom %> · <% } %>one-time</div>
+      <div class="ways-desc">Keep access permanently. No return date, no deposit, no reminders from us.</div>
+      <div class="ways-go">See what's for sale →</div>
+    </a>
+    <a href="/ps-plus" class="ways-card">
+      <div class="ways-name">PS Plus</div>
+      <div class="ways-price">hundreds of games</div>
+      <div class="ways-desc">One rental gets you a whole catalogue instead of a single title. Best if you play lots of different things.</div>
+      <div class="ways-go">Browse the catalogue →</div>
+    </a>
+  </div>
+</div>
+
 <div class="why-section">
   <h2 class="section-title">Why Rent From Us</h2>
   <div class="why-grid">
@@ -574,6 +648,38 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
     </div>
   </div>
 </section>
+
+<%# The objections that stop a first order from a stranger, answered before
+    anyone has to open Messenger and wait for a reply. Collapsed by default, so
+    an already-long homepage gains five lines rather than five paragraphs.
+    Every answer here is one the site's own behaviour backs up. %>
+<div class="faq-section">
+  <h2 class="section-title">Common questions</h2>
+  <div class="faq-list">
+    <details class="faq-item">
+      <summary>Do I need to give you my PSN password?</summary>
+      <p>No, and we never ask for it. You bring up the sign-in screen on your own console and send us the code from it — that signs <em>our</em> account into <em>your</em> console. Your password never leaves your hands.</p>
+    </details>
+    <details class="faq-item">
+      <summary>Can I try a game before I pay?</summary>
+      <p>Yes — three hours free, on our account, before you commit to renting or buying. Message us and we'll set it up.</p>
+    </details>
+    <% if (depositAmt) { %>
+    <details class="faq-item">
+      <summary>When do I get my ₱<%= depositAmt %> deposit back?</summary>
+      <p>As soon as you return the account at the end of your rental. It only applies to Trophy accounts. If you return late, ₱<%= (promo && promo.late_fee_per_day) || 0 %> a day comes out of it — return on time and you get the full amount back.</p>
+    </details>
+    <% } %>
+    <details class="faq-item">
+      <summary>What happens when my rental ends?</summary>
+      <p>You sign our account out of your console and send us a quick screenshot to confirm. That frees the slot for the next person, and releases your deposit if you paid one.</p>
+    </details>
+    <details class="faq-item">
+      <summary>What if there are no slots left for the game I want?</summary>
+      <p>You can join the line for free and we'll message you the moment one opens, or pay a small priority fee to move ahead of everyone on the free list. Either way you keep your place — you can see exactly where you are in the queue.</p>
+    </details>
+  </div>
+</div>
 
 <!-- Reviews Section -->
 <% if (reviews && reviews.length > 0) { %>
