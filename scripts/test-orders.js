@@ -110,6 +110,23 @@ check('a waitlist entry still cannot skip straight to a paid state', () => {
   assert.strictEqual(orders.canTransition('waitlisted', 'awaiting_qr'), false);
 });
 
+check('a mis-marked priority can be undone back to the free list', () => {
+  // The one edge out of 'reserved', so POST /admin/orders/:ref/undo-priority
+  // is not a one-way door. 'cancelled' does not accept 'reserved', so without
+  // this the only remedy for a mis-click would be deleting the order.
+  assert.strictEqual(orders.canTransition('reserved', 'waitlisted'), true);
+});
+
+check('undoing is the ONLY way out of reserved', () => {
+  // 'reserved' is otherwise still a resting state: the owner converts it to a
+  // real rental by hand once the game releases. If a later change makes it a
+  // general staging state, this fails and the decision gets made deliberately.
+  ['active', 'awaiting_qr', 'qr_pending', 'awaiting_payment', 'verifying_payment', 'closed', 'cancelled']
+    .forEach(to => {
+      assert.strictEqual(orders.canTransition('reserved', to), false, 'reserved should not reach ' + to);
+    });
+});
+
 check('the owner-marked priority upgrade has a legal path end to end', () => {
   // POST /admin/orders/:ref/priority-paid walks exactly these three hops, for a
   // customer who sent the ₱100 over Messenger instead of through the site.

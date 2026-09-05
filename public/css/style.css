@@ -3133,6 +3133,10 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-lact { text-align: right; white-space: nowrap; }
 .oq-lact-del { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; line-height: 1; padding: 0.32rem 0.5rem; cursor: pointer; font-family: inherit; }
 .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
+/* Undo priority. Same ghost shape as its neighbours; amber on hover because it
+   walks back the amber priority action rather than destroying anything. */
+.oq-lact-undo { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; line-height: 1; padding: 0.32rem 0.5rem; cursor: pointer; font-family: inherit; margin-right: 0.3rem; }
+.oq-lact-undo:hover { border-color: #f59e0b; color: #f59e0b; }
 /* Review-ask copy button, paired with the delete button in the same cell. The
    form is block by default, so it needs to go inline for the two to sit side by
    side. The .rem-copy chrome is overridden down to the delete button's ghost
@@ -3188,6 +3192,8 @@ body.light-mode .oq-tbl th,
 body.light-mode .oq-grp td { background: #f6f7f9; }
 body.light-mode .oq-lact-del { border-color: #ddd; color: #999; }
 body.light-mode .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
+body.light-mode .oq-lact-undo { border-color: #ddd; color: #999; }
+body.light-mode .oq-lact-undo:hover { border-color: #f59e0b; color: #f59e0b; }
 body.light-mode .oq-lact .rem-copy { border-color: #ddd; color: #999; }
 body.light-mode .oq-lact .rem-copy:hover { border-color: #f59e0b; color: #f59e0b; }
 body.light-mode .oq-period select,

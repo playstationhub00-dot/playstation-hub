@@ -3021,6 +3021,34 @@ app.post('/admin/orders/:ref/priority-paid', requireAuth, async (req, res) => {
   res.redirect('/admin?tab=orders&msg=order_priority_paid');
 });
 
+// Undo for the button above, when the ₱100 turns out not to have arrived. Puts
+// the customer back on the free list with their ref, their link and their place
+// in line intact — created_at is never touched, so lib/queue.js sorts them
+// exactly where they were.
+//
+// Guarded on upgraded_from_waitlist, which is the flag only the priority
+// upgrade sets. A Coming Soon downpayment rests in the same 'reserved' state
+// but paid real money for a game, and must never be reachable from here.
+app.post('/admin/orders/:ref/undo-priority', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (order.state !== 'reserved' || !order.upgraded_from_waitlist) {
+    return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  }
+  const r = await orders.transition(order.ref, 'waitlisted', {
+    is_waitlist: true,
+    is_reservation: false,
+    upgraded_from_waitlist: false,
+    deposit_due: 0,
+    // The payment record goes with the state it recorded — leaving these behind
+    // would show a paid receipt on an entry that owes ₱100 again.
+    paid_at: null,
+    payment_method: null
+  });
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_priority_undone');
+});
+
 // Owner-initiated cancellation for an unpaid order — the customer said no,
 // or never followed up. Distinct from Delete: this keeps the record (and
 // its state_history) instead of removing it.

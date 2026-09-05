@@ -441,6 +441,14 @@
           <% if (o.review_msg) { %>
           <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">📋</button>
           <% } %>
+          <%# Only on orders the priority-paid button created — a Coming Soon
+              downpayment rests in the same state but paid for a game, not a
+              queue place, and must not be undoable into a free entry. %>
+          <% if (o.state === 'reserved' && o.upgraded_from_waitlist) { %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
+            <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">↩</button>
+          </form>
+          <% } %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
             <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
           </form>
