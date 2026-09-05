@@ -3568,7 +3568,13 @@ label.buy-tier:hover { border-color: #444; }
 }
 .gdrq-track { display: flex; gap: 0.75rem; width: max-content; padding: 0 1rem; }
 .gdrq-track.gdrq-sliding { animation: gdrqSlide var(--gdrq-duration, 32s) linear infinite; }
-.gdrq-vp:hover .gdrq-track.gdrq-sliding,
+/* Deliberately NOT paused on hover. This strip is full width, so a visitor who
+   scrolls down to read the reviews almost always has the cursor somewhere over
+   it — which froze the marquee and made the section look broken. The game rows
+   above use a JS drift that ignores plain hover, so this was the one row that
+   appeared dead.
+   Pausing is still available where it is actually asked for: keyboard focus,
+   a deliberate touch, and prefers-reduced-motion (which stops it outright). */
 .gdrq-vp:focus-within .gdrq-track.gdrq-sliding,
 .gdrq-track.gdrq-sliding.gdrq-stopped { animation-play-state: paused; }
 @keyframes gdrqSlide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
