@@ -569,6 +569,12 @@
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       <div class="oq-ab-btns">
         <button type="button" class="btn-copy rem-copy" data-msg="<%= wlMsg %>" title="Copy slot-open message">📋 Copy</button>
+        <%# For a ₱100 that arrived over Messenger or GCash rather than through
+            the site. Confirms first because it books money and moves them above
+            everyone still on a free entry. %>
+        <form method="POST" action="/admin/orders/<%= o.ref %>/priority-paid" onsubmit="return confirm('Mark ' + <%= JSON.stringify(o.ref) %> + ' as priority paid?\n\nUse this when they sent the ₱100 outside the site. They move above everyone on a free entry, and the rest of the rent is still owed when a slot opens.');">
+          <button type="submit" class="oq-btn-pri" title="They paid the ₱100 priority fee outside the site">⭐ Priority paid</button>
+        </form>
         <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Remove ' + <%= JSON.stringify(o.ref) %> + ' from the waiting list?');">
           <button type="submit" class="oq-btn-no" title="Remove this waitlist entry">Remove</button>
         </form>

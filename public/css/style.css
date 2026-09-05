@@ -3059,6 +3059,11 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-btn-go { background: var(--ps-blue); color: #fff; border: 0; border-radius: 9px; padding: 0.6rem 0.9rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .oq-btn-no { background: transparent; color: #666; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .oq-btn-no:hover { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+/* Priority-paid. Amber to match the ⭐ tier everywhere else on the site, and
+   outlined rather than solid so it does not outrank the primary action on rows
+   that have one. */
+.oq-btn-pri { background: transparent; color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-btn-pri:hover { background: rgba(245,158,11,0.12); border-color: #f59e0b; }
 .oq-count { background: var(--ps-blue); color: #fff; border-radius: 20px; padding: 0.05rem 0.4rem; font-size: 0.7rem; font-weight: 900; margin-left: 0.3rem; }
 
 .oq-refunds { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1.25rem; }
@@ -3145,7 +3150,11 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-st-dead { color: #ef4444; }
 .oq-dep { font-size: 0.65rem; color: #f59e0b; margin-top: 0.15rem; }
 .oq-dep-ok { color: #7c8794; }
-.oq-ab-btns { display: flex; align-items: center; gap: 0.4rem; }
+/* Wraps rather than overflowing: .oq-ab-right is flex-shrink:0, so without this
+   a row with enough buttons pushes past the viewport on a phone instead of
+   stacking. The waitlist row gained a third button and the abandoned row
+   already carries up to five. */
+.oq-ab-btns { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ── Orders: light mode ── */
 body.light-mode .oq-stat,

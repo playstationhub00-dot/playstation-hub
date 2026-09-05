@@ -110,6 +110,17 @@ check('a waitlist entry still cannot skip straight to a paid state', () => {
   assert.strictEqual(orders.canTransition('waitlisted', 'awaiting_qr'), false);
 });
 
+check('the owner-marked priority upgrade has a legal path end to end', () => {
+  // POST /admin/orders/:ref/priority-paid walks exactly these three hops, for a
+  // customer who sent the ₱100 over Messenger instead of through the site.
+  // Because the direct waitlisted -> reserved edge is (correctly) forbidden
+  // above, that route depends on every hop below staying legal — if one is ever
+  // removed, the button silently stops working and this fails instead.
+  assert.strictEqual(orders.canTransition('waitlisted', 'awaiting_payment'), true);
+  assert.strictEqual(orders.canTransition('awaiting_payment', 'verifying_payment'), true);
+  assert.strictEqual(orders.canTransition('verifying_payment', 'reserved'), true);
+});
+
 check('exposes a queue-candidate query helper', () => {
   assert.strictEqual(typeof orders.listQueueCandidates, 'function');
 });

@@ -2293,6 +2293,44 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
 // order page renders the payment step because the state is awaiting_payment,
 // and the admin approve route already sends any is_reservation order from
 // verifying_payment into 'reserved'.
+// The patch that turns a free waitlist entry into a ₱100 priority reservation.
+// Shared by the customer's own upgrade button and the owner's "priority paid"
+// action, so the two can never quote different money — prices and promos move,
+// and a second copy of this arithmetic would drift silently.
+//
+// Returns null when the order can't be priced (a deleted game, or a game with
+// no price configured for that type and duration), which both callers treat as
+// "leave it alone" rather than guessing a figure.
+function priorityUpgradePatch(order) {
+  const s = getSiteSettings();
+  const promo = s.promo || {};
+  const isPsplus = order.game_id === 'psplus';
+  const game = isPsplus ? null : getGame(order.game_id);
+  if (!isPsplus && !game) return null;
+  const priceType = order.account_type === 'ps4' ? 'nt' : order.account_type;
+  // Recomputed from CURRENT prices and promo rather than the remaining_due
+  // stored when they joined the line — a promo may have started or ended since,
+  // and every paid path quotes today's price.
+  const base = isPsplus
+    ? (getPsplusPrices()[priceType + '_price_' + order.days + 'd'] || 0)
+    : (resolveGamePrices(game)[priceType + '_price_' + order.days + 'd'] || 0);
+  if (!base) return null;
+  const pct = getPromoDiscountPct(promo, order.days);
+  const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
+  return {
+    amount_due: 100,
+    deposit_due: 0,
+    is_reservation: true,
+    is_waitlist: false,
+    // Keeps this order in the queue at its original free position while the
+    // ₱100 is in flight, so an upgrading customer never disappears from the
+    // line. lib/queue.js reads this flag.
+    upgraded_from_waitlist: true,
+    remaining_due: Math.max(0, rentAfterPromo - 100) + deposit
+  };
+}
+
 app.post('/order/:ref/upgrade-priority', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
@@ -2305,34 +2343,9 @@ app.post('/order/:ref/upgrade-priority', async (req, res) => {
   if (order.state !== 'waitlisted') return res.redirect(back + '&msg=stale');
   if (queueRules.isExpired(order, new Date())) return res.redirect(back + '&msg=stale');
 
-  // Recompute from CURRENT prices and promo rather than trusting the
-  // remaining_due stored when they joined — a promo may have started or ended
-  // in the meantime, and the paid paths all quote today's price.
-  const s = getSiteSettings();
-  const promo = s.promo || {};
-  const isPsplus = order.game_id === 'psplus';
-  const game = isPsplus ? null : getGame(order.game_id);
-  if (!isPsplus && !game) return res.redirect(back + '&msg=stale');
-  const priceType = order.account_type === 'ps4' ? 'nt' : order.account_type;
-  const base = isPsplus
-    ? (getPsplusPrices()[priceType + '_price_' + order.days + 'd'] || 0)
-    : (resolveGamePrices(game)[priceType + '_price_' + order.days + 'd'] || 0);
-  if (!base) return res.redirect(back + '&msg=stale');
-  const pct = getPromoDiscountPct(promo, order.days);
-  const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
-  const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
-
-  const updated = await orders.transition(order.ref, 'awaiting_payment', {
-    amount_due: 100,
-    deposit_due: 0,
-    is_reservation: true,
-    is_waitlist: false,
-    // Keeps this order in the queue at its original free position while the
-    // ₱100 is in flight, so an upgrading customer never disappears from the
-    // line. lib/queue.js reads this flag.
-    upgraded_from_waitlist: true,
-    remaining_due: Math.max(0, rentAfterPromo - 100) + deposit
-  });
+  const patch = priorityUpgradePatch(order);
+  if (!patch) return res.redirect(back + '&msg=stale');
+  const updated = await orders.transition(order.ref, 'awaiting_payment', patch);
   if (!updated) return res.redirect(back + '&msg=stale');
   res.redirect(back + '&msg=upgrade_started');
 });
@@ -2976,6 +2989,36 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
   const r = await orders.transition(order.ref, target, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_marked_paid');
+});
+
+// A free waitlist entry whose ₱100 arrived outside the site — over Messenger,
+// or GCash direct. Moves them to a paid priority reservation so the queue sorts
+// them above everyone still on a free entry.
+//
+// waitlisted -> reserved is deliberately NOT an edge in the state machine: a
+// free entry must never jump straight to a paid state, and there is a test
+// asserting exactly that. So this walks the same legal path the customer's own
+// upgrade plus mark-paid would take, and the state history reads identically
+// whether the money arrived on the site or in a chat thread.
+app.post('/admin/orders/:ref/priority-paid', requireAuth, async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (order.state !== 'waitlisted') return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const patch = priorityUpgradePatch(order);
+  if (!patch) return res.redirect('/admin?tab=orders&msg=order_stale');
+
+  if (!(await orders.transition(order.ref, 'awaiting_payment', patch))) {
+    return res.redirect('/admin?tab=orders&msg=order_stale');
+  }
+  if (!(await orders.transition(order.ref, 'verifying_payment', {}))) {
+    return res.redirect('/admin?tab=orders&msg=order_stale');
+  }
+  const r = await orders.transition(order.ref, 'reserved', {
+    paid_at: new Date().toISOString(),
+    payment_method: order.payment_method || 'manual'
+  });
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_priority_paid');
 });
 
 // Owner-initiated cancellation for an unpaid order — the customer said no,
