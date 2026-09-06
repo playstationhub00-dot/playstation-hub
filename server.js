@@ -3561,6 +3561,25 @@ app.get('/admin', requireAuth, async (req, res) => {
     && requiresSlotAssignment(c.game_id, c.account_type || 'nt')
   );
 
+  // Active rentals due back tomorrow, today, or already overdue — computed
+  // once here so the Customers tab's reminder panel and the dashboard's
+  // "Needs you now" summary can never disagree on who is due. dl <= 1 covers
+  // overdue (negative) too: a rental still marked 'renting' past its end
+  // date is an account nobody has returned, which is exactly who most needs
+  // chasing. The ascending sort puts the most-overdue first.
+  const remToday = new Date(); remToday.setHours(0, 0, 0, 0);
+  const needsReminder = customers.filter(c => {
+    if (c.status !== 'renting' || !c.end_date) return false;
+    const end = new Date(c.end_date + 'T00:00:00');
+    const dl = Math.ceil((end - remToday) / 86400000);
+    return dl <= 1;
+  }).map(c => {
+    const end = new Date(c.end_date + 'T00:00:00');
+    const dl = Math.ceil((end - remToday) / 86400000);
+    const kind = dl < 0 ? 'expiry_overdue' : dl === 0 ? 'expiry_today' : 'expiry_tomorrow';
+    return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
+  }).sort((a, b) => a.dl - b.dl);
+
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
   // Who still needs asking for a quote, and who has already been asked or
@@ -3624,6 +3643,13 @@ app.get('/admin', requireAuth, async (req, res) => {
   // as a failed sale. Both the weekly funnel and the ledger below exclude
   // them at the source so no downstream stat has to know about the carve-out.
   const paidPathOrders = allOrders.filter(o => o.state !== 'waitlisted');
+  // "Money taken this month" for the dashboard's Right Now row — same
+  // created_at-month attribution the orders ledger groups by, so the two
+  // numbers can never disagree about which orders belong to the month.
+  const thisMonthKey = new Date().toISOString().slice(0, 7);
+  const moneyThisMonth = paidPathOrders
+    .filter(o => orders.isPaid(o.state) && (o.created_at || '').slice(0, 7) === thisMonthKey)
+    .reduce((s, o) => s + (o.amount_due || 0) + (o.deposit_due || 0), 0);
   const allRecentOrders = paidPathOrders.filter(o => new Date(o.created_at) >= weekAgo);
   const startedCount = allRecentOrders.length;
   const completedCount = allRecentOrders.filter(o =>
@@ -3850,7 +3876,7 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   const accountsView = buildAccountsView();
   const postersView = buildPostersView();
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

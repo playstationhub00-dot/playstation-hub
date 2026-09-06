@@ -268,26 +268,9 @@
               const tplLateFee = p.late_fee_per_day != null ? p.late_fee_per_day : 20;
               const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit, lateFeePerDay: tplLateFee }, extra));
             %>
-            <%
-              // Reuses the same day arithmetic the table rows below already do,
-              // rather than introducing a second definition of "due tomorrow".
-              // dl <= 1 covers overdue (negative) too: a rental still marked
-              // 'renting' past its end date is an account nobody has returned,
-              // which is exactly who most needs chasing. The ascending sort then
-              // puts the most-overdue first without any extra ordering rule.
-              const remToday = new Date(); remToday.setHours(0,0,0,0);
-              const needsReminder = customers.filter(c => {
-                if (c.status !== 'renting' || !c.end_date) return false;
-                const end = new Date(c.end_date + 'T00:00:00');
-                const dl = Math.ceil((end - remToday) / 86400000);
-                return dl <= 1;
-              }).map(c => {
-                const end = new Date(c.end_date + 'T00:00:00');
-                const dl = Math.ceil((end - remToday) / 86400000);
-                const kind = dl < 0 ? 'expiry_overdue' : dl === 0 ? 'expiry_today' : 'expiry_tomorrow';
-                return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
-              }).sort((a, b) => a.dl - b.dl);
-            %>
+            <%# needsReminder is computed once in server.js (shared with the
+                dashboard's "Needs you now" summary) so the two can never
+                disagree about who is due. %>
             <%# Rentals occupying no account slot on a game whose availability is
                 driven by accounts. Each one is a slot the site is still offering
                 to the next customer while somebody is already in it, so this

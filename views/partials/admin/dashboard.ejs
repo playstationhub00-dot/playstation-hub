@@ -14,7 +14,138 @@
       const today0 = new Date(); today0.setHours(0,0,0,0);
       const overdueCustomers = activeCustomers.filter(c => c.end_date && new Date(c.end_date + 'T00:00:00') < today0);
       const dashNow = new Date();
+
+      // ── "Needs you now" ─────────────────────────────────────────────────────
+      // Every figure here already exists elsewhere (Orders, Customers) — this
+      // is arrangement, not new measurement, so the two views can never drift.
+      const qrPending = orderQueue.filter(o => o.state === 'qr_pending');
+      const paymentsToApprove = orderQueue.filter(o => o.state === 'verifying_payment');
+      const returnsToVerify = orderQueue.filter(o => o.state === 'verifying_return');
+      // Soonest deadline first — that's the one the countdown chip shows.
+      const soonestQr = qrPending.slice().sort((a, b) =>
+        new Date(a.qr_expires_at || 0) - new Date(b.qr_expires_at || 0)
+      )[0];
+      const overdueReminders = needsReminder.filter(r => r.dl < 0);
+      const needsNowTotal = qrPending.length + paymentsToApprove.length + returnsToVerify.length
+        + needsReminder.length + unlinkedRentals.length;
     %>
+
+    <div class="dnn-wrap">
+      <div class="dnn-head">
+        <span class="dnn-title">🔔 Needs you now</span>
+        <% if (needsNowTotal === 0) { %><span class="dnn-clear">All clear</span><% } %>
+      </div>
+      <div class="dnn-grid">
+        <div class="dnn-card <%= qrPending.length ? 'dnn-hot' : 'dnn-quiet' %>" onclick="switchTab('orders')">
+          <div class="dnn-icon">🕐</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= qrPending.length %></div>
+            <div class="dnn-lbl">Sign-in<%= qrPending.length !== 1 ? 's' : '' %> waiting</div>
+            <% if (soonestQr && soonestQr.qr_expires_at) { %>
+              <span class="oq-timer dnn-timer" data-expires="<%= soonestQr.qr_expires_at %>">--:--</span>
+            <% } else { %>
+              <div class="dnn-sub">Nothing waiting</div>
+            <% } %>
+          </div>
+        </div>
+        <div class="dnn-card <%= paymentsToApprove.length ? 'dnn-hot' : 'dnn-quiet' %>" onclick="switchTab('orders')">
+          <div class="dnn-icon">💳</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= paymentsToApprove.length %></div>
+            <div class="dnn-lbl">Payment<%= paymentsToApprove.length !== 1 ? 's' : '' %> to approve</div>
+            <div class="dnn-sub">Blocks the order until checked</div>
+          </div>
+        </div>
+        <div class="dnn-card <%= returnsToVerify.length ? 'dnn-warm' : 'dnn-quiet' %>" onclick="switchTab('orders')">
+          <div class="dnn-icon">↩️</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= returnsToVerify.length %></div>
+            <div class="dnn-lbl">Return<%= returnsToVerify.length !== 1 ? 's' : '' %> to verify</div>
+            <div class="dnn-sub">Confirm the account came back</div>
+          </div>
+        </div>
+        <div class="dnn-card <%= overdueReminders.length ? 'dnn-hot' : (needsReminder.length ? 'dnn-warm' : 'dnn-quiet') %>" onclick="switchTab('customers')">
+          <div class="dnn-icon">⏰</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= needsReminder.length %></div>
+            <div class="dnn-lbl">Reminder<%= needsReminder.length !== 1 ? 's' : '' %> due</div>
+            <div class="dnn-sub"><%= overdueReminders.length ? overdueReminders.length + ' already overdue' : 'Due today or tomorrow' %></div>
+          </div>
+        </div>
+        <div class="dnn-card <%= unlinkedRentals.length ? 'dnn-hot' : 'dnn-quiet' %>" onclick="switchTab('customers')">
+          <div class="dnn-icon">🗂️</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= unlinkedRentals.length %></div>
+            <div class="dnn-lbl">Rental<%= unlinkedRentals.length !== 1 ? 's' : '' %> with no slot linked</div>
+            <div class="dnn-sub">Site still shows that slot as free</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── "Right now" ── -->
+    <div class="dnn-wrap" style="margin-top:0.85rem;">
+      <div class="dnn-head"><span class="dnn-title">📍 Right now</span></div>
+      <div class="dnn-grid dnn-grid-3">
+        <div class="dnn-card dnn-flat">
+          <div class="dnn-icon">🎮</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= ledgerStats.out %></div>
+            <div class="dnn-lbl">Out on rent</div>
+            <div class="dnn-sub">Paid, not returned yet</div>
+          </div>
+        </div>
+        <div class="dnn-card dnn-flat">
+          <div class="dnn-icon">📋</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= orderQueue.length %></div>
+            <div class="dnn-lbl">In the queue</div>
+            <div class="dnn-sub">Same as Needs you now, above</div>
+          </div>
+        </div>
+        <div class="dnn-card dnn-flat">
+          <div class="dnn-icon">💰</div>
+          <div class="dnn-body">
+            <div class="dnn-num">₱<%= moneyThisMonth.toLocaleString() %></div>
+            <div class="dnn-lbl">Taken this month</div>
+            <div class="dnn-sub"><%= dashNow.toLocaleDateString('en-US',{month:'long',year:'numeric'}) %></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .dnn-wrap { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:0.9rem; }
+      .dnn-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.7rem; }
+      .dnn-title { font-size:0.9rem; font-weight:800; color:#fff; }
+      .dnn-clear { font-size:0.72rem; color:#22c55e; font-weight:700; }
+      .dnn-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:0.6rem; }
+      .dnn-grid-3 { grid-template-columns:repeat(3,1fr); }
+      .dnn-card { display:flex; align-items:flex-start; gap:0.55rem; border-radius:10px; padding:0.75rem 0.7rem; cursor:pointer; transition:transform 0.1s; border:1px solid #1e1e1e; background:#0d0d0d; }
+      .dnn-card:hover { transform:translateY(-1px); }
+      .dnn-card.dnn-flat { cursor:default; }
+      .dnn-card.dnn-flat:hover { transform:none; }
+      .dnn-card.dnn-quiet { opacity:0.6; }
+      .dnn-card.dnn-warm { background:#100a00; border-color:#3a2a00; }
+      .dnn-card.dnn-hot { background:#1a0a0a; border-color:#3a1a1a; }
+      .dnn-icon { font-size:1.3rem; line-height:1; flex-shrink:0; }
+      .dnn-num { font-size:1.4rem; font-weight:900; color:#fff; line-height:1; }
+      .dnn-lbl { font-size:0.72rem; color:#ccc; font-weight:700; margin-top:0.15rem; }
+      .dnn-sub { font-size:0.64rem; color:#666; margin-top:0.2rem; }
+      .dnn-timer { display:inline-block; margin-top:0.2rem; font-size:0.68rem; font-weight:800; color:#ef4444; }
+      @media (max-width: 900px) {
+        .dnn-grid, .dnn-grid-3 { grid-template-columns:repeat(2,1fr); }
+      }
+    </style>
+
+    <div class="settings-accordion" style="margin:1rem 0;">
+      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📈</div>
+          <div><div class="sa-title">Analytics</div><div class="sa-desc">Revenue, profit, monthly stats, visits &amp; page popularity</div></div>
+        </div><span class="sa-arrow">▼</span>
+      </div>
+      <div class="settings-accordion-body">
 
     <div class="settings-accordion" style="margin-bottom:1rem;">
       <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
@@ -837,4 +968,6 @@
         .catch(() => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:1.5rem;">Failed to load visits.</td></tr>'; });
     }
     </script>
+
+      </div></div><!-- /accordion analytics -->
   </div><!-- /tab-visitors -->
