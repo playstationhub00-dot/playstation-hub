@@ -9,12 +9,18 @@
   <style>
     /* ── Sidebar shell ── */
     .admin-shell { display:flex; align-items:flex-start; gap:1.25rem; }
-    .admin-sidebar { flex-shrink:0; width:210px; background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:0.6rem; position:sticky; top:1rem; transition:width 0.18s; }
+    /* Every layout property here is declared explicitly, including the ones
+       that look like defaults. The site-wide `nav {}` rule in style.css is a
+       flex ROW 64px tall, and anything left undeclared leaks in from it. */
+    .admin-sidebar { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; height:auto; flex-shrink:0; width:210px; background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:0.6rem; position:sticky; top:1rem; transition:width 0.18s; }
     .admin-sidebar.collapsed { width:56px; padding:0.6rem 0.4rem; }
     .sidebar-toggle { width:100%; display:flex; align-items:center; justify-content:center; gap:0.4rem; padding:0.45rem; margin-bottom:0.5rem; border-radius:8px; border:1px solid #222; background:#111; color:#888; font-size:0.75rem; font-weight:700; cursor:pointer; }
     .sidebar-toggle:hover { color:#ccc; }
     .sidebar-group-label { font-size:0.65rem; text-transform:uppercase; letter-spacing:0.6px; color:#555; font-weight:800; padding:0.7rem 0.6rem 0.3rem; }
-    .admin-sidebar.collapsed .sidebar-group-label { text-align:center; padding:0.7rem 0 0.3rem; }
+    /* At 56px the group words wrap onto two lines, so collapsed swaps them for
+       a divider: the grouping stays legible without the text. */
+    .admin-sidebar.collapsed .sidebar-group-label { font-size:0; line-height:0; padding:0.3rem 0; }
+    .admin-sidebar.collapsed .admin-tab + .sidebar-group-label { border-top:1px solid #222; margin:0.4rem 0.35rem 0.15rem; }
     .admin-tab { display:flex; align-items:center; gap:0.6rem; width:100%; text-align:left; padding:0.55rem 0.6rem; border-radius:10px; font-size:0.82rem; font-weight:700; cursor:pointer; color:#888; border:none; background:none; transition:all 0.15s; letter-spacing:0.2px; white-space:nowrap; text-decoration:none; overflow:hidden; }
     .admin-tab .tab-icon { flex-shrink:0; }
     .admin-sidebar.collapsed .admin-tab { justify-content:center; padding:0.55rem 0; }
@@ -26,12 +32,13 @@
     .tab-panel.active { display:block; }
     @media (max-width: 860px) {
       .admin-shell { flex-direction:column; }
-      .admin-sidebar { position:static; width:100% !important; }
-      .admin-sidebar:not(.collapsed) { display:flex; flex-wrap:wrap; gap:0.25rem; }
-      .admin-sidebar:not(.collapsed) .sidebar-group-label { flex-basis:100%; }
-      .admin-sidebar.collapsed { display:flex; flex-direction:row; flex-wrap:wrap; }
+      /* On a phone the sidebar sits above the content as a wrapping row of
+         buttons rather than a column down the side. */
+      .admin-sidebar { position:static; width:100% !important; flex-direction:row; flex-wrap:wrap; gap:0.25rem; }
+      .admin-sidebar .sidebar-toggle { display:none; }
+      .admin-sidebar .sidebar-group-label { flex-basis:100%; padding:0.4rem 0.3rem 0.2rem; }
+      .admin-sidebar .admin-tab { width:auto; flex:1 1 auto; min-width:44px; justify-content:center; }
       .admin-sidebar.collapsed .sidebar-group-label { display:none; }
-      .admin-sidebar.collapsed .admin-tab { flex:1; min-width:52px; }
     }
     .add-choice-overlay { display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center; }
     .add-choice-overlay.open { display:flex; }
@@ -112,7 +119,9 @@
 
   <!-- SIDEBAR + CONTENT -->
   <div class="admin-shell">
-    <nav class="admin-sidebar" id="adminSidebar">
+    <%# A div, not a <nav>: style.css's site-wide `nav {}` rule is a 64px flex
+        row for the top bar, and it would otherwise style this sidebar too. %>
+    <div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="Admin sections">
       <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Collapse/expand sidebar">
         <span id="sidebarToggleIcon">«</span><span id="sidebarToggleLabel">Collapse</span>
       </button>
@@ -130,7 +139,7 @@
       <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus</span></button>
       <button class="admin-tab" data-tab="posters" onclick="switchTab('posters')"><span class="tab-icon">📸</span><span class="tab-label">Posters</span></button>
       <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></button>
-    </nav>
+    </div>
 
     <div class="admin-main">
       <!-- ═══════════════ DASHBOARD TAB ═══════════════ -->
