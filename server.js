@@ -4,7 +4,6 @@ const FileSync = require('lowdb/adapters/FileSync');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const XLSX = require('xlsx');
 const sharp = require('sharp');
 const session = require('express-session');
 const sessionStore = require('./lib/session-store');
@@ -868,10 +867,6 @@ function getSiteSettings() {
   if (s.section_gap === undefined) {
     db.set('site_settings.section_gap', 4).write();
     s.section_gap = 4;
-  }
-  if (s.bot_ai_fallback_enabled === undefined) {
-    db.set('site_settings.bot_ai_fallback_enabled', false).write();
-    s.bot_ai_fallback_enabled = false;
   }
   // Weekly/Monthly migration: promo discount keys move from {10,15,30} to {7,30}.
   // Seed the new "7" key from the old "10" key so an existing promo's Weekly
@@ -3573,7 +3568,6 @@ app.get('/admin', requireAuth, async (req, res) => {
   // customers are covered too.
   const reviewQueue = reviewRules.buildRequestQueue(getCustomers(), reviews, new Date());
   const reviewQueueSummary = reviewRules.queueSummary(reviewQueue);
-  const botTraining = db.get('bot_training').value() || [];
   // Slim payload for the client-side dashboard (year filter + month drill-down) —
   // only the fields it needs, not the full customer records.
   const dashboardData = customers.map(c => ({
@@ -3854,7 +3848,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -5105,152 +5099,6 @@ app.post('/admin/month-log/delete', requireAuth, (req, res) => {
   res.redirect('/admin?tab=customers&msg=month_log_deleted');
 });
 
-// ── Customer Import / Sample ──────────────────────────────────────────────────
-
-// Download sample Excel template
-app.get('/admin/customers/sample', requireAuth, (req, res) => {
-  const wb = XLSX.utils.book_new();
-  const sampleRows = [
-    ['customer_name','game_title','days','account_type','start_date','end_date','price','status','notes'],
-    ['Juan dela Cruz','God of War Ragnarök','30','nt','2025-06-01','2025-07-01','349','done','Paid via GCash'],
-    ['Maria Santos','Spider-Man 2','15','tr','2025-06-10','2025-06-25','249','renting','With ₱100 deposit'],
-    ['Pedro Reyes','Resident Evil 4','10','ps4','2025-06-15','2025-06-25','149','done',''],
-    ['Ana Lim','Elden Ring','30','nt','2025-06-20','','0','reservation','Upcoming reservation'],
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(sampleRows);
-  // Column widths
-  ws['!cols'] = [20,30,8,14,14,14,10,14,30].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb, ws, 'Customers');
-
-  // Notes sheet
-  const notesRows = [
-    ['FIELD','ACCEPTED VALUES','NOTES'],
-    ['customer_name','Any text','Required'],
-    ['game_title','Exact game title from your library (or upcoming game title)','Required — matched by title'],
-    ['days','10, 15, 30, or any number','Use 0 for reservation/bought'],
-    ['account_type','nt, tr, ps4','nt=Non-Trophy  tr=Trophy  ps4=PS4 Primary'],
-    ['start_date','YYYY-MM-DD  e.g. 2025-06-01','Leave blank if unknown'],
-    ['end_date','YYYY-MM-DD  e.g. 2025-07-01','Leave blank for reservation/bought'],
-    ['price','Number only, no ₱ sign','e.g. 349'],
-    ['status','renting, done, bought, reservation',''],
-    ['notes','Any text','Optional'],
-  ];
-  const wsNotes = XLSX.utils.aoa_to_sheet(notesRows);
-  wsNotes['!cols'] = [18,52,30].map(w=>({wch:w}));
-  XLSX.utils.book_append_sheet(wb, wsNotes, 'Instructions');
-
-  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-  res.setHeader('Content-Disposition', 'attachment; filename="customers_import_sample.xlsx"');
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.send(buf);
-});
-
-// Import customers from Excel
-const importUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-app.post('/admin/customers/import', requireAuth, importUpload.single('import_file'), (req, res) => {
-  if (!req.file) return res.redirect('/admin?tab=customers&msg=error');
-  try {
-    const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    if (rows.length < 2) return res.redirect('/admin?tab=customers&msg=error');
-
-    // Detect header row (first row)
-    const headers = rows[0].map(h => String(h).trim().toLowerCase().replace(/\s+/g,'_'));
-    const col = h => headers.indexOf(h);
-
-    const games = getGames();
-    const upcomingGames = getUpcoming();
-    let imported = 0, skipped = 0;
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      const get = (field) => {
-        const idx = col(field);
-        return idx >= 0 ? String(row[idx] || '').trim() : '';
-      };
-
-      const customer_name = get('customer_name');
-      if (!customer_name) { skipped++; continue; }
-
-      const game_title_raw = get('game_title');
-      const status = get('status') || 'done';
-
-      // Match game by title (case-insensitive)
-      let game_id = null, game_title = game_title_raw;
-      const regularMatch = games.find(g => g.title.toLowerCase() === game_title_raw.toLowerCase());
-      if (regularMatch) {
-        game_id = regularMatch.id;
-        game_title = regularMatch.title;
-      } else {
-        // Try upcoming games
-        const upMatch = upcomingGames.find(g => g.title.toLowerCase() === game_title_raw.toLowerCase());
-        if (upMatch) {
-          game_id = 'upcoming_' + upMatch.id;
-          game_title = upMatch.title;
-        } else {
-          // Store title as-is with null id — import anyway
-          game_id = null;
-          game_title = game_title_raw;
-        }
-      }
-
-      // Parse date — handle both string and JS Date from xlsx
-      const parseDate = (val) => {
-        if (!val) return '';
-        if (val instanceof Date) return val.toISOString().slice(0, 10);
-        const s = String(val).trim();
-        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-        const d = new Date(s);
-        return isNaN(d) ? '' : d.toISOString().slice(0, 10);
-      };
-
-      const days = parseInt(get('days')) || 0;
-      const account_type = get('account_type') || 'nt';
-      const start_date = parseDate(row[col('start_date')]);
-      const end_date = parseDate(row[col('end_date')]);
-      const price = parseInt(get('price')) || 0;
-      const notes = get('notes');
-
-      const id = newCustomerId();
-      db.get('customers').push({
-        id,
-        customer_name,
-        game_id,
-        game_title,
-        days,
-        account_type,
-        start_date,
-        end_date,
-        price,
-        status,
-        notes,
-        created_at: new Date().toISOString()
-      }).write();
-
-      // Adjust slots for active statuses on regular games
-      if ((status === 'renting' || status === 'bought') && regularMatch) {
-        const g = getGame(regularMatch.id);
-        if (g) {
-          db.get('games').find({ id: g.id }).assign({
-            available_slots: Math.max(0, (g.available_slots || 0) - 1),
-            renters: (g.renters || 0) + 1
-          }).write();
-          if (account_type === 'tr') adjustTrophySlots(g.id, -1);
-          else if (account_type === 'ps4') adjustPs4Slots(g.id, -1);
-          else adjustNtSlots(g.id, -1);
-        }
-      }
-      imported++;
-    }
-
-    res.redirect('/admin?tab=customers&msg=imported_' + imported + '_skipped_' + skipped);
-  } catch (e) {
-    console.error('Import error:', e);
-    res.redirect('/admin?tab=customers&msg=import_error');
-  }
-});
-
 // Price category CRUD
 app.post('/admin/price-categories/add', requireAuth, upload.single('image'), async (req, res) => {
   const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
@@ -5421,47 +5269,12 @@ app.post('/webhook', express.json(), (req, res) => {
         }
       }
 
-      // Recurring Notifications opt-in confirmation arrives as event.optin
-      // (Meta's current shape for this button type) with the full grant
-      // details; a decline is a normal postback with the payload this bot
-      // sets on its own "No thanks" quick reply. The entire raw event is
-      // stored on opt-in — see the Global Constraint on raw_optin_payload for
-      // why only a subset is not stored instead.
-      if (event.optin) {
-        const existingOptin = db.get('notification_optins').find({ psid: senderId, topic: 'monthly_promo' }).value();
-        if (existingOptin) {
-          db.get('notification_optins').find({ psid: senderId, topic: 'monthly_promo' }).assign({
-            opted_in_at: new Date().toISOString(),
-            raw_optin_payload: event.optin,
-            status: 'active',
-            last_error: null,
-            last_attempt_at: null
-          }).write();
-        } else {
-          db.get('notification_optins').push({
-            psid: senderId,
-            opted_in_at: new Date().toISOString(),
-            frequency: 'MONTHLY',
-            topic: 'monthly_promo',
-            raw_optin_payload: event.optin,
-            status: 'active',
-            last_sent_at: null,
-            last_error: null,
-            last_attempt_at: null
-          }).write();
-        }
-        console.log('[notif optin] confirmed for psid=' + senderId);
-      }
-
       // Everything below this point is the existing chat bot, which only
       // handles real inbound text.
       if (!event.message) return;
 
-      // Save/update PSID so we can blast later. Runs for every inbound
-      // message, decline quick-replies included — this contact-tracking
-      // must never sit below the decline early-return below, or a person
-      // who taps "No thanks" is silently excluded from messenger_contacts
-      // (and therefore the 24h Auto Blast pool) despite having messaged us.
+      // Save/update PSID. Runs for every inbound message — used to identify
+      // which Facebook thread a customer's messages come from.
       const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
       if (!existingContact) {
         db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
@@ -5469,28 +5282,8 @@ app.post('/webhook', express.json(), (req, res) => {
         db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
       }
 
-      // A tapped "No thanks" quick reply arrives as event.message.quick_reply,
-      // not event.postback (that shape is reserved for Structured
-      // Messages/persistent-menu/Get-Started taps). Handle and return before
-      // this falls through to the bot's normal text handling below.
-      if (event.message.quick_reply?.payload === 'NOTIF_DECLINE') {
-        console.log('[notif optin] declined by psid=' + senderId);
-        return;
-      }
       const text = (event.message.text || '').toLowerCase().trim();
-      handleMessage(senderId, text)
-        .then(() => {
-          // Offer once per contact, after the bot's real reply — never
-          // instead of it, never woven into handleMessage's own branches.
-          const contact = db.get('messenger_contacts').find({ psid: senderId }).value();
-          if (contact && !contact.notif_offered) {
-            setTimeout(() => {
-              sendNotificationOptinOffer(senderId);
-              markNotifOffered(senderId);
-            }, 1500);
-          }
-        })
-        .catch(e => console.error('[handleMessage]', e));
+      handleMessage(senderId, text).catch(e => console.error('[handleMessage]', e));
     });
   });
 });
@@ -5526,54 +5319,6 @@ function sendImage(recipientId, imageUrl) {
   sendMessage(recipientId, {
     attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
   });
-}
-
-// Offers the Recurring Notifications opt-in once per contact. The button's
-// exact field names (frequency key, token delivery shape) are Meta's current
-// Messenger Platform "Recurring Notifications" request format as of this
-// writing — this has changed shape across platform versions before, so this
-// function is intentionally isolated: if Meta's actual expected payload
-// differs, only this one function needs correcting, nothing else in the bot.
-function sendNotificationOptinOffer(recipientId) {
-  sendMessage(recipientId, {
-    attachment: {
-      type: 'template',
-      payload: {
-        template_type: 'generic',
-        elements: [{
-          title: '🔔 Monthly Game Drops & Promos',
-          subtitle: 'Want a heads-up when new games and promos land each month? No spam, one message a month.',
-          buttons: [{
-            type: 'notification_messages',
-            title: 'Yes, notify me!',
-            payload: 'NOTIF_OPTIN',
-            notification_messages_frequency: 'MONTHLY',
-            notification_messages_reoptin: 'PUSH'
-          }]
-        }]
-      }
-    }
-  });
-  // The "No thanks" option is a quick reply on a separate follow-up text —
-  // Messenger's notification_messages button type does not support a second,
-  // declining button alongside it in the same template element.
-  sendMessage(recipientId, {
-    text: 'Or if you\'d rather not get monthly updates, that\'s fine too:',
-    quick_replies: [{ content_type: 'text', title: 'No thanks', payload: 'NOTIF_DECLINE' }]
-  });
-}
-
-function markNotifOffered(psid) {
-  const existing = db.get('messenger_contacts').find({ psid }).value();
-  if (existing) {
-    db.get('messenger_contacts').find({ psid }).assign({ notif_offered: true }).write();
-  } else {
-    db.get('messenger_contacts').push({ psid, first_seen: new Date().toISOString(), last_seen: new Date().toISOString(), notif_offered: true }).write();
-  }
-}
-
-function getActiveOptins() {
-  return db.get('notification_optins').filter({ status: 'active' }).value();
 }
 
 async function handleMessage(senderId, text) {
@@ -5817,65 +5562,6 @@ async function handleMessage(senderId, text) {
     return sendText(senderId, msg);
   }
 
-  // ── AI FALLBACK ───────────────────────────────────────────────────────────
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (apiKey && getSiteSettings().bot_ai_fallback_enabled) {
-    try {
-      const Anthropic = require('@anthropic-ai/sdk');
-      const client = new Anthropic.default({ apiKey });
-      const gameList = games.slice(0, 20).map(g =>
-        `${g.title} (${g.platform}) — NT: ₱${g.nt_price_7d}/₱${g.nt_price_30d}${g.tr_price_7d ? `, TR: ₱${g.tr_price_7d}/₱${g.tr_price_30d}` : ''} — ${((g.non_trophy_slots||0)+(g.trophy_slots||0))>0?'Available':'Fully Rented'}`
-      ).join('\n');
-      // What the bot tells customers about paying, derived from what is
-      // actually switched on rather than written out here. Enabling PayPal or
-      // Maya later updates the bot on its own, the same way the checkout page
-      // picks them up — a hardcoded line went stale the moment the gateway
-      // went live, and told customers to use GCash long after checkout existed.
-      const paySettings = getSiteSettings();
-      const enabledPay = (paySettings.payment_methods || [])
-        .filter(m => m && m.enabled)
-        .map(m => m.label);
-      const manualPay = enabledPay.length ? enabledPay.join(' / ') : '';
-      const payLine = process.env.PAYMONGO_SECRET_KEY
-        ? 'Pay online at checkout — QRPh, scan with GCash, Maya or any bank app'
-          + (manualPay ? '; or send manually via ' + manualPay : '')
-        : (manualPay ? 'Payment via ' + manualPay : 'Payment details are sent with each order');
-      const trainingExamples = (db.get('bot_training').value() || []).slice(0, 30);
-      const examplesText = trainingExamples.length > 0
-        ? '\n\nHere are real examples of how the owner replies to customers (learn this style exactly):\n' +
-          trainingExamples.map(e => `Customer: "${e.customer_msg}"\nYou: "${e.your_reply}"`).join('\n\n')
-        : '';
-      const response = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 350,
-        messages: [{
-          role: 'user',
-          content: `You are the Messenger bot for PlayStation Hub — a PS5/PS4 digital game rental shop in the Philippines run by a young Filipino owner. Reply EXACTLY in the owner's communication style based on the examples below. Match their tone, vocabulary, Taglish mix, and friendliness. Keep replies short and conversational.
-
-Business info:
-- Rent PS5/PS4 games for Weekly or Monthly durations
-- Non-Trophy account (play on our account) and Trophy account (earn trophies on your own PSN)
-- ${payLine}
-- FREE 3-hour trial before renting or buying
-- Also offer permanent/lifetime Buy access
-- Website: ${SITE}
-${examplesText}
-
-Available games:
-${gameList}
-
-Customer message: "${text}"
-
-Reply naturally in the owner's style. Max 5 sentences. If game not available, say so kindly and suggest alternatives.`
-        }]
-      });
-      const aiReply = response.content[0]?.text?.trim();
-      if (aiReply) return sendText(senderId, aiReply);
-    } catch(e) {
-      console.error('[bot AI fallback]', e.message);
-    }
-  }
-
   // ── FINAL FALLBACK ────────────────────────────────────────────────────────
   return sendText(senderId,
     '😊 Hindi ko sure kung ano ang ibig mong sabihin, pero nandito kami para tumulong!\n\n' +
@@ -5886,32 +5572,6 @@ Reply naturally in the owner's style. Max 5 sentences. If game not available, sa
     'Browse: ' + SITE + '/browse'
   );
 }
-
-// ── Bot Training ──────────────────────────────────────────────────────────────
-app.post('/admin/bot-training/add', requireAuth, (req, res) => {
-  const { customer_msg, your_reply, category } = req.body;
-  if (!customer_msg || !your_reply) return res.redirect('/admin?tab=settings&msg=error');
-  const id = db.get('nextBotTrainingId').value();
-  db.get('bot_training').push({
-    id,
-    customer_msg: customer_msg.trim(),
-    your_reply: your_reply.trim(),
-    category: category || 'general',
-    created_at: new Date().toISOString()
-  }).write();
-  db.set('nextBotTrainingId', id + 1).write();
-  res.redirect('/admin?tab=settings&msg=training_saved');
-});
-
-app.post('/admin/bot-training/delete/:id', requireAuth, (req, res) => {
-  db.get('bot_training').remove({ id: parseInt(req.params.id) }).write();
-  res.redirect('/admin?tab=settings&msg=training_deleted');
-});
-
-app.post('/admin/settings/bot-ai-fallback', requireAuth, (req, res) => {
-  db.set('site_settings.bot_ai_fallback_enabled', req.body.bot_ai_fallback_enabled === 'on').write();
-  res.redirect('/admin?tab=settings&msg=bot_ai_fallback_updated');
-});
 
 // Proves the Telegram alert path end to end, on demand. Without this the first
 // real test is a customer's sign-in — and a wrong variable is discovered by
@@ -6009,216 +5669,6 @@ app.post('/admin/signin-steps/:id/move', requireAuth, (req, res) => {
   db.get('signin_steps').find({ id: swapWith.id }).assign({ rank: stepRank }).write();
   res.redirect('/admin?tab=settings&msg=signin_step_saved');
 });
-
-app.post('/admin/bot-training/import-fb', requireAuth, express.json({ limit: '10mb' }), (req, res) => {
-  // Parse Facebook Messages JSON export
-  const { messages } = req.body;
-  if (!Array.isArray(messages)) return res.json({ ok: false, error: 'Invalid format' });
-  let imported = 0;
-  // Facebook export format: messages array with sender_name and content
-  // Group into pairs: customer message followed by page reply
-  for (let i = 0; i < messages.length - 1; i++) {
-    const msg = messages[i];
-    const next = messages[i + 1];
-    // If next message is from the page (your reply)
-    if (msg.content && next.content && msg.sender_name !== next.sender_name) {
-      const id = db.get('nextBotTrainingId').value();
-      db.get('bot_training').push({
-        id,
-        customer_msg: msg.content.slice(0, 500),
-        your_reply: next.content.slice(0, 500),
-        category: 'imported',
-        created_at: new Date().toISOString()
-      }).write();
-      db.set('nextBotTrainingId', id + 1).write();
-      imported++;
-      if (imported >= 100) break; // cap at 100 examples
-    }
-  }
-  res.json({ ok: true, imported });
-});
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── AI Message Generator ──────────────────────────────────────────────────────
-app.post('/admin/ai-generate', requireAuth, async (req, res) => {
-  const { prompt } = req.body;
-  if (!prompt || !prompt.trim()) return res.json({ ok: false, error: 'No prompt provided.' });
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return res.json({ ok: false, error: 'ANTHROPIC_API_KEY not set on server.' });
-  try {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic.default({ apiKey });
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      messages: [{
-        role: 'user',
-        content: `You are helping a Philippine PlayStation game rental shop (PlayStation Hub) write a Messenger message to send to past customers.
-
-The message should:
-- Be in a friendly Filipino/Taglish tone (mix of Filipino and English is fine)
-- Use {name} placeholder where the customer's name should appear
-- Use {game} placeholder where the last game they rented should appear
-- Be concise (3-6 sentences max)
-- End with the website link: https://playstation-hub-production.up.railway.app
-- NOT include any subject line or "Message:" prefix — just the message body
-
-User's request: ${prompt.trim()}
-
-Write only the message, nothing else.`
-      }]
-    });
-    const text = response.content[0]?.text || '';
-    res.json({ ok: true, message: text.trim() });
-  } catch (e) {
-    console.error('[ai-generate]', e.message);
-    res.json({ ok: false, error: 'AI error: ' + e.message });
-  }
-});
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Messenger Auto Blast ──────────────────────────────────────────────────────
-// Messenger only allows a business-initiated message within 24h of the
-// contact's last inbound message (the "standard messaging window"). Outside
-// that window, only specific message tags are allowed, and every tag is
-// reserved for a narrow non-promotional case (order updates, human-agent
-// replies, etc) — none of them permit a promo blast. So "reachable" here
-// means "inside the 24h window", not "ever contacted us".
-const BLAST_WINDOW_MS = 24 * 60 * 60 * 1000;
-function reachableContacts() {
-  const contacts = db.get('messenger_contacts').value() || [];
-  const cutoff = Date.now() - BLAST_WINDOW_MS;
-  return contacts.filter(c => c.last_seen && new Date(c.last_seen).getTime() >= cutoff);
-}
-
-app.get('/admin/blast/contacts', requireAuth, (req, res) => {
-  const total = (db.get('messenger_contacts').value() || []).length;
-  res.json({ reachable: reachableContacts().length, total });
-});
-
-app.post('/admin/blast', requireAuth, async (req, res) => {
-  const { message } = req.body;
-  if (!message || !message.trim()) return res.json({ ok: false, error: 'No message provided.' });
-  if (!PAGE_ACCESS_TOKEN) return res.json({ ok: false, error: 'MESSENGER_PAGE_TOKEN not configured on server.' });
-
-  const contacts = reachableContacts();
-  if (!contacts.length) return res.json({ ok: false, error: 'No contacts are inside the 24-hour messaging window right now. Messenger only allows this kind of message to people who messaged your Page in the last 24 hours.' });
-
-  const https = require('https');
-  let sent = 0, failed = 0;
-
-  function sendOne(psid) {
-    return new Promise((resolve) => {
-      const payload = JSON.stringify({
-        recipient: { id: psid },
-        message: { text: message },
-        messaging_type: 'UPDATE'
-      });
-      const options = {
-        hostname: 'graph.facebook.com',
-        path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-      };
-      const r2 = https.request(options, (resp) => {
-        let data = '';
-        resp.on('data', c => data += c);
-        resp.on('end', () => {
-          if (resp.statusCode === 200) sent++;
-          else { failed++; console.log('[blast] fail psid=' + psid, resp.statusCode, data); }
-          resolve();
-        });
-      });
-      r2.on('error', () => { failed++; resolve(); });
-      r2.write(payload);
-      r2.end();
-    });
-  }
-
-  for (const c of contacts) {
-    await sendOne(c.psid);
-    await new Promise(r => setTimeout(r, 120)); // avoid rate limit
-  }
-
-  res.json({ ok: true, sent, failed, total: contacts.length });
-});
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ── Recurring Notifications Send ─────────────────────────────────────────────
-app.post('/admin/notifications/send', requireAuth, async (req, res) => {
-  const { message } = req.body;
-  if (!message || !message.trim()) return res.json({ ok: false, error: 'No message provided.' });
-  if (!PAGE_ACCESS_TOKEN) return res.json({ ok: false, error: 'MESSENGER_PAGE_TOKEN not configured on server.' });
-
-  const optins = getActiveOptins();
-  if (!optins.length) return res.json({ ok: false, error: 'No active opt-ins yet. Contacts opt in via the bot after messaging your Page.' });
-
-  const https = require('https');
-  let sent = 0, failed = 0;
-
-  function sendOne(optin) {
-    return new Promise((resolve) => {
-      // Best-effort per the plan's stated uncertainty: Meta's recurring-
-      // notification send is expected to accept the PSID directly like a
-      // normal message once a valid opt-in exists for that recipient/topic,
-      // tagged so it's exempt from the 24h window this feature exists to
-      // bypass. If Meta's account requires a different recipient shape (e.g.
-      // a token field instead of the PSID), this is the one place to adjust.
-      const payload = JSON.stringify({
-        recipient: { id: optin.psid },
-        message: { text: message },
-        messaging_type: 'MESSAGE_TAG',
-        tag: 'CONFIRMED_EVENT_UPDATE'
-      });
-      const options = {
-        hostname: 'graph.facebook.com',
-        path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-      };
-      const r2 = https.request(options, (resp) => {
-        let data = '';
-        resp.on('data', c => data += c);
-        resp.on('end', () => {
-          console.log('[notif send] psid=' + optin.psid, resp.statusCode, data);
-          if (resp.statusCode === 200) {
-            sent++;
-            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({ last_sent_at: new Date().toISOString(), last_error: null }).write();
-          } else {
-            // A non-200 response (e.g. the Recurring Notifications permission
-            // not yet approved by Meta) is diagnostic information, not proof
-            // the opt-in itself is invalid — status stays 'active' so the
-            // contact remains reachable on the next send once the underlying
-            // condition clears. There is no way to distinguish a transient/
-            // permission failure from a permanently invalid recipient from
-            // the status code alone, so we default to retryable.
-            failed++;
-            db.get('notification_optins').find({ psid: optin.psid, topic: 'monthly_promo' }).assign({
-              last_error: String(resp.statusCode) + ' ' + data.slice(0, 500),
-              last_attempt_at: new Date().toISOString()
-            }).write();
-          }
-          resolve();
-        });
-      });
-      r2.on('error', (e) => { console.error('[notif send error] psid=' + optin.psid, e.message); failed++; resolve(); });
-      r2.write(payload);
-      r2.end();
-    });
-  }
-
-  for (const optin of optins) {
-    await sendOne(optin);
-    await new Promise(r => setTimeout(r, 120));
-  }
-
-  res.json({ ok: true, sent, failed, total: optins.length });
-});
-
-app.get('/admin/notifications/optins', requireAuth, (req, res) => {
-  res.json({ active: getActiveOptins().length });
-});
-// ─────────────────────────────────────────────────────────────────────────────
 
 // ── Reviews ──────────────────────────────────────────────────────────────────
 
