@@ -1,14 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Poster Generator — <%= settings.title %></title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
-  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <div class="tab-panel" id="tab-posters">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
   <style>
-    .pg-wrap { max-width: 1300px; margin: 0 auto; padding: 1.5rem; }
     .pg-cat-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
     .pg-cat-tab { padding: 0.6rem 1.1rem; border-radius: 10px; border: 1px solid #2a2a35; background: #15151d; color: #ccc; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
     .pg-cat-tab.active { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
@@ -57,24 +49,8 @@
     .poster-badges { display: flex; justify-content: center; gap: 10px; }
     .poster-badge { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 5px 14px; font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); }
   </style>
-</head>
-<body>
 
-<nav>
-  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
-  <div class="nav-links">
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
-
-<div class="pg-wrap">
-  <a href="/admin" class="back-link">← Back to Admin</a>
-  <h1>📸 Poster Generator</h1>
   <p style="color:#888;font-size:0.85rem;">Auto-generated from your live catalog. Prices only — no slot availability, so posted images stay accurate. Pick a category, then download.</p>
-
-  <% if (msg === 'bg_saved') { %><div class="pg-msg">✅ Custom background updated — applied to every poster below.</div><% } %>
-  <% if (msg === 'bg_removed') { %><div class="pg-msg">✅ Custom background removed — posters use the default look again.</div><% } %>
-  <% if (msg === 'error') { %><div class="pg-warn"><strong>⚠️ No file selected.</strong> Choose an image first.</div><% } %>
 
   <div class="pg-bg-section">
     <label style="display:block;font-weight:700;font-size:0.85rem;margin-bottom:0.6rem;">🎨 Custom Poster Background <span style="color:#666;font-weight:500;font-size:0.75rem;">— applies to every category poster below, replacing the plain gradient</span></label>
@@ -106,12 +82,12 @@
   </div>
 
   <div class="pg-cat-tabs">
-    <% posterGroups.forEach((grp, gi) => { %>
+    <% postersView.posterGroups.forEach((grp, gi) => { %>
       <button type="button" class="pg-cat-tab<%= gi===0 ? ' active' : '' %>" onclick="showCat(<%= gi %>)"><%= grp.name %> <span class="cnt">(<%= grp.count %>)</span></button>
     <% }) %>
   </div>
 
-  <% posterGroups.forEach((grp, gi) => { %>
+  <% postersView.posterGroups.forEach((grp, gi) => { %>
   <div class="pg-cat-panel<%= gi===0 ? ' active' : '' %>" id="catPanel<%= gi %>">
 
     <% if (grp.missingCovers.length) { %>
@@ -142,10 +118,10 @@
             <div class="poster-cat-title"><%= grp.name %></div>
             <div class="poster-cat-sub">PS5 &amp; PS4 Digital Game Rentals</div>
           </div>
-          <% if (activePromos.length === 1) { %>
-          <div class="poster-promo">🔥 <span class="pct"><%= activePromos[0].pct %>% OFF</span> on <%= activePromos[0].days %>-Day Rentals — Limited Time!</div>
-          <% } else if (activePromos.length > 1) { %>
-          <div class="poster-promo">🔥 <span class="pct">UP TO <%= Math.max(...activePromos.map(p => p.pct)) %>% OFF</span> — <%= activePromos.map(p => p.days + 'D').join(' / ') %> Promos Active!</div>
+          <% if (postersView.activePromos.length === 1) { %>
+          <div class="poster-promo">🔥 <span class="pct"><%= postersView.activePromos[0].pct %>% OFF</span> on <%= postersView.activePromos[0].days %>-Day Rentals — Limited Time!</div>
+          <% } else if (postersView.activePromos.length > 1) { %>
+          <div class="poster-promo">🔥 <span class="pct">UP TO <%= Math.max(...postersView.activePromos.map(p => p.pct)) %>% OFF</span> — <%= postersView.activePromos.map(p => p.days + 'D').join(' / ') %> Promos Active!</div>
           <% } %>
           <%
             const pagePrices = pageGames.filter(g => g.fromPrice).map(g => g.fromPrice);
@@ -183,42 +159,36 @@
   </div>
   <% }) %>
 
-</div>
-
-<script>
-function showCat(idx) {
-  document.querySelectorAll('.pg-cat-panel').forEach((el, i) => el.classList.toggle('active', i === idx));
-  document.querySelectorAll('.pg-cat-tab').forEach((el, i) => el.classList.toggle('active', i === idx));
-}
-function slugify(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
-function downloadPoster(id) {
-  const node = document.getElementById(id);
-  // The live preview shrinks this node via CSS transform:scale for on-screen display.
-  // html2canvas bakes that transform into the capture, so it must be neutralized
-  // (via a higher-specificity inline style) right before rendering, then restored.
-  const prevTransform = node.style.transform;
-  node.style.transform = 'none';
-  const scale = parseInt(document.getElementById('pgQuality').value, 10) || 3;
-  return html2canvas(node, { scale, backgroundColor: '#0a0518', useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 })
-    .then(canvas => {
-      node.style.transform = prevTransform;
-      const a = document.createElement('a');
-      a.download = 'pshub-poster-' + id + '.png';
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-    })
-    .catch(err => { node.style.transform = prevTransform; throw err; });
-}
-async function downloadCategory(gi) {
-  const panel = document.getElementById('catPanel' + gi);
-  const posters = [...panel.querySelectorAll('.poster')];
-  for (let i = 0; i < posters.length; i++) {
-    await downloadPoster(posters[i].id);
-    await new Promise(r => setTimeout(r, 400));
+  <script>
+  function showCat(idx) {
+    document.querySelectorAll('#tab-posters .pg-cat-panel').forEach((el, i) => el.classList.toggle('active', i === idx));
+    document.querySelectorAll('#tab-posters .pg-cat-tab').forEach((el, i) => el.classList.toggle('active', i === idx));
   }
-}
-</script>
-
-<%- include('partials/footer') %>
-</body>
-</html>
+  function downloadPoster(id) {
+    const node = document.getElementById(id);
+    // The live preview shrinks this node via CSS transform:scale for on-screen display.
+    // html2canvas bakes that transform into the capture, so it must be neutralized
+    // (via a higher-specificity inline style) right before rendering, then restored.
+    const prevTransform = node.style.transform;
+    node.style.transform = 'none';
+    const scale = parseInt(document.getElementById('pgQuality').value, 10) || 3;
+    return html2canvas(node, { scale, backgroundColor: '#0a0518', useCORS: true, width: 1080, height: 1350, windowWidth: 1080, windowHeight: 1350 })
+      .then(canvas => {
+        node.style.transform = prevTransform;
+        const a = document.createElement('a');
+        a.download = 'pshub-poster-' + id + '.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      })
+      .catch(err => { node.style.transform = prevTransform; throw err; });
+  }
+  async function downloadCategory(gi) {
+    const panel = document.getElementById('catPanel' + gi);
+    const posters = [...panel.querySelectorAll('.poster')];
+    for (let i = 0; i < posters.length; i++) {
+      await downloadPoster(posters[i].id);
+      await new Promise(r => setTimeout(r, 400));
+    }
+  }
+  </script>
+  </div>

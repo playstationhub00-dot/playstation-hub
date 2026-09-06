@@ -1,13 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Accounts Dashboard — <%= settings.title %></title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
-  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <div class="tab-panel" id="tab-accounts">
   <style>
-    .acc-wrap { max-width: 1300px; margin: 0 auto; padding: 1.5rem; }
     .acc-summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
     .acc-stat { background: #15151d; border-radius: 10px; padding: 0.7rem 1.1rem; min-width: 120px; }
     .acc-stat .lbl { font-size: 0.72rem; color: #888; }
@@ -63,37 +55,25 @@
     .acc-edit-grid input, .acc-edit-grid select, .acc-edit-grid textarea { width: 100%; padding: 6px; background: #1a1a22; border: 1px solid #333; border-radius: 5px; color: #fff; font-size: 0.8rem; }
     .slot-toggles { display: flex; gap: 14px; flex-wrap: wrap; margin: 0.5rem 0; font-size: 0.78rem; color: #ccc; }
     .slot-toggles label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
-    .msg-banner { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #4ade80; padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; }
   </style>
-</head>
-<body>
 
-<nav>
-  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
-  <div class="nav-links">
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
+  <%
+    const STATUS_LABEL = { open:'OPEN', rented:'RENTED', buyed:'BUYED', na:'NOT AVAILABLE', maintenance:'MAINTENANCE' };
+    const SLOT_LABEL = { trophy:'Trophy', non_trophy:'Non-Trophy', ps4_primary:'PS4 Primary' };
+    function gameTitleById(gs, id){ const g = gs.find(x=>x.id===id); return g ? g.title : ('#'+id); }
+    function gameById(gs, id){ return gs.find(x=>x.id===id); }
+    // Alphabetical for these dropdowns/lookups, regardless of how the caller
+    // ordered `games` for its own tab (id-descending, newest first).
+    const accGames = [...games].sort((a, b) => a.title.localeCompare(b.title));
+  %>
 
-<%
-  const STATUS_LABEL = { open:'OPEN', rented:'RENTED', buyed:'BUYED', na:'NOT AVAILABLE', maintenance:'MAINTENANCE' };
-  const SLOT_LABEL = { trophy:'Trophy', non_trophy:'Non-Trophy', ps4_primary:'PS4 Primary' };
-  function gameTitleById(games, id){ const g = games.find(x=>x.id===id); return g ? g.title : ('#'+id); }
-  function gameById(games, id){ return games.find(x=>x.id===id); }
-%>
-
-<div class="acc-wrap">
-  <a href="/admin" class="back-link">← Back to Admin</a>
-  <h1>🎮 Accounts Dashboard</h1>
   <p style="color:#888;font-size:0.85rem;margin-bottom:0.5rem;">Track each PSN account and its Trophy / Non-Trophy / PS4 Primary slots. Click a status pill to change it.</p>
 
-  <% if (msg) { %><div class="msg-banner">✅ <%= msg.replace(/_/g,' ') %></div><% } %>
-
   <div class="acc-summary">
-    <div class="acc-stat"><div class="lbl">Total slots</div><div class="val"><%= stats.total %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#4ade80;">Open</div><div class="val" style="color:#4ade80;"><%= stats.open %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#f87171;">Rented</div><div class="val" style="color:#f87171;"><%= stats.rented %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#fbbf24;">Ending ≤3 days</div><div class="val" style="color:#fbbf24;"><%= stats.ending %></div></div>
+    <div class="acc-stat"><div class="lbl">Total slots</div><div class="val"><%= accountsView.stats.total %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#4ade80;">Open</div><div class="val" style="color:#4ade80;"><%= accountsView.stats.open %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#f87171;">Rented</div><div class="val" style="color:#f87171;"><%= accountsView.stats.rented %></div></div>
+    <div class="acc-stat"><div class="lbl" style="color:#fbbf24;">Ending ≤3 days</div><div class="val" style="color:#fbbf24;"><%= accountsView.stats.ending %></div></div>
   </div>
 
   <!-- ADD ACCOUNT -->
@@ -105,7 +85,7 @@
         <div style="grid-column:1/-1;"><label>Games in this account (free text — shown internally)</label><textarea name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6..."></textarea></div>
         <div style="grid-column:1/-1;"><label>Link catalog games (optional — powers the game-card summary)</label>
           <select name="game_ids" multiple size="5" style="height:auto;">
-            <% games.forEach(g => { %><option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option><% }) %>
+            <% accGames.forEach(g => { %><option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option><% }) %>
           </select>
           <span style="font-size:0.68rem;color:#666;">Hold Ctrl / Cmd to select multiple.</span>
         </div>
@@ -134,10 +114,10 @@
   </div>
 
   <!-- ACCOUNTS TABLES (grouped by price category) -->
-  <% if (!accounts.length) { %>
+  <% if (!accountsView.accounts.length) { %>
     <div style="text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No accounts yet. Click “+ Add Account” above to create your first one.</div>
   <% } %>
-  <% groups.forEach(group => { %>
+  <% accountsView.groups.forEach(group => { %>
   <div class="acc-group" data-group>
     <div class="acc-group-title"><%= group.name %> <span class="acc-group-count">(<%= group.accounts.length %>)</span></div>
     <div class="acc-table-scroll">
@@ -154,12 +134,12 @@
         </thead>
         <tbody>
         <% group.accounts.forEach(acc => { %>
-        <tr data-searchable="<%= (acc.label + ' ' + (acc.email||'') + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(games, id)).join(' ')).toLowerCase() %>">
+        <tr data-searchable="<%= (acc.label + ' ' + (acc.email||'') + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(accGames, id)).join(' ')).toLowerCase() %>">
           <td>
             <div class="acc-name-row">
               <% if (acc.game_ids && acc.game_ids.length) { %>
                 <div class="acc-covers">
-                  <% acc.game_ids.slice(0, 4).forEach(id => { const g = gameById(games, id); %>
+                  <% acc.game_ids.slice(0, 4).forEach(id => { const g = gameById(accGames, id); %>
                     <% if (g && g.cover_image) { %>
                       <img src="<%= g.cover_image %>" alt="<%= g.title %>" class="acc-cover-thumb" title="<%= g.title %>">
                     <% } else { %>
@@ -173,7 +153,7 @@
                 <% if (acc.email) { %><div class="acc-games" style="color:#888;">✉️ <%= acc.email %></div><% } %>
                 <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
                 <% if (acc.game_ids && acc.game_ids.length) { %>
-                  <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(games, id)).join(', ') %></div>
+                  <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(accGames, id)).join(', ') %></div>
                 <% } %>
                 <% if (acc.note) { %><div class="acc-games" style="color:#666;">📝 <%= acc.note %></div><% } %>
               </div>
@@ -181,7 +161,7 @@
           </td>
           <td class="acc-price">₱<%= acc.price_permanent_tr %><br>₱<%= acc.price_permanent_nt %></td>
 
-          <% SLOT_TYPES.forEach(type => {
+          <% ['trophy','non_trophy','ps4_primary'].forEach(type => {
                const s = acc.slotView[type];
                const stClass = !s.enabled ? 'st-disabled' : ('st-' + s.status);
                const label = !s.enabled ? 'DISABLED' : STATUS_LABEL[s.status];
@@ -194,7 +174,7 @@
                 <summary><div class="slot-pill <%= stClass %>"><%= label %></div></summary>
                 <form method="POST" action="/admin/accounts/<%= acc.id %>/slot/<%= type %>" class="slot-form">
                   <select name="status" onchange="this.closest('form').querySelector('.renter-wrap').style.display = (this.value==='rented'||this.value==='buyed')?'block':'none'; this.closest('form').querySelector('.days-wrap').style.display = this.value==='rented'?'block':'none';">
-                    <% STATUSES.forEach(st => { %>
+                    <% accountsView.STATUSES.forEach(st => { %>
                       <option value="<%= st %>" <%= s.status===st?'selected':'' %>><%= STATUS_LABEL[st] %></option>
                     <% }) %>
                   </select>
@@ -234,7 +214,7 @@
                     <div><label>Games (text)</label><textarea name="games_text" rows="2"><%= acc.games_text %></textarea></div>
                     <div><label>Linked games</label>
                       <select name="game_ids" multiple size="4" style="height:auto;">
-                        <% games.forEach(g => { %><option value="<%= g.id %>" <%= acc.game_ids.includes(g.id)?'selected':'' %>><%= g.title %></option><% }) %>
+                        <% accGames.forEach(g => { %><option value="<%= g.id %>" <%= acc.game_ids.includes(g.id)?'selected':'' %>><%= g.title %></option><% }) %>
                       </select>
                     </div>
                     <div><label>TR price</label><input type="number" name="price_permanent_tr" value="<%= acc.price_permanent_tr %>"></div>
@@ -265,30 +245,25 @@
   <% }) %>
 
   <div id="accNoResults" style="display:none;text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No games or accounts match your search.</div>
-</div>
 
-<script>
-function filterAccounts() {
-  const q = document.getElementById('accSearch').value.trim().toLowerCase();
-  const groups = document.querySelectorAll('[data-group]');
-  let totalVisible = 0;
-  groups.forEach(group => {
-    const rows = group.querySelectorAll('tr[data-searchable]');
-    let visibleInGroup = 0;
-    rows.forEach(row => {
-      const match = !q || row.dataset.searchable.includes(q);
-      row.style.display = match ? '' : 'none';
-      if (match) visibleInGroup++;
+  <script>
+  function filterAccounts() {
+    const q = document.getElementById('accSearch').value.trim().toLowerCase();
+    const groups = document.querySelectorAll('#tab-accounts [data-group]');
+    let totalVisible = 0;
+    groups.forEach(group => {
+      const rows = group.querySelectorAll('tr[data-searchable]');
+      let visibleInGroup = 0;
+      rows.forEach(row => {
+        const match = !q || row.dataset.searchable.includes(q);
+        row.style.display = match ? '' : 'none';
+        if (match) visibleInGroup++;
+      });
+      group.style.display = visibleInGroup > 0 ? '' : 'none';
+      totalVisible += visibleInGroup;
     });
-    group.style.display = visibleInGroup > 0 ? '' : 'none';
-    totalVisible += visibleInGroup;
-  });
-  document.getElementById('accSearchCount').textContent = q ? totalVisible + ' match' + (totalVisible !== 1 ? 'es' : '') : '';
-  document.getElementById('accNoResults').style.display = (q && totalVisible === 0) ? 'block' : 'none';
-}
-</script>
-
-<script src="/js/admin-searchable-select.js"></script>
-<%- include('partials/footer') %>
-</body>
-</html>
+    document.getElementById('accSearchCount').textContent = q ? totalVisible + ' match' + (totalVisible !== 1 ? 'es' : '') : '';
+    document.getElementById('accNoResults').style.display = (q && totalVisible === 0) ? 'block' : 'none';
+  }
+  </script>
+  </div>

@@ -3848,7 +3848,9 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  const accountsView = buildAccountsView();
+  const postersView = buildPostersView();
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -4791,7 +4793,10 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
 });
 
 // ── Accounts Dashboard ────────────────────────────────────────────────────────
-app.get('/admin/accounts', requireAuth, (req, res) => {
+// Shared by the Accounts tab (rendered inline in /admin) and anyone hitting the
+// old standalone URL — one source of truth for the grouped-by-category table
+// and its summary stats, so the two entry points can never drift apart.
+function buildAccountsView() {
   const allGames = getGames();
   const gamesById = {};
   allGames.forEach(g => { gamesById[g.id] = g; });
@@ -4831,15 +4836,14 @@ app.get('/admin/accounts', requireAuth, (req, res) => {
     if (s.status === 'open') stats.open++;
     if (s.status === 'rented') { stats.rented++; if (s.days_left != null && s.days_left <= 3) stats.ending++; }
   }));
-  const games = allGames.sort((a, b) => a.title.localeCompare(b.title));
-  res.render('accounts', {
-    accounts, groups, stats, games,
-    customers: getCustomers(),
-    settings: getSiteSettings(),
-    SLOT_TYPES: ACCOUNT_SLOT_TYPES,
-    STATUSES: ACCOUNT_STATUSES,
-    msg: req.query.msg || ''
-  });
+  return { accounts, groups, stats, STATUSES: ACCOUNT_STATUSES };
+}
+
+// Old bookmarks/links land on the merged Accounts tab instead of a page that
+// no longer exists on its own.
+app.get('/admin/accounts', requireAuth, (req, res) => {
+  const q = req.query.msg ? '&msg=' + encodeURIComponent(req.query.msg) : '';
+  res.redirect('/admin?tab=accounts' + q);
 });
 
 function parseGameIds(raw) {
@@ -4916,7 +4920,8 @@ function buildPosterGroup(name, games, discount10) {
   const missingCovers = games.filter(game => !game.cover_image).map(game => game.title);
   return { name, density, pages, count: games.length, missingCovers };
 }
-app.get('/admin/posters', requireAuth, (req, res) => {
+// Shared by the Posters tab and the old standalone URL redirect below.
+function buildPostersView() {
   const settings = getSiteSettings();
   const promo = settings.promo;
   // Weekly is always the cheapest tier, so it's what "From ₱X" shows —
@@ -4932,19 +4937,26 @@ app.get('/admin/posters', requireAuth, (req, res) => {
   if (newArrivalGames.length) posterGroups.unshift(buildPosterGroup('🆕 New Arrivals', newArrivalGames, discount10));
   // Which durations currently have an active discount, for the poster's promo banner
   const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
-  res.render('posters', { posterGroups, settings, activePromos, msg: req.query.msg || '' });
+  return { posterGroups, activePromos };
+}
+
+// Old bookmarks/links land on the merged Posters tab instead of a page that
+// no longer exists on its own.
+app.get('/admin/posters', requireAuth, (req, res) => {
+  const q = req.query.msg ? '&msg=' + encodeURIComponent(req.query.msg) : '';
+  res.redirect('/admin?tab=posters' + q);
 });
 
 // Custom poster background (applies to every category poster, replacing the flat gradient)
 app.post('/admin/posters/background', requireAuth, uploadPosterBg.single('poster_background'), (req, res) => {
-  if (!req.file) return res.redirect('/admin/posters?msg=error');
+  if (!req.file) return res.redirect('/admin?tab=posters&msg=poster_error');
   const settings = getSiteSettings();
   if (settings.poster_background_path) {
     const oldFp = path.join(uploadsDir, path.basename(settings.poster_background_path));
     if (fs.existsSync(oldFp)) { try { fs.unlinkSync(oldFp); } catch (e) {} }
   }
   db.set('site_settings.poster_background_path', '/uploads/' + req.file.filename).write();
-  res.redirect('/admin/posters?msg=bg_saved');
+  res.redirect('/admin?tab=posters&msg=bg_saved');
 });
 app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
   const settings = getSiteSettings();
@@ -4953,13 +4965,13 @@ app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
   }
   db.set('site_settings.poster_background_path', '').write();
-  res.redirect('/admin/posters?msg=bg_removed');
+  res.redirect('/admin?tab=posters&msg=bg_removed');
 });
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
     enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
-  if (!label || !label.trim()) return res.redirect('/admin/accounts?msg=error');
+  if (!label || !label.trim()) return res.redirect('/admin?tab=accounts&msg=account_error');
   db.get('accounts').push({
     id: newAccountId(),
     label: label.trim(),
@@ -4978,14 +4990,14 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
     },
     created_at: new Date().toISOString()
   }).write();
-  res.redirect('/admin/accounts?msg=account_added');
+  res.redirect('/admin?tab=accounts&msg=account_added');
 });
 
 app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
     enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
   const existing = getAccount(req.params.id);
-  if (!existing) return res.redirect('/admin/accounts?msg=error');
+  if (!existing) return res.redirect('/admin?tab=accounts&msg=account_error');
   const slots = existing.slots;
   slots.trophy.enabled = enable_trophy !== undefined;
   slots.non_trophy.enabled = enable_non_trophy !== undefined;
@@ -5002,7 +5014,7 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     public_name: public_name !== undefined ? public_name.trim() : existing.public_name,
     slots
   }).write();
-  res.redirect('/admin/accounts?msg=account_updated');
+  res.redirect('/admin?tab=accounts&msg=account_updated');
 });
 
 app.post('/admin/accounts/delete/:id', requireAuth, (req, res) => {
@@ -5018,7 +5030,7 @@ app.post('/admin/accounts/delete/:id', requireAuth, (req, res) => {
     });
   }
   db.get('accounts').remove({ id: parseInt(req.params.id) }).write();
-  res.redirect('/admin/accounts?msg=account_deleted');
+  res.redirect('/admin?tab=accounts&msg=account_deleted');
 });
 
 // Update a single slot's status / renter / expiration
@@ -5026,7 +5038,7 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
   const { status, renter_id, renter_name, days, end_date } = req.body;
   const type = req.params.type;
   const account = getAccount(req.params.id);
-  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return res.redirect('/admin/accounts?msg=error');
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return res.redirect('/admin?tab=accounts&msg=account_error');
   const slot = account.slots[type];
   const newStatus = ACCOUNT_STATUSES.includes(status) ? status : slot.status;
 
@@ -5050,7 +5062,7 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
   }
   account.slots[type] = slot;
   db.get('accounts').find({ id: parseInt(req.params.id) }).assign({ slots: account.slots }).write();
-  res.redirect('/admin/accounts?msg=slot_updated');
+  res.redirect('/admin?tab=accounts&msg=slot_updated');
 });
 
 // ── Month Logs (dashboard drill-down: ad count/spend + screenshots) ───────────
