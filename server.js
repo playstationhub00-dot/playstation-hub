@@ -3552,6 +3552,20 @@ app.get('/admin', requireAuth, async (req, res) => {
     const bd = b.end_date || b.created_at || '';
     return bd.localeCompare(ad);
   });
+  // Live rentals that never took an account slot, on games where the accounts
+  // system governs availability. Each one is a slot the site still advertises
+  // as free while somebody is in it — the Onimusha trophy case. Surfaced here
+  // because the records already exist; the add/edit guard only stops new ones.
+  //
+  // Scoped to active rentals so this stays a short list of things to fix rather
+  // than a history of everything ever recorded loosely.
+  const unlinkedRentals = customers.filter(c =>
+    c && (c.status === 'renting' || c.status === 'bought')
+    && !String(c.game_id).startsWith('upcoming_')
+    && !findAccountAssignmentForCustomer(c.id)
+    && requiresSlotAssignment(c.game_id, c.account_type || 'nt')
+  );
+
   const visitors = db.get('visitors').value();
   const reviews = db.get('reviews').value().sort((a, b) => (a.order || 999) - (b.order || 999));
   // Who still needs asking for a quote, and who has already been asked or
@@ -3840,7 +3854,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, botTraining, accounts: getAccounts(), showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -4437,6 +4451,30 @@ function freeAccountSlotsForCustomer(customerId) {
   if (anyChanged) db.write();
 }
 // Find the "accId:type" string of whichever slot is currently linked to a customer, or null
+// Which account slot type a customer's account_type consumes.
+const SLOT_TYPE_FOR_ACCOUNT_TYPE = { tr: 'trophy', nt: 'non_trophy', ps4: 'ps4_primary' };
+
+// True when recording this rental WITHOUT picking an account slot would leave the
+// game's advertised availability wrong.
+//
+// Two sources describe whether a game is free: the legacy per-game counters
+// (game.trophy_slots and friends) and the linked account slots. lib/availability.js
+// prefers the accounts whenever a game has any, and ignores the legacy count
+// entirely — so on such a game, saving a rental that decrements only the legacy
+// counter leaves the slot reading 'open' and the card still advertising it.
+//
+// That is not cosmetic: the next customer can rent a slot somebody is already in.
+// It is how Onimusha showed "Trophy · 1 slot left" while a trophy rental was live.
+function requiresSlotAssignment(gameId, accountType) {
+  const slotKey = SLOT_TYPE_FOR_ACCOUNT_TYPE[accountType || 'nt'];
+  if (!slotKey) return false;
+  const summary = gameAccountSummary(gameId);
+  // Only when the accounts system actually governs this type for this game. A
+  // game with no linked slots of this type still runs on the legacy counters,
+  // which the add/edit routes do keep up to date.
+  return !!(summary && summary[slotKey] && summary[slotKey].total > 0);
+}
+
 function findAccountAssignmentForCustomer(customerId) {
   for (const acc of getAccounts()) {
     for (const t of ACCOUNT_SLOT_TYPES) {
@@ -4470,6 +4508,17 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
   // Reservation uses upcoming game (prefixed id), others use regular game
   const isReservation = (status || 'renting') === 'reservation';
+  // Refuse before writing anything: a half-recorded rental is worse than a
+  // rejected one, because the customer row exists and the slot still reads free.
+  {
+    const st = status || 'renting';
+    if ((st === 'renting' || st === 'bought')
+        && !String(game_id).startsWith('upcoming_')
+        && !account_assign
+        && requiresSlotAssignment(game_id, account_type || 'nt')) {
+      return res.redirect('/admin?tab=customers&msg=slot_required');
+    }
+  }
   const isUpcomingGame = String(game_id).startsWith('upcoming_');
   let game = null, gameTitle = '';
   if (isUpcomingGame) {
@@ -4576,6 +4625,18 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
   const isActive = status === 'renting' || status === 'bought';
   const wasUpcoming = String(existing.game_id).startsWith('upcoming_');
   const isUpcomingNew = String(game_id || existing.game_id).startsWith('upcoming_');
+  // Same guard as the add route. Checked against whatever assignment would end
+  // up applied — an existing one counts, so editing an already-linked rental
+  // does not demand the slot be re-picked.
+  {
+    const effectiveAssign = account_assign !== undefined
+      ? account_assign
+      : findAccountAssignmentForCustomer(existing.id);
+    if (isActive && !isUpcomingNew && !effectiveAssign
+        && requiresSlotAssignment(game_id || existing.game_id, account_type || existing.account_type || 'nt')) {
+      return res.redirect('/admin?tab=customers&msg=slot_required');
+    }
+  }
 
   // ── Sync linked account slot (dashboard) with this edit ──
   const customerId = parseInt(req.params.id);

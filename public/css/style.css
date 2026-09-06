@@ -2929,6 +2929,10 @@ footer {
 
 /* Needs-a-reminder panel + copy buttons (message templates) */
 .rem-panel { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.25); border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.25rem; }
+/* Red rather than amber: a reminder is a nudge, an unlinked rental is the site
+   actively offering a slot somebody is already sitting in. */
+.unlinked-panel { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.3); }
+.unlinked-note { font-size: 0.78rem; color: #f0a0a0; line-height: 1.55; margin: 0.3rem 0 0.75rem; }
 .rem-title { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.85rem; }
 .rem-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0; border-top: 1px solid rgba(245,158,11,0.15); }
 .rem-row:first-of-type { border-top: 0; }

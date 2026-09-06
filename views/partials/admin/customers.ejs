@@ -342,6 +342,30 @@
                 return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
               }).sort((a, b) => a.dl - b.dl);
             %>
+            <%# Rentals occupying no account slot on a game whose availability is
+                driven by accounts. Each one is a slot the site is still offering
+                to the next customer while somebody is already in it, so this
+                sits above the reminders — a double-booking costs more than a
+                late return. %>
+            <% if (typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) { %>
+            <div class="rem-panel unlinked-panel">
+              <div class="rem-title">⚠ Renting, but no account slot linked (<%= unlinkedRentals.length %>)</div>
+              <div class="unlinked-note">
+                The site still shows these slots as free, so someone else can rent the same one.
+                Open each and pick the account slot they're actually on.
+              </div>
+              <% unlinkedRentals.forEach(u => { %>
+              <div class="rem-row">
+                <div class="rem-info">
+                  <span class="rem-name"><%= u.customer_name %></span>
+                  <span class="rem-badge rem-overdue"><%= u.account_type === 'tr' ? 'Trophy' : u.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %></span>
+                  <div class="rem-meta"><%= u.game_title %><%= u.end_date ? ' · ends ' + u.end_date : '' %></div>
+                </div>
+                <a class="btn-copy" href="/admin/customers/edit/<%= u.id %>">Assign slot</a>
+              </div>
+              <% }) %>
+            </div>
+            <% } %>
             <% if (needsReminder.length) { %>
             <div class="rem-panel">
               <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
