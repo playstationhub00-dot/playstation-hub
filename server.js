@@ -5272,6 +5272,24 @@ app.get('/admin/mongo-status', requireAuth, async (req, res) => {
 
 // ── Meta / Facebook Product Catalog Feed ──────────────────────────────────────
 // Give Meta this URL: https://your-railway-domain.up.railway.app/feed/meta.csv
+// Every order, for offline analysis — scripts/funnel-report.js reads this file.
+// Behind requireAuth like the games export beside it: order rows carry customer
+// names and amounts, so this is owner-only.
+//
+// Deliberately the raw documents including state_history: the funnel is built
+// from state transitions, and pre-summarising here would mean the analysis
+// could only ever answer the questions this route already thought of.
+app.get('/admin/api/orders-export', requireAuth, async (req, res) => {
+  try {
+    const all = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
+    res.setHeader('Content-Disposition', 'attachment; filename="orders-export.json"');
+    res.json({ exported_at: new Date().toISOString(), count: all.length, orders: all });
+  } catch (e) {
+    console.error('[orders-export]', e.message);
+    res.status(500).json({ error: 'export failed' });
+  }
+});
+
 app.get('/api/games-export', requireAuth, (req, res) => {
   const cats = getPriceCategories();
   const catMap = {};

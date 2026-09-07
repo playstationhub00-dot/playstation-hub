@@ -83,6 +83,13 @@
 </div>
 <% } %>
 
+<%# Raw order data for offline analysis: scripts/funnel-report.js turns this
+    file into the drop-off report. %>
+<div class="oq-export">
+  <a href="/admin/api/orders-export" download>⬇ Export orders (JSON)</a>
+  <span>Every order with its full state history — for the funnel report.</span>
+</div>
+
 <form method="POST" action="/admin/online" class="oq-online-form">
   <label class="oq-online-toggle">
     <input type="checkbox" name="online" onchange="this.form.submit()" <%= settings.owner_online ? 'checked' : '' %>>
