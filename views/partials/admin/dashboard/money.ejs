@@ -152,11 +152,6 @@
         });
         return [...years].sort((a, b) => b - a);
       }
-      function dashUniqueRenters(list) {
-        const set = new Set();
-        list.forEach(c => { if (c.customer_name) set.add(c.customer_name.trim().toLowerCase()); });
-        return set.size;
-      }
       function dashFilterYear(year) {
         if (year === 'all') return DASH_DATA;
         return DASH_DATA.filter(c => { const d = dashCustDate(c); return d && d.getFullYear() === year; });
@@ -255,6 +250,13 @@
         sel.value = pick != null ? String(pick) : 'all';
       }
 
+      // A tile removed from the markup must not abort the whole render: the
+      // month chart and top-games list are further down this same function.
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      }
+
       window.renderDashboard = function() {
         const raw = document.getElementById('dashYearSelect').value;
         const yearNum = raw === 'all' ? null : parseInt(raw);
@@ -267,13 +269,12 @@
         const rentRevenue = yearPayments.filter(x => x.c.status !== 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
         const buyRevenue = yearPayments.filter(x => x.c.status === 'bought').reduce((s, x) => s + (x.p.amount || 0), 0);
 
-        document.getElementById('dashTotalEarned').textContent = '₱' + totalEarned.toLocaleString();
-        document.getElementById('dashTransactions').textContent = scoped.length + ' transaction' + (scoped.length !== 1 ? 's' : '');
-        document.getElementById('dashUniqueRenters').textContent = dashUniqueRenters(scoped);
-        document.getElementById('dashRentRevenue').textContent = '₱' + rentRevenue.toLocaleString();
-        document.getElementById('dashRentSub').textContent = rentList.length + ' rentals · ' + (totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0) + '% of total';
-        document.getElementById('dashBuyRevenue').textContent = '₱' + buyRevenue.toLocaleString();
-        document.getElementById('dashBuySub').textContent = buyList.length + ' game' + (buyList.length !== 1 ? 's' : '') + ' sold · ' + (totalEarned > 0 ? Math.round(buyRevenue/totalEarned*100) : 0) + '% of total';
+        setText('dashTotalEarned', '₱' + totalEarned.toLocaleString());
+        setText('dashTransactions', scoped.length + ' transaction' + (scoped.length !== 1 ? 's' : ''));
+        setText('dashRentRevenue', '₱' + rentRevenue.toLocaleString());
+        setText('dashRentSub', rentList.length + ' rentals · ' + (totalEarned > 0 ? Math.round(rentRevenue/totalEarned*100) : 0) + '% of total');
+        setText('dashBuyRevenue', '₱' + buyRevenue.toLocaleString());
+        setText('dashBuySub', buyList.length + ' game' + (buyList.length !== 1 ? 's' : '') + ' sold · ' + (totalEarned > 0 ? Math.round(buyRevenue/totalEarned*100) : 0) + '% of total');
 
         dashRenderTopGamesList(document.getElementById('dashTopGames'), dashTopGames(scoped, 5), 'No data yet');
 
@@ -289,7 +290,7 @@
       const MONTH_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
       function renderDashChart(year) {
-        document.getElementById('dashChartYearLabel').textContent = year;
+        setText('dashChartYearLabel', year);
         const revs = [], renters = [];
         for (let m = 0; m < 12; m++) {
           revs.push(dashRevenueInMonth(year, m));
@@ -345,14 +346,14 @@
         const buys = list.filter(c => c.status === 'bought');
         const stillRenting = DASH_DATA.filter(c => dashOverlapsMonth(c, year, month));
 
-        document.getElementById('dashMonthTitle').textContent = '📅 ' + MONTH_LONG[month] + ' ' + year;
-        document.getElementById('dashMonthEarned').textContent = '₱' + totalEarned.toLocaleString();
-        document.getElementById('dashMonthTransactions').textContent = list.length;
-        document.getElementById('dashMonthRenters').textContent = dashRentersInMonth(year, month);
-        document.getElementById('dashMonthReservations').textContent = reservations.length;
-        document.getElementById('dashMonthBuys').textContent = buys.length;
-        document.getElementById('dashMonthStillRenting').textContent = stillRenting.length;
-        document.getElementById('dashMonthStillRentingS').textContent = stillRenting.length !== 1 ? 's were' : ' was';
+        setText('dashMonthTitle', '📅 ' + MONTH_LONG[month] + ' ' + year);
+        setText('dashMonthEarned', '₱' + totalEarned.toLocaleString());
+        setText('dashMonthTransactions', list.length);
+        setText('dashMonthRenters', dashRentersInMonth(year, month));
+        setText('dashMonthReservations', reservations.length);
+        setText('dashMonthBuys', buys.length);
+        setText('dashMonthStillRenting', stillRenting.length);
+        setText('dashMonthStillRentingS', stillRenting.length !== 1 ? 's were' : ' was');
         dashRenderTopGamesList(document.getElementById('dashMonthTopGames'), dashTopGames(list, 5), 'No rentals this month');
         renderMonthLogArea();
 
