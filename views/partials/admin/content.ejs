@@ -1,7 +1,17 @@
   <div class="tab-panel" id="tab-content">
+
+    <div class="adm-jump">
+      <a href="#sec-hero-slider">Hero slider</a>
+      <a href="#sec-signin-guide">Sign-in guide</a>
+      <a href="#sec-popup">Popup</a>
+      <a href="#sec-hero-text">Hero text</a>
+      <a href="#sec-reviews">Reviews</a>
+      <a href="#sec-ask-reviews">Ask for reviews</a>
+    </div>
+
     <!-- HERO SLIDES MANAGER -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+    <div class="adm-card" id="sec-hero-slider">
+      <div class="adm-card-head" style="border-left:3px solid #a855f7;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🖼</div>
           <div>
@@ -9,11 +19,9 @@
             <div class="sa-desc">Upload promo banners shown as a slideshow on the homepage</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(240,165,0,0.5);background:linear-gradient(135deg,#0d0d00,#1a1a0a);">
-      <h2 style="display:none;">🖼 Hero Promo Slideshow</h2>
       <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;">Upload promo posters. They replace the homepage hero with an auto-sliding carousel (auto-advances every 5 seconds). Remove all slides to restore the text hero.</p>
 
       <!-- Current slides -->
@@ -50,8 +58,8 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion hero-slides -->
     <!-- SIGN-IN QR GUIDE -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" id="ssgAccordionHeader" onclick="toggleAccordion(this)" style="border-left:3px solid #38bdf8;">
+    <div class="adm-card" id="sec-signin-guide">
+      <div class="adm-card-head" id="ssgAccordionHeader" style="border-left:3px solid #38bdf8;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(56,189,248,0.15);">📷</div>
           <div>
@@ -59,9 +67,8 @@
             <div class="sa-desc">Step-by-step, with screenshots, for PS5 and PS4</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body" id="ssgAccordionBody">
+      <div class="adm-card-body" id="ssgAccordionBody">
     <div style="border-color:rgba(56,189,248,0.3);background:linear-gradient(135deg,#04141c,#071d2a);padding:1.25rem;">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
         <button type="button" class="ssg-tab ssg-tab-on" data-c="ps5" onclick="ssgSwitch('ps5')">PS5 steps</button>
@@ -135,8 +142,8 @@
 
     <!-- HOMEPAGE POPUP -->
     <% const adminPopup = settings.popup || { enabled: false, image_path: '', link_url: '/browse', starts_at: '', ends_at: '' }; %>
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #ec4899;">
+    <div class="adm-card" id="sec-popup">
+      <div class="adm-card-head" style="border-left:3px solid #ec4899;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(236,72,153,0.15);">🪧</div>
           <div>
@@ -144,9 +151,8 @@
             <div class="sa-desc">Pop-out promo image shown once per visit on the homepage</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(236,72,153,0.3);background:linear-gradient(135deg,#12040c,#1a0714);">
       <form method="POST" action="/admin/popup" enctype="multipart/form-data">
         <div class="form-grid">
@@ -197,8 +203,8 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion popup -->
     <!-- HERO TEXT EDITOR -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+    <div class="adm-card" id="sec-hero-text">
+      <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">✏️</div>
           <div>
@@ -206,11 +212,9 @@
             <div class="sa-desc">Edit headline, subtitle, colors & font size</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(240,165,0,0.3);background:linear-gradient(135deg,#111000,#1a1a0a);">
-      <h2 style="display:none;">✏️ Home Page Hero Text</h2>
       <form method="POST" action="/admin/hero-text">
         <div class="form-grid">
           <div class="form-group">
@@ -287,12 +291,11 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion hero-text -->
     <!-- CUSTOMER REVIEWS -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f59e0b;">
+    <div class="adm-card" id="sec-reviews">
+      <div class="adm-card-head" style="border-left:3px solid #f59e0b;">
         <div class="sa-left"><div class="sa-icon" style="background:rgba(245,158,11,0.15);">⭐</div><div><div class="sa-title">Customer Reviews</div><div class="sa-desc">Shown on your homepage and game pages</div></div></div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
         <div style="font-weight:700;color:#f59e0b;margin-bottom:1rem;">➕ Add a review</div>
         <form method="POST" action="/admin/reviews/add">
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:1rem;align-items:end;flex-wrap:wrap;">
@@ -364,12 +367,11 @@
         + 'And would you say 5 out of 5?\n\n'
         + 'Totally fine if you\'d rather not!';
     %>
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+    <div class="adm-card" id="sec-ask-reviews">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
         <div class="sa-left"><div class="sa-icon" style="background:rgba(34,197,94,0.15);">💬</div><div><div class="sa-title">Ask for reviews</div><div class="sa-desc">Ask permission to quote what customers already told you<%= rqSum.todo ? ' — ' + rqSum.todo + ' not asked yet' : '' %></div></div></div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
         <% if (!rqRows.length) { %>
         <div style="color:#555;text-align:center;padding:1.5rem;">No customers yet — this fills up as people rent.</div>
         <% } else { %>
@@ -481,8 +483,8 @@
       <p style="color:#444;font-size:0.82rem;margin-bottom:1rem;font-style:italic;">No announcements yet.</p>
       <% } %>
 
-      <details style="background:#050514;border:1px dashed #1a1a3a;border-radius:10px;overflow:hidden;">
-        <summary style="padding:0.85rem 1rem;cursor:pointer;color:#4a9eff;font-weight:700;font-size:0.9rem;list-style:none;">+ Add New Announcement</summary>
+            <div style="background:#0a0a0a;border:1px solid #1c1c1c;border-radius:10px;padding:0.9rem 1rem;">
+        <div style="font-weight:700;font-size:0.85rem;color:#fff;margin-bottom:0.85rem;">📢 New announcement</div>
         <div style="padding:1rem;border-top:1px dashed #1a1a3a;">
           <form method="POST" action="/admin/announcements/add">
             <div class="form-grid">
@@ -500,6 +502,6 @@
             </div>
           </form>
         </div>
-      </details>
+            </div>
     </div>
   </div><!-- /tab-announcements -->

@@ -47,8 +47,6 @@
     .acc-actions { display: flex; gap: 6px; }
     .acc-actions a, .acc-actions button { font-size: 0.68rem; padding: 4px 8px; border-radius: 5px; text-decoration: none; border: 1px solid #333; background: #1a1a22; color: #ccc; cursor: pointer; }
     .acc-actions .del { border-color: rgba(239,68,68,0.4); color: #f87171; }
-    details.acc-add > summary { display: inline-block; background: var(--ps-blue); color: #000; font-weight: 800; padding: 0.55rem 1rem; border-radius: 8px; cursor: pointer; list-style: none; margin-bottom: 1rem; }
-    details.acc-add > summary::-webkit-details-marker { display: none; }
     .acc-edit-form { background: #111119; border: 1px solid #23232e; border-radius: 10px; padding: 1rem; margin-top: 0.5rem; }
     .acc-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
     .acc-edit-grid label { font-size: 0.72rem; color: #aaa; display: block; margin-bottom: 3px; }
@@ -77,8 +75,14 @@
   </div>
 
   <!-- ADD ACCOUNT -->
-  <details class="acc-add">
-    <summary>+ Add Account</summary>
+  <div class="adm-card" id="sec-add-account">
+    <div class="adm-card-head" style="border-left:3px solid #22c55e;">
+      <div class="sa-left">
+        <div class="sa-icon" style="background:rgba(34,197,94,0.15);">➕</div>
+        <div><div class="sa-title">Add Account</div><div class="sa-desc">Create a PSN account and its Trophy / Non-Trophy / PS4 slots</div></div>
+      </div>
+    </div>
+    <div class="adm-card-body" style="padding:1.15rem;">
     <form method="POST" action="/admin/accounts/add" class="acc-edit-form">
       <div class="acc-edit-grid">
         <div style="grid-column:1/-1;"><label>Account Label *</label><input type="text" name="label" placeholder="e.g. PSHub Main Account" required></div>
@@ -105,7 +109,8 @@
       </label>
       <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Create Account</button>
     </form>
-  </details>
+    </div>
+  </div>
 
   <!-- SEARCH -->
   <div class="acc-search-wrap">

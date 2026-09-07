@@ -83,48 +83,6 @@
 </div>
 <% } %>
 
-<%# Sits beside the gateway health badge because it answers the same question:
-    is the plumbing behind this page actually working? Alerts are the thing the
-    owner cannot verify by looking — nothing arriving looks identical to nothing
-    happening. %>
-<div class="oq-alert-test">
-  <button type="button" id="oqTestAlert" class="oq-alert-btn">🔔 Send test alert</button>
-  <span class="oq-alert-msg" id="oqTestAlertMsg">Checks that alerts reach your Telegram.</span>
-</div>
-
-<%
-  // Labels live here rather than in lib/telegram.js — that module builds
-  // messages, and how the owner's own settings panel words a switch is a
-  // presentation choice. Falling back to the raw key means a kind added to
-  // ALERT_KINDS still renders a working toggle before anyone writes copy for it.
-  const ALERT_LABELS = {
-    signin:        { name: 'Sign-in waiting',   note: 'The one that blocks — you have 10 minutes' },
-    order_created: { name: 'New order started', note: 'Noisiest: about half never pay' },
-    order_review:  { name: 'Payment to approve', note: 'Blocks the order until you act' },
-    order_paid:    { name: 'Paid online',       note: 'Money landed; already advanced itself' },
-    request:       { name: 'Game request',      note: 'New titles only, never repeat votes' }
-  };
-  const alertsOn = (settings && settings.alerts) || {};
-%>
-<details class="oq-alert-cfg">
-  <summary>Which alerts reach my phone</summary>
-  <form method="POST" action="/admin/settings/alerts">
-    <% (alertKinds || []).forEach(k => { const L = ALERT_LABELS[k] || { name: k, note: '' }; %>
-    <label class="oq-alert-row">
-      <%# Unset means on, matching lib/telegram.js — so a brand new install and
-          a kind added later both start out checked. %>
-      <input type="checkbox" name="alert_<%= k %>" <%= alertsOn[k] !== false ? 'checked' : '' %>>
-      <span>
-        <span class="oq-alert-name"><%= L.name %></span>
-        <% if (L.note) { %><span class="oq-alert-note"><%= L.note %></span><% } %>
-      </span>
-    </label>
-    <% }) %>
-    <button type="submit" class="oq-alert-btn" style="margin-top:0.5rem;">Save alert settings</button>
-    <div class="oq-alert-msg" style="margin-top:0.4rem;">The test button above ignores these and always sends, so you can check the connection with everything switched off.</div>
-  </form>
-</details>
-
 <form method="POST" action="/admin/online" class="oq-online-form">
   <label class="oq-online-toggle">
     <input type="checkbox" name="online" onchange="this.form.submit()" <%= settings.owner_online ? 'checked' : '' %>>
@@ -133,99 +91,9 @@
 </form>
 
 <script>
-(function () {
-  var btn = document.getElementById('oqTestAlert');
-  var out = document.getElementById('oqTestAlertMsg');
-  if (!btn || !out) return;
-  btn.addEventListener('click', function () {
-    btn.disabled = true;
-    out.className = 'oq-alert-msg';
-    out.textContent = 'Sending…';
-    fetch('/admin/test-alert', { method: 'POST', headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d && d.ok) {
-          out.className = 'oq-alert-msg oq-alert-ok';
-          out.textContent = 'Sent — check Telegram. If it arrived, alerts are working.';
-          return;
-        }
-        out.className = 'oq-alert-msg oq-alert-bad';
-        // Say what to fix, not just that it failed.
-        if (d && d.reason === 'not_configured') {
-          out.textContent = 'Not set up yet — missing ' + (d.missing || []).join(' and ') + ' in Railway.';
-        } else if (d && d.reason === 'api') {
-          out.textContent = 'Telegram refused it: ' + (d.description || ('HTTP ' + d.status))
-            + (/unauthorized/i.test(d.description || '') ? ' — the bot token is wrong or was revoked.' : '')
-            + (/chat not found/i.test(d.description || '') ? ' — the chat ID is wrong, or you have not messaged the bot yet.' : '');
-        } else {
-          out.textContent = 'Could not reach Telegram: ' + ((d && d.description) || 'unknown error');
-        }
-      })
-      .catch(function (e) {
-        out.className = 'oq-alert-msg oq-alert-bad';
-        out.textContent = 'Request failed: ' + e.message;
-      })
-      .then(function () { btn.disabled = false; });
-  });
-})();
+
 </script>
 
-<!-- ── Manual Messenger order ──────────────────────────────────────────────
-     For a customer who never touches the site: you sent them your own
-     GCash/Maya QR in chat and already got paid there. This just records the
-     order and hands back its link — the same invoice + review page any
-     site order gets — to paste back into that same thread. -->
-<details class="oq-manual-order">
-  <summary>➕ Create order for a Messenger customer (already paid)</summary>
-  <form id="oqManualForm" class="oq-manual-form" data-no-loading="1">
-    <div class="oq-manual-grid">
-      <label class="oq-manual-field oq-manual-full">
-        <span>Facebook name</span>
-        <input type="text" name="fb_name" placeholder="Their Facebook name" required>
-      </label>
-      <label class="oq-manual-field oq-manual-full">
-        <span>Game</span>
-        <select name="game_id" required>
-          <option value="">— Select a game —</option>
-          <% games.forEach(g => { %>
-          <option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option>
-          <% }) %>
-        </select>
-      </label>
-      <label class="oq-manual-field">
-        <span>Type</span>
-        <select name="mode" id="oqManualMode">
-          <option value="rent">Rent</option>
-          <option value="buy">Buy (permanent)</option>
-        </select>
-      </label>
-      <label class="oq-manual-field">
-        <span>Account</span>
-        <select name="account_type" id="oqManualType">
-          <option value="nt">Non-Trophy</option>
-          <option value="tr">Trophy</option>
-          <option value="ps4">PS4 Primary</option>
-        </select>
-      </label>
-      <label class="oq-manual-field" id="oqManualDaysWrap">
-        <span>Duration</span>
-        <select name="days">
-          <option value="7">Weekly</option>
-          <option value="30">Monthly</option>
-        </select>
-      </label>
-      <label class="oq-manual-field">
-        <span>Paid via</span>
-        <select name="method">
-          <option value="gcash">GCash</option>
-          <option value="maya">Maya</option>
-        </select>
-      </label>
-    </div>
-    <button type="submit" class="oq-btn-go" id="oqManualSubmit">Create order &amp; get link</button>
-    <div class="oq-manual-result" id="oqManualResult" hidden></div>
-  </form>
-</details>
 <script>
 (function(){
   var modeSel = document.getElementById('oqManualMode');
@@ -357,6 +225,63 @@
 <% } %>
 
 <!-- ── All orders ledger ────────────────────────────────────────────────── -->
+<!-- ── Manual Messenger order ──────────────────────────────────────────────
+     For a customer who never touches the site: you sent them your own
+     GCash/Maya QR in chat and already got paid there. This just records the
+     order and hands back its link — the same invoice + review page any
+     site order gets — to paste back into that same thread. -->
+<div class="oq-manual-order">
+  <div class="oq-manual-title">➕ Create order for a Messenger customer (already paid)</div>
+  <form id="oqManualForm" class="oq-manual-form" data-no-loading="1">
+    <div class="oq-manual-grid">
+      <label class="oq-manual-field oq-manual-full">
+        <span>Facebook name</span>
+        <input type="text" name="fb_name" placeholder="Their Facebook name" required>
+      </label>
+      <label class="oq-manual-field oq-manual-full">
+        <span>Game</span>
+        <select name="game_id" required>
+          <option value="">— Select a game —</option>
+          <% games.forEach(g => { %>
+          <option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Type</span>
+        <select name="mode" id="oqManualMode">
+          <option value="rent">Rent</option>
+          <option value="buy">Buy (permanent)</option>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Account</span>
+        <select name="account_type" id="oqManualType">
+          <option value="nt">Non-Trophy</option>
+          <option value="tr">Trophy</option>
+          <option value="ps4">PS4 Primary</option>
+        </select>
+      </label>
+      <label class="oq-manual-field" id="oqManualDaysWrap">
+        <span>Duration</span>
+        <select name="days">
+          <option value="7">Weekly</option>
+          <option value="30">Monthly</option>
+        </select>
+      </label>
+      <label class="oq-manual-field">
+        <span>Paid via</span>
+        <select name="method">
+          <option value="gcash">GCash</option>
+          <option value="maya">Maya</option>
+        </select>
+      </label>
+    </div>
+    <button type="submit" class="oq-btn-go" id="oqManualSubmit">Create order &amp; get link</button>
+    <div class="oq-manual-result" id="oqManualResult" hidden></div>
+  </form>
+</div>
+
 <div class="oq-zone oq-zone-all">
   All orders
   <span class="oq-zone-n"><%= ledgerStats.total %></span>

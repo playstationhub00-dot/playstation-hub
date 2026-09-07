@@ -88,6 +88,32 @@
       .admin-content { padding:1rem 0.9rem 3rem; }
       .admin-topbar { padding:0 0.9rem; }
     }
+    /* ── Panels ──
+       These were collapsible accordions. Everything is open now: on a back
+       office the cost of a click to find a form outweighs the cost of scrolling
+       past it, and a closed panel hides state the owner needs to notice. */
+    .adm-card { border:1px solid #1c1c1c; border-radius:14px; overflow:hidden; margin-bottom:1rem; background:#0a0a0a; }
+    .adm-card-head { display:flex; align-items:center; gap:0.75rem; padding:0.8rem 1.15rem; background:#111; border-bottom:1px solid #1a1a1a; border-left:3px solid #333; }
+    .adm-card-head .sa-left { display:flex; align-items:center; gap:0.75rem; }
+    .adm-card-head .sa-icon { font-size:1rem; width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .adm-card-head .sa-title { font-weight:700; font-size:0.9rem; color:#fff; line-height:1.2; }
+    .adm-card-head .sa-desc { font-size:0.72rem; color:#666; margin-top:0.1rem; }
+    .adm-card-body { display:block; background:#0a0a0a; }
+    .adm-card-body > .form-card,
+    .adm-card-body > .table-card,
+    .adm-card-body > div > .form-card,
+    .adm-card-body > div > .table-card { border:none !important; border-radius:0 !important; margin:0 !important; box-shadow:none !important; }
+
+    /* Jump strip for the long tabs, so a flat page stays navigable. */
+    .adm-jump { display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:1rem; padding-bottom:0.85rem; border-bottom:1px solid #171717; }
+    .adm-jump a { font-size:0.75rem; font-weight:700; color:#9a9a9a; text-decoration:none; background:#111; border:1px solid #222; border-radius:20px; padding:0.35rem 0.8rem; }
+    .adm-jump a:hover { color:#fff; border-color:var(--ps-blue); }
+    body.light-mode .adm-card { background:#fff; border-color:#e4e7eb; }
+    body.light-mode .adm-card-head { background:#f7f9fa; border-bottom-color:#e9ecef; }
+    body.light-mode .adm-card-head .sa-title { color:#14171a; }
+    body.light-mode .adm-card-body { background:#fff; }
+    body.light-mode .adm-jump a { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
+
     .add-choice-overlay { display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center; }
     .add-choice-overlay.open { display:flex; }
     .add-choice-box { background:#111;border:1px solid #222;border-radius:20px;padding:2rem;width:min(480px,92vw);animation:popIn 0.18s ease; }
@@ -266,15 +292,6 @@ window.closeSidebarDrawer = closeSidebarDrawer;
   applySidebar(saved === '1');
 })();
 
-function toggleAccordion(header) {
-  const body = header.nextElementSibling;
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  header.classList.toggle('open', !isOpen);
-}
-// alias for old class names still used in Games/Customers tabs
-window.toggleAccordion = toggleAccordion;
-
 function switchTab(name) {
   // A name outside the current tabs array (a stale id from before a phase of
   // this reorganisation shipped) must not reach getElementById and dereference
@@ -324,6 +341,7 @@ function switchTab(name) {
     signin_step_saved:'content', signin_step_deleted:'content',
     request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games',
     voter_renamed:'games', voter_removed:'games', voter_dupe:'games', voter_empty:'games', voter_error:'games',
+    alerts_saved:'settings',
     account_added:'accounts', account_updated:'accounts', account_deleted:'accounts', slot_updated:'accounts', account_error:'accounts',
     bg_saved:'posters', bg_removed:'posters', poster_error:'posters'
   };
@@ -345,17 +363,8 @@ function switchTab(name) {
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
       history.replaceState({}, '', '/admin?tab=' + (msgTabMap[msg] || initial));
     }
-    // Sign-in QR Guide edits happen inside a nested accordion that
-    // switchTab/toggleAccordion don't know about — open it explicitly
-    // so the admin lands back on the step they just edited.
-    if (String(msg).startsWith('signin_step_')) {
-      const ssgHeader = document.getElementById('ssgAccordionHeader');
-      const ssgBody = document.getElementById('ssgAccordionBody');
-      if (ssgHeader && ssgBody) {
-        ssgHeader.classList.add('open');
-        ssgBody.classList.add('open');
-      }
-    }
+    // The Sign-In QR Guide used to need re-opening after a save; it is a
+    // plain always-visible panel now, so landing on the tab is enough.
   }
 
   // Restore whichever PS5/PS4 console tab was last active in the Sign-In

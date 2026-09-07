@@ -3092,9 +3092,7 @@ footer {
 .oq-pm-bad .oq-pm-sub { color: #fca5a5; }
 body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-manual-order { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; margin-top: 0.85rem; padding: 0 1rem; }
-.oq-manual-order summary { cursor: pointer; padding: 0.85rem 0; font-size: 0.85rem; font-weight: 700; color: #aaa; list-style: none; }
-.oq-manual-order summary::-webkit-details-marker { display: none; }
-.oq-manual-order[open] summary { border-bottom: 1px solid #1a1a1a; }
+.oq-manual-title { padding: 0.85rem 0; font-size: 0.85rem; font-weight: 700; color: #ccc; }
 .oq-manual-form { padding: 1rem 0 1.1rem; }
 .oq-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-bottom: 0.9rem; }
 .oq-manual-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.72rem; color: #777; font-weight: 700; }

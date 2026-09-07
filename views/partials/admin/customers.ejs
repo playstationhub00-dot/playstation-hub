@@ -1,17 +1,81 @@
   <div class="tab-panel" id="tab-customers">
 
 
+
+    <%
+      // Pre-render every message server-side so lib/templates.js stays the
+      // single implementation of the substitution rules — the browser only
+      // copies a finished string.
+      const remPromo = settings.promo || {};
+      const tplDeposit = remPromo.deposit != null ? remPromo.deposit : 100;
+      const tplLateFee = remPromo.late_fee_per_day != null ? remPromo.late_fee_per_day : 20;
+      const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit, lateFeePerDay: tplLateFee }, extra));
+    %>
+    <%# Only rendered when something is actually waiting — an empty
+        "Needs attention" card every day trains you to ignore it. %>
+    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length) { %>
+    <!-- NEEDS ATTENTION -->
+    <div class="adm-card" id="sec-attention">
+      <div class="adm-card-head" style="border-left:3px solid #ef4444;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(239,68,68,0.15);">⚠️</div>
+          <div><div class="sa-title">Needs attention</div><div class="sa-desc">Rentals due back, and rentals holding a slot the site still shows as free</div></div>
+        </div>
+      </div>
+      <div class="adm-card-body" style="padding:1rem 1.15rem;">
+        <%# Rentals occupying no account slot on a game whose availability is
+            driven by accounts. Each one is a slot the site is still offering
+            to the next customer while somebody is already in it, so this
+            sits above the reminders — a double-booking costs more than a
+            late return. %>
+        <% if (typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) { %>
+        <div class="rem-panel unlinked-panel">
+          <div class="rem-title">⚠ Renting, but no account slot linked (<%= unlinkedRentals.length %>)</div>
+          <div class="unlinked-note">
+            The site still shows these slots as free, so someone else can rent the same one.
+            Open each and pick the account slot they're actually on.
+          </div>
+          <% unlinkedRentals.forEach(u => { %>
+          <div class="rem-row">
+            <div class="rem-info">
+              <span class="rem-name"><%= u.customer_name %></span>
+              <span class="rem-badge rem-overdue"><%= u.account_type === 'tr' ? 'Trophy' : u.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %></span>
+              <div class="rem-meta"><%= u.game_title %><%= u.end_date ? ' · ends ' + u.end_date : '' %></div>
+            </div>
+            <a class="btn-copy" href="/admin/customers/edit/<%= u.id %>">Assign slot</a>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+        <% if (needsReminder.length) { %>
+        <div class="rem-panel">
+          <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
+          <% needsReminder.forEach(r => { %>
+          <div class="rem-row">
+            <div class="rem-info">
+              <span class="rem-name"><%= r.c.customer_name %></span>
+              <span class="rem-badge <%= r.dl < 0 ? 'rem-overdue' : r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl < 0 ? 'Overdue by ' + r.overdueBy + 'd' : r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
+              <div class="rem-meta"><%= r.c.game_title %> · <%= r.c.account_type === 'tr' ? 'Trophy' : r.c.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %> · <%= r.c.days %> days</div>
+            </div>
+            <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c, { daysOverdue: r.overdueBy }) %>"><%= r.dl < 0 ? '📋 Copy overdue notice' : '📋 Copy reminder' %></button>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
     <!-- Add Customer Form -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+    <div class="adm-card" id="sec-add-customer">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(34,197,94,0.15);">👤</div>
           <div><div class="sa-title">Add New Customer</div><div class="sa-desc">Log a rental, sale, or reservation manually</div></div>
-        </div><span class="sa-arrow">▼</span>
+        </div>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
-      <h2 style="display:none;">👤 Add New Customer</h2>
       <form method="POST" action="/admin/customers/add">
         <div class="form-grid">
 
@@ -221,14 +285,14 @@
       </div></div><!-- /accordion add-customer -->
 
     <!-- Customers Table -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
+    <div class="adm-card" id="sec-all-customers">
+      <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
           <div><div class="sa-title">All Customers (<%= customers.length %>)</div><div class="sa-desc">View, filter, edit & manage all rental records</div></div>
-        </div><span class="sa-arrow">▼</span>
+        </div>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div class="table-card" style="margin-top:0;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
         <h2 style="margin:0;border:none;padding:0;">All Customers (<%= customers.length %>)</h2>
@@ -259,57 +323,9 @@
       <% if (customers.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
       <% } else { %>
-            <%
-              // Pre-render every message server-side so lib/templates.js stays the
-              // single implementation of the substitution rules — the browser only
-              // copies a finished string.
-              const p = settings.promo || {};
-              const tplDeposit = p.deposit != null ? p.deposit : 100;
-              const tplLateFee = p.late_fee_per_day != null ? p.late_fee_per_day : 20;
-              const renderMsg = (kind, cust, extra) => renderTemplate(kind, cust, messageTemplates, Object.assign({ deposit: tplDeposit, lateFeePerDay: tplLateFee }, extra));
-            %>
             <%# needsReminder is computed once in server.js (shared with the
                 dashboard's "Needs you now" summary) so the two can never
                 disagree about who is due. %>
-            <%# Rentals occupying no account slot on a game whose availability is
-                driven by accounts. Each one is a slot the site is still offering
-                to the next customer while somebody is already in it, so this
-                sits above the reminders — a double-booking costs more than a
-                late return. %>
-            <% if (typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) { %>
-            <div class="rem-panel unlinked-panel">
-              <div class="rem-title">⚠ Renting, but no account slot linked (<%= unlinkedRentals.length %>)</div>
-              <div class="unlinked-note">
-                The site still shows these slots as free, so someone else can rent the same one.
-                Open each and pick the account slot they're actually on.
-              </div>
-              <% unlinkedRentals.forEach(u => { %>
-              <div class="rem-row">
-                <div class="rem-info">
-                  <span class="rem-name"><%= u.customer_name %></span>
-                  <span class="rem-badge rem-overdue"><%= u.account_type === 'tr' ? 'Trophy' : u.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %></span>
-                  <div class="rem-meta"><%= u.game_title %><%= u.end_date ? ' · ends ' + u.end_date : '' %></div>
-                </div>
-                <a class="btn-copy" href="/admin/customers/edit/<%= u.id %>">Assign slot</a>
-              </div>
-              <% }) %>
-            </div>
-            <% } %>
-            <% if (needsReminder.length) { %>
-            <div class="rem-panel">
-              <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
-              <% needsReminder.forEach(r => { %>
-              <div class="rem-row">
-                <div class="rem-info">
-                  <span class="rem-name"><%= r.c.customer_name %></span>
-                  <span class="rem-badge <%= r.dl < 0 ? 'rem-overdue' : r.dl === 0 ? 'rem-today' : 'rem-tomorrow' %>"><%= r.dl < 0 ? 'Overdue by ' + r.overdueBy + 'd' : r.dl === 0 ? 'Due today' : 'Due tomorrow' %></span>
-                  <div class="rem-meta"><%= r.c.game_title %> · <%= r.c.account_type === 'tr' ? 'Trophy' : r.c.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %> · <%= r.c.days %> days</div>
-                </div>
-                <button type="button" class="rem-copy" data-msg="<%= renderMsg(r.kind, r.c, { daysOverdue: r.overdueBy }) %>"><%= r.dl < 0 ? '📋 Copy overdue notice' : '📋 Copy reminder' %></button>
-              </div>
-              <% }) %>
-            </div>
-            <% } %>
       <div style="max-height:520px;overflow-y:auto;overflow-x:auto;border-radius:8px;">
         <table class="games-table" id="customersTable">
           <thead>

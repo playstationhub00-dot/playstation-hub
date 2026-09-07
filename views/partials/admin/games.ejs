@@ -1,5 +1,13 @@
   <div class="tab-panel" id="tab-games">
 
+    <div class="adm-jump">
+      <a href="#sec-all-games">All games</a>
+      <a href="#sec-coming-soon">Coming soon</a>
+      <a href="#sec-requests">Requests</a>
+      <a href="#sec-categories">Price categories</a>
+    </div>
+
+
     <!-- Add New button -->
     <div style="display:flex;justify-content:flex-end;margin-bottom:1.25rem;">
       <button onclick="document.getElementById('addChoiceModal').classList.add('open')"
@@ -41,184 +49,14 @@
     </div>
 
     <!-- PRICE CATEGORIES -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🏷️</div>
-          <div><div class="sa-title">Price Categories</div><div class="sa-desc">Shared pricing tiers assigned to multiple games</div></div>
-        </div><span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body">
-    <div id="add-category-form" class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
-      <h2 style="display:none;">🏷️ Price Categories</h2>
-      <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
-      <% if (priceCategories.length > 0) { %>
-      <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
-        <% priceCategories.forEach(cat => { %>
-        <details style="background:#0a0a0a;border:1px solid #1a2a1a;border-radius:10px;overflow:hidden;">
-          <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none;">
-            <span style="font-size:1rem;">🏷️</span>
-            <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %></span>
-            <span style="font-size:0.75rem;color:#555;">NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %> &nbsp;|&nbsp; TR: ₱<%= cat.tr_price_7d %>/₱<%= cat.tr_price_30d %></span>
-            <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
-          </summary>
-          <div style="padding:1rem;border-top:1px solid #1a2a1a;">
-            <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>" enctype="multipart/form-data">
-              <div class="form-grid">
-                <div class="form-group full"><label>Category Name</label><input type="text" name="name" value="<%= cat.name %>" required></div>
-                <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-                <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= cat.nt_price_7d %>" min="1"></div>
-                <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
-                <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
-                <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="<%= cat.tr_price_7d %>" min="1"></div>
-                <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
-
-                <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
-                <div class="form-group full">
-                  <label>Card Picture</label>
-                  <% if (cat.image) { %>
-                  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
-                    <img src="<%= cat.image %>" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #222;">
-                    <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#ef4444;font-weight:600;">
-                      <input type="checkbox" name="remove_image"> Remove current picture
-                    </label>
-                  </div>
-                  <% } %>
-                  <input type="file" name="image" accept="image/*">
-                </div>
-                <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="<%= cat.image_width != null ? cat.image_width : 52 %>" min="20" max="90"></div>
-                <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="<%= cat.image_opacity != null ? cat.image_opacity : 100 %>" min="0" max="100"></div>
-                <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="<%= cat.bg_color || '#F0A500' %>" style="height:38px;padding:0.2rem;"></div>
-                <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="<%= cat.title_color || '#ffffff' %>" style="height:38px;padding:0.2rem;"></div>
-                <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="<%= cat.title_size != null ? cat.title_size : 18 %>" min="10" max="40"></div>
-              </div>
-              <div class="form-actions" style="margin-top:0.75rem;">
-                <button type="submit" class="btn btn-primary" style="background:#166534;">Save Category</button>
-                <button type="button" class="btn btn-outline" style="border-color:#7f1d1d;color:#ef4444;"
-                  onclick="if(confirm('Delete this category? Games using it will switch to custom price.')) { fetch('/admin/price-categories/delete/<%= cat.id %>',{method:'POST'}).then(()=>location.reload()); }">Delete</button>
-              </div>
-            </form>
-          </div>
-        </details>
-        <% }) %>
-      </div>
-      <% } else { %>
-      <p style="color:#444;font-size:0.82rem;margin-bottom:1.25rem;font-style:italic;">No categories yet. Add one below.</p>
-      <% } %>
-      <details style="background:#050f05;border:1px dashed #1a3a1a;border-radius:10px;overflow:hidden;">
-        <summary style="padding:0.85rem 1rem;cursor:pointer;color:#22c55e;font-weight:700;font-size:0.9rem;list-style:none;">+ Add New Price Category</summary>
-        <div style="padding:1rem;border-top:1px dashed #1a3a1a;">
-          <form method="POST" action="/admin/price-categories/add" enctype="multipart/form-data">
-            <div class="form-grid">
-              <div class="form-group full"><label>Category Name *</label><input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required></div>
-              <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
-              <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
-              <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
-              <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
-              <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
-              <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
-
-              <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
-              <div class="form-group full"><label>Card Picture</label><input type="file" name="image" accept="image/*"></div>
-              <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="52" min="20" max="90"></div>
-              <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="100" min="0" max="100"></div>
-              <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="#F0A500" style="height:38px;padding:0.2rem;"></div>
-              <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="#ffffff" style="height:38px;padding:0.2rem;"></div>
-              <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="18" min="10" max="40"></div>
-            </div>
-            <div class="form-actions" style="margin-top:0.75rem;">
-              <button type="submit" class="btn btn-primary" style="background:#166534;">Create Category</button>
-            </div>
-          </form>
-        </div>
-      </details>
-    </div>
-
-      </div></div><!-- /accordion price-cat -->
-
-    <!-- GAME REQUESTS -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🙋</div>
-          <div>
-            <div class="sa-title">Game Requests (<%= gameRequestRows.length %>)</div>
-            <div class="sa-desc">What customers are asking for — approve new ones, mark stocked when you add them</div>
-          </div>
-        </div><span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body">
-        <div style="padding:1rem 1.25rem;">
-          <% if (!gameRequestRows.length) { %>
-            <div style="color:#666;font-size:0.85rem;padding:1rem 0;">No requests yet.</div>
-          <% } %>
-          <% gameRequestRows.forEach(r => { const votes = (r.voters || []).length; %>
-          <div style="display:flex;align-items:flex-start;gap:0.85rem;background:#111;border:1px solid <%= r.status === 'pending' ? '#7a5c00' : '#222' %>;border-radius:10px;padding:0.8rem 1rem;margin-bottom:0.6rem;">
-            <span style="font-size:1.1rem;font-weight:900;color:var(--ps-blue);min-width:2rem;text-align:center;"><%= votes %></span>
-            <% if (r.cover_image) { %>
-              <img src="<%= r.cover_image %>" alt="" style="width:40px;height:60px;min-width:40px;border-radius:5px;object-fit:cover;background:#151515;">
-            <% } else { %>
-              <div style="width:40px;height:60px;min-width:40px;border-radius:5px;border:1px dashed #2e2e2e;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#3d3d3d;">🎮</div>
-            <% } %>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:700;color:#fff;font-size:0.9rem;">
-                <%= r.title %>
-                <span style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-left:0.4rem;color:<%= r.status === 'pending' ? '#f59e0b' : r.status === 'approved' ? 'var(--ps-blue)' : r.status === 'stocked' ? '#22c55e' : '#666' %>;"><%= r.status %></span>
-              </div>
-              <div style="font-size:0.72rem;color:#666;margin-top:0.35rem;display:flex;flex-direction:column;gap:0.3rem;">
-                <% if (!(r.voters || []).length) { %>no voters<% } %>
-                <% (r.voters || []).forEach(v => { %>
-                <div style="display:flex;gap:0.3rem;align-items:center;">
-                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/rename" style="display:flex;gap:0.3rem;align-items:center;">
-                    <input type="hidden" name="at" value="<%= v.at %>">
-                    <input type="text" name="fb_name" value="<%= v.fb_name %>" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.25rem 0.4rem;max-width:160px;">
-                    <button type="submit" class="btn-edit" style="font-size:0.68rem;padding:0.25rem 0.6rem;">Save</button>
-                  </form>
-                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" style="display:inline" onsubmit="return confirm('Remove this vote?');">
-                    <input type="hidden" name="at" value="<%= v.at %>">
-                    <button type="submit" class="btn-delete" style="font-size:0.68rem;padding:0.25rem 0.5rem;">✕</button>
-                  </form>
-                </div>
-                <% }) %>
-              </div>
-            </div>
-            <div style="display:flex;gap:0.35rem;flex-wrap:wrap;flex-shrink:0;">
-              <% if (r.status === 'pending') { %>
-              <form method="POST" action="/admin/requests/<%= r.slug %>/approve" style="display:inline"><button type="submit" class="btn-edit" style="background:rgba(34,197,94,0.15);color:#22c55e;">Approve</button></form>
-              <form method="POST" action="/admin/requests/<%= r.slug %>/reject" style="display:inline"><button type="submit" class="btn-edit">Reject</button></form>
-              <% } %>
-              <% if (r.status === 'approved') { %>
-              <form method="POST" action="/admin/requests/<%= r.slug %>/stock" style="display:inline-flex;gap:0.3rem;align-items:center;" onsubmit="return confirm('Mark <%= r.title.replace(/'/g, "\\'") %> as stocked? It will show as Now available on the request board.');">
-                <select name="game_id" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.3rem 0.4rem;max-width:150px;">
-                  <option value="">No linked game</option>
-                  <% games.forEach(g => { %>
-                  <option value="<%= g.id %>"><%= g.title %></option>
-                  <% }) %>
-                </select>
-                <button type="submit" class="btn-edit" style="background:rgba(34,197,94,0.15);color:#22c55e;">Mark stocked</button>
-              </form>
-              <% } %>
-              <form method="POST" action="/admin/requests/<%= r.slug %>/delete" style="display:inline" onsubmit="return confirm('Delete this request permanently?');"><button type="submit" class="btn-delete">🗑</button></form>
-            </div>
-          </div>
-          <form method="POST" action="/admin/requests/<%= r.slug %>/image" enctype="multipart/form-data" style="display:flex;gap:0.4rem;align-items:center;margin:-0.3rem 0 0.6rem 2.85rem;">
-            <input type="file" name="cover_image" accept="image/*" style="font-size:0.72rem;color:#888;max-width:220px;">
-            <button type="submit" class="btn-edit" style="font-size:0.72rem;padding:0.3rem 0.7rem;"><%= r.cover_image ? 'Replace cover' : 'Add cover' %></button>
-          </form>
-          <% }) %>
-        </div>
-      </div>
-    </div>
-
-    <!-- GAMES TABLE (not collapsible — always shown) -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" style="border-left:3px solid #60a5fa;cursor:default;">
+    <div class="adm-card" id="sec-all-games">
+      <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
           <div><div class="sa-title">All Games (<%= games.length %>)</div><div class="sa-desc">View, edit, and delete games in your library</div></div>
         </div>
       </div>
-      <div class="settings-accordion-body open">
+      <div class="adm-card-body">
     <div class="table-card">
       <h2 style="display:none;">All Games (<%= games.length %>)</h2>
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;padding:1rem 1.25rem 0;">
@@ -347,14 +185,14 @@
       </div></div><!-- /accordion all-games -->
 
     <!-- UPCOMING GAMES -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+    <div class="adm-card" id="sec-coming-soon">
+      <div class="adm-card-head" style="border-left:3px solid #a855f7;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(168,85,247,0.15);">🔜</div>
           <div><div class="sa-title">Coming Soon Games</div><div class="sa-desc">Add upcoming titles & manage reservations</div></div>
-        </div><span class="sa-arrow">▼</span>
+        </div>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
 
     <% if (upcoming.length > 0) { %>
     <div class="table-card" style="border-color:#2a1a3a;">
@@ -447,4 +285,173 @@
     }
     </script>
 
-  </div><!-- /tab-games -->
+<div class="adm-card" id="sec-requests">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🙋</div>
+          <div>
+            <div class="sa-title">Game Requests (<%= gameRequestRows.length %>)</div>
+            <div class="sa-desc">What customers are asking for — approve new ones, mark stocked when you add them</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <div style="padding:1rem 1.25rem;">
+          <% if (!gameRequestRows.length) { %>
+            <div style="color:#666;font-size:0.85rem;padding:1rem 0;">No requests yet.</div>
+          <% } %>
+          <% gameRequestRows.forEach(r => { const votes = (r.voters || []).length; %>
+          <div style="display:flex;align-items:flex-start;gap:0.85rem;background:#111;border:1px solid <%= r.status === 'pending' ? '#7a5c00' : '#222' %>;border-radius:10px;padding:0.8rem 1rem;margin-bottom:0.6rem;">
+            <span style="font-size:1.1rem;font-weight:900;color:var(--ps-blue);min-width:2rem;text-align:center;"><%= votes %></span>
+            <% if (r.cover_image) { %>
+              <img src="<%= r.cover_image %>" alt="" style="width:40px;height:60px;min-width:40px;border-radius:5px;object-fit:cover;background:#151515;">
+            <% } else { %>
+              <div style="width:40px;height:60px;min-width:40px;border-radius:5px;border:1px dashed #2e2e2e;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#3d3d3d;">🎮</div>
+            <% } %>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;color:#fff;font-size:0.9rem;">
+                <%= r.title %>
+                <span style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-left:0.4rem;color:<%= r.status === 'pending' ? '#f59e0b' : r.status === 'approved' ? 'var(--ps-blue)' : r.status === 'stocked' ? '#22c55e' : '#666' %>;"><%= r.status %></span>
+              </div>
+              <div style="font-size:0.72rem;color:#666;margin-top:0.35rem;display:flex;flex-direction:column;gap:0.3rem;">
+                <% if (!(r.voters || []).length) { %>no voters<% } %>
+                <% (r.voters || []).forEach(v => { %>
+                <div style="display:flex;gap:0.3rem;align-items:center;">
+                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/rename" style="display:flex;gap:0.3rem;align-items:center;">
+                    <input type="hidden" name="at" value="<%= v.at %>">
+                    <input type="text" name="fb_name" value="<%= v.fb_name %>" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.25rem 0.4rem;max-width:160px;">
+                    <button type="submit" class="btn-edit" style="font-size:0.68rem;padding:0.25rem 0.6rem;">Save</button>
+                  </form>
+                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" style="display:inline" onsubmit="return confirm('Remove this vote?');">
+                    <input type="hidden" name="at" value="<%= v.at %>">
+                    <button type="submit" class="btn-delete" style="font-size:0.68rem;padding:0.25rem 0.5rem;">✕</button>
+                  </form>
+                </div>
+                <% }) %>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.35rem;flex-wrap:wrap;flex-shrink:0;">
+              <% if (r.status === 'pending') { %>
+              <form method="POST" action="/admin/requests/<%= r.slug %>/approve" style="display:inline"><button type="submit" class="btn-edit" style="background:rgba(34,197,94,0.15);color:#22c55e;">Approve</button></form>
+              <form method="POST" action="/admin/requests/<%= r.slug %>/reject" style="display:inline"><button type="submit" class="btn-edit">Reject</button></form>
+              <% } %>
+              <% if (r.status === 'approved') { %>
+              <form method="POST" action="/admin/requests/<%= r.slug %>/stock" style="display:inline-flex;gap:0.3rem;align-items:center;" onsubmit="return confirm('Mark <%= r.title.replace(/'/g, "\\'") %> as stocked? It will show as Now available on the request board.');">
+                <select name="game_id" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.3rem 0.4rem;max-width:150px;">
+                  <option value="">No linked game</option>
+                  <% games.forEach(g => { %>
+                  <option value="<%= g.id %>"><%= g.title %></option>
+                  <% }) %>
+                </select>
+                <button type="submit" class="btn-edit" style="background:rgba(34,197,94,0.15);color:#22c55e;">Mark stocked</button>
+              </form>
+              <% } %>
+              <form method="POST" action="/admin/requests/<%= r.slug %>/delete" style="display:inline" onsubmit="return confirm('Delete this request permanently?');"><button type="submit" class="btn-delete">🗑</button></form>
+            </div>
+          </div>
+          <form method="POST" action="/admin/requests/<%= r.slug %>/image" enctype="multipart/form-data" style="display:flex;gap:0.4rem;align-items:center;margin:-0.3rem 0 0.6rem 2.85rem;">
+            <input type="file" name="cover_image" accept="image/*" style="font-size:0.72rem;color:#888;max-width:220px;">
+            <button type="submit" class="btn-edit" style="font-size:0.72rem;padding:0.3rem 0.7rem;"><%= r.cover_image ? 'Replace cover' : 'Add cover' %></button>
+          </form>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAMES TABLE -->
+    <div class="adm-card" id="sec-categories">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🏷️</div>
+          <div><div class="sa-title">Price Categories</div><div class="sa-desc">Shared pricing tiers assigned to multiple games</div></div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+    <div id="add-category-form" class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a1a0a);">
+      <p style="color:#666;font-size:0.82rem;margin-bottom:1.25rem;">Create pricing tiers (e.g. "New Games", "Classic") — assign games to a category so they all share the same price automatically.</p>
+      <% if (priceCategories.length > 0) { %>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem;">
+        <% priceCategories.forEach(cat => { %>
+        <details style="background:#0a0a0a;border:1px solid #1a2a1a;border-radius:10px;overflow:hidden;">
+          <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none;">
+            <span style="font-size:1rem;">🏷️</span>
+            <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %></span>
+            <span style="font-size:0.75rem;color:#555;">NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %> &nbsp;|&nbsp; TR: ₱<%= cat.tr_price_7d %>/₱<%= cat.tr_price_30d %></span>
+            <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
+          </summary>
+          <div style="padding:1rem;border-top:1px solid #1a2a1a;">
+            <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>" enctype="multipart/form-data">
+              <div class="form-grid">
+                <div class="form-group full"><label>Category Name</label><input type="text" name="name" value="<%= cat.name %>" required></div>
+                <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
+                <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= cat.nt_price_7d %>" min="1"></div>
+                <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
+                <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
+                <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="<%= cat.tr_price_7d %>" min="1"></div>
+                <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="<%= cat.tr_price_30d %>" min="1"></div>
+
+                <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
+                <div class="form-group full">
+                  <label>Card Picture</label>
+                  <% if (cat.image) { %>
+                  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.5rem;">
+                    <img src="<%= cat.image %>" style="width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #222;">
+                    <label style="display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#ef4444;font-weight:600;">
+                      <input type="checkbox" name="remove_image"> Remove current picture
+                    </label>
+                  </div>
+                  <% } %>
+                  <input type="file" name="image" accept="image/*">
+                </div>
+                <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="<%= cat.image_width != null ? cat.image_width : 52 %>" min="20" max="90"></div>
+                <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="<%= cat.image_opacity != null ? cat.image_opacity : 100 %>" min="0" max="100"></div>
+                <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="<%= cat.bg_color || '#F0A500' %>" style="height:38px;padding:0.2rem;"></div>
+                <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="<%= cat.title_color || '#ffffff' %>" style="height:38px;padding:0.2rem;"></div>
+                <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="<%= cat.title_size != null ? cat.title_size : 18 %>" min="10" max="40"></div>
+              </div>
+              <div class="form-actions" style="margin-top:0.75rem;">
+                <button type="submit" class="btn btn-primary" style="background:#166534;">Save Category</button>
+                <button type="button" class="btn btn-outline" style="border-color:#7f1d1d;color:#ef4444;"
+                  onclick="if(confirm('Delete this category? Games using it will switch to custom price.')) { fetch('/admin/price-categories/delete/<%= cat.id %>',{method:'POST'}).then(()=>location.reload()); }">Delete</button>
+              </div>
+            </form>
+          </div>
+        </details>
+        <% }) %>
+      </div>
+      <% } else { %>
+      <p style="color:#444;font-size:0.82rem;margin-bottom:1.25rem;font-style:italic;">No categories yet. Add one below.</p>
+      <% } %>
+            <div style="background:#0a0a0a;border:1px solid #1c1c1c;border-radius:10px;padding:0.9rem 1rem;">
+        <div style="font-weight:700;font-size:0.85rem;color:#fff;margin-bottom:0.85rem;">🏷️ New price category</div>
+        <div style="padding:1rem;border-top:1px dashed #1a3a1a;">
+          <form method="POST" action="/admin/price-categories/add" enctype="multipart/form-data">
+            <div class="form-grid">
+              <div class="form-group full"><label>Category Name *</label><input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required></div>
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
+              <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
+              <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#ffc400;">🏆 Trophy Account Prices (₱)</label></div>
+              <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
+              <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
+
+              <div class="form-group full" style="margin-bottom:0;"><label style="color:#7dd3fc;">🎨 Homepage Card Design</label></div>
+              <div class="form-group full"><label>Card Picture</label><input type="file" name="image" accept="image/*"></div>
+              <div class="form-group"><label>Picture Width (%) <span style="color:#666;font-weight:400;">— how far it reaches across the card</span></label><input type="number" name="image_width" value="52" min="20" max="90"></div>
+              <div class="form-group"><label>Picture Opacity (%)</label><input type="number" name="image_opacity" value="100" min="0" max="100"></div>
+              <div class="form-group"><label>Accent Color <span style="color:#666;font-weight:400;">— price text</span></label><input type="color" name="bg_color" value="#F0A500" style="height:38px;padding:0.2rem;"></div>
+              <div class="form-group"><label>Title Font Color</label><input type="color" name="title_color" value="#ffffff" style="height:38px;padding:0.2rem;"></div>
+              <div class="form-group"><label>Title Font Size (px)</label><input type="number" name="title_size" value="18" min="10" max="40"></div>
+            </div>
+            <div class="form-actions" style="margin-top:0.75rem;">
+              <button type="submit" class="btn btn-primary" style="background:#166534;">Create Category</button>
+            </div>
+          </form>
+        </div>
+            </div>
+    </div>
+
+      </div></div><!-- /accordion price-cat -->
+
+    <!-- GAME REQUESTS -->
+      </div><!-- /tab-games -->

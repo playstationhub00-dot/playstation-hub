@@ -1,26 +1,18 @@
   <div class="tab-panel" id="tab-settings">
 
-    <style>
-    .settings-accordion { border:1px solid #222; border-radius:14px; overflow:hidden; margin-bottom:0.75rem; }
-    .settings-accordion-header { display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.25rem; cursor:pointer; user-select:none; background:#111; transition:background 0.15s; border-left:3px solid #333; }
-    .settings-accordion-header:hover { background:#161616; }
-    .settings-accordion-header .sa-left { display:flex; align-items:center; gap:0.75rem; }
-    .settings-accordion-header .sa-icon { font-size:1rem; width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .settings-accordion-header .sa-title { font-weight:700; font-size:0.9rem; color:#fff; line-height:1.2; }
-    .settings-accordion-header .sa-desc { font-size:0.72rem; color:#555; margin-top:0.1rem; }
-    .settings-accordion-header .sa-arrow { color:#555; font-size:0.8rem; transition:transform 0.2s; flex-shrink:0; }
-    .settings-accordion-header.open .sa-arrow { transform:rotate(180deg); }
-    .settings-accordion-body { display:none; background:#0a0a0a; border-top:1px solid #1a1a1a; }
-    .settings-accordion-body.open { display:block; }
-    .settings-accordion-body > .form-card,
-    .settings-accordion-body > .table-card { border:none !important; border-radius:0 !important; margin:0 !important; box-shadow:none !important; }
-    .settings-accordion-body > div > .form-card,
-    .settings-accordion-body > div > .table-card { border:none !important; border-radius:0 !important; margin:0 !important; box-shadow:none !important; }
-    </style>
+    <div class="adm-jump">
+      <a href="#sec-site">Site</a>
+      <a href="#sec-promo">Promo & pricing</a>
+      <a href="#sec-payments">Payment methods</a>
+      <a href="#sec-alerts">Phone alerts</a>
+      <a href="#sec-images">Images</a>
+    </div>
+
+
 
     <!-- SITE SETTINGS -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #f0a500;">
+    <div class="adm-card" id="sec-site">
+      <div class="adm-card-head" style="border-left:3px solid #f0a500;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(240,165,0,0.15);">⚙️</div>
           <div>
@@ -28,11 +20,9 @@
             <div class="sa-desc">Website title, logo, favicon & hero background</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(240,165,0,0.4);background:linear-gradient(135deg,#1a1500 0%,#1a1a0a 100%);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;display:none;">⚙️ Site Settings</h2>
       <form method="POST" action="/admin/site-settings" enctype="multipart/form-data">
         <div class="form-grid">
           <div class="form-group full">
@@ -135,8 +125,8 @@
       const adminPromo = settings.promo || { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100 };
       const adminDiscounts = adminPromo.discounts || { 10: 0, 15: 0, 30: 0 };
     %>
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+    <div class="adm-card" id="sec-promo">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🎉</div>
           <div>
@@ -144,11 +134,9 @@
             <div class="sa-desc">Discount %, rental duration rules & security deposit</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
-      <h2 style="display:none;">🎉 Promo & Pricing Rules</h2>
       <form method="POST" action="/admin/promo" enctype="multipart/form-data">
         <div class="form-grid">
           <!-- RENT PROMO -->
@@ -240,17 +228,17 @@
 
 
     <!-- PAYMENT METHODS -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #a855f7;">
+    <div class="adm-card" id="sec-payments">
+      <div class="adm-card-head" style="border-left:3px solid #a855f7;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(168,85,247,0.15);">💳</div>
           <div>
             <div class="sa-title">Payment Methods</div>
             <div class="sa-desc">GCash and Maya account details customers see when paying</div>
           </div>
-        </div><span class="sa-arrow">▼</span>
+        </div>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
         <div style="padding:1.25rem;">
         <form method="POST" action="/admin/payment-methods" enctype="multipart/form-data">
           <label class="pm-field">
@@ -362,9 +350,56 @@
 
     <!-- MAINTENANCE -->
     <div style="margin:1.5rem 0 0.75rem;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#555;">Maintenance</div>
+    <!-- PHONE ALERTS -->
+    <div class="adm-card" id="sec-alerts">
+      <div class="adm-card-head" style="border-left:3px solid #38bdf8;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(56,189,248,0.15);">🔔</div>
+          <div><div class="sa-title">Phone Alerts</div><div class="sa-desc">Which Telegram alerts reach you, and a button to prove they arrive</div></div>
+        </div>
+      </div>
+      <div class="adm-card-body" style="padding:1.15rem;">
+<div class="oq-alert-test">
+  <button type="button" id="oqTestAlert" class="oq-alert-btn">🔔 Send test alert</button>
+  <span class="oq-alert-msg" id="oqTestAlertMsg">Checks that alerts reach your Telegram.</span>
+</div>
+
+<%
+  // Labels live here rather than in lib/telegram.js — that module builds
+  // messages, and how the owner's own settings panel words a switch is a
+  // presentation choice. Falling back to the raw key means a kind added to
+  // ALERT_KINDS still renders a working toggle before anyone writes copy for it.
+  const ALERT_LABELS = {
+    signin:        { name: 'Sign-in waiting',   note: 'The one that blocks — you have 10 minutes' },
+    order_created: { name: 'New order started', note: 'Noisiest: about half never pay' },
+    order_review:  { name: 'Payment to approve', note: 'Blocks the order until you act' },
+    order_paid:    { name: 'Paid online',       note: 'Money landed; already advanced itself' },
+    request:       { name: 'Game request',      note: 'New titles only, never repeat votes' }
+  };
+  const alertsOn = (settings && settings.alerts) || {};
+%>
+  <form method="POST" action="/admin/settings/alerts">
+    <% (alertKinds || []).forEach(k => { const L = ALERT_LABELS[k] || { name: k, note: '' }; %>
+    <label class="oq-alert-row">
+      <%# Unset means on, matching lib/telegram.js — so a brand new install and
+          a kind added later both start out checked. %>
+      <input type="checkbox" name="alert_<%= k %>" <%= alertsOn[k] !== false ? 'checked' : '' %>>
+      <span>
+        <span class="oq-alert-name"><%= L.name %></span>
+        <% if (L.note) { %><span class="oq-alert-note"><%= L.note %></span><% } %>
+      </span>
+    </label>
+    <% }) %>
+    <button type="submit" class="oq-alert-btn" style="margin-top:0.5rem;">Save alert settings</button>
+    <div class="oq-alert-msg" style="margin-top:0.4rem;">The test button ignores these and always sends, so you can check the connection with everything switched off.</div>
+  </form>
+
+    </div>
+    </div>
+
     <!-- IMAGE OPTIMIZATION -->
-    <div class="settings-accordion">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
+    <div class="adm-card" id="sec-images">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🗜️</div>
           <div>
@@ -372,9 +407,8 @@
             <div class="sa-desc">Shrink existing uploads for faster mobile loading</div>
           </div>
         </div>
-        <span class="sa-arrow">▼</span>
       </div>
-      <div class="settings-accordion-body">
+      <div class="adm-card-body">
     <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
       <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;line-height:1.6;">
         New uploads are already auto-resized to WebP. This button re-processes every existing cover, gallery, popup, and promo image the same way — safe to run more than once, already-optimized files are skipped.
@@ -398,5 +432,42 @@
         .catch(() => { resultEl.innerHTML = '<span style="color:#ef4444;">❌ Something went wrong — try again.</span>'; })
         .finally(() => { btn.disabled = false; btn.textContent = '🗜️ Optimize All Images Now'; });
     }
+    </script>
+    <script>
+(function () {
+  var btn = document.getElementById('oqTestAlert');
+  var out = document.getElementById('oqTestAlertMsg');
+  if (!btn || !out) return;
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    out.className = 'oq-alert-msg';
+    out.textContent = 'Sending…';
+    fetch('/admin/test-alert', { method: 'POST', headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.ok) {
+          out.className = 'oq-alert-msg oq-alert-ok';
+          out.textContent = 'Sent — check Telegram. If it arrived, alerts are working.';
+          return;
+        }
+        out.className = 'oq-alert-msg oq-alert-bad';
+        // Say what to fix, not just that it failed.
+        if (d && d.reason === 'not_configured') {
+          out.textContent = 'Not set up yet — missing ' + (d.missing || []).join(' and ') + ' in Railway.';
+        } else if (d && d.reason === 'api') {
+          out.textContent = 'Telegram refused it: ' + (d.description || ('HTTP ' + d.status))
+            + (/unauthorized/i.test(d.description || '') ? ' — the bot token is wrong or was revoked.' : '')
+            + (/chat not found/i.test(d.description || '') ? ' — the chat ID is wrong, or you have not messaged the bot yet.' : '');
+        } else {
+          out.textContent = 'Could not reach Telegram: ' + ((d && d.description) || 'unknown error');
+        }
+      })
+      .catch(function (e) {
+        out.className = 'oq-alert-msg oq-alert-bad';
+        out.textContent = 'Request failed: ' + e.message;
+      })
+      .then(function () { btn.disabled = false; });
+  });
+})();
     </script>
   </div><!-- /tab-settings -->
