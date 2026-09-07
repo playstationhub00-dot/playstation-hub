@@ -1087,9 +1087,16 @@ app.get('/how-it-works', (req, res) => {
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
   const rows = await gameRequests.listPublic();
+  // Split rather than sorted: the two groups answer different questions —
+  // "what can I vote for" and "did voting ever work". Mixing them buried the
+  // stocked ones among games that still need votes.
+  const stocked = rows.filter(r => r.status === 'stocked');
+  const voting = rows.filter(r => r.status !== 'stocked');
   res.render('requests', Object.assign({
     requests: rows,
-    firstName: gameRequests.firstName,
+    stockedRequests: stocked,
+    votingRequests: voting,
+    initials: gameRequests.initials,
     settings: getSiteSettings(),
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),

@@ -56,18 +56,30 @@
     <button type="submit" class="btn btn-primary">Request</button>
   </form>
 
+  <%#
+    Two lists, not one sorted list. "Still voting" is where a customer can do
+    something; "Now available" is proof that doing it works. Mixed together the
+    stocked titles sat among games that still needed votes, wearing a vote count
+    that no longer meant anything.
+  %>
   <div class="req-listhead">
     <span class="req-listtitle">Most requested</span>
-    <span class="req-count"><%= requests.length %> game<%= requests.length !== 1 ? 's' : '' %></span>
+    <span class="req-count"><%= votingRequests.length %> game<%= votingRequests.length !== 1 ? 's' : '' %></span>
   </div>
 
-  <% if (!requests.length) { %>
-    <div class="req-empty">No requests yet — be the first to ask for a game.</div>
+  <% if (!votingRequests.length) { %>
+    <div class="req-empty">
+      <% if (stockedRequests.length) { %>
+        Every requested game has been stocked. Ask for the next one above.
+      <% } else { %>
+        No requests yet — be the first to ask for a game.
+      <% } %>
+    </div>
   <% } %>
 
-  <% requests.forEach(r => { const votes = (r.voters || []).length; %>
-  <div class="req-row<%= r.status === 'stocked' ? ' req-row-stocked' : '' %>" id="req-<%= r.slug %>">
-    <span class="req-votes<%= r.status === 'stocked' ? ' req-votes-stocked' : '' %>"><%= votes %></span>
+  <% votingRequests.forEach(r => { const votes = (r.voters || []).length; %>
+  <div class="req-row" id="req-<%= r.slug %>">
+    <span class="req-votes"><%= votes %></span>
     <% if (r.cover_image) { %>
       <img class="req-cover" src="<%= r.cover_image %>" alt="">
     <% } else { %>
@@ -75,24 +87,44 @@
     <% } %>
     <div class="req-main">
       <div class="req-title"><%= r.title %></div>
-      <% if (r.status === 'stocked') { %>
-        <div class="req-stocked-note">Now available — you asked, we stocked it</div>
-      <% } else { %>
-        <div class="req-voters">
-          requested by <%= (r.voters || []).slice(0, 3).map(v => firstName(v.fb_name)).join(', ') %><% if (votes > 3) { %> +<%= votes - 3 %><% } %>
-        </div>
-      <% } %>
+      <%# Initials, not names: this list is public, and who asked for a game is
+          nobody else's business. The count carries the social proof. %>
+      <div class="req-voters">
+        requested by <%= (r.voters || []).slice(0, 3).map(v => initials(v.fb_name)).join(', ') %><% if (votes > 3) { %> +<%= votes - 3 %> more<% } %>
+      </div>
     </div>
-    <% if (r.status === 'stocked' && r.game_id) { %>
+    <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
+      <input type="text" name="fb_name" placeholder="Your name" required autocomplete="off">
+      <button type="submit" class="req-btn">Vote</button>
+    </form>
+  </div>
+  <% }) %>
+
+  <% if (stockedRequests.length) { %>
+  <div class="req-listhead req-listhead-stocked">
+    <span class="req-listtitle">✓ Now available</span>
+    <span class="req-count">you asked, we stocked <%= stockedRequests.length %></span>
+  </div>
+
+  <% stockedRequests.forEach(r => { %>
+  <%# No vote count here on purpose: the votes did their job, and a number
+      beside a game you can already rent only invites "why so few?". %>
+  <div class="req-row req-row-stocked" id="req-<%= r.slug %>">
+    <% if (r.cover_image) { %>
+      <img class="req-cover" src="<%= r.cover_image %>" alt="">
+    <% } else { %>
+      <div class="req-cover req-cover-empty">🎮</div>
+    <% } %>
+    <div class="req-main">
+      <div class="req-title"><%= r.title %></div>
+      <div class="req-stocked-note">Now available — you asked, we stocked it</div>
+    </div>
+    <% if (r.game_id) { %>
       <a href="/game/<%= r.slug %>" class="req-btn req-btn-rent">Rent</a>
-    <% } else if (r.status !== 'stocked') { %>
-      <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
-        <input type="text" name="fb_name" placeholder="Your name" required autocomplete="off">
-        <button type="submit" class="req-btn">Vote</button>
-      </form>
     <% } %>
   </div>
   <% }) %>
+  <% } %>
 
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 
@@ -116,7 +148,7 @@
   // literal tag text itself — the HTML parser ends a <script> block on that
   // exact sequence even inside a comment or string, which silently truncated
   // this script until this line was reworded.)
-  var requested = <%- JSON.stringify(requests.map(r => ({ slug: r.slug, title: r.title, votes: (r.voters || []).length }))).replace(/</g, '\\u003c') %>;
+  var requested = <%- JSON.stringify(votingRequests.map(r => ({ slug: r.slug, title: r.title, votes: (r.voters || []).length }))).replace(/</g, '\\u003c') %>;
 
   function slugify(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
 
