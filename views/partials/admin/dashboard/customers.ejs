@@ -1,0 +1,62 @@
+  <div class="dash-pane" id="dsub-customers">
+
+    <div class="row-4">
+      <div class="dm-tile">
+        <div class="dm-k">Came back</div>
+        <div class="dm-v y"><%= dashMetrics.repeat.pct %>%</div>
+        <%# Counted from typed names, not verified identities — say so rather
+            than let it read as a measured fact. %>
+        <div class="dm-s"><%= dashMetrics.repeat.repeat %> of <%= dashMetrics.repeat.unique %> rented 2×+ · by name</div>
+      </div>
+      <div class="dm-tile">
+        <div class="dm-k">Reviews</div>
+        <div class="dm-v g"><%= dashMetrics.reviews.avg == null ? '—' : dashMetrics.reviews.avg + '★' %></div>
+        <div class="dm-s"><%= dashMetrics.reviews.count %> published<%= dashMetrics.reviews.pending ? ' · ' + dashMetrics.reviews.pending + ' awaiting' : '' %></div>
+      </div>
+      <div class="dm-tile">
+        <div class="dm-k">Out on rent</div>
+        <div class="dm-v g"><%= activeCustomers.length %></div>
+        <div class="dm-s">live rentals</div>
+      </div>
+      <div class="dm-tile <%= dashMetrics.dormant.length ? 'warn' : '' %>">
+        <div class="dm-k">Gone quiet</div>
+        <div class="dm-v <%= dashMetrics.dormant.length ? 'y' : '' %>"><%= dashMetrics.dormant.length %></div>
+        <div class="dm-s">no payment in 60 days</div>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:0.85rem;">
+      <div class="dash-section">
+        <div class="dash-section-head"><span class="dash-section-title">👑 Top customers</span><span style="font-size:0.7rem;color:#444;"><%= dashPeriod.label %></span></div>
+        <% if (!dashMetrics.topSpenders.length) { %>
+          <div class="dm-empty">No payments recorded in this period.</div>
+        <% } else { %>
+          <% const spendMax = dashMetrics.topSpenders[0].total; %>
+          <% dashMetrics.topSpenders.forEach((c, i) => { %>
+          <div class="dm-row">
+            <span class="dm-row-n"><%= ['🥇','🥈','🥉'][i] || (i + 1) + '.' %> <%= c.name %></span>
+            <span class="dm-row-v g">₱<%= c.total.toLocaleString() %></span>
+          </div>
+          <div class="dm-bar"><i class="ok" style="width:<%= Math.round((c.total / spendMax) * 100) %>%"></i></div>
+          <div class="dm-note"><%= c.rentals %> record<%= c.rentals !== 1 ? 's' : '' %></div>
+          <% }) %>
+        <% } %>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head"><span class="dash-section-title">💤 Worth a message</span><span style="font-size:0.7rem;color:#444;">quiet 60+ days</span></div>
+        <% if (!dashMetrics.dormant.length) { %>
+          <div class="dm-empty">Nobody has gone quiet — everyone has paid recently.</div>
+        <% } else { %>
+          <% dashMetrics.dormant.slice(0, 8).forEach(d => { %>
+          <div class="dm-row">
+            <span class="dm-row-n"><%= d.name %></span>
+            <span class="dm-row-v" style="color:#777;"><%= d.daysSince %>d</span>
+          </div>
+          <% }) %>
+          <div class="dm-note" style="margin-top:0.5rem;">Last paid — copy a message from the Customers tab.</div>
+        <% } %>
+      </div>
+    </div>
+
+  </div>

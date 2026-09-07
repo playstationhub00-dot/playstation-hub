@@ -1,0 +1,71 @@
+  <div class="dash-pane" id="dsub-games">
+
+    <div class="row-3">
+      <div class="dm-tile">
+        <div class="dm-k">Slot utilisation</div>
+        <div class="dm-v <%= dashMetrics.slots.pct >= 70 ? 'g' : dashMetrics.slots.pct >= 40 ? 'y' : 'r' %>"><%= dashMetrics.slots.pct %>%</div>
+        <div class="dm-s"><%= dashMetrics.slots.filled %> of <%= dashMetrics.slots.total %> filled · <%= dashMetrics.slots.idle %> idle</div>
+      </div>
+      <div class="dm-tile">
+        <div class="dm-k">Fully booked</div>
+        <div class="dm-v <%= dashMetrics.fullyBooked ? 'r' : '' %>"><%= dashMetrics.fullyBooked %></div>
+        <div class="dm-s">game<%= dashMetrics.fullyBooked !== 1 ? 's' : '' %> with no free slot</div>
+      </div>
+      <div class="dm-tile">
+        <div class="dm-k">Top request</div>
+        <% if (dashMetrics.topRequest) { %>
+          <div class="dm-v" style="font-size:1rem;line-height:1.3;"><%= dashMetrics.topRequest.title %></div>
+          <div class="dm-s"><%= dashMetrics.topRequest.votes %> vote<%= dashMetrics.topRequest.votes !== 1 ? 's' : '' %> · not stocked</div>
+        <% } else { %>
+          <div class="dm-v" style="color:#444;">—</div>
+          <div class="dm-s">nothing waiting on a decision</div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="row-2" style="margin-top:0.85rem;">
+      <div class="dash-section">
+        <div class="dash-section-head"><span class="dash-section-title">💸 Earned its cost back</span><span style="font-size:0.7rem;color:#444;">all time</span></div>
+        <% if (!dashMetrics.payback.rows.length) { %>
+          <div class="dm-empty">
+            No game has a cost recorded yet, so payback can’t be worked out.
+            <a href="#" onclick="switchTab('games');return false;">Add costs in Games →</a>
+          </div>
+        <% } else { %>
+          <%# Worst first: a game below 1× has not paid for itself, and that is
+              the row worth a decision. %>
+          <% dashMetrics.payback.rows.slice(0, 6).forEach(r => { %>
+          <div class="dm-row">
+            <span class="dm-row-n"><%= r.title %></span>
+            <span class="dm-row-v <%= r.multiple >= 1 ? 'g' : 'y' %>"><%= r.multiple %>×</span>
+          </div>
+          <div class="dm-bar"><i class="<%= r.multiple >= 1 ? 'ok' : 'warn' %>" style="width:<%= Math.min(Math.round(r.multiple * 100), 100) %>%"></i></div>
+          <div class="dm-note">₱<%= r.revenue.toLocaleString() %> earned · ₱<%= r.cost.toLocaleString() %> cost</div>
+          <% }) %>
+          <% if (dashMetrics.payback.missingCost) { %>
+          <div class="dm-empty" style="margin-top:0.6rem;">
+            <%= dashMetrics.payback.missingCost %> game<%= dashMetrics.payback.missingCost !== 1 ? 's have' : ' has' %> no cost recorded and can’t be scored.
+            <a href="#" onclick="switchTab('games');return false;">Add them →</a>
+          </div>
+          <% } %>
+        <% } %>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head"><span class="dash-section-title">🔥 Most rented</span><span style="font-size:0.7rem;color:#444;"><%= dashPeriod.label %></span></div>
+        <% if (!dashMetrics.topRented.length) { %>
+          <div class="dm-empty">No rentals started in this period.</div>
+        <% } else { %>
+          <% const rentMax = dashMetrics.topRented[0][1]; %>
+          <% dashMetrics.topRented.forEach(([title, n], i) => { %>
+          <div class="dm-row">
+            <span class="dm-row-n"><%= ['🥇','🥈','🥉'][i] || (i + 1) + '.' %> <%= title %></span>
+            <span class="dm-row-v b"><%= n %>×</span>
+          </div>
+          <div class="dm-bar"><i class="blue" style="width:<%= Math.round((n / rentMax) * 100) %>%"></i></div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+  </div>

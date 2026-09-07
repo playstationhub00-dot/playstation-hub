@@ -17,6 +17,7 @@ const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
+const dashboard = require('./lib/dashboard');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -3881,9 +3882,62 @@ app.get('/admin', requireAuth, async (req, res) => {
     VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
   }
 
+  // ── Dashboard metrics ────────────────────────────────────────────
+  // The arithmetic lives in lib/dashboard.js so it can be asserted without a
+  // database; this route stays a caller. The period is resolved here rather
+  // than in the browser — one source of truth, and the same pattern the orders
+  // ledger period already uses.
+  // Live customer roll-ups. Computed here rather than inside a dashboard pane
+  // because EJS gives each include its own scope — two panes needing the same
+  // list would otherwise mean two copies of the same filter.
+  const activeCustomers = customers.filter(c => c.status === 'renting');
+  const boughtCustomersNow = customers.filter(c => c.status === 'bought');
+  const reservationCustomersNow = customers.filter(c => c.status === 'reservation');
+  const dashNowDate = new Date();
+  const dashPeriod = dashboard.periodRange(req.query.dperiod, dashNowDate);
+  const rentalsStarted = customers.filter(c =>
+    c && c.status !== 'bought' && dashboard.inPeriod(c.start_date || c.created_at, dashPeriod)
+  ).length;
+  // Requests that are still open: a stocked one is no longer a decision.
+  const openRequests = (gameRequestRows || [])
+    .filter(r => r && r.status !== 'stocked' && r.status !== 'rejected')
+    .map(r => ({ title: r.title, votes: (r.voters || []).length }))
+    .sort((a, b) => b.votes - a.votes);
+  // A game is fully booked when the accounts governing it have no open slot.
+  // Read off the same account rows the Accounts tab renders, so the two agree.
+  const bookedGameIds = new Set();
+  const freeGameIds = new Set();
+  (accountsView.accounts || []).forEach(a => {
+    const anyOpen = dashboard.SLOT_TYPES.some(t => a.slots && a.slots[t] && a.slots[t].enabled && a.slots[t].status === 'open');
+    (a.game_ids || []).forEach(id => (anyOpen ? freeGameIds : bookedGameIds).add(id));
+  });
+  const fullyBooked = [...bookedGameIds].filter(id => !freeGameIds.has(id)).length;
+
+  const PAY_LABELS = { gcash: 'GCash', maya: 'Maya', paypal: 'PayPal', qrph: 'QRPh (auto)', card: 'Card', unrecorded: 'Not recorded' };
+  const dashMetrics = {
+    collected: dashboard.collected(customers, dashPeriod),
+    split: dashboard.rentalVsSales(customers, dashPeriod),
+    deposits: dashboard.depositsHeld(allOrders),
+    ads: dashboard.adCost(monthLogs, dashPeriod, rentalsStarted),
+    paymentMix: dashboard.paymentMix(allOrders, dashPeriod),
+    methodLabel: m => PAY_LABELS[m] || String(m || '').toUpperCase(),
+    slots: dashboard.slotUtilisation(accountsView.accounts),
+    payback: dashboard.gamePayback(games, customers),
+    topRented: dashboard.topRented(customers, dashPeriod, 5),
+    fullyBooked,
+    topRequest: openRequests[0] || null,
+    repeat: dashboard.repeatRate(customers),
+    topSpenders: dashboard.topSpenders(customers, dashPeriod, 5),
+    dormant: dashboard.dormant(customers, 60, dashNowDate),
+    reviews: dashboard.reviewStats(reviews),
+    // Drives the count on the "Now" pill, so the badge and the cards below it
+    // can never disagree about how much is waiting.
+    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length
+  };
+
   const accountsView = buildAccountsView();
   const postersView = buildPostersView();
-  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
