@@ -86,13 +86,29 @@
     <!-- ── "Right now" ── -->
     <div class="dnn-wrap" style="margin-top:0.85rem;">
       <div class="dnn-head"><span class="dnn-title">📍 Right now</span></div>
-      <div class="dnn-grid dnn-grid-3">
+      <div class="dnn-grid">
         <div class="dnn-card dnn-flat">
           <div class="dnn-icon">🎮</div>
           <div class="dnn-body">
-            <div class="dnn-num"><%= ledgerStats.out %></div>
+            <div class="dnn-num"><%= activeCustomers.length %></div>
             <div class="dnn-lbl">Out on rent</div>
-            <div class="dnn-sub">Paid, not returned yet</div>
+            <div class="dnn-sub">Live rentals in Customers</div>
+          </div>
+        </div>
+        <div class="dnn-card dnn-flat">
+          <div class="dnn-icon">🔖</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= reservationCustomersNow.length %></div>
+            <div class="dnn-lbl">Reservations</div>
+            <div class="dnn-sub">Holding a spot</div>
+          </div>
+        </div>
+        <div class="dnn-card dnn-flat">
+          <div class="dnn-icon">🛒</div>
+          <div class="dnn-body">
+            <div class="dnn-num"><%= boughtCustomersNow.length %></div>
+            <div class="dnn-lbl">Bought</div>
+            <div class="dnn-sub">Permanent accounts sold</div>
           </div>
         </div>
         <div class="dnn-card dnn-flat">
@@ -100,7 +116,7 @@
           <div class="dnn-body">
             <div class="dnn-num"><%= orderQueue.length %></div>
             <div class="dnn-lbl">In the queue</div>
-            <div class="dnn-sub">Same as Needs you now, above</div>
+            <div class="dnn-sub">Waiting on you, above</div>
           </div>
         </div>
         <div class="dnn-card dnn-flat">
@@ -120,7 +136,6 @@
       .dnn-title { font-size:0.9rem; font-weight:800; color:#fff; }
       .dnn-clear { font-size:0.72rem; color:#22c55e; font-weight:700; }
       .dnn-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:0.6rem; }
-      .dnn-grid-3 { grid-template-columns:repeat(3,1fr); }
       .dnn-card { display:flex; align-items:flex-start; gap:0.55rem; border-radius:10px; padding:0.75rem 0.7rem; cursor:pointer; transition:transform 0.1s; border:1px solid #1e1e1e; background:#0d0d0d; }
       .dnn-card:hover { transform:translateY(-1px); }
       .dnn-card.dnn-flat { cursor:default; }
@@ -133,33 +148,17 @@
       .dnn-lbl { font-size:0.72rem; color:#ccc; font-weight:700; margin-top:0.15rem; }
       .dnn-sub { font-size:0.64rem; color:#666; margin-top:0.2rem; }
       .dnn-timer { display:inline-block; margin-top:0.2rem; font-size:0.68rem; font-weight:800; color:#ef4444; }
+      .dash-section { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:1rem; margin-top:0.85rem; }
+      .dash-section-head { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.9rem; padding-bottom:0.7rem; border-bottom:1px solid #171717; }
+      .dash-section-title { font-size:0.9rem; font-weight:800; color:#fff; }
       @media (max-width: 900px) {
-        .dnn-grid, .dnn-grid-3 { grid-template-columns:repeat(2,1fr); }
+        .dnn-grid { grid-template-columns:repeat(2,1fr); }
       }
     </style>
 
-    <div class="settings-accordion" style="margin:1rem 0;">
-      <div class="settings-accordion-header" onclick="toggleAccordion(this)" style="border-left:3px solid #60a5fa;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📈</div>
-          <div><div class="sa-title">Analytics</div><div class="sa-desc">Revenue, profit, monthly stats, visits &amp; page popularity</div></div>
-        </div><span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body">
-
-    <div class="settings-accordion" style="margin-bottom:1rem;">
-      <div class="settings-accordion-header open" onclick="toggleAccordion(this)" style="border-left:3px solid #22c55e;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">📊</div>
-          <div><div class="sa-title">Business Dashboard</div><div class="sa-desc">Revenue, profit, monthly stats & top games</div></div>
-        </div><span class="sa-arrow">▼</span>
-      </div>
-      <div class="settings-accordion-body open">
-    <div style="margin-bottom:0;">
-
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-        <span style="font-size:1.05rem;font-weight:800;color:#fff;">📊 Business Dashboard</span>
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <span class="dash-section-title">💰 Money</span>
         <div style="display:flex;align-items:center;gap:0.6rem;">
           <select id="dashYearSelect" onchange="renderDashboard()" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.35rem 0.6rem;font-size:0.78rem;"></select>
           <span style="font-size:0.7rem;color:#444;">as of <%= dashNow.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) %></span>
@@ -201,31 +200,6 @@
           <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
           <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;" id="dashBuyRevenue">₱0</div>
           <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashBuySub">0 games sold · 0% of total</div>
-        </div>
-      </div>
-
-      <!-- Status Row -->
-      <div style="font-size:0.62rem;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.4rem;">Live Status <span class="dash-tag">now</span></div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.65rem;">
-        <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
-          <div style="font-size:1.2rem;">🟢</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#22c55e;line-height:1;"><%= activeCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Renting Now</div></div>
-        </div>
-        <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
-          <div style="font-size:1.2rem;">🔖</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#c084fc;line-height:1;"><%= reservationCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Reservations</div></div>
-        </div>
-        <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
-          <div style="font-size:1.2rem;">🛒</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#60a5fa;line-height:1;"><%= boughtCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Games Sold</div></div>
-        </div>
-        <div style="background:#0a0a1a;border:1px solid #1a1a3a;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
-          <div style="font-size:1.2rem;">✅</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:#aaa;line-height:1;"><%= doneCustomersNow.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Completed</div></div>
-        </div>
-        <div style="background:<%= overdueCustomers.length > 0 ? '#1a0a0a' : '#0d0d0d' %>;border:1px solid <%= overdueCustomers.length > 0 ? '#3a1a1a' : '#1e1e1e' %>;border-radius:10px;padding:0.75rem 0.6rem;display:flex;align-items:center;gap:0.5rem;">
-          <div style="font-size:1.2rem;">⚠️</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:<%= overdueCustomers.length > 0 ? '#ef4444' : '#555' %>;line-height:1;"><%= overdueCustomers.length %></div><div style="font-size:0.6rem;color:#555;margin-top:0.1rem;">Overdue</div></div>
         </div>
       </div>
 
@@ -275,12 +249,10 @@
       <!-- Tooltip -->
       <div id="dashTip" style="position:fixed;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:0.4rem 0.65rem;font-size:0.72rem;color:#fff;pointer-events:none;z-index:9999;display:none;white-space:nowrap;"></div>
 
-    </div>
-
-      </div></div><!-- /accordion dashboard -->
+    </div><!-- /dash-section money -->
 
 
-    <!-- ── DASHBOARD ── -->
+    <!-- ── Money section: chart, drill-down and insight rendering ── -->
 
     <script>
     (function() {
@@ -675,6 +647,12 @@
 
     %>
 
+    <div class="dash-section">
+      <div class="dash-section-head">
+        <span class="dash-section-title">📈 Website traffic</span>
+        <span style="font-size:0.7rem;color:#444;">Who is visiting the site, and what they look at</span>
+      </div>
+
     <!-- KPI Cards -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;">
       <div class="stat-card">
@@ -969,5 +947,5 @@
     }
     </script>
 
-      </div></div><!-- /accordion analytics -->
+    </div><!-- /dash-section traffic -->
   </div><!-- /tab-visitors -->
