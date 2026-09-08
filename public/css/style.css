@@ -2019,6 +2019,24 @@ body.light-mode .games-table tr:hover td:last-child { background: #fafafa; }
 .table-cover { width: 40px; height: 53px; object-fit: cover; border-radius: 4px; background: #111; display: block; }
 .table-cover-placeholder { width: 40px; height: 53px; background: #1a1a1a; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #333; font-size: 1.2rem; }
 
+.cst-done { background:#166534; color:#fff; border:none; border-radius:20px; padding:0.25rem 0.75rem; font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+.cst-done:hover { background:#1c7a42; }
+.cst-undone { background:#222; color:#aaa; border:1px solid #333; border-radius:20px; padding:0.25rem 0.75rem; font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+.cst-undone:hover { color:#fff; }
+.cst-slot { display:inline-block; }
+.cst-slot > summary { list-style:none; cursor:pointer; background:#1a1a22; border:1px solid #333; border-radius:5px; padding:4px 8px; font-size:0.68rem; color:#ccc; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+.cst-slot > summary::-webkit-details-marker { display:none; }
+.cst-slot > summary:hover { border-color:var(--ps-blue); color:#fff; }
+/* Deliberately NOT position:absolute. The customers table sits in a
+   max-height wrapper with overflow-y:auto, which clips absolutely
+   positioned children — the menu on any lower row was cut off and
+   unusable. Expanding inline costs a little row height and can never be
+   clipped, which is the same choice the accounts slot editor makes. */
+.cst-slot-form { margin-top:4px; background:#0c0c14; border:1px solid #2a2a35; border-radius:8px; padding:8px; display:flex; flex-direction:column; gap:6px; min-width:200px; }
+.cst-slot-form select { width:100%; padding:5px; font-size:0.75rem; background:#1a1a22; border:1px solid #333; border-radius:5px; color:#fff; }
+.cst-slot-form button { background:var(--ps-blue); color:#000; border:none; border-radius:5px; padding:6px; font-weight:800; font-size:0.72rem; cursor:pointer; }
+body.light-mode .cst-slot > summary { background:#f2f4f7; border-color:#dfe3e8; color:#333; }
+body.light-mode .cst-slot-form { background:#fff; border-color:#e4e7eb; }
 .action-btns { display: flex; flex-wrap: wrap; gap: 0.4rem; max-width: 150px; }
 .btn-edit, .btn-delete {
   padding: 0.35rem 0.75rem;

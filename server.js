@@ -5004,6 +5004,48 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
   res.redirect('/admin?tab=customers&msg=customer_updated');
 });
 
+// Move a live rental onto a different account slot, without opening the full
+// edit form. This is a routine thing — an account gets locked, or a swap is
+// agreed — and it was the only reason left to open a form with fifteen fields
+// on it.
+//
+// Only the slot moves. Name, game, dates and price are deliberately untouched:
+// a narrow route cannot mangle the fields it never reads.
+app.post('/admin/customers/:id/slot', requireAuth, (req, res) => {
+  const customerId = parseInt(req.params.id);
+  const existing = getCustomer(customerId);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+
+  const assign = String(req.body.account_assign || '').trim();
+  const isActive = existing.status === 'renting' || existing.status === 'bought';
+
+  // The same guard the add and edit paths carry: clearing the slot on a live
+  // rental of an accounts-governed game would leave it advertised as free.
+  if (isActive && !assign
+      && !String(existing.game_id).startsWith('upcoming_')
+      && requiresSlotAssignment(existing.game_id, existing.account_type || 'nt')) {
+    return res.redirect('/admin?tab=customers&msg=slot_required');
+  }
+
+  const prior = findAccountAssignmentForCustomer(customerId);
+  if (prior === assign) return res.redirect('/admin?tab=customers&msg=customer_updated');
+
+  // Free first, then take. Doing it the other way round would briefly show the
+  // same person holding two slots, and a failed second step would leave it that
+  // way permanently.
+  if (prior) freeAccountSlotsForCustomer(customerId);
+  if (assign) {
+    const ok = applyAccountAssignment(assign, {
+      customerId,
+      customerName: existing.customer_name,
+      status: existing.status,
+      endDate: existing.end_date
+    });
+    if (!ok) return res.redirect('/admin?tab=customers&msg=slot_unavailable');
+  }
+  res.redirect('/admin?tab=customers&msg=slot_moved');
+});
+
 app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
   const existing = getCustomer(req.params.id);
   if (!existing) return res.redirect('/admin?tab=customers&msg=error');

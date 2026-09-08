@@ -110,7 +110,26 @@
       <% if (customers.length === 0) { %>
         <div style="padding:2rem;text-align:center;color:#444;font-style:italic;">No customers yet. Add one above!</div>
       <% } else { %>
-            <%# needsReminder is computed once in server.js (shared with the
+            <%
+      // Which account slot each customer currently occupies. Built once as a
+      // lookup rather than scanning every account per row — this table runs to
+      // hundreds of rows.
+      const CST_SLOT_BY_CUSTOMER = {};
+      (accounts || []).forEach(a => {
+        ['trophy','non_trophy','ps4_primary'].forEach(t => {
+          const sl = a.slots && a.slots[t];
+          if (sl && sl.renter_id) {
+            CST_SLOT_BY_CUSTOMER[sl.renter_id] = {
+              assign: a.id + ':' + t,
+              label: a.label + ' · ' + ({ trophy:'🏆', non_trophy:'🎮', ps4_primary:'🕹️' }[t] || t)
+            };
+          }
+        });
+      });
+      const custSlotAssign = id => (CST_SLOT_BY_CUSTOMER[id] || {}).assign || '';
+      const custSlotLabel = id => (CST_SLOT_BY_CUSTOMER[id] || {}).label || '';
+    %>
+    <%# needsReminder is computed once in server.js (shared with the
                 dashboard's "Needs you now" summary) so the two can never
                 disagree about who is due. %>
       <div style="max-height:520px;overflow-y:auto;overflow-x:auto;border-radius:8px;">
@@ -187,14 +206,14 @@
                 <form method="POST" action="/admin/customers/status/<%= c.id %>" style="display:inline;">
                   <% if (isRenting) { %>
                     <input type="hidden" name="status" value="done">
-                    <button type="submit" style="background:#166534;color:#fff;border:none;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Done">🟢 Renting</button>
+                    <button type="submit" class="cst-done" title="Finish this rental and free its account slot">✓ Mark done</button>
                   <% } else if (isReservation) { %>
                     <span style="background:#2d1a4a;color:#c084fc;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🔖 Reserved</span>
                   <% } else if (isBought) { %>
                     <span style="background:#1e3a5f;color:#60a5fa;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;white-space:nowrap;">🛒 Bought</span>
                   <% } else { %>
                     <input type="hidden" name="status" value="renting">
-                    <button type="submit" style="background:#222;color:#aaa;border:1px solid #333;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;" title="Mark as Renting">✅ Done</button>
+                    <button type="submit" class="cst-undone" title="Put this rental back to renting">✅ Done · undo</button>
                   <% } %>
                 </form>
               </td>
@@ -207,6 +226,30 @@
                       carries the review ask — the confirmation no longer applies. %>
                   <% if (c.status === 'done') { %>
                   <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('return_complete', c) %>" title="Copy thank-you + review ask">⭐</button>
+                  <% } %>
+                  <%# Changing which account a live rental sits on was the last routine
+                      reason to open a fifteen-field form. It is a dropdown now. %>
+                  <% if (isRenting || isBought) { %>
+                  <details class="cst-slot">
+                    <summary title="Move to a different account slot">🗂️ <%= custSlotLabel(c.id) || 'No slot' %></summary>
+                    <form method="POST" action="/admin/customers/<%= c.id %>/slot" class="cst-slot-form">
+                      <select name="account_assign">
+                        <option value="">— No slot —</option>
+                        <% const CST_SLOT = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
+                        <% const curAssign = custSlotAssign(c.id); %>
+                        <% (accounts || []).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => {
+                             const sl = a.slots && a.slots[t];
+                             if (!sl || !sl.enabled) return;
+                             const val = a.id + ':' + t;
+                             // Its own slot stays listed so the current one is visible and
+                             // re-picking it is a no-op rather than an error.
+                             if (sl.status !== 'open' && val !== curAssign) return; %>
+                        <option value="<%= val %>" <%= val === curAssign ? 'selected' : '' %>><%= a.label %> — <%= CST_SLOT[t] %></option>
+                        <% }) }) %>
+                      </select>
+                      <button type="submit">Move</button>
+                    </form>
+                  </details>
                   <% } %>
                   <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
                   <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
