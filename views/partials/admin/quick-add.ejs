@@ -54,7 +54,19 @@
           <option value="<%= a.id %>:<%= t %>"><%= a.label %> — <%= QA_SLOT[t] %></option>
         <% } }) }) %>
       </select>
+      <%# When nothing is free, the guard below would demand a choice that does
+          not exist. Say so up front, with the way out, rather than letting the
+          owner submit into a wall. %>
+      <% const qaOpenSlots = (accounts || []).reduce((n, a) => n + ['trophy','non_trophy','ps4_primary']
+           .filter(t => a.slots && a.slots[t] && a.slots[t].enabled && a.slots[t].status === 'open').length, 0); %>
+      <% if (!qaOpenSlots) { %>
+      <div class="qa-warn">
+        No account slot is free right now. Free one in <a href="#" onclick="qaClose();switchTab('accounts');return false;">Accounts</a>
+        first — recording a rental against no slot is what leaves it showing as available to the next customer.
+      </div>
+      <% } else { %>
       <div class="qa-hint">Leave blank only for a game whose slots aren't tracked by an account.</div>
+      <% } %>
 
       <div class="qa-l">Paid already?</div>
       <div class="qa-radios">
@@ -170,6 +182,8 @@
   .qa-g2 { display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; }
   .qa-sub { display:block; font-size:0.68rem; color:#666; }
   .qa-sub .qa-in { margin-top:0.2rem; }
+  .qa-warn { background:#100a00; border:1px solid #3a2a00; color:#e8c06a; border-radius:8px; padding:0.5rem 0.7rem; font-size:0.72rem; margin-top:0.35rem; line-height:1.55; }
+  .qa-warn a { color:var(--ps-blue); font-weight:700; }
   .qa-hint { font-size:0.66rem; color:#4d4d4d; margin-top:0.3rem; }
   .qa-price { margin-top:0.5rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.55rem 0.8rem; font-size:0.8rem; color:#9fd8ae; }
   .qa-price b { color:#22c55e; font-size:1rem; }
