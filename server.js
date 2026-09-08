@@ -1022,6 +1022,7 @@ function getPromoDiscountPct(promo, days) {
 // placing it themselves — one set of numbers, not two that can drift apart.
 // Returns null when there's no reliable price to charge (missing tier data),
 // same as computeSwapReferencePrice does for the same reason.
+const TYPE_LABELS_SHORT = { tr: 'Trophy', nt: 'Non-Trophy', ps4: 'PS4 Primary' };
 function computeRentPricing(game, type, days) {
   if (!game || !['nt', 'tr', 'ps4'].includes(type) || !PROMO_DURATIONS.includes(days)) return null;
   const s = getSiteSettings();
@@ -2692,6 +2693,150 @@ app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
 // so the owner can copy it straight into the same Messenger thread; that link
 // is also the customer's invoice and, once they've received the game, the
 // review prompt this project already ties to any order with a ref + key.
+// ── Quick Add ─────────────────────────────────────────────────────────
+// One popup replacing two half-forms: the Customers tab could record a person
+// but not an order, and the Orders tab could record an order but not a slot or
+// a date. Each was missing what the other had.
+//
+// Creating a real order matters beyond tidiness: a customer added by hand used
+// to exist only in the customers table, invisible to the funnel report, the
+// payment mix and the order ledger. Now they are in all three.
+//
+// Returns JSON — the modal stays open to show the message to copy, so a redirect
+// would throw away the one thing the owner opened it for.
+app.post('/admin/quick-add', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const name = String(b.customer_name || '').trim();
+  if (!name) return res.status(400).json({ ok: false, reason: 'bad_name', message: 'Enter the customer name.' });
+
+  const game = getGame(b.game_id);
+  if (!game) return res.status(400).json({ ok: false, reason: 'bad_game', message: 'Pick a game.' });
+
+  const mode = b.mode === 'buy' ? 'buy' : 'rent';
+  const type = (mode === 'buy' ? ['nt', 'tr'] : ['nt', 'tr', 'ps4']).includes(b.account_type) ? b.account_type : null;
+  if (!type) return res.status(400).json({ ok: false, reason: 'bad_type', message: 'Pick an account type.' });
+
+  const days = mode === 'buy' ? null
+    : (b.days === 'custom' ? (parseInt(b.custom_days) || 0) : (parseInt(b.days) || 0));
+  if (mode === 'rent' && days < 1) {
+    return res.status(400).json({ ok: false, reason: 'bad_days', message: 'Enter how many days.' });
+  }
+
+  const status = b.status === 'bought' ? 'bought' : (b.status === 'done' ? 'done' : 'renting');
+
+  // The guard the Orders form never had. Refuse before writing anything: a
+  // half-recorded rental is worse than a rejected one, because the customer row
+  // exists while the slot still reads free — exactly the Onimusha case.
+  if ((status === 'renting' || status === 'bought')
+      && !b.account_assign
+      && requiresSlotAssignment(game.id, type)) {
+    return res.status(400).json({
+      ok: false, reason: 'slot_required',
+      message: 'Pick the account slot — availability for this game comes from linked accounts, so a rental with no slot leaves it showing as free.'
+    });
+  }
+
+  // Price comes from the same helpers the public site uses, so an
+  // admin-entered rental cannot drift from what a customer would have paid.
+  // An explicit override wins, because a hand-arranged deal is a real thing.
+  const pricing = mode === 'buy' ? computeBuyPricing(game, type) : computeRentPricing(game, type, days);
+  if (!pricing) {
+    return res.status(400).json({ ok: false, reason: 'bad_pricing', message: 'That game has no price set for this type and duration.' });
+  }
+  const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
+  const amountDue = override != null && override >= 0 ? override : pricing.amountDue;
+  const depositDue = mode === 'buy' ? 0 : pricing.depositDue;
+
+  const startDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.start_date || '')) ? b.start_date : orders.manilaDate();
+  let endDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.end_date || '')) ? b.end_date : '';
+  if (!endDate && mode === 'rent') {
+    endDate = new Date(Date.parse(startDate + 'T00:00:00Z') + days * 86400000).toISOString().slice(0, 10);
+  }
+
+  const paid = String(b.paid || 'yes') !== 'no';
+  const method = String(b.method || '').trim().slice(0, 20) || 'manual';
+
+  try {
+    const order = await orders.create(Object.assign({
+      game_id: game.id, game_title: game.title, account_type: type, days,
+      amount_due: amountDue, deposit_due: depositDue,
+      fb_name: name, session_id: null,
+      start_date: startDate, end_date: endDate
+    }, mode === 'buy' ? { is_buy: true } : {}, override != null ? {} : {
+      price_tier_name: pricing.priceTierName, price_snapshot: pricing.snapshot
+    }));
+
+    // Paid orders skip straight past payment verification: the owner is the one
+    // confirming, and asking them to "verify" money they just took themselves
+    // would be theatre. Unpaid ones rest where a web order would.
+    if (paid) {
+      await orders.transition(order.ref, 'awaiting_qr', {
+        payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
+      });
+    }
+
+    // The customer row. The order lifecycle creates one of these on advance,
+    // keyed by order.customer_id so it cannot double up — writing it here with
+    // the same key means an order advanced later updates this row rather than
+    // adding a second one for the same person.
+    const customerId = newCustomerId();
+    db.get('customers').push({
+      id: customerId,
+      customer_name: name,
+      game_id: game.id,
+      game_title: game.title,
+      days: mode === 'buy' ? null : days,
+      account_type: type,
+      start_date: startDate,
+      end_date: mode === 'buy' ? '' : endDate,
+      price: amountDue,
+      status: mode === 'buy' ? 'bought' : status,
+      notes: String(b.notes || '').trim(),
+      order_ref: order.ref,
+      order_key: order.url_key,
+      created_at: new Date().toISOString(),
+      payments: paid && amountDue > 0
+        ? [{ amount: amountDue, date: startDate, kind: mode === 'buy' ? 'purchase' : 'rent' }]
+        : []
+    }).write();
+    await orders.setCustomerId(order.ref, customerId).catch(() => {});
+
+    if (b.account_assign) {
+      applyAccountAssignment(b.account_assign, {
+        customerId, customerName: name,
+        status: mode === 'buy' ? 'bought' : status,
+        endDate
+      });
+    }
+
+    // The message the owner actually opened this popup for. Rendered from the
+    // stored templates so editing Messaging → Message Templates changes it,
+    // with no second copy of the wording living in here.
+    const settings = getSiteSettings();
+    const promo = settings.promo || {};
+    const customerRow = db.get('customers').find({ id: customerId }).value();
+    const message = templates.renderFor('confirmation', customerRow, settings.message_templates, {
+      deposit: promo.deposit != null ? promo.deposit : 100,
+      lateFeePerDay: promo.late_fee_per_day != null ? promo.late_fee_per_day : 20
+    });
+
+    res.json({
+      ok: true,
+      ref: order.ref,
+      url: SITE_URL + '/order/' + order.ref + '?k=' + order.url_key,
+      total: amountDue + depositDue,
+      paid,
+      summary: [name, game.title, TYPE_LABELS_SHORT[type] || type,
+        mode === 'buy' ? 'Purchase' : days + ' days',
+        '\u20b1' + (amountDue + depositDue)].join(' \u00b7 '),
+      message
+    });
+  } catch (e) {
+    console.error('[quick-add]', e.message);
+    res.status(500).json({ ok: false, reason: 'create_failed', message: 'Could not save that — try again.' });
+  }
+});
+
 app.post('/admin/orders/create-manual', requireAuth, async (req, res) => {
   const { game_id, account_type, mode, fb_name } = req.body;
   const game = getGame(game_id);

@@ -1,5 +1,11 @@
   <div class="tab-panel" id="tab-customers">
 
+    <div class="qa-launch">
+      <button type="button" class="qa-btn qa-gold" onclick="qaOpen()">⚡ Quick Add</button>
+      <span>Records the customer and the order together, and hands you the message to send.</span>
+    </div>
+
+
 
 
     <%
@@ -66,226 +72,7 @@
     </div>
     <% } %>
 
-    <!-- Add Customer Form -->
-    <div class="adm-card" id="sec-add-customer">
-      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">👤</div>
-          <div><div class="sa-title">Add New Customer</div><div class="sa-desc">Log a rental, sale, or reservation manually</div></div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-    <div class="form-card" style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#001a06,#0a0a0a);">
-      <form method="POST" action="/admin/customers/add">
-        <div class="form-grid">
-
-          <div class="form-group full">
-            <label>Customer Name *</label>
-            <input type="text" name="customer_name" placeholder="e.g. Juan dela Cruz" required>
-          </div>
-
-          <div class="form-group full">
-            <label id="cust_game_label">Game Rented *</label>
-            <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
-              <option value="">— Select a game —</option>
-              <!-- Regular games (shown for renting/done/bought) -->
-              <optgroup label="Available Games" id="cust_optgroup_regular">
-                <% games.forEach(g => { %>
-                <option value="<%= g.id %>" data-type="regular"
-                  data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
-                  data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
-                  data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
-                  data-slots="<%= g.available_slots %>">
-                  <%= g.title %> (<%= g.platform %>)<%= g.available_slots > 0 ? ' — '+g.available_slots+' slot(s)' : ' — FULL' %>
-                </option>
-                <% }) %>
-              </optgroup>
-              <!-- Upcoming games (shown for reservation) -->
-              <optgroup label="Coming Soon Games" id="cust_optgroup_upcoming" style="display:none;">
-                <% upcoming.forEach(g => { %>
-                <option value="upcoming_<%= g.id %>" data-type="upcoming" data-title="<%= g.title %>"
-                  data-nt7="<%= g.nt_price_7d||0 %>" data-nt30="<%= g.nt_price_30d||0 %>"
-                  data-tr7="<%= g.tr_price_7d||0 %>" data-tr30="<%= g.tr_price_30d||0 %>">
-                  🔜 <%= g.title %> (<%= g.platform %>) — <%= g.release_date === 'TBA' ? 'TBA' : g.release_date %>
-                </option>
-                <% }) %>
-              </optgroup>
-            </select>
-          </div>
-
-          <div class="form-group" id="cust_days_group">
-            <label>Rental Duration</label>
-            <select name="days" id="cust_days" onchange="toggleCustCustomDays(this.value);updateCustPrice()">
-              <option value="7">Weekly</option>
-              <option value="30">Monthly</option>
-              <option value="custom">✏️ Custom...</option>
-            </select>
-            <input type="number" id="cust_custom_days" name="custom_days" min="1" max="365" placeholder="Enter number of days"
-              hidden oninput="updateCustEndDate()">
-          </div>
-
-          <div class="form-group">
-            <label>Account Type</label>
-            <select name="account_type" id="cust_type" onchange="updateCustPrice()">
-              <option value="nt">🎮 Non-Trophy</option>
-              <option value="tr">🏆 Trophy Account</option>
-              <option value="ps4">🕹️ PS4 Primary</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label>Start Date</label>
-            <input type="date" name="start_date" id="cust_start" onchange="updateCustEndDate()">
-          </div>
-
-          <div class="form-group">
-            <label>End Date <span style="color:#555;font-size:0.72rem;">(auto-calculated)</span></label>
-            <input type="date" name="end_date" id="cust_end">
-          </div>
-
-          <div class="form-group">
-            <label>Price (₱) <span style="color:#555;font-size:0.72rem;">(auto-filled)</span></label>
-            <input type="number" name="price" id="cust_price" min="0" placeholder="0">
-          </div>
-
-          <div class="form-group">
-            <label>Status</label>
-            <select name="status" id="cust_status" onchange="toggleCustStatus(this.value)">
-              <option value="renting">🟢 Currently Renting</option>
-              <option value="reservation">🔖 Reservation</option>
-              <option value="done">✅ Done</option>
-              <option value="bought">🛒 Bought</option>
-            </select>
-          </div>
-
-          <div class="form-group full">
-            <label>🗂️ Assign to Account Slot <span style="color:#555;font-size:0.72rem;">(optional — marks that slot rented/buyed on the Accounts dashboard)</span></label>
-            <% const SLOT_LBL = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
-            <select name="account_assign">
-              <option value="">— None —</option>
-              <% (accounts||[]).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => { const s=a.slots[t]; if (s && s.enabled && s.status==='open') { %>
-                <option value="<%= a.id %>:<%= t %>"><%= a.label %> — <%= SLOT_LBL[t] %></option>
-              <% } }) }) %>
-            </select>
-          </div>
-
-          <div class="form-group full">
-            <label>Notes <span style="color:#555;font-size:0.72rem;">(optional)</span></label>
-            <input type="text" name="notes" placeholder="e.g. Paid via GCash, needs follow-up...">
-          </div>
-
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary" style="background:#166534;">Add Customer</button>
-          <button type="reset" class="btn btn-outline">Clear</button>
-        </div>
-      </form>
-      <script>
-      // Same promo the game-detail page applies — an admin-entered price should
-      // land on the number a walk-in customer actually pays today, not the base
-      // rate. PS4 Primary borrows the Non-Trophy price/discount: games have no
-      // PS4-specific price fields of their own (matches computeSwapReferencePrice
-      // in server.js, the other place that needs a PS4 reference price).
-      const ADMIN_PROMO = <%- JSON.stringify({
-        enabled: (settings.promo || {}).enabled || false,
-        discounts: (settings.promo || {}).discounts || {},
-        buyPromoEnabled: (settings.promo || {}).buy_promo_enabled || false,
-        buyPromoPct: (settings.promo || {}).buy_promo_pct || 0
-      }) %>;
-      function getCustDays() {
-        const sel = document.getElementById('cust_days');
-        if (sel.value === 'custom') return parseInt(document.getElementById('cust_custom_days').value) || 0;
-        return parseInt(sel.value) || 0;
-      }
-      function toggleCustCustomDays(val) {
-        const inp = document.getElementById('cust_custom_days');
-        if (val === 'custom') { inp.removeAttribute('hidden'); inp.focus(); }
-        else inp.setAttribute('hidden', '');
-      }
-      function toggleCustStatus(status) {
-        const daysGroup = document.getElementById('cust_days_group');
-        const gameLabel = document.getElementById('cust_game_label');
-        const grpRegular = document.getElementById('cust_optgroup_regular');
-        const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
-        const gameSel = document.getElementById('cust_game');
-
-        const currentIsUpcoming = gameSel.value.startsWith('upcoming_');
-
-        if (status === 'reservation') {
-          // Show only coming soon games
-          daysGroup.removeAttribute('hidden');
-          grpRegular.style.display = 'none';
-          grpUpcoming.style.display = '';
-          gameLabel.textContent = 'Coming Soon Game *';
-          // Only reset if the current selection isn't already an upcoming game —
-          // switching between non-reservation statuses (e.g. renting -> done)
-          // shouldn't blank out a selection that's still valid.
-          if (!currentIsUpcoming) gameSel.value = '';
-        } else {
-          // Show only regular games
-          grpRegular.style.display = '';
-          grpUpcoming.style.display = 'none';
-          gameLabel.textContent = 'Game Rented *';
-          if (currentIsUpcoming) gameSel.value = '';
-          if (status === 'bought') {
-            daysGroup.setAttribute('hidden', '');
-          } else {
-            daysGroup.removeAttribute('hidden');
-            updateCustEndDate();
-          }
-        }
-        // Bought uses a flat buy price, not a per-duration rent price — the
-        // price field needs recomputing whenever status crosses that line.
-        updateCustPrice();
-      }
-      function updateCustPrice() {
-        const sel = document.getElementById('cust_game');
-        const opt = sel.options[sel.selectedIndex];
-        const days = document.getElementById('cust_days').value;
-        const type = document.getElementById('cust_type').value === 'ps4' ? 'nt' : document.getElementById('cust_type').value;
-        const status = document.getElementById('cust_status').value;
-        if (!opt.value) return;
-
-        let base = 0;
-        let pct = 0;
-        if (status === 'bought') {
-          base = parseInt(opt.dataset['buy' + type], 10) || 0;
-          pct = ADMIN_PROMO.buyPromoEnabled ? ADMIN_PROMO.buyPromoPct : 0;
-        } else if (days !== 'custom') {
-          // Only auto-fill price for standard durations — a custom day count
-          // has no matching promo bracket, so it's left to manual entry.
-          base = parseInt(opt.dataset[type + days], 10) || 0;
-          pct = ADMIN_PROMO.enabled ? (ADMIN_PROMO.discounts[days] || 0) : 0;
-        }
-        if (base > 0) {
-          const final = pct > 0 ? Math.round(base * (1 - pct / 100)) : base;
-          document.getElementById('cust_price').value = final;
-        }
-        updateCustEndDate();
-      }
-      function updateCustEndDate() {
-        const start = document.getElementById('cust_start').value;
-        const days = getCustDays();
-        if (!start || !days) return;
-        const d = new Date(start + 'T00:00:00');
-        d.setDate(d.getDate() + days);
-        // toISOString() converts to UTC first — in a positive-offset timezone
-        // (this business runs on Manila time, UTC+8) local midnight becomes
-        // 16:00 the PREVIOUS day in UTC, silently shifting the date back by
-        // one. Format from the Date object's own local fields instead.
-        const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
-        document.getElementById('cust_end').value = y + '-' + m + '-' + dd;
-      }
-      // Set today as default start date
-      document.getElementById('cust_start').value = new Date().toISOString().slice(0,10);
-      updateCustEndDate();
-      </script>
-    </div>
-
-      </div></div><!-- /accordion add-customer -->
-
-    <!-- Customers Table -->
-    <div class="adm-card" id="sec-all-customers">
+<div class="adm-card" id="sec-all-customers">
       <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
         <div class="sa-left">
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">📋</div>
@@ -493,6 +280,7 @@
       });
     })();
     </script>
-      </div></div></div><!-- /accordion customers-table -->
+      </div></div><!-- /card all-customers -->
 
+  <%- include('quick-add') %>
   </div><!-- /tab-customers -->

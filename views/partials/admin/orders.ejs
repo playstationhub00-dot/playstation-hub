@@ -1,3 +1,8 @@
   <div class="tab-panel" id="tab-orders">
+    <div class="qa-launch">
+      <button type="button" class="qa-btn qa-gold" onclick="qaOpen()">⚡ Quick Add</button>
+      <span>Records the customer and the order together, and hands you the message to send.</span>
+    </div>
     <%- include('../order-queue') %>
+    <%- include('quick-add') %>
   </div>

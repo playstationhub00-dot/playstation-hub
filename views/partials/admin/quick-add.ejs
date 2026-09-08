@@ -1,0 +1,374 @@
+<%# Quick Add — one popup that records the customer AND the order together.
+    Included by both the Customers and Orders tabs; one component so the two
+    can never drift into different forms again, which is how this job ended up
+    split across two half-forms in the first place. %>
+
+<div class="qa-overlay" id="qaOverlay" onclick="if(event.target===this)qaClose()">
+  <div class="qa-box" role="dialog" aria-modal="true" aria-labelledby="qaTitle">
+
+    <div class="qa-head">
+      <span id="qaIcon">⚡</span>
+      <span class="qa-title" id="qaTitle">Quick Add — customer &amp; order</span>
+      <button type="button" class="qa-x" onclick="qaClose()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- ── FORM ── -->
+    <form class="qa-body" id="qaForm" data-no-loading="1">
+      <div class="qa-err" id="qaErr" hidden></div>
+
+      <div class="qa-l">Customer</div>
+      <input class="qa-in" type="text" name="customer_name" id="qaName" placeholder="Facebook name — e.g. Ana Cruz" required autocomplete="off">
+
+      <div class="qa-l">What they're getting</div>
+      <div class="qa-g3">
+        <select class="qa-in" name="game_id" id="qaGame" onchange="qaPrice()" required>
+          <option value="">— Game —</option>
+          <% (games || []).slice().sort((a,b) => a.title.localeCompare(b.title)).forEach(g => { %>
+          <option value="<%= g.id %>"
+            data-nt7="<%= g.nt_price_7d || 0 %>" data-nt30="<%= g.nt_price_30d || 0 %>"
+            data-tr7="<%= g.tr_price_7d || 0 %>" data-tr30="<%= g.tr_price_30d || 0 %>"
+            data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"><%= g.title %></option>
+          <% }) %>
+        </select>
+        <select class="qa-in" name="account_type" id="qaType" onchange="qaPrice()">
+          <option value="nt">🎮 Non-Trophy</option>
+          <option value="tr">🏆 Trophy</option>
+          <option value="ps4">🕹️ PS4 Primary</option>
+        </select>
+        <select class="qa-in" name="days" id="qaDays" onchange="qaDaysChanged()">
+          <option value="7">Weekly (7d)</option>
+          <option value="30" selected>Monthly (30d)</option>
+          <option value="custom">✏️ Custom…</option>
+        </select>
+      </div>
+      <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaPrice()" style="margin-top:0.45rem;">
+      <div class="qa-price" id="qaPriceBox">Pick a game to see the price</div>
+
+      <div class="qa-l">Account slot</div>
+      <select class="qa-in" name="account_assign" id="qaSlot">
+        <option value="">— None —</option>
+        <% const QA_SLOT = { trophy:'🏆 Trophy', non_trophy:'🎮 Non-Trophy', ps4_primary:'🕹️ PS4 Primary' }; %>
+        <% (accounts || []).forEach(a => { ['trophy','non_trophy','ps4_primary'].forEach(t => {
+             const sl = a.slots && a.slots[t];
+             if (sl && sl.enabled && sl.status === 'open') { %>
+          <option value="<%= a.id %>:<%= t %>"><%= a.label %> — <%= QA_SLOT[t] %></option>
+        <% } }) }) %>
+      </select>
+      <div class="qa-hint">Leave blank only for a game whose slots aren't tracked by an account.</div>
+
+      <div class="qa-l">Paid already?</div>
+      <div class="qa-radios">
+        <label class="qa-radio qa-on" id="qaPaidYes">
+          <input type="radio" name="paid" value="yes" checked onchange="qaPaidChanged()"> ✅ Yes
+        </label>
+        <label class="qa-radio" id="qaPaidNo">
+          <input type="radio" name="paid" value="no" onchange="qaPaidChanged()"> Not yet
+        </label>
+        <select class="qa-in" name="method" id="qaMethod" style="flex:1;">
+          <% (((settings.payment_methods)||[]).filter(m => m.enabled)).forEach(m => { %>
+          <option value="<%= m.key %>"><%= m.label %></option>
+          <% }) %>
+          <option value="manual">Other / cash</option>
+        </select>
+      </div>
+
+      <div class="qa-l">Dates</div>
+      <div class="qa-g2">
+        <label class="qa-sub">Starts
+          <input class="qa-in" type="date" name="start_date" id="qaStart" onchange="qaEnd()">
+        </label>
+        <label class="qa-sub">Ends <span id="qaEndAuto">(auto)</span>
+          <input class="qa-in" type="date" name="end_date" id="qaEndDate">
+        </label>
+      </div>
+
+      <%# The five fields the full Customers form had that the common path does
+          not need. Demoted, not dropped: the day a completed rental or a
+          hand-agreed price needs recording, it still has somewhere to go. %>
+      <details class="qa-more">
+        <summary>More options</summary>
+        <div class="qa-g2">
+          <label class="qa-sub">Status
+            <select class="qa-in" name="status" id="qaStatus">
+              <option value="renting">🟢 Currently renting</option>
+              <option value="done">✅ Done (already finished)</option>
+              <option value="bought">🛒 Bought (permanent)</option>
+            </select>
+          </label>
+          <label class="qa-sub">Price override (₱)
+            <input class="qa-in" type="number" name="price" id="qaPriceOverride" min="0" placeholder="auto" oninput="qaPrice()">
+          </label>
+        </div>
+        <label class="qa-sub" style="margin-top:0.55rem;">Notes
+          <input class="qa-in" type="text" name="notes" placeholder="e.g. paid via GCash, follow up Friday">
+        </label>
+      </details>
+
+      <input type="hidden" name="mode" id="qaMode" value="rent">
+    </form>
+
+    <div class="qa-foot" id="qaFootForm">
+      <span class="qa-grow"></span>
+      <button type="button" class="qa-btn qa-ghost" onclick="qaClose()">Cancel</button>
+      <button type="button" class="qa-btn qa-gold" id="qaSubmit" onclick="qaSubmit()">Create + get message</button>
+    </div>
+
+    <!-- ── SUCCESS ── -->
+    <div class="qa-body" id="qaDone" hidden>
+      <div class="qa-ok">
+        <span class="qa-ok-tick">✅</span>
+        <div>
+          <div class="qa-ok-ref" id="qaOkRef"></div>
+          <div class="qa-ok-sub" id="qaOkSub"></div>
+        </div>
+      </div>
+      <div class="qa-chips" id="qaChips"></div>
+      <div class="qa-l">Message to send</div>
+      <div class="qa-msg" id="qaMsg"></div>
+    </div>
+
+    <div class="qa-foot" id="qaFootDone" hidden>
+      <button type="button" class="qa-btn qa-gold" id="qaCopyMsg" onclick="qaCopy('msg', this)">📋 Copy message</button>
+      <button type="button" class="qa-btn qa-ghost" onclick="qaCopy('url', this)">Copy order link</button>
+      <span class="qa-grow"></span>
+      <button type="button" class="qa-btn qa-ghost" onclick="qaReset()">Add another</button>
+      <button type="button" class="qa-btn qa-ghost" onclick="qaDoneClose()">Done</button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* The launcher lives in the host tab, outside this modal, but its styles
+     belong with the component so the two cannot be separated. */
+  .qa-launch { display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .qa-launch span { font-size:0.75rem; color:#666; }
+  .qa-overlay { display:none; position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); align-items:flex-start; justify-content:center; padding:3vh 1rem; overflow-y:auto; }
+  .qa-overlay.open { display:flex; }
+  .qa-box { background:#101010; border:1px solid #272727; border-radius:16px; width:min(580px,100%); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.7); animation:qaPop 0.16s ease; }
+  @keyframes qaPop { from { transform:scale(0.96); opacity:0 } to { transform:scale(1); opacity:1 } }
+  .qa-head { display:flex; align-items:center; gap:0.6rem; padding:0.85rem 1.1rem; background:#151515; border-bottom:1px solid #1f1f1f; }
+  .qa-title { font-weight:800; font-size:0.95rem; color:#fff; }
+  .qa-x { margin-left:auto; background:none; border:none; color:#666; font-size:1rem; cursor:pointer; }
+  .qa-x:hover { color:#fff; }
+  .qa-body { padding:1rem 1.1rem; }
+  /* [hidden] sets display:none, but a class with an explicit display wins.
+     Without this the form footer stays on screen over the success view. */
+  .qa-foot[hidden], .qa-body[hidden] { display:none !important; }
+  .qa-foot { display:flex; align-items:center; gap:0.5rem; padding:0.85rem 1.1rem; border-top:1px solid #1f1f1f; background:#0c0c0c; flex-wrap:wrap; }
+  .qa-grow { flex:1; }
+  .qa-btn { border:none; border-radius:8px; padding:0.55rem 1rem; font-weight:800; font-size:0.82rem; cursor:pointer; }
+  .qa-gold { background:var(--ps-blue); color:#000; }
+  .qa-gold:disabled { opacity:0.55; cursor:default; }
+  .qa-ghost { background:#161616; border:1px solid #282828; color:#bbb; }
+  .qa-ghost:hover { color:#fff; }
+  .qa-l { font-size:0.63rem; text-transform:uppercase; letter-spacing:0.6px; color:#5a5a5a; font-weight:800; margin:0.9rem 0 0.35rem; }
+  .qa-body > .qa-l:first-of-type, .qa-err:not([hidden]) + .qa-l { margin-top:0; }
+  .qa-in { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:8px; padding:0.55rem 0.7rem; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box; }
+  .qa-in:focus { outline:none; border-color:var(--ps-blue); }
+  .qa-g3 { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:0.45rem; }
+  .qa-g2 { display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; }
+  .qa-sub { display:block; font-size:0.68rem; color:#666; }
+  .qa-sub .qa-in { margin-top:0.2rem; }
+  .qa-hint { font-size:0.66rem; color:#4d4d4d; margin-top:0.3rem; }
+  .qa-price { margin-top:0.5rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.55rem 0.8rem; font-size:0.8rem; color:#9fd8ae; }
+  .qa-price b { color:#22c55e; font-size:1rem; }
+  .qa-price.qa-price-empty { background:#0d0d0d; border-color:#1e1e1e; color:#555; }
+  .qa-radios { display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center; }
+  .qa-radio { flex:0 0 auto; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:9px; padding:0.5rem 0.8rem; font-size:0.82rem; font-weight:700; color:#999; cursor:pointer; }
+  .qa-radio input { display:none; }
+  .qa-radio.qa-on { border-color:var(--ps-blue); background:#1a1500; color:var(--ps-blue); }
+  .qa-more { margin-top:0.9rem; border-top:1px solid #1c1c1c; padding-top:0.7rem; }
+  .qa-more > summary { cursor:pointer; font-size:0.75rem; color:#777; font-weight:700; list-style:none; }
+  .qa-more > summary::-webkit-details-marker { display:none; }
+  .qa-more > summary:hover { color:#ccc; }
+  .qa-more[open] > summary { margin-bottom:0.6rem; }
+  .qa-err { background:#1a0a0a; border:1px solid #3a1a1a; color:#f3a2a2; border-radius:9px; padding:0.6rem 0.8rem; font-size:0.78rem; margin-bottom:0.8rem; line-height:1.5; }
+  .qa-ok { display:flex; align-items:center; gap:0.7rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:11px; padding:0.8rem 1rem; }
+  .qa-ok-tick { font-size:1.5rem; }
+  .qa-ok-ref { font-weight:900; color:#22c55e; font-size:1rem; }
+  .qa-ok-sub { font-size:0.74rem; color:#888; margin-top:0.1rem; }
+  .qa-chips { margin-top:0.6rem; }
+  .qa-chips span { display:inline-block; background:#141414; border:1px solid #262626; border-radius:20px; padding:0.15rem 0.55rem; font-size:0.67rem; color:#888; margin:0 0.3rem 0.3rem 0; }
+  .qa-msg { background:#0a0a0a; border:1px solid #262626; border-radius:10px; padding:0.8rem 0.9rem; font-size:0.78rem; line-height:1.65; white-space:pre-wrap; color:#ccc; max-height:230px; overflow:auto; }
+  body.light-mode .qa-box { background:#fff; border-color:#e4e7eb; }
+  body.light-mode .qa-head { background:#f7f9fa; border-bottom-color:#e9ecef; }
+  body.light-mode .qa-title, body.light-mode .qa-in { color:#14171a; }
+  body.light-mode .qa-in { background:#fff; border-color:#dfe3e8; }
+  body.light-mode .qa-foot { background:#f7f9fa; border-top-color:#e9ecef; }
+  body.light-mode .qa-msg { background:#f7f9fa; border-color:#e4e7eb; color:#333; }
+  @media (max-width: 620px) {
+    .qa-g3, .qa-g2 { grid-template-columns:1fr; }
+  }
+</style>
+
+<script>
+(function () {
+  var last = { msg: '', url: '' };
+
+  function el(id) { return document.getElementById(id); }
+
+  window.qaOpen = function () {
+    el('qaOverlay').classList.add('open');
+    qaReset();
+    setTimeout(function () { el('qaName').focus(); }, 50);
+  };
+  window.qaClose = function () { el('qaOverlay').classList.remove('open'); };
+  // After a successful add the tables behind the popup are stale, so closing
+  // from the success screen reloads rather than leaving old numbers on screen.
+  window.qaDoneClose = function () { window.location.reload(); };
+
+  window.qaReset = function () {
+    el('qaForm').reset();
+    el('qaForm').hidden = false;
+    el('qaFootForm').hidden = false;
+    el('qaDone').hidden = true;
+    el('qaFootDone').hidden = true;
+    el('qaErr').hidden = true;
+    el('qaIcon').textContent = '⚡';
+    el('qaTitle').textContent = 'Quick Add — customer & order';
+    el('qaCustomDays').hidden = true;
+    el('qaStart').value = new Date().toISOString().slice(0, 10);
+    qaPaidChanged(); qaEnd(); qaPrice();
+  };
+
+  window.qaDaysChanged = function () {
+    var custom = el('qaDays').value === 'custom';
+    el('qaCustomDays').hidden = !custom;
+    if (custom) el('qaCustomDays').focus();
+    qaEnd(); qaPrice();
+  };
+
+  function daysValue() {
+    if (el('qaDays').value === 'custom') return parseInt(el('qaCustomDays').value) || 0;
+    return parseInt(el('qaDays').value) || 0;
+  }
+
+  // End date follows start + duration, but only while the owner has not typed
+  // their own — an edited end date is a decision, not a default to overwrite.
+  window.qaEnd = function () {
+    var start = el('qaStart').value, d = daysValue();
+    if (!start || d < 1) return;
+    var end = new Date(Date.parse(start + 'T00:00:00Z') + d * 86400000).toISOString().slice(0, 10);
+    el('qaEndDate').value = end;
+  };
+
+  window.qaPaidChanged = function () {
+    var yes = document.querySelector('input[name=paid]:checked').value === 'yes';
+    el('qaPaidYes').classList.toggle('qa-on', yes);
+    el('qaPaidNo').classList.toggle('qa-on', !yes);
+    el('qaMethod').style.display = yes ? '' : 'none';
+  };
+
+  // Mirrors the server's pricing so the number on screen is the number saved.
+  // The server still recomputes it — this is a preview, not the source.
+  window.qaPrice = function () {
+    var box = el('qaPriceBox');
+    var opt = el('qaGame').selectedOptions[0];
+    var override = el('qaPriceOverride').value;
+    if (!opt || !opt.value) {
+      box.className = 'qa-price qa-price-empty';
+      box.textContent = 'Pick a game to see the price';
+      return;
+    }
+    var type = el('qaType').value, d = daysValue();
+    var key = (type === 'tr' ? 'tr' : 'nt') + (d >= 30 ? '30' : '7');
+    var base = parseInt(opt.dataset[key]) || 0;
+    // Custom durations are priced pro-rata from the nearest standard tier,
+    // which is what the server does too.
+    if (d && d !== 7 && d !== 30 && base) {
+      var perDay = base / (d >= 30 ? 30 : 7);
+      base = Math.round(perDay * d);
+    }
+    var amount = override !== '' ? (parseInt(override) || 0) : base;
+    if (!amount) {
+      box.className = 'qa-price qa-price-empty';
+      box.textContent = 'No price set for this type and duration — set one in Games, or use a price override.';
+      return;
+    }
+    box.className = 'qa-price';
+    // The deposit comes from promo settings the browser does not have, so this
+    // shows the rent only and says so, rather than printing a total it cannot know.
+    box.innerHTML = '<b>₱' + amount.toLocaleString() + '</b> rent'
+      + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
+      + ' <span style="color:#7a7a7a;">· any deposit is added when it saves</span>';
+  };
+
+  window.qaSubmit = function () {
+    var btn = el('qaSubmit'), err = el('qaErr');
+    err.hidden = true;
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = '… saving';
+    fetch('/admin/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(el('qaForm')))
+    })
+      .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+      .then(function (res) {
+        btn.disabled = false;
+        btn.textContent = original;
+        if (!res.ok || !res.body.ok) {
+          err.textContent = '⚠ ' + (res.body && res.body.message ? res.body.message : 'Could not save that — try again.');
+          err.hidden = false;
+          el('qaBoxScroll') || el('qaForm').scrollIntoView({ block: 'start' });
+          return;
+        }
+        last.msg = res.body.message || '';
+        last.url = res.body.url || '';
+        el('qaForm').hidden = true;
+        el('qaFootForm').hidden = true;
+        el('qaDone').hidden = false;
+        el('qaFootDone').hidden = false;
+        el('qaIcon').textContent = '✅';
+        el('qaTitle').textContent = 'Added';
+        el('qaOkRef').textContent = res.body.ref + ' created';
+        el('qaOkSub').textContent = res.body.summary || '';
+        el('qaMsg').textContent = last.msg;
+        el('qaChips').innerHTML = '<span>customer record ✓</span><span>order ✓</span>'
+          + (res.body.paid ? '<span>marked paid ✓</span>' : '<span>awaiting payment</span>');
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = original;
+        err.textContent = '⚠ Something went wrong — try again.';
+        err.hidden = false;
+      });
+  };
+
+  window.qaCopy = function (which, btn) {
+    var text = which === 'msg' ? last.msg : last.url;
+    if (!text) return;
+    var was = btn.textContent;
+    var flash = function (label) {
+      btn.textContent = label;
+      setTimeout(function () { btn.textContent = was; }, 1600);
+    };
+    var done = function () { flash('✓ Copied'); };
+    var failed = function () { flash('⚠ Select and copy manually'); };
+    // A hidden textarea, used both as the fallback and when the clipboard API
+    // rejects. Over plain http the API exists but refuses, so a bare
+    // .then(done, noop) would copy nothing and say nothing — the worst outcome,
+    // because you would paste the previous thing into a customer's chat.
+    function legacyCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      if (ok) done(); else failed();
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, legacyCopy);
+      return;
+    }
+    legacyCopy();
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && el('qaOverlay').classList.contains('open')) qaClose();
+  });
+})();
+</script>
