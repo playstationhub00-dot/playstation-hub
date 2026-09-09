@@ -144,6 +144,34 @@
   <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>
+  <%# Reassurance, not pressure: this is the point where a first-time customer
+      decides whether a small shop online is real. Every line here is a real
+      number — the online flag, real reviews, a measured median approval time —
+      never an invented countdown. See docs/superpowers/specs for why a fake
+      "slot held for you" timer was rejected: slots aren't actually reserved
+      until an order is activated, so a countdown here would be a lie. %>
+  <div class="ord-confidence">
+    <% if (ownerOnline) { %>
+    <div class="ord-online">🟢 We're online right now — payments are usually confirmed within minutes.</div>
+    <% } else { %>
+    <div class="ord-offline">We check payments regularly even when offline — sending yours now doesn't need us to be online.</div>
+    <% } %>
+    <div class="ord-conf-steps">
+      <div class="ord-conf-step"><span class="ord-conf-n">1</span><span>You send ₱<%= totalDue %></span></div>
+      <div class="ord-conf-step ord-conf-step-us"><span class="ord-conf-n">2</span><span>We confirm it<% if (approvalEtaMinutes != null) { %> — usually within <%= approvalEtaMinutes %> min<% } %></span></div>
+      <div class="ord-conf-step"><span class="ord-conf-n">3</span><span>You send your PS sign-in code</span></div>
+      <div class="ord-conf-step ord-conf-step-us"><span class="ord-conf-n">4</span><span>We sign you in — you play</span></div>
+    </div>
+    <% if (reviewStats && reviewStats.count > 0) { %>
+    <div class="ord-conf-reviews">
+      ⭐ <strong><%= reviewStats.average %></strong> from <%= reviewStats.count %> renter<%= reviewStats.count !== 1 ? 's' : '' %>
+      <% if (reviews && reviews.length && reviews[0].text) { %>
+      <div class="ord-conf-quote">"<%= reviews[0].text %>" <span>— <%= reviewDisplayName(reviews[0]) %></span></div>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+
   <% if (payViaGateway) { %>
   <div class="ord-step ord-step-gateway">
     <div class="ord-step-label">Pay ₱<%= totalDue %> now</div>
@@ -277,6 +305,7 @@
     }
   })();
   </script>
+  <div class="ord-conf-footer">Not ready yet? Nothing is lost — this page stays live, come back to it any time.</div>
   <% } %>
 
   <% if (order.state === 'verifying_payment') { %>

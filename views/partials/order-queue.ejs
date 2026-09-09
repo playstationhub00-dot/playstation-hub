@@ -361,6 +361,9 @@
         <%= o.game_title %> · <%= abTypeLabel %>
         · <%= abDurLabel %> · ₱<%= abTotal %>
         <% if (o.state === 'payment_rejected') { %>· <span class="oq-ab-rejected">payment rejected</span><% } %>
+        <%# Only present when they arrived via the Messenger bot; a customer who
+            typed straight into the website has no psid to open a thread with. %>
+        <% if (o.psid) { %>· <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a><% } %>
       </div>
     </div>
     <div class="oq-ab-right">

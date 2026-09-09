@@ -18,6 +18,7 @@ const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
 const dashboard = require('./lib/dashboard');
+const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -2265,7 +2266,7 @@ app.get('/order/:ref', async (req, res) => {
   // also treats 'waitlisted' as paid (a Fall in Line entry has never taken
   // money, so it must never show a green Paid total).
   const isPaidOrder = order.state !== 'waitlisted' && orders.isPaid(order.state);
-  res.render('order-status', {
+  res.render('order-status', Object.assign({
     order,
     settings: s,
     isPaidOrder,
@@ -2281,7 +2282,10 @@ app.get('/order/:ref', async (req, res) => {
     queueRows, queuePos, queueAhead, queueExpired,
     queueRules,
     canReview, myReview, fbReviewsLink,
-  });
+    // For the "reassurance" panel on the payment step: real reviews and a
+    // real median approval time, not invented urgency.
+    approvalEtaMinutes: getApprovalEtaMinutes(),
+  }, reviewBlockLocals('')));
 });
 
 // Unlinks a just-processed upload when the transition it was meant for didn't
@@ -2552,6 +2556,38 @@ function notifyOwnerSignin(order, code) {
 // The in-flight flag stops a stampede: when the cache goes stale, every
 // request that arrives before the first fetch returns would otherwise start
 // its own.
+// Median minutes to approve a payment, shown to a customer deciding whether to
+// pay at all. Cached and refreshed in the background rather than queried per
+// request: it reads every order in the database, and a customer’s own payment
+// step must never wait on that.
+//
+// A stale or missing figure is not shown as zero — the panel simply omits the
+// line rather than promise a number nobody can back up.
+let _approvalEtaCache = { medianMin: null, computedAt: 0 };
+let _approvalEtaFetching = false;
+const APPROVAL_ETA_TTL_MS = 30 * 60 * 1000;
+async function refreshApprovalEta() {
+  if (_approvalEtaFetching) return;
+  _approvalEtaFetching = true;
+  try {
+    const all = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
+    const w = funnel.ownerWait(all);
+    // Fewer than five confirmed data points is not a median worth quoting.
+    _approvalEtaCache = {
+      medianMin: w.checkPayment.n >= 5 ? w.checkPayment.median : null,
+      computedAt: Date.now()
+    };
+  } catch (e) {
+    console.error('[approval-eta]', e.message);
+  } finally {
+    _approvalEtaFetching = false;
+  }
+}
+function getApprovalEtaMinutes() {
+  if (Date.now() - _approvalEtaCache.computedAt > APPROVAL_ETA_TTL_MS) refreshApprovalEta();
+  return _approvalEtaCache.medianMin;
+}
+
 let _fxFetching = false;
 async function fetchUsdPhpRate() {
   if (_fxFetching) return;
