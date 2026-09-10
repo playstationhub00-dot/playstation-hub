@@ -8,14 +8,31 @@
   Deliberately asked AFTER the site review rather than alongside it: two asks
   at once lowers completion of both, and the site one is the one that carries
   a verified order behind it.
+
+  All of that is for a THUMBS UP only. Someone who just told us it went badly
+  gets a different panel: this one promised to publish their words and then
+  asked them to repost the same thing on Facebook, which is the opposite of
+  what the form promised them one line earlier.
 %>
+<% var isDown = review && (review.sentiment === 'down' || (!review.sentiment && Number(review.rating) > 0 && Number(review.rating) < 4)); %>
+
+<% if (isDown) { %>
+<div class="rvt rvt-down">
+  <div class="rvt-title">Thanks for being straight with us</div>
+  <div class="rvt-sub">This went to us, not onto the site. We'll read it and come back to you.</div>
+  <% if (review.text) { %><div class="rvt-quote">"<%= review.text %>"</div><% } %>
+</div>
+<% } else { %>
+
 <div class="rvt">
   <div class="rvt-title">Thanks — that really helps 🙏</div>
   <div class="rvt-sub">We'll put it on the site once we've had a quick look.</div>
 
-  <div class="rvt-quote" id="rvtQuote">"<%= review.text %>"</div>
+  <% if (review.text) { %><div class="rvt-quote" id="rvtQuote">"<%= review.text %>"</div><% } %>
 
-  <% if (fbReviewsLink) { %>
+  <%# The Facebook ask is a paste, so it only makes sense when there is
+      something to paste. A one-tap 👍 leaves no words behind. %>
+  <% if (fbReviewsLink && review.text) { %>
   <div class="rvt-fb">
     <div class="rvt-fb-ask">Mind posting the same thing on our Facebook page? It helps a lot with people finding us.</div>
     <button type="button" class="rvt-copy" id="rvtCopyBtn">Copy what you wrote</button>
@@ -55,3 +72,4 @@
   </script>
   <% } %>
 </div>
+<% } %>

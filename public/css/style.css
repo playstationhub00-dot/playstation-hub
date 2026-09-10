@@ -3564,6 +3564,8 @@ label.buy-tier:hover { border-color: #444; }
 /* Thank-you state, shown once they've reviewed. Green rather than the prompt's
    purple — this is a completed thing, not another ask. */
 .rvt { background: #0f1a12; border: 1px solid #1e4a2a; border-radius: 12px; padding: 0.9rem 0.95rem; margin-bottom: 1.5rem; }
+/* A thumbs down gets a sober panel, not the green celebration one. */
+.rvt.rvt-down { background: #1a1206; border-color: #4a3a00; }
 .rvt-title { font-size: 0.95rem; font-weight: 800; color: #fff; }
 .rvt-sub { font-size: 0.78rem; color: #7fa88c; margin-top: 0.2rem; line-height: 1.5; }
 .rvt-quote { background: #0b0b0d; border: 1px solid #1e4a2a; border-radius: 8px; padding: 0.6rem 0.7rem; margin: 0.7rem 0; font-size: 0.82rem; color: #ddd; line-height: 1.6; font-style: italic; }
