@@ -1,0 +1,165 @@
+<%# The topbar bell: everything waiting on the owner, reachable from any tab.
+    Rows are built server-side by lib/notifications.js — this file only paints
+    them and jumps to the tab that can act on each one. %>
+<style>
+  .nb-wrap { position:relative; }
+  .nb-btn { position:relative; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:20px; border:1px solid #222; background:#111; color:#aaa; font-size:0.95rem; cursor:pointer; line-height:1; }
+  .nb-btn:hover { color:#fff; border-color:#333; }
+  .nb-btn.nb-has { color:#fff; }
+  .nb-badge { position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:#f0a500; color:#000; font-size:0.63rem; font-weight:800; display:flex; align-items:center; justify-content:center; box-sizing:border-box; border:2px solid #0a0a0a; }
+  .nb-badge.nb-crit { background:#ef4444; color:#fff; }
+  /* A quiet pulse only when something is on a clock or a customer is waiting.
+     A badge that always animates stops meaning anything. */
+  .nb-badge.nb-crit { animation:nbPulse 2s ease-in-out infinite; }
+  @keyframes nbPulse { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,0.55); } 50% { box-shadow:0 0 0 6px rgba(239,68,68,0); } }
+
+  .nb-panel { position:absolute; top:calc(100% + 10px); right:0; width:380px; max-width:calc(100vw - 24px); background:#0d0d0d; border:1px solid #232323; border-radius:14px; box-shadow:0 18px 50px rgba(0,0,0,0.6); z-index:300; overflow:hidden; }
+  .nb-panel[hidden] { display:none !important; }
+  .nb-head { display:flex; align-items:center; gap:0.5rem; padding:0.75rem 0.95rem; border-bottom:1px solid #1b1b1b; background:#111; }
+  .nb-head-t { font-size:0.85rem; font-weight:800; color:#fff; }
+  .nb-head-n { font-size:0.68rem; font-weight:700; color:#777; margin-left:auto; }
+  .nb-list { max-height:min(60vh, 460px); overflow-y:auto; }
+  .nb-item { display:flex; align-items:flex-start; gap:0.65rem; width:100%; padding:0.7rem 0.95rem; background:none; border:none; border-bottom:1px solid #161616; border-left:3px solid transparent; text-align:left; cursor:pointer; font:inherit; }
+  .nb-item:hover { background:#141414; }
+  .nb-item.u-critical { border-left-color:#ef4444; }
+  .nb-item.u-warn { border-left-color:#f0a500; }
+  .nb-item.u-info { border-left-color:#2a2a2a; }
+  .nb-ic { font-size:0.95rem; line-height:1.3; flex-shrink:0; }
+  .nb-m { display:block; min-width:0; flex:1; }
+  .nb-t { display:block; font-size:0.79rem; font-weight:700; color:#fff; line-height:1.3; }
+  .nb-item.u-critical .nb-t { color:#fff; }
+  .nb-s { display:block; font-size:0.7rem; color:#777; margin-top:0.15rem; line-height:1.35; word-break:break-word; }
+  .nb-clock { flex-shrink:0; font-size:0.68rem; font-weight:800; color:#ef4444; font-variant-numeric:tabular-nums; padding-top:0.1rem; }
+  .nb-clock.nb-dead { color:#666; }
+  .nb-empty { padding:2rem 1rem; text-align:center; }
+  .nb-empty-ic { font-size:1.6rem; }
+  .nb-empty-t { font-size:0.82rem; font-weight:700; color:#22c55e; margin-top:0.4rem; }
+  .nb-empty-s { font-size:0.7rem; color:#666; margin-top:0.2rem; }
+  .nb-foot { padding:0.55rem 0.95rem; border-top:1px solid #1b1b1b; background:#0a0a0a; }
+  .nb-foot-btn { width:100%; background:none; border:none; color:var(--ps-blue); font-size:0.72rem; font-weight:700; cursor:pointer; padding:0.15rem; font-family:inherit; }
+
+  body.light-mode .nb-btn { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
+  body.light-mode .nb-btn:hover, body.light-mode .nb-btn.nb-has { color:#14171a; }
+  body.light-mode .nb-badge { border-color:#fff; }
+  body.light-mode .nb-panel { background:#fff; border-color:#e4e7eb; box-shadow:0 18px 50px rgba(20,23,26,0.16); }
+  body.light-mode .nb-head { background:#f7f9fa; border-bottom-color:#e9ecef; }
+  body.light-mode .nb-head-t { color:#14171a; }
+  body.light-mode .nb-item { border-bottom-color:#eef1f4; }
+  body.light-mode .nb-item:hover { background:#f5f7f9; }
+  body.light-mode .nb-item.u-info { border-left-color:#e4e7eb; }
+  body.light-mode .nb-t, body.light-mode .nb-item.u-critical .nb-t { color:#14171a; }
+  body.light-mode .nb-s { color:#6b737b; }
+  body.light-mode .nb-foot { background:#f7f9fa; border-top-color:#e9ecef; }
+
+  @media (max-width: 480px) {
+    .nb-panel { position:fixed; top:60px; right:8px; left:8px; width:auto; }
+  }
+</style>
+
+<div class="nb-wrap">
+  <button class="nb-btn <%= notifs.count ? 'nb-has' : '' %>" id="nbBtn" onclick="nbToggle(event)"
+          aria-haspopup="true" aria-expanded="false"
+          title="<%= notifs.count ? notifs.count + ' thing' + (notifs.count === 1 ? '' : 's') + ' need you' : 'Nothing waiting' %>">
+    🔔
+    <% if (notifs.count) { %>
+      <span class="nb-badge <%= notifs.criticalCount ? 'nb-crit' : '' %>"><%= notifs.count > 99 ? '99+' : notifs.count %></span>
+    <% } %>
+  </button>
+
+  <div class="nb-panel" id="nbPanel" hidden role="dialog" aria-label="Things that need you">
+    <div class="nb-head">
+      <span class="nb-head-t">Needs you</span>
+      <% if (notifs.count) { %>
+        <span class="nb-head-n"><%= notifs.criticalCount ? notifs.criticalCount + ' urgent · ' : '' %><%= notifs.count %> total</span>
+      <% } %>
+    </div>
+
+    <% if (!notifs.count) { %>
+      <div class="nb-empty">
+        <div class="nb-empty-ic">✅</div>
+        <div class="nb-empty-t">All clear</div>
+        <div class="nb-empty-s">No payments, returns or reminders waiting.</div>
+      </div>
+    <% } else { %>
+      <div class="nb-list">
+        <% notifs.items.forEach(function (it) { %>
+          <button class="nb-item u-<%= it.urgency %>" onclick="nbGo('<%= it.tab %>')">
+            <span class="nb-ic"><%= it.icon %></span>
+            <span class="nb-m">
+              <span class="nb-t"><%= it.title %></span>
+              <span class="nb-s"><%= it.sub %></span>
+            </span>
+            <% if (it.expiresAt) { %>
+              <%# Deliberately NOT .oq-timer: order-queue.ejs runs its own sweep
+                  over that class, and two loops writing one element fight over
+                  the text and the expired styling. %>
+              <span class="nb-clock" data-expires="<%= it.expiresAt %>">--:--</span>
+            <% } %>
+          </button>
+        <% }); %>
+      </div>
+      <div class="nb-foot">
+        <button class="nb-foot-btn" onclick="nbGo('dashboard')">Open the dashboard →</button>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+(function () {
+  function panel() { return document.getElementById('nbPanel'); }
+  function btn() { return document.getElementById('nbBtn'); }
+
+  window.nbToggle = function (e) {
+    if (e) e.stopPropagation();
+    var p = panel();
+    if (!p) return;
+    var opening = p.hidden;
+    p.hidden = !opening;
+    var b = btn();
+    if (b) b.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  };
+
+  window.nbClose = function () {
+    var p = panel();
+    if (p && !p.hidden) {
+      p.hidden = true;
+      var b = btn();
+      if (b) b.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  window.nbGo = function (tab) {
+    nbClose();
+    if (typeof switchTab === 'function') switchTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Click-away and Escape. Clicks inside the panel must not close it, or a
+  // scroll drag that ends on the backdrop would dismiss the list mid-read.
+  document.addEventListener('click', function (e) {
+    var p = panel();
+    if (!p || p.hidden) return;
+    if (e.target.closest && e.target.closest('.nb-wrap')) return;
+    nbClose();
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') nbClose(); });
+
+  // The sign-in countdowns. order-queue.ejs runs the same loop for its own
+  // rows, but it only exists inside the Orders tab — the bell is on every
+  // page, so it owns the timers it renders.
+  function tick() {
+    var now = Date.now();
+    document.querySelectorAll('#nbPanel .nb-clock').forEach(function (el) {
+      var exp = Date.parse(el.getAttribute('data-expires') || '');
+      if (isNaN(exp)) { el.textContent = '--:--'; return; }
+      var left = Math.floor((exp - now) / 1000);
+      if (left <= 0) { el.textContent = 'expired'; el.classList.add('nb-dead'); return; }
+      el.classList.remove('nb-dead');
+      el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+    });
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>

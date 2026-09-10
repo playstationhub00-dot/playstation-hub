@@ -164,6 +164,7 @@
     <button class="atb-toggle" onclick="toggleSidebar()" title="Collapse/expand sidebar" aria-label="Toggle sidebar">▤</button>
     <span class="atb-crumb" id="adminCrumb">Dashboard</span>
     <div class="atb-right">
+      <%- include('partials/admin/notif-bell') %>
       <div id="mongoIndicator" style="display:flex;align-items:center;gap:0.45rem;background:#111;border:1px solid #222;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.74rem;font-weight:600;color:#555;">
         <span id="mongoDot" style="width:8px;height:8px;border-radius:50%;background:#333;display:inline-block;"></span>
         <span id="mongoLabel">Checking DB…</span>
