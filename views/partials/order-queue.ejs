@@ -165,7 +165,7 @@
         <button type="submit" class="oq-btn-no">Can't find it</button>
       </form>
       <% } %>
-      <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Permanently delete order ' + <%= JSON.stringify(o.ref) %> + '? This cannot be undone.');">
+      <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Permanently delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. This cannot be undone.');">
         <button type="submit" class="oq-btn-no">Delete</button>
       </form>
     </div>
@@ -299,7 +299,7 @@
             <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">↩</button>
           </form>
           <% } %>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
             <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
           </form>
         </td>
@@ -379,7 +379,7 @@
         <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Cancel order ' + <%= JSON.stringify(o.ref) %> + '? The customer said no or never followed up. The record is kept, unlike Delete.');">
           <button type="submit" class="oq-btn-no" title="Cancel this order — the customer declined or never paid">Cancel</button>
         </form>
-        <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Use this to clear out duplicate or accidental orders. This cannot be undone.');">
+        <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out duplicate or accidental orders. This cannot be undone.');">
           <button type="submit" class="oq-btn-no" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
         </form>
       </div>

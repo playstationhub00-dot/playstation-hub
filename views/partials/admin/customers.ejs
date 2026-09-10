@@ -252,7 +252,11 @@
                   </details>
                   <% } %>
                   <a href="/admin/customers/edit/<%= c.id %>" class="btn-edit">✏️ Edit</a>
-                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm('Delete <%= c.customer_name.replace(/'/g, "\\'") %>?')">
+                  <%# Names the order too. A rental is recorded in two places —
+                      a customer row carrying payments[], and an order carrying
+                      amount_due — and deleting one used to leave the other's
+                      money on the books. Both go now, so the dialog says so. %>
+                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm(<%- JSON.stringify('Delete ' + c.customer_name + '?' + (c.order_ref ? '\n\nThis also deletes order ' + c.order_ref + ' and takes its \u20b1' + (c.price || 0) + ' out of your monthly totals.' : '')) %>)">
                     <button type="submit" class="btn-delete">🗑</button>
                   </form>
                 </div>

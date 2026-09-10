@@ -3466,7 +3466,16 @@ app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
 
 // Owner-initiated cleanup for test, duplicate, or mistaken orders. Not part
 // of the customer-facing lifecycle, so it bypasses transition() entirely.
+//
+// Takes the customer row with it for the same reason the Customers tab's
+// delete takes the order: the rental is recorded in both places, and removing
+// only one leaves its money counted on the other tab.
 app.post('/admin/orders/:ref/delete', requireAuth, async (req, res) => {
+  const ref = orders.parseOrderRef(req.params.ref);
+  const linked = ref
+    ? (getCustomers() || []).filter(c => c && c.order_ref === ref)
+    : [];
+  linked.forEach(c => removeCustomerRecord(c.id));
   await orders.deleteOrder(req.params.ref);
   res.redirect('/admin?tab=orders&msg=order_deleted');
 });
@@ -5158,9 +5167,16 @@ app.post('/admin/customers/:id/slot', requireAuth, (req, res) => {
   res.redirect('/admin?tab=customers&msg=slot_moved');
 });
 
-app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
-  const existing = getCustomer(req.params.id);
-  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+// Removes a customer row and puts back whatever it was holding: the game's
+// slot counters and any account slot assigned to them.
+//
+// Shared by the Customers tab's delete button and the Orders tab's, because a
+// rental is recorded in TWO places — a customer row carrying payments[], and an
+// order carrying amount_due — and deleting one while leaving the other is what
+// made the money on the two tabs disagree.
+function removeCustomerRecord(id) {
+  const existing = getCustomer(id);
+  if (!existing) return null;
   // Restore slot if was renting or bought (not reservation)
   if ((existing.status === 'renting' || existing.status === 'bought') && !String(existing.game_id).startsWith('upcoming_')) {
     const game = getGame(existing.game_id);
@@ -5173,8 +5189,21 @@ app.post('/admin/customers/delete/:id', requireAuth, (req, res) => {
       else adjustNtSlots(game.id, +1);
     }
   }
-  freeAccountSlotsForCustomer(parseInt(req.params.id));
-  db.get('customers').remove({ id: parseInt(req.params.id) }).write();
+  freeAccountSlotsForCustomer(parseInt(id));
+  db.get('customers').remove({ id: parseInt(id) }).write();
+  return existing;
+}
+
+app.post('/admin/customers/delete/:id', requireAuth, async (req, res) => {
+  const existing = removeCustomerRecord(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  // The order behind this rental. Without this the customer's money vanished
+  // from the dashboard (which counts customer payments) but stayed in the
+  // Orders ledger (which counts amount_due), so "collected this month" read
+  // one number on one tab and a different one on the other.
+  if (existing.order_ref) {
+    await orders.deleteOrder(existing.order_ref).catch(() => {});
+  }
   res.redirect('/admin?tab=customers&msg=customer_deleted');
 });
 
