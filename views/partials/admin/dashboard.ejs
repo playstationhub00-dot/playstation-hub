@@ -1,22 +1,21 @@
   <div class="tab-panel" id="tab-dashboard">
 
-    <%# Five sub-tabs rather than one long scroll. Each answers a different
-        question, so each is one short screen. "Now" and "Site" ignore the
-        period picker: one is live state, the other has its own filters. %>
+    <%# One overview, plus the two tools that carry drill-downs of their own.
+        Now / Games / Customers were three thin panes with nothing to drill
+        into — they belong together on one glanceable page. Money (a chart with
+        a month drill-down) and Site (a funnel and a visit log) stay separate,
+        because squeezing them onto the overview is what made one long page
+        unbearable. %>
     <div class="dsub-bar">
       <div class="dsub-pills">
-        <button class="dsub-pill" data-dsub="now" onclick="switchDash('now')">🔔 Now<% if (dashMetrics.needsNowTotal) { %> <span class="dsub-n"><%= dashMetrics.needsNowTotal %></span><% } %></button>
+        <button class="dsub-pill" data-dsub="overview" onclick="switchDash('overview')">📊 Overview<% if (dashMetrics.needsNowTotal) { %> <span class="dsub-n"><%= dashMetrics.needsNowTotal %></span><% } %></button>
         <button class="dsub-pill" data-dsub="money" onclick="switchDash('money')">💰 Money</button>
-        <button class="dsub-pill" data-dsub="games" onclick="switchDash('games')">🎮 Games</button>
-        <button class="dsub-pill" data-dsub="customers" onclick="switchDash('customers')">👥 Customers</button>
         <button class="dsub-pill" data-dsub="site" onclick="switchDash('site')">🌐 Site</button>
       </div>
-      <%# Server-side, like the orders ledger period: one source of truth, and
-          the numbers can be asserted in a test rather than recomputed in JS. %>
       <form method="GET" action="/admin" class="dsub-period" id="dsubPeriodForm">
         <input type="hidden" name="tab" value="dashboard">
-        <input type="hidden" name="sub" id="dsubPeriodSub" value="money">
-        <select name="dperiod" onchange="this.form.submit()" title="Period for Money, Games and Customers">
+        <input type="hidden" name="sub" id="dsubPeriodSub" value="overview">
+        <select name="dperiod" onchange="this.form.submit()" title="Period for the overview and the money report">
           <option value="month" <%= dashPeriod.key === 'month' ? 'selected' : '' %>>This month</option>
           <option value="3m" <%= dashPeriod.key === '3m' ? 'selected' : '' %>>Last 3 months</option>
           <option value="year" <%= dashPeriod.key === 'year' ? 'selected' : '' %>>This year</option>
@@ -25,10 +24,8 @@
       </form>
     </div>
 
-    <%- include('dashboard/now') %>
+    <%- include('dashboard/overview') %>
     <%- include('dashboard/money') %>
-    <%- include('dashboard/games') %>
-    <%- include('dashboard/customers') %>
     <%- include('dashboard/site') %>
 
     <style>
@@ -43,14 +40,15 @@
       .dash-pane { display:none; }
       .dash-pane.active { display:block; }
 
-      .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:0.65rem; }
-      .row-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:0.65rem; }
-      .row-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:0.65rem; }
+      /* ── shared card + tile primitives, dark ── */
+      .row-2 { display:grid; grid-template-columns:1fr 1fr; gap:0.7rem; }
+      .row-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:0.7rem; }
+      .row-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:0.7rem; }
       .dm-tile { background:#0d0d0d; border:1px solid #1e1e1e; border-radius:12px; padding:0.9rem 1rem; }
       .dm-tile.warn { background:#100a00; border-color:#3a2a00; }
-      .dm-k { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.5px; color:#555; font-weight:800; }
+      .dm-k { font-size:0.62rem; text-transform:uppercase; letter-spacing:0.5px; color:#666; font-weight:800; }
       .dm-v { font-size:1.5rem; font-weight:900; color:#fff; line-height:1.15; margin-top:0.25rem; }
-      .dm-s { font-size:0.64rem; color:#555; margin-top:0.2rem; line-height:1.4; }
+      .dm-s { font-size:0.64rem; color:#666; margin-top:0.2rem; line-height:1.4; }
       .dm-v.g { color:#22c55e; } .dm-v.b { color:#60a5fa; } .dm-v.p { color:#a78bfa; }
       .dm-v.y { color:var(--ps-blue); } .dm-v.r { color:#ef4444; }
       .dm-row { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; font-size:0.78rem; color:#ccc; margin-top:0.55rem; }
@@ -61,24 +59,122 @@
       .dm-bar i { display:block; height:100%; background:var(--ps-blue); border-radius:3px; }
       .dm-bar i.ok { background:#22c55e; } .dm-bar i.warn { background:var(--ps-blue); } .dm-bar i.blue { background:#60a5fa; }
       .dm-note { font-size:0.62rem; color:#4d4d4d; margin-top:0.15rem; }
-      .dm-empty { color:#555; font-size:0.78rem; padding:0.9rem 0; line-height:1.6; }
+      .dm-empty { color:#666; font-size:0.78rem; padding:0.9rem 0; line-height:1.6; }
       .dm-empty a { color:var(--ps-blue); text-decoration:none; font-weight:700; }
-      @media (max-width: 900px) {
+
+      .dash-section { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:1rem; }
+      .dash-section-head { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.9rem; padding-bottom:0.7rem; border-bottom:1px solid #171717; }
+      .dash-section-title { font-size:0.9rem; font-weight:800; color:#fff; }
+      .dash-section-link { font-size:0.72rem; color:var(--ps-blue); font-weight:700; text-decoration:none; white-space:nowrap; cursor:pointer; background:none; border:none; }
+      .dash-section-link:hover { text-decoration:underline; }
+
+      /* ── overview: hero, KPI strip, activity ── */
+      .ov-hero { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+      .ov-hi { font-size:1.35rem; font-weight:900; color:#fff; }
+      .ov-hi-sub { font-size:0.8rem; color:#777; margin-top:0.15rem; }
+      .ov-health { display:flex; align-items:center; gap:0.7rem; border-radius:12px; padding:0.7rem 1rem; }
+      .ov-health.ok { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); }
+      .ov-health.busy { background:rgba(239,68,68,0.09); border:1px solid rgba(239,68,68,0.28); }
+      .ov-health-ic { font-size:1.4rem; }
+      .ov-health-t { font-weight:800; font-size:0.95rem; }
+      .ov-health.ok .ov-health-t { color:#22c55e; }
+      .ov-health.busy .ov-health-t { color:#ef4444; }
+      .ov-health-s { font-size:0.72rem; color:#888; margin-top:0.1rem; }
+
+      .ov-kpis { display:grid; grid-template-columns:repeat(5,1fr); gap:0.7rem; margin-bottom:0.9rem; }
+      .ov-kpi { background:#0d0d0d; border:1px solid #1e1e1e; border-radius:13px; padding:0.85rem 0.95rem; }
+      .ov-kpi.hot { background:#1a0a0a; border-color:#3a1a1a; }
+      .ov-kpi-ic { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:0.95rem; margin-bottom:0.5rem; background:#161616; }
+      .ov-kpi-l { font-size:0.65rem; color:#777; font-weight:700; }
+      .ov-kpi-v { font-size:1.45rem; font-weight:900; color:#fff; line-height:1.1; margin-top:0.1rem; }
+      .ov-kpi-d { font-size:0.66rem; margin-top:0.25rem; font-weight:700; }
+      .ov-up { color:#22c55e; } .ov-down { color:#ef4444; } .ov-flat { color:#666; font-weight:600; }
+
+      .ov-act-row { display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0; border-bottom:1px solid #141414; }
+      .ov-act-row:last-child { border-bottom:none; }
+      .ov-act-ic { width:26px; height:26px; border-radius:8px; background:#161616; display:flex; align-items:center; justify-content:center; font-size:0.78rem; flex-shrink:0; }
+      .ov-act-m { flex:1; min-width:0; }
+      .ov-act-t { font-size:0.78rem; font-weight:700; color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .ov-act-s { font-size:0.66rem; color:#666; }
+      .ov-act-when { font-size:0.64rem; color:#555; flex-shrink:0; }
+
+      .ov-deeper { margin-top:0.9rem; background:linear-gradient(100deg,#120d02,#12060d); border:1px solid #2a1f0a; border-radius:14px; padding:0.9rem 1.1rem; display:flex; align-items:center; gap:0.9rem; flex-wrap:wrap; }
+      .ov-deeper-t { font-weight:800; font-size:0.9rem; color:#fff; }
+      .ov-deeper-s { font-size:0.72rem; color:#888; }
+      .ov-deeper-go { margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap; }
+      .ov-deeper-btn { background:#161616; border:1px solid #2a2a2a; border-radius:9px; padding:0.5rem 0.9rem; font-size:0.76rem; font-weight:700; color:#ddd; cursor:pointer; }
+      .ov-deeper-btn:hover { border-color:var(--ps-blue); color:#fff; }
+
+      /* ══ LIGHT MODE ══  (none of the above had a single light rule — the
+         cards rendered black-on-black the moment the toggle was flipped) */
+      body.light-mode .dsub-bar { border-bottom-color:#e6e9ec; }
+      body.light-mode .dsub-pill { background:#fff; border-color:#e0e4e8; color:#5b636c; }
+      body.light-mode .dsub-pill:hover { color:#14171a; border-color:#c9d0d7; }
+      body.light-mode .dsub-pill.active { background:var(--ps-blue); border-color:var(--ps-blue); color:#000; }
+      body.light-mode .dsub-period select { background:#fff; border-color:#e0e4e8; color:#14171a; }
+
+      body.light-mode .dm-tile { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .dm-tile.warn { background:#fff7e6; border-color:#f0dca8; }
+      body.light-mode .dm-k { color:#8a929b; }
+      body.light-mode .dm-v { color:#14171a; }
+      body.light-mode .dm-s, body.light-mode .dm-note { color:#8a929b; }
+      body.light-mode .dm-row { color:#3f464d; }
+      body.light-mode .dm-row-v { color:#5b636c; }
+      body.light-mode .dm-bar { background:#eceef1; }
+      body.light-mode .dm-empty { color:#6b7280; }
+
+      body.light-mode .dash-section { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .dash-section-head { border-bottom-color:#eef0f2; }
+      body.light-mode .dash-section-title { color:#14171a; }
+
+      body.light-mode .ov-hi { color:#14171a; }
+      body.light-mode .ov-hi-sub { color:#6b7280; }
+      body.light-mode .ov-health-s { color:#6b7280; }
+      body.light-mode .ov-kpi { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .ov-kpi.hot { background:#fdeded; border-color:#f4c9c9; }
+      body.light-mode .ov-kpi-ic { background:#f2f4f7; }
+      body.light-mode .ov-kpi-l { color:#8a929b; }
+      body.light-mode .ov-kpi-v { color:#14171a; }
+      body.light-mode .ov-flat { color:#8a929b; }
+      body.light-mode .ov-act-row { border-bottom-color:#f1f3f5; }
+      body.light-mode .ov-act-ic { background:#f2f4f7; }
+      body.light-mode .ov-act-t { color:#2b3138; }
+      body.light-mode .ov-act-s, body.light-mode .ov-act-when { color:#9aa1ab; }
+      body.light-mode .ov-deeper { background:linear-gradient(100deg,#fff7e6,#fdf0f6); border-color:#f0dfc2; }
+      body.light-mode .ov-deeper-t { color:#14171a; }
+      body.light-mode .ov-deeper-s { color:#6b7280; }
+      body.light-mode .ov-deeper-btn { background:#fff; border-color:#e0e4e8; color:#3f464d; }
+      /* the old dnn-* / dm-* money & site panes, so those don't stay black either */
+      body.light-mode .dnn-wrap { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .dnn-title, body.light-mode .dm-v.y { color:#14171a; }
+      body.light-mode .dnn-card { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .dnn-card.dnn-warm { background:#fff7e6; border-color:#f0dca8; }
+      body.light-mode .dnn-card.dnn-hot { background:#fdeded; border-color:#f4c9c9; }
+      body.light-mode .dnn-num { color:#14171a; }
+      body.light-mode .dnn-lbl { color:#3f464d; }
+      body.light-mode .dnn-sub { color:#9aa1ab; }
+
+      @media (max-width: 1000px) {
+        .ov-kpis { grid-template-columns:repeat(2,1fr); }
         .row-2, .row-3, .row-4 { grid-template-columns:repeat(2,1fr); }
+      }
+      @media (max-width: 640px) {
+        .row-3, .row-4 { grid-template-columns:1fr; }
       }
     </style>
 
     <script>
-    // ── Dashboard sub-tabs ──
-    // Same contract as the main tabs: the choice lives in the URL so a reload
-    // or a period change lands back where you were, and in localStorage so the
-    // next visit does too.
+    // ── Dashboard sub-tabs ── (Overview / Money / Site)
     (function () {
       const DSUB_KEY = 'adminDashSub';
-      const SUBS = ['now', 'money', 'games', 'customers', 'site'];
+      const SUBS = ['overview', 'money', 'site'];
+      // Old bookmarks pointed at now/games/customers — all three now live on the
+      // overview, so send them there rather than to a pane that no longer exists.
+      const LEGACY = { now: 'overview', games: 'overview', customers: 'overview' };
 
       window.switchDash = function (name) {
-        if (!SUBS.includes(name)) name = 'now';
+        name = LEGACY[name] || name;
+        if (!SUBS.includes(name)) name = 'overview';
         SUBS.forEach(s => {
           const pane = document.getElementById('dsub-' + s);
           const pill = document.querySelector('[data-dsub=' + s + ']');
@@ -86,23 +182,23 @@
           if (pill) pill.classList.toggle('active', s === name);
         });
         try { localStorage.setItem(DSUB_KEY, name); } catch (e) {}
-        // Carried on the period form too, so submitting it returns to this pane
-        // rather than dumping you back on Now.
         const carry = document.getElementById('dsubPeriodSub');
         if (carry) carry.value = name;
         const q = new URLSearchParams(window.location.search);
         q.set('tab', 'dashboard');
-        if (name === 'now') q.delete('sub'); else q.set('sub', name);
+        if (name === 'overview') q.delete('sub'); else q.set('sub', name);
         q.delete('msg');
         history.replaceState({}, '', '/admin?' + q.toString());
       };
+      // Jump into the sibling sub-tabs from a card link on the overview.
+      window.dashGoto = function (name) { switchDash(name); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
       const params = new URLSearchParams(window.location.search);
       let initial = params.get('sub');
       if (!initial) { try { initial = localStorage.getItem(DSUB_KEY); } catch (e) {} }
-      // A month-log save returns with ?month=, which only the Money pane can act on.
       if (params.get('month')) initial = 'money';
-      switchDash(SUBS.includes(initial) ? initial : 'now');
+      initial = LEGACY[initial] || initial;
+      switchDash(SUBS.includes(initial) ? initial : 'overview');
     })();
     </script>
 

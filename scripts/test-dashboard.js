@@ -250,4 +250,111 @@ check('all time counts undated rentals; a bounded period cannot place them', () 
   assert.strictEqual(dash.topRented(undated, dash.periodRange('month', NOW), 5).length, 0);
 });
 
+// ── prior period ─────────────────────────────────────────────────────────────
+// A trend arrow needs the equivalent window immediately before the current one:
+// this month vs last month, this year vs last year.
+check('prior period for a month is the whole previous month', () => {
+  const cur = dash.periodRange('month', NOW);
+  const prev = dash.priorPeriodRange(cur);
+  assert.strictEqual(prev.from, '2026-08-01');
+  assert.strictEqual(prev.to, '2026-08-31');
+  assert.strictEqual(prev.label, 'August 2026');
+});
+
+check('prior period for three months is the three months before that', () => {
+  const cur = dash.periodRange('3m', NOW);   // 2026-07-01 .. 2026-09-30
+  const prev = dash.priorPeriodRange(cur);
+  assert.strictEqual(prev.from, '2026-04-01');
+  assert.strictEqual(prev.to, '2026-06-30');
+});
+
+check('prior period for a year is the previous calendar year', () => {
+  const prev = dash.priorPeriodRange(dash.periodRange('year', NOW));
+  assert.strictEqual(prev.from, '2025-01-01');
+  assert.strictEqual(prev.to, '2025-12-31');
+});
+
+// "All time" has no window, so it has no "before" — a trend arrow makes no sense.
+check('all time has no prior period', () => {
+  assert.strictEqual(dash.priorPeriodRange(dash.periodRange('all', NOW)), null);
+});
+
+// ── trend ────────────────────────────────────────────────────────────────────
+check('trend is the percent change, with direction, guarding divide-by-zero', () => {
+  assert.deepStrictEqual(dash.trend(120, 100), { pct: 20, dir: 'up' });
+  assert.deepStrictEqual(dash.trend(80, 100), { pct: 20, dir: 'down' });
+  assert.deepStrictEqual(dash.trend(100, 100), { pct: 0, dir: 'flat' });
+  // From nothing to something is a rise, but "∞%" is not a useful number.
+  assert.deepStrictEqual(dash.trend(50, 0), { pct: null, dir: 'up' });
+  assert.deepStrictEqual(dash.trend(0, 0), { pct: 0, dir: 'flat' });
+});
+
+// ── recent activity ──────────────────────────────────────────────────────────
+const ACT_ORDERS = [
+  { ref: 'PH-1', fb_name: 'Ana Cruz', game_title: 'A', state: 'active',
+    state_history: [
+      { state: 'awaiting_payment', at: '2026-09-09T10:00:00.000Z' },
+      { state: 'verifying_payment', at: '2026-09-09T10:05:00.000Z' },
+      { state: 'awaiting_qr', at: '2026-09-09T10:20:00.000Z' },
+      { state: 'active', at: '2026-09-09T10:30:00.000Z' }
+    ] },
+  { ref: 'PH-2', fb_name: 'Ben Uy', game_title: 'B', state: 'verifying_payment',
+    state_history: [
+      { state: 'awaiting_payment', at: '2026-09-10T08:00:00.000Z' },
+      { state: 'verifying_payment', at: '2026-09-10T08:15:00.000Z' }
+    ] },
+  // No history at all — should still surface as one item at its created time.
+  { ref: 'PH-3', fb_name: 'Cara Lim', game_title: 'C', state: 'closed', created_at: '2026-09-08T12:00:00.000Z' }
+];
+
+check('recent activity is newest-first across all orders, capped at the limit', () => {
+  // Five items total: PH-1 x3 (verify/qr/active), PH-2 x1, PH-3 x1.
+  const all = dash.recentActivity(ACT_ORDERS, 20);
+  assert.strictEqual(all.length, 5);
+  assert.strictEqual(all[0].ref, 'PH-2');           // 2026-09-10 08:15 is newest
+  assert.strictEqual(all[0].state, 'verifying_payment');
+  assert.strictEqual(all[all.length - 1].ref, 'PH-3'); // 2026-09-08 is oldest
+  assert.strictEqual(dash.recentActivity(ACT_ORDERS, 3).length, 3);
+});
+
+check('recent activity skips the very first awaiting_payment — it is just "order started"', () => {
+  const a = dash.recentActivity(ACT_ORDERS, 20);
+  const firstSteps = a.filter(x => x.ref === 'PH-1' && x.state === 'awaiting_payment');
+  assert.strictEqual(firstSteps.length, 0);
+});
+
+check('recent activity carries a human label, ref, name and time for each item', () => {
+  const a = dash.recentActivity(ACT_ORDERS, 1);
+  assert.strictEqual(a[0].ref, 'PH-2');
+  assert.strictEqual(a[0].name, 'Ben Uy');
+  assert.strictEqual(a[0].game, 'B');
+  assert.strictEqual(typeof a[0].label, 'string');
+  assert.ok(a[0].label.length > 0);
+  assert.strictEqual(a[0].at, '2026-09-10T08:15:00.000Z');
+});
+
+check('recent activity on no orders is an empty list, not a throw', () => {
+  assert.deepStrictEqual(dash.recentActivity([], 5), []);
+  assert.deepStrictEqual(dash.recentActivity(null, 5), []);
+});
+
+// ── accounts slot use ────────────────────────────────────────────────────────
+check('accounts slot use reports fill per account, worst first', () => {
+  const accounts = [
+    { id: 1, label: 'Full One', slots: { trophy: { enabled: true, status: 'rented' }, non_trophy: { enabled: true, status: 'buyed' }, ps4_primary: { enabled: false, status: 'open' } } },
+    { id: 2, label: 'Half One', slots: { trophy: { enabled: true, status: 'rented' }, non_trophy: { enabled: true, status: 'open' }, ps4_primary: { enabled: true, status: 'open' } } },
+    { id: 3, label: 'Empty One', slots: { trophy: { enabled: true, status: 'open' }, non_trophy: { enabled: true, status: 'open' }, ps4_primary: { enabled: true, status: 'maintenance' } } }
+  ];
+  const rows = dash.accountsSlotUse(accounts);
+  assert.strictEqual(rows.length, 3);
+  assert.strictEqual(rows[0].label, 'Empty One');   // 0 of 3 -> worst
+  assert.strictEqual(rows[0].filled, 0);
+  assert.strictEqual(rows[0].total, 3);
+  assert.strictEqual(rows[1].label, 'Half One');
+  assert.strictEqual(rows[1].idle, 2);
+  assert.strictEqual(rows[2].label, 'Full One');
+  assert.strictEqual(rows[2].filled, 2);
+  assert.strictEqual(rows[2].total, 2);             // disabled slot not counted
+});
+
 console.log('\n' + passed + ' assertions passed');

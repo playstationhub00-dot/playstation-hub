@@ -4097,16 +4097,24 @@ app.get('/admin', requireAuth, async (req, res) => {
   const fullyBooked = [...bookedGameIds].filter(id => !freeGameIds.has(id)).length;
 
   const PAY_LABELS = { gcash: 'GCash', maya: 'Maya', paypal: 'PayPal', qrph: 'QRPh (auto)', card: 'Card', unrecorded: 'Not recorded' };
+  // The equivalent window before this one, for the trend arrows. Null for
+  // "all time" — nothing to compare against.
+  const dashPriorPeriod = dashboard.priorPeriodRange(dashPeriod);
+  const collectedNow = dashboard.collected(customers, dashPeriod);
+  const collectedPrior = dashPriorPeriod ? dashboard.collected(customers, dashPriorPeriod) : null;
   const dashMetrics = {
-    collected: dashboard.collected(customers, dashPeriod),
+    collected: collectedNow,
+    collectedTrend: collectedPrior ? dashboard.trend(collectedNow.total, collectedPrior.total) : null,
     split: dashboard.rentalVsSales(customers, dashPeriod),
     deposits: dashboard.depositsHeld(allOrders),
     ads: dashboard.adCost(monthLogs, dashPeriod, rentalsStarted),
     paymentMix: dashboard.paymentMix(allOrders, dashPeriod),
     methodLabel: m => PAY_LABELS[m] || String(m || '').toUpperCase(),
     slots: dashboard.slotUtilisation(accountsView.accounts),
+    accountsSlotUse: dashboard.accountsSlotUse(accountsView.accounts),
     payback: dashboard.gamePayback(games, customers),
     topRented: dashboard.topRented(customers, dashPeriod, 5),
+    recentActivity: dashboard.recentActivity(allOrders, 6),
     fullyBooked,
     topRequest: openRequests[0] || null,
     repeat: dashboard.repeatRate(customers),
