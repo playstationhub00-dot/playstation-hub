@@ -4198,9 +4198,22 @@ app.get('/admin', requireAuth, async (req, res) => {
     .filter(r => r && r.private && !r.handled)
     .sort((a, b) => Date.parse(b.created_at || '') - Date.parse(a.created_at || ''));
 
+  // Orders whose customer row was deleted without them — the damage the old
+  // one-sided delete routes left behind. customer_id is only ever set once a
+  // customer row was actually created for the order, so if it points at an id
+  // that no longer exists, that row was removed and the order is now counting
+  // money for a customer who is gone. Terminal orders carry no money, so they
+  // are not worth chasing.
+  const liveCustomerIds = new Set(customers.map(c => c.id));
+  const orphanedOrders = allOrders.filter(o =>
+    o && o.customer_id
+    && !orders.PAID_EXCLUDED_STATES.includes(o.state)
+    && !liveCustomerIds.has(o.customer_id)
+  );
+
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
-    negativeReviews, paymongoHealth, now: dashNowDate
+    negativeReviews, orphanedOrders, paymongoHealth, now: dashNowDate
   });
 
   res.render('admin', { notifs, negativeReviews, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });

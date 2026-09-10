@@ -248,4 +248,56 @@ ok('nothing is raised when there are no negative reviews', () => {
   assert.strictEqual(n.build(Object.assign({}, empty, { negativeReviews: null })).count, 0);
 });
 
+console.log('\nbuild() — orphaned orders');
+
+ok('an order with no customer record is a warning, tab orders', () => {
+  const r = n.build(Object.assign({}, empty, {
+    orphanedOrders: [{ ref: 'PH-0080', fb_name: 'Luis Mallari', game_title: 'NBA2K27', amount_due: 399, deposit_due: 0, state: 'active' }]
+  }));
+  assert.strictEqual(r.items.length, 1);
+  const it = r.items[0];
+  assert.strictEqual(it.kind, 'orphaned_order');
+  assert.strictEqual(it.urgency, 'warn');
+  assert.strictEqual(it.tab, 'orders');
+  assert.strictEqual(it.ref, 'PH-0080');
+  assert.ok(it.sub.includes('Luis Mallari'), 'names the customer: ' + it.sub);
+  assert.ok(it.sub.includes('399'), 'names the money still counted: ' + it.sub);
+});
+
+ok('the deposit counts toward the money still on the books', () => {
+  const r = n.build(Object.assign({}, empty, {
+    orphanedOrders: [{ ref: 'PH-9', amount_due: 200, deposit_due: 100, state: 'closed' }]
+  }));
+  assert.ok(r.items[0].sub.includes('300'), 'amount_due + deposit_due: ' + r.items[0].sub);
+});
+
+ok('a thin orphan record never renders undefined', () => {
+  const r = n.build(Object.assign({}, empty, { orphanedOrders: [{ ref: 'PH-1' }] }));
+  assert.strictEqual(r.count, 1);
+  assert.ok(!/undefined|null|NaN/.test(r.items[0].title + ' ' + r.items[0].sub), r.items[0].sub);
+});
+
+ok('each orphan gets its own row with a unique id', () => {
+  const r = n.build(Object.assign({}, empty, {
+    orphanedOrders: [{ ref: 'PH-1', state: 'active' }, { ref: 'PH-2', state: 'active' }]
+  }));
+  assert.strictEqual(r.items.length, 2);
+  assert.notStrictEqual(r.items[0].id, r.items[1].id);
+});
+
+ok('nothing is raised when there are no orphans', () => {
+  assert.strictEqual(n.build(Object.assign({}, empty, { orphanedOrders: [] })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { orphanedOrders: null })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { orphanedOrders: [null] })).count, 0);
+});
+
+ok('an orphan sorts below a real payment to approve but is still listed', () => {
+  const r = n.build(Object.assign({}, empty, {
+    orderQueue: [{ ref: 'PH-5', state: 'verifying_payment' }],
+    orphanedOrders: [{ ref: 'PH-0080', state: 'active', amount_due: 399 }]
+  }));
+  assert.strictEqual(r.items[0].kind, 'verifying_payment');
+  assert.strictEqual(r.items[1].kind, 'orphaned_order');
+});
+
 console.log('\n' + passed + ' assertions passed\n');
