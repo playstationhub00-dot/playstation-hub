@@ -234,4 +234,53 @@ check('the shipped ask lines are about the service, not the game', () => {
   assert.ok(!/how was the game|enjoy the game\?/i.test(both));
 });
 
+console.log('\npurchase template — a sale is not a rental');
+
+check('a purchase template ships by default', () => {
+  assert.strictEqual(typeof t.DEFAULT_TEMPLATES.purchase, 'string');
+  assert.ok(t.DEFAULT_TEMPLATES.purchase.length > 0);
+});
+
+check('it never mentions a duration or a return date', () => {
+  // The whole point. A customer who bought the game has nothing to give back,
+  // and the rental confirmation told them a return date anyway.
+  const p = t.DEFAULT_TEMPLATES.purchase;
+  assert.ok(!/\{days\}/.test(p), 'no days token');
+  assert.ok(!/\{end_date\}/.test(p), 'no end_date token');
+  assert.ok(!/return by/i.test(p), 'no "return by" wording');
+  assert.ok(!/duration/i.test(p), 'no "duration" wording');
+});
+
+check('it still carries the things a buyer needs', () => {
+  const p = t.DEFAULT_TEMPLATES.purchase;
+  ['{name}', '{game}', '{type}', '{price}'].forEach(tok => {
+    assert.ok(p.includes(tok), 'missing ' + tok);
+  });
+  assert.ok(/password|email/i.test(p), 'keeps the do-not-change-the-login warning');
+});
+
+check('rendering a bought customer produces no stray tokens or blank lines', () => {
+  const out = t.renderFor('purchase', {
+    customer_name: 'Ana', game_title: 'GT7', account_type: 'nt',
+    price: 1499, days: null, end_date: '', status: 'bought',
+    order_ref: 'PH-1', order_key: 'k1'
+  }, t.DEFAULT_TEMPLATES, {});
+  assert.ok(out.includes('Ana'), 'names them');
+  assert.ok(out.includes('1499'), 'shows what they paid');
+  assert.ok(!/\{[a-z_]+\}/.test(out), 'no unreplaced tokens: ' + out);
+  assert.ok(!/undefined|NaN|null/.test(out), 'clean: ' + out);
+  assert.ok(!/\n\n\n/.test(out), 'no triple blank line from a collapsed token');
+});
+
+check('a purchase with no order link still renders', () => {
+  const out = t.renderFor('purchase', {
+    customer_name: 'Ben', game_title: 'FIFA', account_type: 'tr', price: 999
+  }, t.DEFAULT_TEMPLATES, {});
+  assert.ok(!/\{[a-z_]+\}/.test(out), 'no unreplaced tokens: ' + out);
+  // The website link is legitimately a URL. What must NOT survive is the
+  // review ask, which needs an order link to point at.
+  assert.ok(!/how was it|review/i.test(out), 'the review ask collapses away: ' + out);
+  assert.ok(out.trim().endsWith('playstation-hub.com'), 'ends cleanly, no trailing blank: ' + JSON.stringify(out.slice(-30)));
+});
+
 console.log('\n' + passed + ' assertions passed');

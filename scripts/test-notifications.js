@@ -300,4 +300,40 @@ ok('an orphan sorts below a real payment to approve but is still listed', () => 
   assert.strictEqual(r.items[1].kind, 'orphaned_order');
 });
 
+console.log('\nbuild() — purchases wrongly filed as rentals');
+
+ok('a bought order still carrying an end date is a warning', () => {
+  const r = n.build(Object.assign({}, empty, {
+    boughtWithDuration: [{ ref: 'PH-0091', fb_name: 'Walid', game_title: 'Onimusha', end_date: '2026-09-18', days: 7 }]
+  }));
+  assert.strictEqual(r.items.length, 1);
+  const it = r.items[0];
+  assert.strictEqual(it.kind, 'bought_with_duration');
+  assert.strictEqual(it.urgency, 'warn');
+  assert.strictEqual(it.tab, 'customers');
+  assert.strictEqual(it.ref, 'PH-0091');
+  assert.ok(it.sub.includes('Walid'), 'names them: ' + it.sub);
+  assert.ok(/return/i.test(it.title + ' ' + it.sub), 'says what goes wrong: ' + it.title + ' / ' + it.sub);
+});
+
+ok('a thin record never renders undefined', () => {
+  const r = n.build(Object.assign({}, empty, { boughtWithDuration: [{ ref: 'PH-1' }] }));
+  assert.strictEqual(r.count, 1);
+  assert.ok(!/undefined|null|NaN/.test(r.items[0].title + ' ' + r.items[0].sub), r.items[0].sub);
+});
+
+ok('one row per affected purchase, unique ids', () => {
+  const r = n.build(Object.assign({}, empty, {
+    boughtWithDuration: [{ ref: 'PH-1' }, { ref: 'PH-2' }]
+  }));
+  assert.strictEqual(r.items.length, 2);
+  assert.notStrictEqual(r.items[0].id, r.items[1].id);
+});
+
+ok('nothing is raised when every purchase is filed correctly', () => {
+  assert.strictEqual(n.build(Object.assign({}, empty, { boughtWithDuration: [] })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { boughtWithDuration: null })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { boughtWithDuration: [null] })).count, 0);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

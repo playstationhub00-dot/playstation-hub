@@ -19,6 +19,20 @@
       <div class="qa-l">Customer</div>
       <input class="qa-in" type="text" name="customer_name" id="qaName" placeholder="Facebook name — e.g. Ana Cruz" required autocomplete="off">
 
+      <%# Status was buried in "More options", but it decides everything now:
+          rental pricing vs buy pricing, whether there is a duration at all,
+          whether an end date exists, and which message you get to copy. A
+          control that load-bearing does not belong behind a disclosure. %>
+      <div class="qa-l">What this is</div>
+      <div class="qa-modes" id="qaModes">
+        <input type="radio" name="status" id="qaStRent" value="renting" checked onchange="qaStatusChanged()">
+        <label for="qaStRent" class="qa-mode">🟢 Renting</label>
+        <input type="radio" name="status" id="qaStBought" value="bought" onchange="qaStatusChanged()">
+        <label for="qaStBought" class="qa-mode">🛒 Bought</label>
+        <input type="radio" name="status" id="qaStDone" value="done" onchange="qaStatusChanged()">
+        <label for="qaStDone" class="qa-mode">✅ Finished</label>
+      </div>
+
       <div class="qa-l">What they're getting</div>
       <div class="qa-g3">
         <select class="qa-in" name="game_id" id="qaGame" onchange="qaPrice()" required>
@@ -30,7 +44,8 @@
           <% (qaGames || []).forEach(g => { %>
           <option value="<%= g.id %>"
             data-nt7="<%= g.nt7 %>" data-nt30="<%= g.nt30 %>"
-            data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"><%= g.title %></option>
+            data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"
+            data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
           <% }) %>
         </select>
         <select class="qa-in" name="account_type" id="qaType" onchange="qaPrice()">
@@ -43,6 +58,9 @@
           <option value="30" selected>Monthly (30d)</option>
           <option value="custom">✏️ Custom…</option>
         </select>
+        <%# Hidden for a purchase — there is no duration to enter. Disabled too,
+            so a hidden control cannot still post a value. %>
+        <div class="qa-nodur" id="qaNoDuration" hidden>Yours to keep</div>
       </div>
       <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaPrice()" style="margin-top:0.45rem;">
       <div class="qa-price" id="qaPriceBox">Pick a game to see the price</div>
@@ -92,7 +110,7 @@
         <label class="qa-sub">Starts
           <input class="qa-in" type="date" name="start_date" id="qaStart" onchange="qaEnd()">
         </label>
-        <label class="qa-sub">Ends <span id="qaEndAuto">(auto)</span>
+        <label class="qa-sub" id="qaEndWrap">Ends <span id="qaEndAuto">(auto)</span>
           <input class="qa-in" type="date" name="end_date" id="qaEndDate">
         </label>
       </div>
@@ -102,18 +120,11 @@
           hand-agreed price needs recording, it still has somewhere to go. %>
       <details class="qa-more">
         <summary>More options</summary>
-        <div class="qa-g2">
-          <label class="qa-sub">Status
-            <select class="qa-in" name="status" id="qaStatus">
-              <option value="renting">🟢 Currently renting</option>
-              <option value="done">✅ Done (already finished)</option>
-              <option value="bought">🛒 Bought (permanent)</option>
-            </select>
-          </label>
-          <label class="qa-sub">Price override (₱)
-            <input class="qa-in" type="number" name="price" id="qaPriceOverride" min="0" placeholder="auto" oninput="qaPrice()">
-          </label>
-        </div>
+        <%# Status now lives at the top of the form — it decides pricing, the
+            duration, the dates and the message, so it is not an extra option. %>
+        <label class="qa-sub">Price override (₱)
+          <input class="qa-in" type="number" name="price" id="qaPriceOverride" min="0" placeholder="auto" oninput="qaPrice()">
+        </label>
         <%# Decides what the order link shows. Signed in already means the page
             confirms the rental and asks how it went; "not yet" leaves it asking
             for a sign-in code, which is what every Quick Add used to do. %>
@@ -193,8 +204,27 @@
   .qa-in { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:8px; padding:0.55rem 0.7rem; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box; }
   .qa-in:focus { outline:none; border-color:var(--ps-blue); }
   .qa-g3 { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:0.45rem; }
+  /* Rent / Bought / Finished. Radios hidden, labels are the buttons — no JS
+     needed to paint the selected one, matching how the review thumbs work. */
+  .qa-modes { display:grid; grid-template-columns:repeat(3,1fr); gap:0.4rem; }
+  .qa-modes input { position:absolute; opacity:0; width:0; height:0; }
+  .qa-mode { display:flex; align-items:center; justify-content:center; gap:0.3rem; padding:0.55rem 0.4rem; border:1px solid #2a2a2a; border-radius:8px; background:#0a0a0a; color:#8a8a8a; font-size:0.8rem; font-weight:700; cursor:pointer; box-sizing:border-box; }
+  .qa-mode:hover { border-color:#3a3a3a; color:#ccc; }
+  #qaStRent:checked + .qa-mode { border-color:#22c55e; background:rgba(34,197,94,0.12); color:#4ade80; }
+  #qaStBought:checked + .qa-mode { border-color:var(--ps-blue); background:rgba(240,165,0,0.12); color:#f0a500; }
+  #qaStDone:checked + .qa-mode { border-color:#555; background:#141414; color:#ddd; }
+  .qa-modes input:focus-visible + .qa-mode { outline:2px solid var(--ps-blue); outline-offset:2px; }
+  /* Sits where the duration select was, so the row keeps its shape. */
+  .qa-nodur { display:flex; align-items:center; justify-content:center; border:1px dashed #333; border-radius:8px; color:#777; font-size:0.78rem; padding:0.55rem 0.4rem; box-sizing:border-box; }
+  .qa-nodur[hidden] { display:none; }
+  body.light-mode .qa-mode { background:#f7f9fa; border-color:#e0e4e8; color:#6b737b; }
+  body.light-mode .qa-nodur { border-color:#d7dce1; color:#8b939c; }
   .qa-g2 { display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; }
   .qa-sub { display:block; font-size:0.68rem; color:#666; }
+  /* An explicit `display` beats the hidden attribute, so hiding the Ends field
+     for a purchase left it on screen at full size. Same trap the success-screen
+     footer hit. Anything in this modal that gets toggled needs this guard. */
+  .qa-sub[hidden], .qa-in[hidden], .qa-modes[hidden] { display:none !important; }
   .qa-sub .qa-in { margin-top:0.2rem; }
   .qa-warn { background:#100a00; border:1px solid #3a2a00; color:#e8c06a; border-radius:8px; padding:0.5rem 0.7rem; font-size:0.72rem; margin-top:0.35rem; line-height:1.55; }
   .qa-warn a { color:var(--ps-blue); font-weight:700; }
@@ -257,7 +287,37 @@
     el('qaTitle').textContent = 'Quick Add — customer & order';
     el('qaCustomDays').hidden = true;
     el('qaStart').value = new Date().toISOString().slice(0, 10);
-    qaPaidChanged(); qaEnd(); qaPrice();
+    qaPaidChanged(); qaStatusChanged();
+  };
+
+  // Is this a sale? One question the rest of the form hangs off.
+  function qaIsBuy() {
+    var b = el('qaStBought');
+    return !!(b && b.checked);
+  }
+
+  // Status decides the shape of the form: a purchase has no duration, no end
+  // date, and is priced from the buy fields rather than the rental tiers.
+  // Everything that used to assume "rental" asks this first.
+  window.qaStatusChanged = function () {
+    var buy = qaIsBuy();
+    el('qaMode').value = buy ? 'buy' : 'rent';
+
+    // Hidden AND disabled: a hidden select still posts its value, and a stale
+    // "30" reaching the server is how a purchase got a duration in the first
+    // place. The server ignores days for a buy anyway — this is the second lock.
+    el('qaDays').hidden = buy;
+    el('qaDays').disabled = buy;
+    el('qaNoDuration').hidden = !buy;
+    if (buy) { el('qaCustomDays').hidden = true; el('qaCustomDays').disabled = true; }
+    else { el('qaCustomDays').disabled = false; qaDaysChanged(); }
+
+    el('qaEndWrap').hidden = buy;
+    el('qaEndDate').disabled = buy;
+    if (buy) el('qaEndDate').value = '';
+
+    qaEnd();
+    qaPrice();
   };
 
   window.qaDaysChanged = function () {
@@ -275,6 +335,7 @@
   // End date follows start + duration, but only while the owner has not typed
   // their own — an edited end date is a decision, not a default to overwrite.
   window.qaEnd = function () {
+    if (qaIsBuy()) { el('qaEndDate').value = ''; return; }
     var start = el('qaStart').value, d = daysValue();
     if (!start || d < 1) return;
     var end = new Date(Date.parse(start + 'T00:00:00Z') + d * 86400000).toISOString().slice(0, 10);
@@ -318,6 +379,24 @@
     }
     var type = el('qaType').value, d = daysValue();
     var pre = type === 'tr' ? 'tr' : 'nt';
+
+    // A sale is priced from the buy fields, not the rental tiers. PS4 Primary
+    // has no buy price of its own and borrows Non-Trophy, same as the server.
+    if (qaIsBuy()) {
+      var buy = parseInt(opt.dataset[pre === 'tr' ? 'buytr' : 'buynt']) || 0;
+      var amt = override !== '' ? (parseInt(override) || 0) : buy;
+      if (!amt) {
+        box.className = 'qa-price qa-price-empty';
+        box.textContent = 'No buy price set for this game — type the amount in Price override (under More options).';
+        return;
+      }
+      box.className = 'qa-price';
+      box.innerHTML = '<b>₱' + amt.toLocaleString() + '</b> purchase'
+        + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
+        + ' <span style="color:#7a7a7a;">· no deposit, no return date</span>';
+      return;
+    }
+
     var p7 = parseInt(opt.dataset[pre + '7']) || 0;
     var p30 = parseInt(opt.dataset[pre + '30']) || 0;
     // Mirrors lib/rent-pricing.js exactly. It used to pro-rate everything under

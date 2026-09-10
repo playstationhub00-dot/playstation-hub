@@ -2787,17 +2787,26 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   const game = getGame(b.game_id);
   if (!game) return res.status(400).json({ ok: false, reason: 'bad_game', message: 'Pick a game.' });
 
-  const mode = b.mode === 'buy' ? 'buy' : 'rent';
-  const type = (mode === 'buy' ? ['nt', 'tr'] : ['nt', 'tr', 'ps4']).includes(b.account_type) ? b.account_type : null;
+  // Status decides everything, and it decides it HERE rather than trusting the
+  // form's hidden mode field. That field was hardcoded to 'rent', so picking
+  // "Bought (permanent)" only relabelled the customer row: the purchase was
+  // still priced at the rental rate, charged a refundable deposit, given a
+  // duration and an end date, and then swept into "awaiting return" on that
+  // date — asking someone who owns the game outright to give it back.
+  const status = b.status === 'bought' ? 'bought' : (b.status === 'done' ? 'done' : 'renting');
+  const mode = status === 'bought' ? 'buy' : 'rent';
+
+  // PS4 Primary has no buy price field of its own, so a permanent PS4 sale
+  // borrows the Non-Trophy price — the same fallback the rental side uses.
+  const type = ['nt', 'tr', 'ps4'].includes(b.account_type) ? b.account_type : null;
   if (!type) return res.status(400).json({ ok: false, reason: 'bad_type', message: 'Pick an account type.' });
+  const buyType = type === 'ps4' ? 'nt' : type;
 
   const days = mode === 'buy' ? null
     : (b.days === 'custom' ? (parseInt(b.custom_days) || 0) : (parseInt(b.days) || 0));
   if (mode === 'rent' && days < 1) {
     return res.status(400).json({ ok: false, reason: 'bad_days', message: 'Enter how many days.' });
   }
-
-  const status = b.status === 'bought' ? 'bought' : (b.status === 'done' ? 'done' : 'renting');
 
   // The guard the Orders form never had. Refuse before writing anything: a
   // half-recorded rental is worse than a rejected one, because the customer row
@@ -2814,11 +2823,19 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // Price comes from the same helpers the public site uses, so an
   // admin-entered rental cannot drift from what a customer would have paid.
   // An explicit override wins, because a hand-arranged deal is a real thing.
-  const pricing = mode === 'buy' ? computeBuyPricing(game, type) : computeRentPricing(game, type, days);
-  if (!pricing) {
-    return res.status(400).json({ ok: false, reason: 'bad_pricing', message: 'That game has no price set for this type and duration.' });
-  }
   const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
+  const pricing = mode === 'buy' ? computeBuyPricing(game, buyType) : computeRentPricing(game, type, days);
+  if (!pricing && override == null) {
+    // Most of the catalogue has no per-game buy price set, so refusing every
+    // purchase outright would make "Bought" unusable. Ask for the number
+    // instead — a hand-arranged sale price is a real thing.
+    return res.status(400).json({
+      ok: false, reason: 'bad_pricing',
+      message: mode === 'buy'
+        ? 'No buy price set for this game — type the amount in Price override.'
+        : 'That game has no price set for this type and duration.'
+    });
+  }
   const amountDue = override != null && override >= 0 ? override : pricing.amountDue;
   const depositDue = mode === 'buy' ? 0 : pricing.depositDue;
 
@@ -2827,6 +2844,12 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   if (!endDate && mode === 'rent') {
     endDate = new Date(Date.parse(startDate + 'T00:00:00Z') + days * 86400000).toISOString().slice(0, 10);
   }
+  // A purchase has no end date, whatever the form posted. The date input is
+  // auto-filled by the page and merely hidden when Bought is picked, so
+  // without this a stale value would still reach the order — and an order with
+  // an end_date is exactly what advanceEndedRentals() sweeps into
+  // "awaiting return".
+  if (mode === 'buy') endDate = '';
 
   const paid = String(b.paid || 'yes') !== 'no';
   const method = String(b.method || '').trim().slice(0, 20) || 'manual';
@@ -2851,7 +2874,10 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
       state: initialState
     }, paid ? {
       payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
-    } : {}, mode === 'buy' ? { is_buy: true } : {}, override != null ? {} : {
+    } : {}, mode === 'buy' ? { is_buy: true } : {},
+    // computeBuyPricing returns an amount and nothing else — no tier, no
+    // snapshot — so these belong to the rental path only.
+    (override != null || mode === 'buy') ? {} : {
       price_tier_name: pricing.priceTierName, price_snapshot: pricing.snapshot
     }));
 
@@ -2895,7 +2921,10 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
     const settings = getSiteSettings();
     const promo = settings.promo || {};
     const customerRow = db.get('customers').find({ id: customerId }).value();
-    const message = templates.renderFor('confirmation', customerRow, settings.message_templates, {
+    // A buyer gets the purchase wording: no duration, no return date. Sending
+    // them the rental confirmation is what told someone who owns the game how
+    // many days they had it for.
+    const message = templates.renderFor(mode === 'buy' ? 'purchase' : 'confirmation', customerRow, settings.message_templates, {
       deposit: promo.deposit != null ? promo.deposit : 100,
       lateFeePerDay: promo.late_fee_per_day != null ? promo.late_fee_per_day : 20
     });
@@ -3462,6 +3491,29 @@ app.post('/admin/online', requireAuth, (req, res) => {
 app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
   await orders.markRefunded(req.params.ref);
   res.redirect('/admin?tab=orders&msg=refund_marked');
+});
+
+// Re-files an order that was recorded as a rental but is really a purchase:
+// clears the duration and end date on both the order and its customer row, and
+// marks the order is_buy so the customer's own page says "It's yours" instead
+// of counting down to a return.
+//
+// The end date is the point of it. Left in place, advanceEndedRentals() moves
+// the order to 'awaiting_return' on that day and the site starts asking a
+// customer who owns the game outright to give it back.
+app.post('/admin/orders/:ref/fix-purchase', requireAuth, async (req, res) => {
+  const ref = orders.parseOrderRef(req.params.ref);
+  if (!ref) return res.redirect('/admin?tab=customers&msg=error');
+  const ok = await orders.repairPurchase(ref);
+  if (!ok) return res.redirect('/admin?tab=customers&msg=order_stale');
+  // The customer row carries its own copy of both fields, and the dashboard
+  // reads that copy — fixing only the order would leave the two disagreeing.
+  (getCustomers() || [])
+    .filter(c => c && c.order_ref === ref)
+    .forEach(c => {
+      db.get('customers').find({ id: c.id }).assign({ days: null, end_date: '', status: 'bought' }).write();
+    });
+  res.redirect('/admin?tab=customers&msg=purchase_fixed');
 });
 
 // Owner-initiated cleanup for test, duplicate, or mistaken orders. Not part
@@ -4187,7 +4239,18 @@ app.get('/admin', requireAuth, async (req, res) => {
   const qaGames = games.map(g => {
     const nt = promotedTier(g, 'nt', qaPromo);
     const tr = promotedTier(g, 'tr', qaPromo);
-    return { id: g.id, title: g.title, nt7: nt[7], nt30: nt[30], tr7: tr[7], tr30: tr[30] };
+    // Buy prices go through computeBuyPricing rather than being read raw, so
+    // the picker cannot preview an undiscounted sale price while the save
+    // applies the buy promo — the same trap the rent tiers had. A game with no
+    // buy price set reports 0, and the form asks for a price override.
+    const buyNt = computeBuyPricing(g, 'nt');
+    const buyTr = computeBuyPricing(g, 'tr');
+    return {
+      id: g.id, title: g.title,
+      nt7: nt[7], nt30: nt[30], tr7: tr[7], tr30: tr[30],
+      buynt: buyNt ? buyNt.amountDue : 0,
+      buytr: buyTr ? buyTr.amountDue : 0
+    };
   }).sort((a, b) => a.title.localeCompare(b.title));
 
   // The topbar bell. Built from the same queues the tabs render, so the badge
@@ -4204,6 +4267,17 @@ app.get('/admin', requireAuth, async (req, res) => {
   // that no longer exists, that row was removed and the order is now counting
   // money for a customer who is gone. Terminal orders carry no money, so they
   // are not worth chasing.
+  // Purchases that were filed as rentals — the damage from Quick Add's
+  // hardcoded mode. The dangerous field is end_date: advanceEndedRentals()
+  // sweeps any active order past it into 'awaiting_return', so on that date the
+  // site asks someone who bought the game to give it back.
+  const boughtRefs = new Set(
+    customers.filter(c => c && c.status === 'bought' && c.order_ref).map(c => c.order_ref)
+  );
+  const boughtWithDuration = allOrders.filter(o =>
+    o && boughtRefs.has(o.ref) && (o.end_date || o.days)
+  );
+
   const liveCustomerIds = new Set(customers.map(c => c.id));
   const orphanedOrders = allOrders.filter(o =>
     o && o.customer_id
@@ -4213,10 +4287,10 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
-    negativeReviews, orphanedOrders, paymongoHealth, now: dashNowDate
+    negativeReviews, orphanedOrders, boughtWithDuration, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { notifs, negativeReviews, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { notifs, negativeReviews, boughtWithDuration, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

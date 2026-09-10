@@ -19,7 +19,8 @@
     %>
     <%# Only rendered when something is actually waiting — an empty
         "Needs attention" card every day trains you to ignore it. %>
-    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length) { %>
+    <% const qaBought = (typeof boughtWithDuration !== 'undefined' && boughtWithDuration) ? boughtWithDuration : []; %>
+    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length || qaBought.length) { %>
     <!-- NEEDS ATTENTION -->
     <div class="adm-card" id="sec-attention">
       <div class="adm-card-head" style="border-left:3px solid #ef4444;">
@@ -34,6 +35,32 @@
             to the next customer while somebody is already in it, so this
             sits above the reminders — a double-booking costs more than a
             late return. %>
+        <%# Purchases that were recorded as rentals. Above the others because
+            the consequence is the loudest: on the end date the site starts
+            asking someone who OWNS the game to give it back. %>
+        <% if (qaBought.length) { %>
+        <div class="rem-panel unlinked-panel">
+          <div class="rem-title">🛒 Bought, but filed as a rental (<%= qaBought.length %>)</div>
+          <div class="unlinked-note">
+            These carry a rental duration and an end date. On that date the site will ask a
+            customer who owns the game to return it. Fixing clears the duration and end date
+            and marks the order a purchase — the money and everything else stays.
+          </div>
+          <% qaBought.forEach(o => { %>
+          <div class="rem-row">
+            <div class="rem-info">
+              <span class="rem-name"><%= o.fb_name || 'Unnamed customer' %></span>
+              <span class="rem-badge rem-overdue"><%= o.ref %></span>
+              <div class="rem-meta"><%= o.game_title || '' %><%= o.end_date ? ' · would ask for a return on ' + o.end_date : '' %></div>
+            </div>
+            <form method="POST" action="/admin/orders/<%= o.ref %>/fix-purchase" style="display:inline"
+                  onsubmit="return confirm(<%- JSON.stringify('File ' + o.ref + ' as a purchase? This clears its duration and end date so no return is ever asked for.') %>)">
+              <button type="submit" class="btn-copy">Fix it</button>
+            </form>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
         <% if (typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) { %>
         <div class="rem-panel unlinked-panel">
           <div class="rem-title">⚠ Renting, but no account slot linked (<%= unlinkedRentals.length %>)</div>
