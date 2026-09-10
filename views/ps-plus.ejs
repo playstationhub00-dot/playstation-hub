@@ -204,7 +204,7 @@
 <% }) %>
 
 <section style="padding:0 2rem 3rem;max-width:1400px;margin:0 auto;">
-  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 </section>
 
 <%- include('partials/footer') %>

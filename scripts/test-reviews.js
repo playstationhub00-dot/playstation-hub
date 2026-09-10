@@ -76,13 +76,18 @@ check('the prompt disappears once that order has been reviewed', () => {
   assert.strictEqual(reviews.canPrompt(order({ ref: 'PH-0041' }), list), true);
 });
 
-check('normalize clamps a rating into 1-5', () => {
+check('an old star post collapses onto the nearest thumb', () => {
+  // There is no 1-5 scale to clamp into any more. A stale cached page posting
+  // the star radio still has to store something sane. Nothing SUBMITTED can be
+  // neutral — only stored history can — so 3 lands on 'down' here rather than
+  // being dropped on the floor.
   assert.strictEqual(reviews.normalize({ rating: '9', text: 'x' }).rating, 5);
   assert.strictEqual(reviews.normalize({ rating: '0', text: 'x' }).rating, 1);
   assert.strictEqual(reviews.normalize({ rating: '-4', text: 'x' }).rating, 1);
-  assert.strictEqual(reviews.normalize({ rating: '3', text: 'x' }).rating, 3);
+  assert.strictEqual(reviews.normalize({ rating: '3', text: 'x' }).rating, 1);
   assert.strictEqual(reviews.normalize({ rating: 'abc', text: 'x' }).rating, 5);
   assert.strictEqual(reviews.normalize({}).rating, 5);
+  assert.strictEqual(reviews.normalize({ rating: '3' }).sentiment, 'down');
 });
 
 check('normalize trims, collapses whitespace and caps length', () => {
@@ -313,6 +318,128 @@ check('countRenters ignores blank names and bad input', () => {
   assert.strictEqual(reviews.countRenters([]), 0);
   assert.strictEqual(reviews.countRenters(null), 0);
   assert.strictEqual(reviews.countRenters(undefined), 0);
+});
+
+console.log('\nsentimentOf() — reading old star data as thumbs');
+
+check('a stored sentiment wins over anything else', () => {
+  assert.strictEqual(reviews.sentimentOf({ sentiment: 'up', rating: 1 }), 'up');
+  assert.strictEqual(reviews.sentimentOf({ sentiment: 'down', rating: 5 }), 'down');
+});
+
+check('4 and 5 stars read as a recommend, 1 and 2 do not', () => {
+  assert.strictEqual(reviews.sentimentOf({ rating: 5 }), 'up');
+  assert.strictEqual(reviews.sentimentOf({ rating: 4 }), 'up');
+  assert.strictEqual(reviews.sentimentOf({ rating: 2 }), 'down');
+  assert.strictEqual(reviews.sentimentOf({ rating: 1 }), 'down');
+});
+
+check('exactly 3 stars votes in neither direction', () => {
+  // Calling it a recommend overstates, calling it a complaint understates.
+  assert.strictEqual(reviews.sentimentOf({ rating: 3 }), null);
+});
+
+check('a 3-star import cannot move the published figure either way', () => {
+  const withNeutral = reviews.recommendStats([{ sentiment: 'up' }, { rating: 3 }]);
+  const without = reviews.recommendStats([{ sentiment: 'up' }]);
+  assert.deepStrictEqual(withNeutral, without);
+  assert.strictEqual(withNeutral.total, 1, 'the 3-star is out of the denominator too');
+});
+
+check('a review with no rating at all counts as a recommend', () => {
+  // Every review predating the site form was typed in by the owner from a
+  // Facebook comment they chose to publish. Treating a missing rating as
+  // negative would invent criticism nobody wrote.
+  assert.strictEqual(reviews.sentimentOf({}), 'up');
+  assert.strictEqual(reviews.sentimentOf(null), 'up');
+});
+
+console.log('\nnormalize() — thumbs in, thumbs and stars out');
+
+check('a thumbs up stores as up, and as 5 stars for anything still reading rating', () => {
+  const r = reviews.normalize({ sentiment: 'up', text: 'Fast sign-in.' });
+  assert.strictEqual(r.sentiment, 'up');
+  assert.strictEqual(r.rating, 5);
+  assert.strictEqual(r.text, 'Fast sign-in.');
+});
+
+check('a thumbs down stores as down and 1 star', () => {
+  const r = reviews.normalize({ sentiment: 'down', text: 'Slow reply.' });
+  assert.strictEqual(r.sentiment, 'down');
+  assert.strictEqual(r.rating, 1);
+});
+
+check('the comment is optional now', () => {
+  const r = reviews.normalize({ sentiment: 'up' });
+  assert.strictEqual(r.sentiment, 'up');
+  assert.strictEqual(r.text, '');
+});
+
+check('anything that is not up or down falls back to up, never to a stored blank', () => {
+  ['', null, undefined, 'sideways', 5].forEach(v => {
+    assert.strictEqual(reviews.normalize({ sentiment: v }).sentiment, 'up', 'sentiment=' + v);
+  });
+});
+
+check('an old form posting rating still works', () => {
+  // Belt and braces: a cached page could still post the star radio.
+  assert.strictEqual(reviews.normalize({ rating: '5' }).sentiment, 'up');
+  assert.strictEqual(reviews.normalize({ rating: '2' }).sentiment, 'down');
+});
+
+check('text is still trimmed, collapsed and capped', () => {
+  assert.strictEqual(reviews.normalize({ sentiment: 'up', text: '  a   b  ' }).text, 'a b');
+  const long = reviews.normalize({ sentiment: 'up', text: 'x'.repeat(500) }).text;
+  assert.strictEqual(long.length, reviews.MAX_TEXT);
+});
+
+console.log('\nrecommendStats() — the figure shown publicly');
+
+check('counts recommends against everything submitted', () => {
+  const s = reviews.recommendStats([
+    { sentiment: 'up' }, { sentiment: 'up' }, { sentiment: 'down' }, { rating: 5 }
+  ]);
+  assert.strictEqual(s.up, 3);
+  assert.strictEqual(s.total, 4);
+  assert.strictEqual(s.pct, 75);
+});
+
+check('an empty pool reports nothing rather than a fake 100%', () => {
+  [[], null, undefined].forEach(v => {
+    const s = reviews.recommendStats(v);
+    assert.strictEqual(s.total, 0);
+    assert.strictEqual(s.up, 0);
+    assert.strictEqual(s.pct, 0);
+  });
+});
+
+check('the denominator includes reviews that never went public', () => {
+  // This is the whole point. Negative reviews are never made visible, so a
+  // ratio counted over the VISIBLE pool would read 100% forever.
+  const all = [{ sentiment: 'up', visible: true }, { sentiment: 'down', visible: false }];
+  const s = reviews.recommendStats(all);
+  assert.strictEqual(s.total, 2, 'the unhappy one still counts');
+  assert.strictEqual(s.pct, 50);
+});
+
+check('null entries do not inflate the total', () => {
+  const s = reviews.recommendStats([{ sentiment: 'up' }, null, undefined]);
+  assert.strictEqual(s.total, 1);
+  assert.strictEqual(s.pct, 100);
+});
+
+check('percentages are whole numbers', () => {
+  const s = reviews.recommendStats([{ sentiment: 'up' }, { sentiment: 'up' }, { sentiment: 'down' }]);
+  assert.strictEqual(s.pct, 67);
+  assert.strictEqual(s.pct, Math.round(s.pct));
+});
+
+console.log('\naggregate() — still carries the star average for admin');
+
+check('average survives for the admin dashboard, alongside the new ratio', () => {
+  const a = reviews.aggregate([{ rating: 5 }, { rating: 4 }]);
+  assert.strictEqual(a.count, 2);
+  assert.strictEqual(a.average, 4.5);
 });
 
 console.log('\n' + passed + ' assertions passed');

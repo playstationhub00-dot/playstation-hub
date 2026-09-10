@@ -711,7 +711,7 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
       different shape; sharing the partial means the rating, the review count
       and the renters-served figure can never drift between pages. The strip's
       own header carries the count, so the heading above no longer repeats it. %>
-  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName, renterCount: renterCount }) %>
+  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName, renterCount: renterCount }) %>
 </section>
 <% } %>
 

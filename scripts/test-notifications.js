@@ -215,4 +215,37 @@ ok('a missing name never renders the word undefined', () => {
   });
 });
 
+console.log('\nbuild() — unhappy customers');
+
+ok('a thumbs-down review that is not handled yet is critical', () => {
+  const r = n.build(Object.assign({}, empty, {
+    negativeReviews: [{ id: 3, name: 'Pia', game_rented: 'GT7', order_ref: 'PH-20', text: 'Slow reply.' }]
+  }));
+  assert.strictEqual(r.items[0].kind, 'unhappy_customer');
+  assert.strictEqual(r.items[0].urgency, 'critical');
+  assert.strictEqual(r.items[0].tab, 'content');
+  assert.ok(r.items[0].sub.includes('Pia'), 'names them: ' + r.items[0].sub);
+});
+
+ok('a thumbs down with no comment still raises a row', () => {
+  const r = n.build(Object.assign({}, empty, { negativeReviews: [{ id: 4, name: 'Rex' }] }));
+  assert.strictEqual(r.count, 1);
+  assert.ok(!/undefined|null/.test(r.items[0].sub), 'clean: ' + r.items[0].sub);
+});
+
+ok('an unhappy customer outranks a waiting payment', () => {
+  // Someone who told us it went badly is the most perishable thing on the
+  // list: every hour that passes makes it harder to put right.
+  const r = n.build(Object.assign({}, empty, {
+    orderQueue: [{ ref: 'PH-21', state: 'verifying_payment' }],
+    negativeReviews: [{ id: 5, name: 'Sam' }]
+  }));
+  assert.strictEqual(r.items[0].kind, 'unhappy_customer');
+});
+
+ok('nothing is raised when there are no negative reviews', () => {
+  assert.strictEqual(n.build(Object.assign({}, empty, { negativeReviews: [] })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { negativeReviews: null })).count, 0);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

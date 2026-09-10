@@ -233,7 +233,7 @@
 
     </div>
 
-    <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+    <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 
     <% const gpGallery = (game.gallery || []).filter(Boolean); %>
     <% if (gpGallery.length) { %>

@@ -627,10 +627,14 @@ function getCustomers() { return (db.get('customers').value() || []).map(normali
 // gameTitle floats reviews naming that game to the top; pass '' on pages that
 // list many games at once (there is no single title to prefer there).
 function reviewBlockLocals(gameTitle) {
-  const pool = db.get('reviews').filter({ visible: true }).value() || [];
+  const all = db.get('reviews').value() || [];
+  const pool = all.filter(r => r && r.visible === true && !r.private);
   return {
     reviews: reviewRules.sortForGame(pool, gameTitle || ''),
     reviewStats: reviewRules.aggregate(pool),
+    // Counted over EVERY review, not just the published ones — see
+    // reviewRules.recommendStats for why that matters.
+    recommend: reviewRules.recommendStats(all),
     reviewBadge: reviewRules.badgeFor,
     reviewDisplayName: reviewRules.displayName,
     renterCount: reviewRules.renterMilestone(reviewRules.countRenters(getCustomers()))
@@ -2438,12 +2442,18 @@ app.post('/order/:ref/review', async (req, res) => {
   const existing = db.get('reviews').value() || [];
   // Covers both "this order can't be reviewed yet" and "already reviewed".
   if (!reviewRules.canPrompt(order, existing)) return res.redirect(back + '&msg=stale');
-  const { rating, text } = reviewRules.normalize(req.body);
-  if (!text) return res.redirect(back + '&msg=review_empty');
+  const { sentiment, rating, text } = reviewRules.normalize(req.body);
+  // The comment is optional now — one tap is a complete answer.
   const id = db.get('nextReviewId').value();
+  // A thumbs down is private by design: it goes to the owner to fix, never to
+  // the site. `private` is what keeps it out of the public pool even if the
+  // visible toggle is ever flipped by accident, and recommendStats still counts
+  // it, so the published ratio cannot quietly become 100%.
+  const isDown = sentiment === 'down';
   db.get('reviews').push({
     id,
     name: order.fb_name || 'Guest',
+    sentiment,
     rating,
     text,
     game_rented: order.game_title || '',
@@ -2451,12 +2461,18 @@ app.post('/order/:ref/review', async (req, res) => {
     // review is worth featuring.
     order: 99,
     visible: false,
+    private: isDown,
+    handled: false,
     created_at: new Date().toISOString(),
     source: 'site',
     order_ref: order.ref
   }).write();
   db.set('nextReviewId', id + 1).write();
-  res.redirect(back + '&msg=review_thanks');
+  // No Telegram alert on a thumbs down: lib/telegram.js has a fixed set of
+  // alert kinds wired to the admin toggles, and this belongs in the
+  // notification bell with the rest of the owner's queue, where it stays
+  // visible until it is dealt with rather than scrolling away in a chat.
+  res.redirect(back + '&msg=' + (isDown ? 'review_sorry' : 'review_thanks'));
 });
 
 // ── Online payments (PayMongo) ───────────────────────────────────────────────
@@ -2814,25 +2830,30 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
 
   const paid = String(b.paid || 'yes') !== 'no';
   const method = String(b.method || '').trim().slice(0, 20) || 'manual';
+  // Quick Add records a rental that has ALREADY happened, so the order is born
+  // at its true state rather than walking the machine to get there.
+  //
+  // This is the bug behind "You're all set" linking to a page that still asked
+  // for a sign-in code: every paid Quick Add used to land at awaiting_qr, so
+  // the order page showed the sign-in guide and hid the review box, which is
+  // gated on the customer actually having played.
+  const initialState = !paid ? 'awaiting_payment'
+    : status === 'done' ? 'closed'
+    : b.signed_in === 'no' ? 'awaiting_qr'
+    : 'active';
 
   try {
     const order = await orders.create(Object.assign({
       game_id: game.id, game_title: game.title, account_type: type, days,
       amount_due: amountDue, deposit_due: depositDue,
       fb_name: name, session_id: null,
-      start_date: startDate, end_date: endDate
-    }, mode === 'buy' ? { is_buy: true } : {}, override != null ? {} : {
+      start_date: startDate, end_date: endDate,
+      state: initialState
+    }, paid ? {
+      payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
+    } : {}, mode === 'buy' ? { is_buy: true } : {}, override != null ? {} : {
       price_tier_name: pricing.priceTierName, price_snapshot: pricing.snapshot
     }));
-
-    // Paid orders skip straight past payment verification: the owner is the one
-    // confirming, and asking them to "verify" money they just took themselves
-    // would be theatre. Unpaid ones rest where a web order would.
-    if (paid) {
-      await orders.transition(order.ref, 'awaiting_qr', {
-        payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
-      });
-    }
 
     // The customer row. The order lifecycle creates one of these on advance,
     // keyed by order.customer_id so it cannot double up — writing it here with
@@ -4162,12 +4183,18 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   // The topbar bell. Built from the same queues the tabs render, so the badge
   // can never claim work that the tab it points at does not show.
+  // Thumbs-down reviews the owner has not dealt with yet. They never reach the
+  // site, so this queue is the only place they surface at all.
+  const negativeReviews = (db.get('reviews').value() || [])
+    .filter(r => r && r.private && !r.handled)
+    .sort((a, b) => Date.parse(b.created_at || '') - Date.parse(a.created_at || ''));
+
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
-    paymongoHealth, now: dashNowDate
+    negativeReviews, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { notifs, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { notifs, negativeReviews, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -6062,12 +6089,19 @@ app.post('/admin/signin-steps/:id/move', requireAuth, (req, res) => {
 // ── Reviews ──────────────────────────────────────────────────────────────────
 
 app.post('/admin/reviews/add', requireAuth, (req, res) => {
-  const { name, rating, text, game_rented, order, source } = req.body;
+  const { name, text, game_rented, order, source } = req.body;
   const id = db.get('nextReviewId').value();
+  // Same normalize the customer form uses, so a review typed in from Facebook
+  // and one submitted on the site are stored identically.
+  const { sentiment, rating } = reviewRules.normalize(req.body);
   db.get('reviews').push({
-    id, name, rating: parseInt(rating) || 5, text,
+    id, name, sentiment, rating, text,
     game_rented: game_rented || '', order: parseInt(order) || 99,
-    visible: true, created_at: new Date().toISOString(),
+    // A negative one the owner typed in is still not something to publish.
+    visible: sentiment !== 'down',
+    private: sentiment === 'down',
+    handled: sentiment === 'down' ? false : undefined,
+    created_at: new Date().toISOString(),
     // Defaults to facebook: copying a real Facebook comment is what this form
     // is for, and it matches how every pre-existing review should display.
     source: source === 'site' ? 'site' : 'facebook',
@@ -6075,6 +6109,17 @@ app.post('/admin/reviews/add', requireAuth, (req, res) => {
   }).write();
   db.set('nextReviewId', id + 1).write();
   res.redirect('/admin#reviews');
+});
+
+// Marks a thumbs-down as dealt with, which drops it out of the notification
+// bell. Deliberately NOT a delete: the review still counts in the recommend
+// ratio shown publicly, so clearing your queue cannot quietly improve the
+// number the site advertises.
+app.post('/admin/reviews/handled/:id', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id);
+  const review = db.get('reviews').find({ id }).value();
+  if (review) db.get('reviews').find({ id }).assign({ handled: !review.handled }).write();
+  res.redirect('/admin?tab=content&msg=' + (review && !review.handled ? 'review_handled' : 'review_reopened'));
 });
 
 app.post('/admin/reviews/delete/:id', requireAuth, (req, res) => {

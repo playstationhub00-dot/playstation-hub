@@ -114,6 +114,17 @@
             <input class="qa-in" type="number" name="price" id="qaPriceOverride" min="0" placeholder="auto" oninput="qaPrice()">
           </label>
         </div>
+        <%# Decides what the order link shows. Signed in already means the page
+            confirms the rental and asks how it went; "not yet" leaves it asking
+            for a sign-in code, which is what every Quick Add used to do. %>
+        <label class="qa-sub" style="margin-top:0.55rem;display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
+          <input type="checkbox" name="signed_in_box" id="qaSignedIn" checked
+                 onchange="document.getElementById('qaSignedInVal').value = this.checked ? 'yes' : 'no';"
+                 style="width:auto;margin:0;">
+          <span>Already signed in to their console</span>
+        </label>
+        <input type="hidden" name="signed_in" id="qaSignedInVal" value="yes">
+
         <label class="qa-sub" style="margin-top:0.55rem;">Notes
           <input class="qa-in" type="text" name="notes" placeholder="e.g. paid via GCash, follow up Friday">
         </label>

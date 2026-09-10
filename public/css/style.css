@@ -3542,12 +3542,18 @@ label.buy-tier:hover { border-color: #444; }
 .rvp { background: #141018; border: 1px solid #3b2a5c; border-radius: 12px; padding: 0.9rem 0.95rem; margin-bottom: 1.5rem; }
 .rvp-title { font-size: 0.95rem; font-weight: 800; color: #fff; }
 .rvp-sub { font-size: 0.78rem; color: #9b8bbd; margin-top: 0.2rem; line-height: 1.5; }
-.rvp-stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 0.15rem; margin: 0.75rem 0 0.6rem; }
-.rvp-stars input { position: absolute; opacity: 0; width: 0; height: 0; }
-.rvp-stars label { font-size: 1.5rem; line-height: 1; color: #3a3a44; cursor: pointer; transition: color 0.12s; }
-.rvp-stars input:checked ~ label { color: #f0a500; }
-.rvp-stars label:hover, .rvp-stars label:hover ~ label { color: #ffc63d; }
-.rvp-stars input:focus-visible + label { outline: 2px solid var(--ps-blue); outline-offset: 2px; border-radius: 3px; }
+/* Two thumbs, not five stars. Radios are visually hidden and the labels are
+   the buttons, so this needs no JavaScript and still works in the Facebook
+   in-app browser. Neither is pre-selected: a default answer is not an answer. */
+.rvp-thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.75rem 0 0.6rem; }
+.rvp-thumbs input { position: absolute; opacity: 0; width: 0; height: 0; }
+.rvp-thumb { display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 0.5rem; border: 1px solid #2a2a32; border-radius: 10px; background: #0b0b0d; color: #9b8bbd; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: border-color 0.12s, background 0.12s, color 0.12s; }
+.rvp-thumb-ic { font-size: 1.1rem; line-height: 1; filter: grayscale(1); opacity: 0.75; transition: filter 0.12s, opacity 0.12s; }
+.rvp-thumb:hover { border-color: #3f3f4a; color: #d8d0ea; }
+#rvpUp:checked + .rvp-up { border-color: #22c55e; background: rgba(34,197,94,0.12); color: #4ade80; }
+#rvpDown:checked + .rvp-down { border-color: #f0a500; background: rgba(240,165,0,0.12); color: #fbbf24; }
+.rvp-thumbs input:checked + .rvp-thumb .rvp-thumb-ic { filter: none; opacity: 1; }
+.rvp-thumbs input:focus-visible + .rvp-thumb { outline: 2px solid var(--ps-blue); outline-offset: 2px; }
 .rvp-text { width: 100%; background: #0b0b0d; border: 1px solid #2a2a32; border-radius: 8px; padding: 0.55rem 0.65rem; color: #eee; font-family: inherit; font-size: 0.85rem; resize: vertical; }
 .rvp-text:focus { outline: none; border-color: #6d28d9; }
 .rvp-who { font-size: 0.75rem; color: #64748b; margin: 0.45rem 0 0.6rem; }
@@ -3583,6 +3589,9 @@ label.buy-tier:hover { border-color: #444; }
 .gdrq-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1rem; background: #111116; border-bottom: 1px solid #23232b; }
 .gdrq-avg { font-size: 1.7rem; font-weight: 500; color: #fff; line-height: 1; }
 .gdrq-stars { font-size: 0.8rem; color: #f0a500; letter-spacing: 2px; line-height: 1; }
+.gdrq-avg-pct { font-size: 1rem; font-weight: 500; margin-left: 1px; }
+.gdrq-rec-l { font-size: 0.8rem; font-weight: 700; color: #fff; line-height: 1.2; }
+.gdrq-rec-n { font-size: 0.7rem; color: #8b8b8b; margin-top: 0.15rem; line-height: 1.2; }
 /* Pushed to the far edge with a divider, because it measures something else
    entirely from the rating on its left: people served, not reviews collected. */
 .gdrq-renters { margin-left: auto; padding-left: 0.9rem; border-left: 1px solid #23232b; text-align: right; flex-shrink: 0; }
@@ -3619,7 +3628,7 @@ label.buy-tier:hover { border-color: #444; }
    The track's default flex stretch already gives every card in a row the
    same height, so "pinned to the bottom" reads as "the same position". */
 .gdrq-card { width: 300px; flex: none; display: flex; flex-direction: column; background: #111116; border: 1px solid #23232b; border-radius: 12px; padding: 0.75rem 0.85rem; }
-.gdrq-card-stars { font-size: 0.75rem; color: #f0a500; letter-spacing: 2px; }
+.gdrq-card-stars { font-size: 0.72rem; font-weight: 700; color: #4ade80; }
 .gdrq-text { font-size: 0.8rem; color: #ddd; line-height: 1.6; margin: 0.4rem 0 0.55rem; }
 /* Icon/badge sits right next to the name, not pinned to the card's far edge —
    pinning it right made its distance from the name vary with how long the

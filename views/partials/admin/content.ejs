@@ -301,20 +301,50 @@
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:1rem;align-items:end;flex-wrap:wrap;">
             <div class="form-group" style="margin:0;"><label>Customer Name *</label><input type="text" name="name" placeholder="e.g. Juan dela Cruz" required></div>
             <div class="form-group" style="margin:0;"><label>Game Rented</label><input type="text" name="game_rented" placeholder="e.g. GTA V"></div>
-            <div class="form-group" style="margin:0;"><label>Rating (1–5 ⭐)</label><select name="rating"><option value="5">⭐⭐⭐⭐⭐ 5</option><option value="4">⭐⭐⭐⭐ 4</option><option value="3">⭐⭐⭐ 3</option><option value="2">⭐⭐ 2</option><option value="1">⭐ 1</option></select></div>
+            <div class="form-group" style="margin:0;"><label>Rating</label><select name="sentiment"><option value="up">👍 Recommends us</option><option value="down">👎 Not good</option></select></div>
             <div class="form-group" style="margin:0;"><label>Source</label><select name="source"><option value="facebook">Facebook</option><option value="site">Website</option></select></div>
             <div class="form-group" style="margin:0;"><label>Order</label><input type="number" name="order" value="99" min="1" style="width:70px;"></div>
           </div>
           <div class="form-group" style="margin-top:0.75rem;"><label>Review Text *</label><textarea name="text" rows="3" placeholder="Paste the customer's review from Facebook..." required style="width:100%;resize:vertical;"></textarea></div>
           <button type="submit" class="btn" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;font-weight:700;border:none;padding:0.6rem 1.5rem;border-radius:50px;cursor:pointer;margin-top:0.5rem;">➕ Add Review</button>
         </form>
-        <% const pendingReviews = (reviews || []).filter(r => !r.visible); %>
+        <%# A thumbs down never enters the approval queue. The review form
+            promises the customer it goes to the owner and not onto the site,
+            and an Approve button sitting next to it is one slip from breaking
+            that promise. They get their own panel below instead. %>
+        <% const pendingReviews = (reviews || []).filter(r => !r.visible && !r.private); %>
+        <% const unhappy = (reviews || []).filter(r => r.private); %>
+        <%# null means an old 3-star import: it says neither, and the public
+            figure leaves it out entirely. Labelling it as a complaint here
+            would misread the one review nobody can read. %>
+        <% const sentOf = r => (typeof reviewSentiment === 'function' ? reviewSentiment(r) : 'up'); %>
+        <% const thumb = r => { const v = sentOf(r); return v === 'up' ? '👍 Good' : v === 'down' ? '👎 Not good' : '— no clear rating'; }; %>
+
+        <% if (unhappy.length) { %>
+        <div style="margin-top:1.5rem;border:1px solid #4a1a1a;background:#1a0808;border-radius:10px;padding:1rem;">
+          <div style="font-weight:700;color:#ef4444;margin-bottom:0.35rem;">💔 Unhappy customers (<%= unhappy.filter(r => !r.handled).length %> to deal with)</div>
+          <div style="font-size:0.75rem;color:#888;margin-bottom:0.75rem;">These never go on the site. They still count in the "would recommend" figure, so marking one handled does not change the number shown publicly.</div>
+          <% unhappy.forEach(u => { %>
+          <div style="background:#111;border:1px solid <%= u.handled ? '#2a2a2a' : '#4a1a1a' %>;border-radius:10px;padding:0.85rem;margin-bottom:0.5rem;opacity:<%= u.handled ? '0.55' : '1' %>;">
+            <div style="color:#ef4444;font-size:0.8rem;font-weight:700;">👎 Not good<% if (u.handled) { %> <span style="color:#4ade80;">· handled</span><% } %></div>
+            <div style="color:#ccc;font-size:0.88rem;line-height:1.5;margin:0.35rem 0 0.5rem;"><%= u.text ? '"' + u.text + '"' : 'No comment left.' %></div>
+            <div style="font-size:0.75rem;color:#777;margin-bottom:0.6rem;">
+              <%= u.name %><% if (u.game_rented) { %> · <%= u.game_rented %><% } %><% if (u.order_ref) { %> · <%= u.order_ref %><% } %>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+              <form method="POST" action="/admin/reviews/handled/<%= u.id %>"><button type="submit" style="background:<%= u.handled ? '#1a1a1a' : '#14532d' %>;color:<%= u.handled ? '#888' : '#4ade80' %>;border:1px solid <%= u.handled ? '#2a2a2a' : '#22c55e' %>;border-radius:6px;padding:0.35rem 0.9rem;font-size:0.78rem;cursor:pointer;"><%= u.handled ? '↩ Reopen' : '✓ Mark handled' %></button></form>
+              <form method="POST" action="/admin/reviews/delete/<%= u.id %>" onsubmit="return confirm('Delete this? It will stop counting in the would-recommend figure.')"><button type="submit" style="background:#2a0000;color:#ef4444;border:1px solid #4a0000;border-radius:6px;padding:0.35rem 0.9rem;font-size:0.78rem;cursor:pointer;">🗑 Delete</button></form>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
         <% if (pendingReviews.length) { %>
         <div style="margin-top:1.5rem;border:1px solid #4a3a00;background:#1a1204;border-radius:10px;padding:1rem;">
           <div style="font-weight:700;color:#f59e0b;margin-bottom:0.75rem;">⏳ Waiting for your approval (<%= pendingReviews.length %>)</div>
           <% pendingReviews.forEach(pr => { %>
           <div style="background:#111;border:1px solid #2a2a2a;border-radius:10px;padding:0.85rem;margin-bottom:0.5rem;">
-            <div style="color:#f59e0b;font-size:0.85rem;"><%= '⭐'.repeat(pr.rating) %></div>
+            <div style="color:#4ade80;font-size:0.8rem;font-weight:700;"><%= thumb(pr) %></div>
             <div style="color:#ccc;font-size:0.88rem;line-height:1.5;margin:0.35rem 0 0.5rem;">"<%= pr.text %>"</div>
             <div style="font-size:0.75rem;color:#777;margin-bottom:0.6rem;">
               <%= pr.name %><% if (pr.game_rented) { %> · <%= pr.game_rented %><% } %><% if (pr.order_ref) { %> · <%= pr.order_ref %><% } %>
@@ -334,7 +364,7 @@
             <div style="flex:1;">
               <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;flex-wrap:wrap;">
                 <strong style="color:#fff;"><%= r.name %></strong>
-                <span style="color:#f59e0b;font-size:0.85rem;"><%= '⭐'.repeat(r.rating) %></span>
+                <span style="font-size:0.78rem;font-weight:700;color:<%= sentOf(r) === 'up' ? '#4ade80' : sentOf(r) === 'down' ? '#ef4444' : '#888' %>;"><%= thumb(r) %></span>
                 <% if (r.game_rented) { %><span style="font-size:0.75rem;color:#888;background:#1a1a1a;padding:0.15rem 0.5rem;border-radius:20px;">🎮 <%= r.game_rented %></span><% } %>
                 <% if (!r.visible) { %><span style="font-size:0.7rem;color:#ef4444;background:#2a0000;padding:0.15rem 0.5rem;border-radius:20px;">Hidden</span><% } %>
               </div>

@@ -74,7 +74,10 @@
   <% if (msg === 'stale') { %><div class="ord-flash ord-flash-warn">That step was already handled — here's your current status.</div><% } %>
   <% if (msg === 'upgrade_started') { %><div class="ord-flash">Upgraded to priority — send the ₱100 below and we'll move you up.</div><% } %>
   <% if (msg === 'review_thanks') { %><div class="ord-flash">Thanks — we'll put this up once we've checked it.</div><% } %>
+  <%# review_empty is no longer produced — the comment is optional — but an old
+      tab could still be sitting on that URL, so the message stays renderable. %>
   <% if (msg === 'review_empty') { %><div class="ord-flash ord-flash-warn">Add a sentence before sending, so it's useful to the next renter.</div><% } %>
+  <% if (msg === 'review_sorry') { %><div class="ord-flash ord-flash-warn">Thanks for telling us — that goes straight to us, not on the site. We'll make it right.</div><% } %>
   <% if (msg === 'pay_cancelled') { %><div class="ord-flash ord-flash-warn">Checkout cancelled — no payment was taken. Try again below.</div><% } %>
   <% if (msg === 'pay_failed') { %><div class="ord-flash ord-flash-warn">We couldn't start checkout just now — please try again, or pay manually below.</div><% } %>
   <% if (msg === 'pay_unavailable') { %><div class="ord-flash ord-flash-warn">Online payment isn't available right now — please pay manually below.</div><% } %>
@@ -162,9 +165,9 @@
       <div class="ord-conf-step"><span class="ord-conf-n">3</span><span>You send your PS sign-in code</span></div>
       <div class="ord-conf-step ord-conf-step-us"><span class="ord-conf-n">4</span><span>We sign you in — you play</span></div>
     </div>
-    <% if (reviewStats && reviewStats.count > 0) { %>
+    <% if (recommend && recommend.total > 0) { %>
     <div class="ord-conf-reviews">
-      ⭐ <strong><%= reviewStats.average %></strong> from <%= reviewStats.count %> renter<%= reviewStats.count !== 1 ? 's' : '' %>
+      👍 <strong><%= recommend.up %> of <%= recommend.total %></strong> renter<%= recommend.total !== 1 ? 's' : '' %> recommend us
       <% if (reviews && reviews.length && reviews[0].text) { %>
       <div class="ord-conf-quote">"<%= reviews[0].text %>" <span>— <%= reviewDisplayName(reviews[0]) %></span></div>
       <% } %>
