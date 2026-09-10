@@ -19,6 +19,7 @@ const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
 const dashboard = require('./lib/dashboard');
 const notifications = require('./lib/notifications');
+const rentPricing = require('./lib/rent-pricing');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
@@ -1024,24 +1025,45 @@ function getPromoDiscountPct(promo, days) {
 // placing it themselves — one set of numbers, not two that can drift apart.
 // Returns null when there's no reliable price to charge (missing tier data),
 // same as computeSwapReferencePrice does for the same reason.
+//
+// Admin-only — the public order routes validate durations against
+// PROMO_DURATIONS themselves, so accepting a custom duration here does not let
+// a customer order one.
+// The two tier prices a rental is quoted from, with any running promo already
+// taken off. Discounting each tier BEFORE a custom duration is derived from it
+// means a hand-arranged 5-day deal inherits whatever promo a 7-day one would
+// get; discounting afterwards would leave six days costing more than seven.
+function promotedTier(resolved, priceType, promo) {
+  const tier = {};
+  rentPricing.STANDARD_DAYS.forEach(d => {
+    tier[d] = rentPricing.discounted(resolved[priceType + '_price_' + d + 'd'] || 0,
+                                     getPromoDiscountPct(promo, d));
+  });
+  return tier;
+}
+
 const TYPE_LABELS_SHORT = { tr: 'Trophy', nt: 'Non-Trophy', ps4: 'PS4 Primary' };
 function computeRentPricing(game, type, days) {
-  if (!game || !['nt', 'tr', 'ps4'].includes(type) || !PROMO_DURATIONS.includes(days)) return null;
+  if (!game || !['nt', 'tr', 'ps4'].includes(type)) return null;
   const s = getSiteSettings();
   const promo = s.promo || {};
   const resolved = resolveGamePrices(game);
   const priceType = type === 'ps4' ? 'nt' : type;
-  const base = resolved[priceType + '_price_' + days + 'd'] || 0;
-  if (!base) return null;
-  const pct = getPromoDiscountPct(promo, days);
-  const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const tier = promotedTier(resolved, priceType, promo);
+  // Custom durations are a real thing the admin form offers, so they get a
+  // real price instead of a rejection. lib/rent-pricing.js owns that curve and
+  // the admin preview mirrors it.
+  const priced = rentPricing.amountForDays(days, tier);
+  if (!priced) return null;
+  const amountDue = priced.amount;
   const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
   const cat = game.price_category_id ? getPriceCategory(game.price_category_id) : null;
   const snapshot = {
     nt_price_7d: resolved.nt_price_7d || 0, nt_price_30d: resolved.nt_price_30d || 0,
     tr_price_7d: resolved.tr_price_7d || 0, tr_price_30d: resolved.tr_price_30d || 0
   };
-  return { amountDue, depositDue, priceTierName: cat ? cat.name : '', snapshot };
+  return { amountDue, depositDue, priceTierName: cat ? cat.name : '', snapshot,
+           prorated: priced.prorated, priceBasis: priced.basis };
 }
 
 // Same one-time-purchase pricing math as POST /order/buy's single-game branch.
@@ -4127,6 +4149,17 @@ app.get('/admin', requireAuth, async (req, res) => {
     needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length
   };
 
+  // Prices for Quick Add's game picker, promo already applied. The form used to
+  // read the raw tier fields off each game, so with a monthly promo running it
+  // previewed the undiscounted price and then saved the discounted one. These
+  // come off the same promotedTier() the save path prices from.
+  const qaPromo = getSiteSettings().promo || {};
+  const qaGames = games.map(g => {
+    const nt = promotedTier(g, 'nt', qaPromo);
+    const tr = promotedTier(g, 'tr', qaPromo);
+    return { id: g.id, title: g.title, nt7: nt[7], nt30: nt[30], tr7: tr[7], tr30: tr[30] };
+  }).sort((a, b) => a.title.localeCompare(b.title));
+
   // The topbar bell. Built from the same queues the tabs render, so the badge
   // can never claim work that the tab it points at does not show.
   const notifs = notifications.build({
@@ -4134,7 +4167,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { notifs, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { notifs, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

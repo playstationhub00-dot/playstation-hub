@@ -23,11 +23,14 @@
       <div class="qa-g3">
         <select class="qa-in" name="game_id" id="qaGame" onchange="qaPrice()" required>
           <option value="">— Game —</option>
-          <% (games || []).slice().sort((a,b) => a.title.localeCompare(b.title)).forEach(g => { %>
+          <%# Prices come from qaGames, not the raw game records: they have the
+              running promo already taken off, the same way the save path
+              prices them. Reading the raw tier fields here is what made this
+              form preview ₱349 and then save ₱314. %>
+          <% (qaGames || []).forEach(g => { %>
           <option value="<%= g.id %>"
-            data-nt7="<%= g.nt_price_7d || 0 %>" data-nt30="<%= g.nt_price_30d || 0 %>"
-            data-tr7="<%= g.tr_price_7d || 0 %>" data-tr30="<%= g.tr_price_30d || 0 %>"
-            data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"><%= g.title %></option>
+            data-nt7="<%= g.nt7 %>" data-nt30="<%= g.nt30 %>"
+            data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"><%= g.title %></option>
           <% }) %>
         </select>
         <select class="qa-in" name="account_type" id="qaType" onchange="qaPrice()">
@@ -274,6 +277,23 @@
     el('qaMethod').style.display = yes ? '' : 'none';
   };
 
+  // The client half of lib/rent-pricing.js — same curve, same rounding:
+  //   d < 7        pro-rata at the weekly rate
+  //   7 < d < 30   straight line between the weekly and monthly price
+  //   d > 30       pro-rata at the monthly rate
+  // Standard durations charge their tier exactly.
+  function qaAmountForDays(d, p7, p30) {
+    if (!d || d < 1 || d !== Math.floor(d)) return 0;
+    if (!p7 && !p30) return 0;
+    if (d === 7 && p7) return p7;
+    if (d === 30 && p30) return p30;
+    if (!p30) return Math.round(p7 * d / 7);
+    if (!p7) return Math.round(p30 * d / 30);
+    if (d < 7) return Math.round(p7 * d / 7);
+    if (d > 30) return Math.round(p30 * d / 30);
+    return Math.round(p7 + (p30 - p7) * (d - 7) / 23);
+  }
+
   // Mirrors the server's pricing so the number on screen is the number saved.
   // The server still recomputes it — this is a preview, not the source.
   window.qaPrice = function () {
@@ -286,14 +306,14 @@
       return;
     }
     var type = el('qaType').value, d = daysValue();
-    var key = (type === 'tr' ? 'tr' : 'nt') + (d >= 30 ? '30' : '7');
-    var base = parseInt(opt.dataset[key]) || 0;
-    // Custom durations are priced pro-rata from the nearest standard tier,
-    // which is what the server does too.
-    if (d && d !== 7 && d !== 30 && base) {
-      var perDay = base / (d >= 30 ? 30 : 7);
-      base = Math.round(perDay * d);
-    }
+    var pre = type === 'tr' ? 'tr' : 'nt';
+    var p7 = parseInt(opt.dataset[pre + '7']) || 0;
+    var p30 = parseInt(opt.dataset[pre + '30']) || 0;
+    // Mirrors lib/rent-pricing.js exactly. It used to pro-rate everything under
+    // 30 days at the WEEKLY rate and claim the server matched — the server
+    // rejected the save outright, so the form promised a price it could not
+    // honour, and 29 days quoted higher than 30. Keep these two in step.
+    var base = qaAmountForDays(d, p7, p30);
     var amount = override !== '' ? (parseInt(override) || 0) : base;
     if (!amount) {
       box.className = 'qa-price qa-price-empty';
@@ -303,8 +323,12 @@
     box.className = 'qa-price';
     // The deposit comes from promo settings the browser does not have, so this
     // shows the rent only and says so, rather than printing a total it cannot know.
+    // Say when the number was derived rather than set, so a custom-duration
+    // quote is not mistaken for a price on the Games page.
+    var derived = override === '' && d !== 7 && d !== 30
+      ? ' <span style="color:#7a7a7a;">· worked out for ' + d + ' day' + (d === 1 ? '' : 's') + '</span>' : '';
     box.innerHTML = '<b>₱' + amount.toLocaleString() + '</b> rent'
-      + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
+      + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : derived)
       + ' <span style="color:#7a7a7a;">· any deposit is added when it saves</span>';
   };
 
