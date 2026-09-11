@@ -1,0 +1,234 @@
+<%# Extending a rental used to mean opening the fifteen-field edit form and
+    changing days, end date and price by hand, with nothing tying them together
+    and no message saying an extension had happened. This is that action as one
+    thing: pick the extra days, see what it costs and when it now ends, save,
+    copy the message.
+
+    Included once at page level (not per row) — two copies would mean duplicate
+    ids and getElementById would find the wrong one, which is exactly how the
+    Quick Add button ended up doing nothing. %>
+<div class="qa-overlay" id="xtOverlay">
+  <div class="qa-box">
+    <div class="qa-head">
+      <span class="qa-head-ic" id="xtIcon">⏩</span>
+      <span class="qa-head-t" id="xtTitle">Extend rental</span>
+      <button type="button" class="qa-x" onclick="xtClose()" aria-label="Close">✕</button>
+    </div>
+
+    <form class="qa-body" id="xtForm" data-no-loading="1">
+      <div class="qa-err" id="xtErr" hidden></div>
+
+      <div class="xt-who" id="xtWho"></div>
+
+      <div class="qa-l">How much longer?</div>
+      <div class="qa-modes" id="xtDaysPick">
+        <input type="radio" name="days" id="xtD7" value="7" checked onchange="xtChanged()">
+        <label for="xtD7" class="qa-mode">+7 days</label>
+        <input type="radio" name="days" id="xtD30" value="30" onchange="xtChanged()">
+        <label for="xtD30" class="qa-mode">+30 days</label>
+        <input type="radio" name="days" id="xtDC" value="custom" onchange="xtChanged()">
+        <label for="xtDC" class="qa-mode">✏️ Custom</label>
+      </div>
+      <input class="qa-in" type="number" name="custom_days" id="xtCustomDays" min="1" max="365"
+             placeholder="How many extra days?" hidden oninput="xtChanged()" style="margin-top:0.45rem;">
+
+      <div class="qa-price" id="xtPriceBox">Pick a length to see the price</div>
+
+      <div class="xt-dates" id="xtDates"></div>
+
+      <details class="qa-more">
+        <summary>More options</summary>
+        <label class="qa-sub">Price override (₱)
+          <input class="qa-in" type="number" name="price" id="xtPriceOverride" min="0" placeholder="auto" oninput="xtChanged()">
+        </label>
+      </details>
+    </form>
+
+    <div class="qa-foot" id="xtFootForm">
+      <span class="qa-grow"></span>
+      <button type="button" class="qa-btn qa-ghost" onclick="xtClose()">Cancel</button>
+      <button type="button" class="qa-btn qa-gold" id="xtSubmit" onclick="xtSubmit()">Extend + get message</button>
+    </div>
+
+    <div class="qa-done" id="xtDone" hidden>
+      <div class="qa-done-ic">✅</div>
+      <div class="qa-done-t">Extension saved</div>
+      <div class="qa-done-sum" id="xtSummary"></div>
+      <div class="qa-copy-l">Message to send</div>
+      <textarea class="qa-copy-box" id="xtMessage" rows="10" readonly></textarea>
+      <button type="button" class="qa-btn qa-gold qa-copy-btn" id="xtCopyBtn" onclick="xtCopy()">📋 Copy message</button>
+      <div class="qa-copy-warn" id="xtCopyWarn" hidden>⚠ Select and copy manually</div>
+    </div>
+
+    <div class="qa-foot" id="xtFootDone" hidden>
+      <span class="qa-grow"></span>
+      <button type="button" class="qa-btn qa-ghost" onclick="xtDoneClose()">Done</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .xt-who { background:#0a0a0a; border:1px solid #1e1e1e; border-radius:9px; padding:0.6rem 0.75rem; font-size:0.82rem; color:#ddd; margin-bottom:0.85rem; }
+  .xt-who b { color:#fff; }
+  .xt-who span { color:#777; font-size:0.75rem; display:block; margin-top:0.15rem; }
+  .xt-dates { display:flex; align-items:center; gap:0.4rem; font-size:0.78rem; color:#888; margin-top:0.6rem; flex-wrap:wrap; }
+  .xt-dates b { color:#4ade80; font-weight:700; }
+  .xt-arrow { color:#555; }
+  body.light-mode .xt-who { background:#f7f9fa; border-color:#e4e7eb; color:#4b5259; }
+  body.light-mode .xt-who b { color:#14171a; }
+</style>
+
+<script>
+(function () {
+  function el(id) { return document.getElementById(id); }
+
+  // Everything the modal needs about the rental it is extending. Set by the
+  // row's button; the price curve mirrors lib/rent-pricing.js exactly, the same
+  // way Quick Add's preview does, so the number on screen is the number saved.
+  var XT = { id: null, p7: 0, p30: 0, end: '', today: '' };
+
+  function amountForDays(d, p7, p30) {
+    if (!d || d < 1 || d !== Math.floor(d)) return 0;
+    if (!p7 && !p30) return 0;
+    if (d === 7 && p7) return p7;
+    if (d === 30 && p30) return p30;
+    if (!p30) return Math.round(p7 * d / 7);
+    if (!p7) return Math.round(p30 * d / 30);
+    if (d < 7) return Math.round(p7 * d / 7);
+    if (d > 30) return Math.round(p30 * d / 30);
+    return Math.round(p7 + (p30 - p7) * (d - 7) / 23);
+  }
+
+  // Mirrors lib/extensions.nextEnd: from their current end date, or today if
+  // that date has already passed — so an overdue rental is not handed days
+  // that are already gone.
+  function nextEnd(currentEnd, d) {
+    if (!d || d < 1) return '';
+    var from = (currentEnd && XT.today && currentEnd > XT.today) ? currentEnd : (XT.today || currentEnd);
+    if (!from) return '';
+    var t = Date.parse(from + 'T00:00:00Z');
+    if (isNaN(t)) return '';
+    return new Date(t + d * 86400000).toISOString().slice(0, 10);
+  }
+
+  function daysValue() {
+    if (el('xtDC').checked) return parseInt(el('xtCustomDays').value) || 0;
+    var picked = document.querySelector('input[name=days]:checked');
+    return picked ? (parseInt(picked.value) || 0) : 0;
+  }
+
+  window.xtChanged = function () {
+    var custom = el('xtDC').checked;
+    el('xtCustomDays').hidden = !custom;
+    if (custom && !el('xtCustomDays').value) el('xtCustomDays').focus();
+
+    var d = daysValue();
+    var override = el('xtPriceOverride').value;
+    var box = el('xtPriceBox');
+    var auto = amountForDays(d, XT.p7, XT.p30);
+    var amount = override !== '' ? (parseInt(override) || 0) : auto;
+
+    if (!d) {
+      box.className = 'qa-price qa-price-empty';
+      box.textContent = 'Pick a length to see the price';
+      el('xtDates').innerHTML = '';
+      return;
+    }
+    if (!auto && override === '') {
+      box.className = 'qa-price qa-price-empty';
+      box.textContent = 'No price set for this game — type the amount in Price override.';
+    } else {
+      box.className = 'qa-price';
+      box.innerHTML = '<b>₱' + amount.toLocaleString() + '</b> for ' + d + ' more day' + (d === 1 ? '' : 's')
+        + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '');
+    }
+
+    var end = nextEnd(XT.end, d);
+    var pastDue = XT.end && XT.today && XT.end <= XT.today;
+    el('xtDates').innerHTML = end
+      ? 'Ends ' + (XT.end || '—') + ' <span class="xt-arrow">→</span> <b>' + end + '</b>'
+        + (pastDue ? ' <span style="color:#f0a500;">· already past, so counted from today</span>' : '')
+      : '';
+  };
+
+  // Called from the row button with everything the modal needs, so it never has
+  // to look the rental up again.
+  window.xtOpen = function (opts) {
+    XT = { id: opts.id, p7: opts.p7 || 0, p30: opts.p30 || 0, end: opts.end || '', today: opts.today || '' };
+    el('xtForm').reset();
+    el('xtForm').hidden = false;
+    el('xtFootForm').hidden = false;
+    el('xtDone').hidden = true;
+    el('xtFootDone').hidden = true;
+    el('xtErr').hidden = true;
+    el('xtCopyWarn').hidden = true;
+    el('xtCustomDays').hidden = true;
+    el('xtIcon').textContent = '⏩';
+    el('xtTitle').textContent = 'Extend rental';
+    el('xtWho').innerHTML = '<b>' + opts.name + '</b><span>' + opts.game
+      + (opts.end ? ' · currently ends ' + opts.end : '') + '</span>';
+    el('xtOverlay').classList.add('open');
+    xtChanged();
+  };
+
+  window.xtClose = function () { el('xtOverlay').classList.remove('open'); };
+  window.xtDoneClose = function () { xtClose(); location.reload(); };
+
+  window.xtSubmit = function () {
+    var btn = el('xtSubmit'), err = el('xtErr');
+    err.hidden = true;
+    btn.disabled = true;
+    var original = btn.textContent;
+    btn.textContent = '… saving';
+    fetch('/admin/customers/' + XT.id + '/extend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(el('xtForm')))
+    }).then(function (r) { return r.json(); }).then(function (data) {
+      btn.disabled = false;
+      btn.textContent = original;
+      if (!data.ok) {
+        err.textContent = data.message || 'Could not save that.';
+        err.hidden = false;
+        return;
+      }
+      el('xtForm').hidden = true;
+      el('xtFootForm').hidden = true;
+      el('xtIcon').textContent = '✅';
+      el('xtTitle').textContent = 'Extended';
+      el('xtSummary').textContent = data.summary || '';
+      el('xtMessage').value = data.message || '';
+      el('xtDone').hidden = false;
+      el('xtFootDone').hidden = false;
+    }).catch(function () {
+      btn.disabled = false;
+      btn.textContent = original;
+      err.textContent = 'Could not reach the server — try again.';
+      err.hidden = false;
+    });
+  };
+
+  // Same guard the other copy buttons use: navigator.clipboard needs HTTPS and
+  // is blocked in the Facebook in-app browser, so a silent failure is possible.
+  window.xtCopy = function () {
+    var box = el('xtMessage'), btn = el('xtCopyBtn'), warn = el('xtCopyWarn');
+    function done() {
+      btn.textContent = 'Copied ✓';
+      setTimeout(function () { btn.textContent = '📋 Copy message'; }, 1800);
+    }
+    function fallback() {
+      box.removeAttribute('readonly');
+      box.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      box.setAttribute('readonly', 'readonly');
+      if (ok) done(); else warn.hidden = false;
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(box.value).then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  };
+})();
+</script>

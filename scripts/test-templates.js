@@ -283,4 +283,49 @@ check('a purchase with no order link still renders', () => {
   assert.ok(out.trim().endsWith('playstation-hub.com'), 'ends cleanly, no trailing blank: ' + JSON.stringify(out.slice(-30)));
 });
 
+console.log('\nextension template — the extra days, not the new totals');
+
+check('an extension template ships by default', () => {
+  assert.strictEqual(typeof t.DEFAULT_TEMPLATES.extension, 'string');
+  assert.ok(t.DEFAULT_TEMPLATES.extension.length > 0);
+});
+
+check('it says what was added, not just what the rental now totals', () => {
+  // The whole point. {days} and {price} are the running totals after the
+  // extension — sending those alone reads like the original booking.
+  const e = t.DEFAULT_TEMPLATES.extension;
+  assert.ok(e.includes('{ext_days}'), 'names the days added');
+  assert.ok(e.includes('{ext_price}'), 'names what they paid this time');
+  assert.ok(e.includes('{end_date}'), 'names the new return date');
+  assert.ok(/exten(d|sion)/i.test(e), 'says the word: ' + e);
+});
+
+check('ext_days and ext_price render from the extension, not the customer row', () => {
+  const out = t.renderFor('extension', {
+    customer_name: 'Ana', game_title: 'GT7', account_type: 'nt',
+    days: 37, price: 798, end_date: '2026-09-21', status: 'renting'
+  }, t.DEFAULT_TEMPLATES, { extDays: 7, extPrice: 199 });
+  assert.ok(out.includes('7'), 'the 7 added days');
+  assert.ok(out.includes('199'), 'the 199 just paid');
+  assert.ok(!/\{[a-z_]+\}/.test(out), 'no unreplaced tokens: ' + out);
+  assert.ok(!/undefined|NaN|null/.test(out), 'clean: ' + out);
+});
+
+check('the new return date comes through formatted', () => {
+  const out = t.renderFor('extension', {
+    customer_name: 'Ben', game_title: 'FIFA', account_type: 'tr',
+    days: 14, price: 400, end_date: '2026-09-21'
+  }, t.DEFAULT_TEMPLATES, { extDays: 7, extPrice: 199 });
+  assert.ok(/Sep/.test(out), 'formatted date, not the raw ISO string: ' + out);
+});
+
+check('a free extension renders 0, not a blank', () => {
+  const out = t.renderFor('extension', {
+    customer_name: 'Cara', game_title: 'Tekken 8', account_type: 'nt',
+    days: 37, price: 599, end_date: '2026-09-21'
+  }, t.DEFAULT_TEMPLATES, { extDays: 3, extPrice: 0 });
+  assert.ok(!/\{ext_price\}/.test(out), 'token replaced');
+  assert.ok(/0/.test(out), 'shows the zero');
+});
+
 console.log('\n' + passed + ' assertions passed');

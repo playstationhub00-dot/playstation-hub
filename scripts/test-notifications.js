@@ -336,4 +336,38 @@ ok('nothing is raised when every purchase is filed correctly', () => {
   assert.strictEqual(n.build(Object.assign({}, empty, { boughtWithDuration: [null] })).count, 0);
 });
 
+console.log('\nbuild() — orders left behind by an extension');
+
+ok('an order ending before its customer does is a warning', () => {
+  const r = n.build(Object.assign({}, empty, {
+    staleEndDates: [{ ref: 'PH-0055', fb_name: 'Walid', game_title: 'Onimusha', end_date: '2026-09-11', customer_end_date: '2026-09-18' }]
+  }));
+  assert.strictEqual(r.items.length, 1);
+  const it = r.items[0];
+  assert.strictEqual(it.kind, 'stale_order_end');
+  assert.strictEqual(it.urgency, 'warn');
+  assert.strictEqual(it.tab, 'customers');
+  assert.strictEqual(it.ref, 'PH-0055');
+  assert.ok(it.sub.includes('Walid'), 'names them: ' + it.sub);
+  assert.ok(it.sub.includes('2026-09-18'), 'names the date it should be: ' + it.sub);
+});
+
+ok('a thin record never renders undefined', () => {
+  const r = n.build(Object.assign({}, empty, { staleEndDates: [{ ref: 'PH-1' }] }));
+  assert.strictEqual(r.count, 1);
+  assert.ok(!/undefined|null|NaN/.test(r.items[0].title + ' ' + r.items[0].sub), r.items[0].sub);
+});
+
+ok('one row each, unique ids', () => {
+  const r = n.build(Object.assign({}, empty, { staleEndDates: [{ ref: 'PH-1' }, { ref: 'PH-2' }] }));
+  assert.strictEqual(r.items.length, 2);
+  assert.notStrictEqual(r.items[0].id, r.items[1].id);
+});
+
+ok('nothing raised when every order is in step', () => {
+  assert.strictEqual(n.build(Object.assign({}, empty, { staleEndDates: [] })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { staleEndDates: null })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { staleEndDates: [null] })).count, 0);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

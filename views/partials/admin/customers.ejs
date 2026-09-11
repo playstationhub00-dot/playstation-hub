@@ -20,7 +20,8 @@
     <%# Only rendered when something is actually waiting — an empty
         "Needs attention" card every day trains you to ignore it. %>
     <% const qaBought = (typeof boughtWithDuration !== 'undefined' && boughtWithDuration) ? boughtWithDuration : []; %>
-    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length || qaBought.length) { %>
+    <% const qaStaleEnd = (typeof staleEndDates !== 'undefined' && staleEndDates) ? staleEndDates : []; %>
+    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length || qaBought.length || qaStaleEnd.length) { %>
     <!-- NEEDS ATTENTION -->
     <div class="adm-card" id="sec-attention">
       <div class="adm-card-head" style="border-left:3px solid #ef4444;">
@@ -38,6 +39,31 @@
         <%# Purchases that were recorded as rentals. Above the others because
             the consequence is the loudest: on the end date the site starts
             asking someone who OWNS the game to give it back. %>
+        <%# Extensions made before the Extend action existed: the customer row was
+            edited by hand, so the order still expires on the original date and
+            the sweep asks for a return early. %>
+        <% if (qaStaleEnd.length) { %>
+        <div class="rem-panel unlinked-panel">
+          <div class="rem-title">📅 Extension never reached the order (<%= qaStaleEnd.length %>)</div>
+          <div class="unlinked-note">
+            These rentals run longer than their order thinks. Left alone, the customer's own link
+            counts down to the old date and asks them to return a game they have paid to keep.
+            Fixing copies the rental's real end date onto the order — nothing else changes.
+          </div>
+          <% qaStaleEnd.forEach(o => { %>
+          <div class="rem-row">
+            <div class="rem-info">
+              <span class="rem-name"><%= o.fb_name || 'Unnamed customer' %></span>
+              <span class="rem-badge rem-overdue"><%= o.ref %></span>
+              <div class="rem-meta"><%= o.game_title || '' %> · order ends <%= o.end_date || '—' %>, rental ends <%= o.customer_end_date %></div>
+            </div>
+            <form method="POST" action="/admin/orders/<%= o.ref %>/sync-end-date" style="display:inline">
+              <button type="submit" class="btn-copy">Fix it</button>
+            </form>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
         <% if (qaBought.length) { %>
         <div class="rem-panel unlinked-panel">
           <div class="rem-title">🛒 Bought, but filed as a rental (<%= qaBought.length %>)</div>
@@ -248,6 +274,14 @@
                 <div class="action-btns">
                   <% if (isRenting || isReservation) { %>
                   <button type="button" class="btn-copy rem-copy" data-msg="<%= renderMsg('confirmation', c) %>" title="Copy confirmation message">📋</button>
+                  <% } %>
+                  <%# Extending was three fields on the edit form that nothing kept
+                      in agreement. One action now: extra days, price, new end
+                      date, and the message that says it was an extension. %>
+                  <% if (isRenting) { %>
+                  <% const xtT = (typeof extendTiers !== 'undefined' && extendTiers[c.id]) ? extendTiers[c.id] : { p7: 0, p30: 0 }; %>
+                  <button type="button" class="btn-copy" title="Extend this rental"
+                    onclick='xtOpen(<%- JSON.stringify({ id: c.id, name: c.customer_name || "", game: c.game_title || "", end: c.end_date || "", p7: xtT.p7, p30: xtT.p30, today: (typeof todayManila !== "undefined" ? todayManila : "") }).replace(/'/g, "&#39;") %>)'>⏩ Extend</button>
                   <% } %>
                   <%# Once they're done, the useful message is the thank-you that
                       carries the review ask — the confirmation no longer applies. %>

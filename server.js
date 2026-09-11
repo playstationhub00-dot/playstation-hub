@@ -20,6 +20,7 @@ const telegram = require('./lib/telegram');
 const dashboard = require('./lib/dashboard');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
+const extensions = require('./lib/extensions');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
@@ -614,6 +615,7 @@ gameRequests.ensureIndexes().catch(e => console.error('[requests] ensureIndexes'
 function normalizeCustomer(c) {
   if (!c) return c;
   c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
+  c.extensions = Array.isArray(c.extensions) ? c.extensions : [];
   normalizeCustomerPayments(c);
   return c;
 }
@@ -3498,6 +3500,22 @@ app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
   res.redirect('/admin?tab=orders&msg=refund_marked');
 });
 
+// Pushes the customer row's end date onto an order that never got it — an
+// extension made by hand-editing the customer before the Extend action existed.
+// Not a delete and not a state change: the rental is real and paid for, the
+// order just has the wrong window. setRentalWindow also pulls it back out of
+// 'awaiting_return' if the early sweep already ran.
+app.post('/admin/orders/:ref/sync-end-date', requireAuth, async (req, res) => {
+  const ref = orders.parseOrderRef(req.params.ref);
+  if (!ref) return res.redirect('/admin?tab=customers&msg=error');
+  const linked = (getCustomers() || []).find(c => c && c.order_ref === ref && c.end_date);
+  if (!linked) return res.redirect('/admin?tab=customers&msg=order_stale');
+  const ok = await orders.setRentalWindow(ref, {
+    end_date: linked.end_date, days: linked.days, amount_due: linked.price
+  });
+  res.redirect('/admin?tab=customers&msg=' + (ok ? 'end_date_synced' : 'order_stale'));
+});
+
 // Re-files an order that was recorded as a rental but is really a purchase:
 // clears the duration and end date on both the order and its customer row, and
 // marks the order is_buy so the customer's own page says "It's yours" instead
@@ -4241,6 +4259,19 @@ app.get('/admin', requireAuth, async (req, res) => {
   // previewed the undiscounted price and then saved the discounted one. These
   // come off the same promotedTier() the save path prices from.
   const qaPromo = getSiteSettings().promo || {};
+  // Price tiers for the Extend modal, keyed by customer id. Built here through
+  // promotedTier — the same function the extend route prices from — so the
+  // modal cannot preview one number and save another, the way the rent tiers
+  // drifted before they were single-sourced.
+  const todayManila = orders.manilaDate();
+  const extendTiers = {};
+  customers.forEach(c => {
+    if (!c || c.status !== 'renting') return;
+    const g = getGame(c.game_id);
+    if (!g) return;
+    const t = promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', qaPromo);
+    extendTiers[c.id] = { p7: t[7] || 0, p30: t[30] || 0 };
+  });
   const qaGames = games.map(g => {
     const nt = promotedTier(g, 'nt', qaPromo);
     const tr = promotedTier(g, 'tr', qaPromo);
@@ -4283,6 +4314,21 @@ app.get('/admin', requireAuth, async (req, res) => {
     o && boughtRefs.has(o.ref) && (o.end_date || o.days)
   );
 
+  // Rentals whose order still expires before the customer row says it should —
+  // an extension that was hand-edited onto the customer only. The order gets
+  // swept to 'awaiting_return' on its own stale date, so the customer's link
+  // asks for a return while they still have days paid for.
+  const customerEndByRef = new Map();
+  customers.forEach(c => {
+    if (c && c.status === 'renting' && c.order_ref && c.end_date) customerEndByRef.set(c.order_ref, c);
+  });
+  const staleEndDates = allOrders.filter(o => {
+    if (!o || o.is_buy) return false;
+    if (!['active', 'awaiting_return', 'verifying_return'].includes(o.state)) return false;
+    const c = customerEndByRef.get(o.ref);
+    return c && (!o.end_date || o.end_date < c.end_date);
+  }).map(o => Object.assign({}, o, { customer_end_date: customerEndByRef.get(o.ref).end_date }));
+
   const liveCustomerIds = new Set(customers.map(c => c.id));
   const orphanedOrders = allOrders.filter(o =>
     o && o.customer_id
@@ -4292,10 +4338,10 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
-    negativeReviews, orphanedOrders, boughtWithDuration, paymongoHealth, now: dashNowDate
+    negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { notifs, negativeReviews, boughtWithDuration, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { notifs, negativeReviews, boughtWithDuration, staleEndDates, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -5184,6 +5230,99 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     payments: existingPayments,
   }).write();
   res.redirect('/admin?tab=customers&msg=customer_updated');
+});
+
+// Extend a live rental. One action instead of hand-editing days, end date and
+// price on the customer form and hoping they agree — and, unlike that path,
+// this also moves the ORDER's window, which nothing did before (see
+// orders.setRentalWindow for why that mattered).
+//
+// Returns JSON: the modal stays open to show the message to copy, same as
+// Quick Add.
+app.post('/admin/customers/:id/extend', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.status(400).json({ ok: false, reason: 'bad_customer', message: 'That customer no longer exists.' });
+  if (existing.status !== 'renting') {
+    return res.status(400).json({ ok: false, reason: 'bad_status', message: 'Only a live rental can be extended.' });
+  }
+
+  const days = b.days === 'custom' ? (parseInt(b.custom_days) || 0) : (parseInt(b.days) || 0);
+  if (days < 1) return res.status(400).json({ ok: false, reason: 'bad_days', message: 'Enter how many extra days.' });
+
+  const game = getGame(existing.game_id);
+  const type = existing.account_type === 'tr' ? 'tr' : 'nt';
+  const promo = getSiteSettings().promo || {};
+  // Extra days are priced off the same promo-adjusted curve a fresh rental uses,
+  // so extending a week never costs a different number than renting a week.
+  const tier = game ? promotedTier(resolveGamePrices(game), type, promo) : {};
+  const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
+
+  const ext = extensions.build({
+    currentEnd: existing.end_date, days, today: orders.manilaDate(),
+    tier, override
+  });
+  if (!ext) {
+    return res.status(400).json({
+      ok: false, reason: 'bad_pricing',
+      message: 'No price set for this game and duration — type the amount in Price override.'
+    });
+  }
+
+  const prevPrice = existing.price || 0;
+  const prevDays = existing.days || 0;
+  const newPrice = prevPrice + ext.amount;
+  const newDays = prevDays + ext.days;
+
+  // The price rise IS the payment event, and lib/payments.js already files it
+  // as a dated 'extension' so it counts in the month it was taken rather than
+  // the month the rental began.
+  const payments = Array.isArray(existing.payments) ? existing.payments.slice() : [];
+  const deltaPayment = priceDeltaPayment(prevPrice, newPrice, { startDate: existing.start_date });
+  if (deltaPayment) payments.push(deltaPayment);
+
+  const entry = extensions.record({
+    days: ext.days, amount: ext.amount, fromEnd: ext.fromEnd, endDate: ext.endDate,
+    prevDays, prevPrice
+  });
+
+  db.get('customers').find({ id: parseInt(req.params.id) }).assign({
+    days: newDays,
+    end_date: ext.endDate,
+    price: newPrice,
+    payments,
+    extensions: [...(existing.extensions || []), entry]
+  }).write();
+
+  // The three places a rental's end date lives. They disagreed before: only the
+  // customer row was updated by hand, so the slot freed early on the accounts
+  // board and the order expired on the original date.
+  const assign = findAccountAssignmentForCustomer(parseInt(req.params.id));
+  if (assign) refreshAccountAssignment(assign, {
+    customerName: existing.customer_name, endDate: ext.endDate, status: 'renting'
+  });
+  if (existing.order_ref) {
+    await orders.setRentalWindow(existing.order_ref, {
+      end_date: ext.endDate, days: newDays, amount_due: newPrice
+    }).catch(() => {});
+  }
+
+  const settings = getSiteSettings();
+  const customerRow = db.get('customers').find({ id: parseInt(req.params.id) }).value();
+  const message = templates.renderFor('extension', customerRow, settings.message_templates, {
+    deposit: promo.deposit != null ? promo.deposit : 100,
+    lateFeePerDay: promo.late_fee_per_day != null ? promo.late_fee_per_day : 20,
+    extDays: ext.days, extPrice: ext.amount
+  });
+
+  res.json({
+    ok: true,
+    summary: [existing.customer_name, existing.game_title,
+      '+' + ext.days + ' day' + (ext.days === 1 ? '' : 's'),
+      '\u20b1' + ext.amount, 'until ' + ext.endDate].join(' \u00b7 '),
+    endDate: ext.endDate,
+    message
+  });
 });
 
 app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
