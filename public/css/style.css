@@ -1492,6 +1492,7 @@ nav {
   body.home-page { display: flex; flex-direction: column; }
   .home-page .hero,
   .home-page #heroSlideshow,
+  .home-page .acct-section,
   .home-page #newReleasesSection,
   .home-page #mostPopularSection,
   .home-page .tier-section,
@@ -1499,14 +1500,24 @@ nav {
   .home-page .section[data-upcoming],
   .home-page #mostPlayedPsplusSection,
   .home-page .promo-section,
+  .home-page .ways-section,
   .home-page .why-section,
+  .home-page .paysec,
   .home-page .how-section,
+  .home-page .faq-section,
   .home-page #reviewsSection,
   .home-page footer {
     min-width: 0; width: 100%;
   }
   .home-page #heroSlideshow,
   .home-page .hero { order: 10; }
+  /* acct-section ("Which account type is for you?"), ways-section ("Three ways
+     to play"), paysec ("Ways to Pay") and faq-section ("Common questions") had
+     no order assigned here, so on mobile they defaulted to order:0 — below the
+     hero's order:10 — and rendered ABOVE the hero, new releases, and every game
+     row instead of after promo-section like on desktop. Slotted between their
+     already-ordered neighbours, matching the desktop DOM sequence. */
+  .home-page .acct-section { order: 12; }
   .home-page #newReleasesSection { order: 15; }
   /* Coming Soon sits between the two game rows, matching desktop. They share
      three titles, and back to back that reads as the page repeating itself.
@@ -1518,8 +1529,11 @@ nav {
   .home-page #mostPopularSection { order: 50; }
   .home-page #mostPlayedPsplusSection { order: 60; }
   .home-page .promo-section { order: 70; }
+  .home-page .ways-section { order: 75; }
   .home-page .why-section { order: 80; }
+  .home-page .paysec { order: 85; }
   .home-page .how-section { order: 90; }
+  .home-page .faq-section { order: 95; }
   .home-page #reviewsSection { order: 100; }
   .home-page footer { order: 110; }
 
