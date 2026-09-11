@@ -1416,6 +1416,21 @@ function resolveUpcomingSlots(game) {
   });
 }
 
+// Repeats an existing list — never invents new items — up to a floor of
+// `min` cards, for the two homepage rows that auto-loop. Below that floor two
+// things go wrong: the row may not even overflow the viewport, so
+// autoDrift()'s own "nothing to scroll" check bails out and the loop never
+// starts at all; and when it does start, cycling through 3-4 cards reads as
+// stuck rather than looping. This only widens what gets RENDERED — a
+// section's own show/hide gate must always check the original, un-padded
+// count, or four real games would render as "enough" to show a padded six.
+function padForLoop(list, min) {
+  if (!list.length || list.length >= min) return list;
+  const out = list.slice();
+  for (let i = 0; out.length < min; i++) out.push(list[i % list.length]);
+  return out;
+}
+
 function sortUpcoming(list) {
   return [...list].sort((a, b) => {
     const ra = a.rank || 0;
@@ -1451,7 +1466,7 @@ app.get('/', (req, res) => {
   // the field is being backfilled instead of silently falling back to created_at.
   // Future-dated games belong in Coming Soon, so they're excluded here.
   const todayIso = new Date().toISOString().slice(0, 10);
-  const newReleases = all
+  const newReleasesRaw = all
     .filter(g => g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso)
     .sort((a, b) => b.release_date.localeCompare(a.release_date))
     .slice(0, 10);
@@ -1465,16 +1480,31 @@ app.get('/', (req, res) => {
   // Only excludes when New Releases is actually on the page. That row hides
   // itself below four games (see index.ejs), and de-duplicating against a row
   // nobody can see would quietly drop games from this one for no reason.
-  const newReleaseIds = newReleases.length >= 4
-    ? new Set(newReleases.map(g => g.id))
+  //
+  // Deduped against the RAW (un-padded) list — padForLoop repeats games to
+  // fill out the loop, and a repeated id would otherwise get excluded from
+  // Most Popular twice over for no reason.
+  const newReleaseIds = newReleasesRaw.length >= 4
+    ? new Set(newReleasesRaw.map(g => g.id))
     : new Set();
   const featured = [...all]
     .sort((a, b) => (b.renters || 0) - (a.renters || 0))
     .filter(g => !newReleaseIds.has(g.id))
     .slice(0, 10);
+  // Widened to a floor of 6 so the row always has enough to auto-loop — but
+  // ONLY once it has already earned its place on the page. index.ejs's own
+  // gate re-checks newReleases.length >= 4, so padding an already-hidden
+  // 2-game list up to 6 would flip that gate to true and show a section built
+  // from real data too thin to be a "New Releases" row at all.
+  const newReleases = newReleasesRaw.length >= 4 ? padForLoop(newReleasesRaw, 6) : newReleasesRaw;
+  // Same floor for Coming Soon. Scoped to just this homepage row: `upcoming`
+  // here is local to this route and only ever reaches index.ejs's Coming Soon
+  // partial, never the admin, browse, or reservation pages that read the real
+  // (un-padded) list elsewhere in this file.
+  const upcomingForLoop = padForLoop(upcoming, 6);
   // The homepage renders the same review strip partial as every other public
   // page, so it takes the same locals from the same helper.
-  res.render('index', Object.assign({ featured, games: all, upcoming, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
+  res.render('index', Object.assign({ featured, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
     reviewBlockLocals('')));
 });
 

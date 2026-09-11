@@ -769,7 +769,12 @@ function slideSection(id, dir) {
 (function () {
   var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  function autoDrift(id, pxPerSecond) {
+  // `reverse` flips which way the content flows. Forward increases scrollLeft,
+  // so cards drift toward the left edge and exit there (content flows right to
+  // left) — that's Most Popular. Reverse starts at the halfway wrap point and
+  // decreases, so cards drift toward the right edge and exit there instead
+  // (content flows left to right) — New Releases and Coming Soon, per request.
+  function autoDrift(id, pxPerSecond, reverse) {
     var slider = document.getElementById(id);
     if (!slider || reduced) return;
     // Nothing to drift through if the row already fits on screen.
@@ -779,7 +784,7 @@ function slideSection(id, dir) {
     // (or not at all) still animates; the observer corrects it on its first
     // callback, which fires immediately on observe().
     var raf = null, stopped = false, hovered = false, onScreen = true;
-    var last = 0, pos = slider.scrollLeft;
+    var last = 0;
 
     // A second copy of the cards, so reaching the end of the first set can wrap
     // to the identical point in the second without anything visibly jumping.
@@ -800,14 +805,28 @@ function slideSection(id, dir) {
 
     slider.style.scrollSnapType = 'none';
 
+    // Reverse starts mid-wrap (the seam between the two identical copies)
+    // rather than at 0, since there is nothing before position 0 to decrease
+    // into — scrollLeft can't go negative in an LTR row. Starting at the seam
+    // and counting down reaches 0 exactly when the content there is once
+    // again identical to the far end, which is the same invisible-wrap trick
+    // the forward direction uses, just approached from the other side.
+    var pos = reverse ? slider.scrollWidth / 2 : slider.scrollLeft;
+    if (reverse) slider.scrollLeft = pos;
+
     function frame(now) {
       if (stopped) return;
       var dt = last ? Math.min(now - last, 100) : 0; // clamp: a backgrounded tab
       last = now;                                    // must not lurch on return
       if (!hovered && onScreen && !document.hidden) {
-        pos += (pxPerSecond * dt) / 1000;
         var half = slider.scrollWidth / 2;
-        if (pos >= half) pos -= half; // identical content, so this is invisible
+        if (reverse) {
+          pos -= (pxPerSecond * dt) / 1000;
+          if (pos <= 0) pos += half; // identical content, so this is invisible
+        } else {
+          pos += (pxPerSecond * dt) / 1000;
+          if (pos >= half) pos -= half;
+        }
         slider.scrollLeft = pos;
       }
       raf = requestAnimationFrame(frame);
@@ -867,10 +886,12 @@ function slideSection(id, dir) {
     }
   }
 
-  // Slightly different speeds so the two rows never drift in lockstep, which
-  // would read as one big moving block rather than two independent shelves.
-  autoDrift('newReleasesSlider', 18);
-  autoDrift('upcomingSlider', 16);
+  // Slightly different speeds so the rows never drift in lockstep, which
+  // would read as one big moving block rather than independent shelves.
+  // New Releases and Coming Soon flow left to right; Most Popular is
+  // untouched and keeps flowing right to left.
+  autoDrift('newReleasesSlider', 18, true);
+  autoDrift('upcomingSlider', 16, true);
   autoDrift('popularSlider', 14);
 })();
 
