@@ -888,9 +888,9 @@ function slideSection(id, dir) {
 
   // Slightly different speeds so the rows never drift in lockstep, which
   // would read as one big moving block rather than independent shelves.
-  // New Releases and Coming Soon flow left to right; Most Popular is
-  // untouched and keeps flowing right to left.
-  autoDrift('newReleasesSlider', 18, true);
+  // Only Coming Soon flows left to right; New Releases and Most Popular flow
+  // right to left (New Releases was briefly reversed too, then asked back).
+  autoDrift('newReleasesSlider', 18);
   autoDrift('upcomingSlider', 16, true);
   autoDrift('popularSlider', 14);
 })();
