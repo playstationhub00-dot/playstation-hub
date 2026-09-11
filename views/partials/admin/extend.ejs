@@ -131,7 +131,7 @@
     if (!d) {
       box.className = 'qa-price qa-price-empty';
       box.textContent = 'Pick a length to see the price';
-      el('xtDates').innerHTML = '';
+      el('xtDates').textContent = '';
       return;
     }
     if (!auto && override === '') {
@@ -143,12 +143,30 @@
         + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '');
     }
 
+    // Also built as nodes rather than markup. `end` is computed here and always
+    // an ISO slice, but XT.end arrives from the record, and there is no reason
+    // for any stored string to reach an innerHTML sink in this file.
     var end = nextEnd(XT.end, d);
     var pastDue = XT.end && XT.today && XT.end <= XT.today;
-    el('xtDates').innerHTML = end
-      ? 'Ends ' + (XT.end || '—') + ' <span class="xt-arrow">→</span> <b>' + end + '</b>'
-        + (pastDue ? ' <span style="color:#f0a500;">· already past, so counted from today</span>' : '')
-      : '';
+    var dates = el('xtDates');
+    dates.textContent = '';
+    if (end) {
+      dates.appendChild(document.createTextNode('Ends ' + (XT.end || '—') + ' '));
+      var arrow = document.createElement('span');
+      arrow.className = 'xt-arrow';
+      arrow.textContent = '→';
+      dates.appendChild(arrow);
+      var newEnd = document.createElement('b');
+      newEnd.textContent = end;
+      dates.appendChild(document.createTextNode(' '));
+      dates.appendChild(newEnd);
+      if (pastDue) {
+        var note = document.createElement('span');
+        note.style.color = '#f0a500';
+        note.textContent = ' · already past, so counted from today';
+        dates.appendChild(note);
+      }
+    }
   };
 
   // Called from the row button with everything the modal needs, so it never has
@@ -165,8 +183,18 @@
     el('xtCustomDays').hidden = true;
     el('xtIcon').textContent = '⏩';
     el('xtTitle').textContent = 'Extend rental';
-    el('xtWho').innerHTML = '<b>' + opts.name + '</b><span>' + opts.game
-      + (opts.end ? ' · currently ends ' + opts.end : '') + '</span>';
+    // Built with DOM nodes, never innerHTML: name and game are customer-supplied
+    // (fb_name comes off the public order form), so concatenating them into
+    // markup would run whatever tags someone put in their name — inside the
+    // owner's own admin session.
+    const who = el('xtWho');
+    who.textContent = '';
+    const nameEl = document.createElement('b');
+    nameEl.textContent = opts.name || '';
+    const metaEl = document.createElement('span');
+    metaEl.textContent = (opts.game || '') + (opts.end ? ' · currently ends ' + opts.end : '');
+    who.appendChild(nameEl);
+    who.appendChild(metaEl);
     el('xtOverlay').classList.add('open');
     xtChanged();
   };

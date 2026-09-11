@@ -80,7 +80,7 @@
               <div class="rem-meta"><%= o.game_title || '' %><%= o.end_date ? ' · would ask for a return on ' + o.end_date : '' %></div>
             </div>
             <form method="POST" action="/admin/orders/<%= o.ref %>/fix-purchase" style="display:inline"
-                  onsubmit="return confirm(<%- JSON.stringify('File ' + o.ref + ' as a purchase? This clears its duration and end date so no return is ever asked for.') %>)">
+                  class="cst-confirm" data-confirm="File <%= o.ref %> as a purchase? This clears its duration and end date so no return is ever asked for.">
               <button type="submit" class="btn-copy">Fix it</button>
             </form>
           </div>
@@ -280,8 +280,10 @@
                       date, and the message that says it was an extension. %>
                   <% if (isRenting) { %>
                   <% const xtT = (typeof extendTiers !== 'undefined' && extendTiers[c.id]) ? extendTiers[c.id] : { p7: 0, p30: 0 }; %>
-                  <button type="button" class="btn-copy" title="Extend this rental"
-                    onclick='xtOpen(<%- JSON.stringify({ id: c.id, name: c.customer_name || "", game: c.game_title || "", end: c.end_date || "", p7: xtT.p7, p30: xtT.p30, today: (typeof todayManila !== "undefined" ? todayManila : "") }).replace(/'/g, "&#39;") %>)'>⏩ Extend</button>
+                  <button type="button" class="btn-copy cst-extend" title="Extend this rental"
+                    data-id="<%= c.id %>" data-name="<%= c.customer_name || '' %>" data-game="<%= c.game_title || '' %>"
+                    data-end="<%= c.end_date || '' %>" data-p7="<%= xtT.p7 %>" data-p30="<%= xtT.p30 %>"
+                    data-today="<%= typeof todayManila !== 'undefined' ? todayManila : '' %>">⏩ Extend</button>
                   <% } %>
                   <%# Once they're done, the useful message is the thank-you that
                       carries the review ask — the confirmation no longer applies. %>
@@ -317,7 +319,16 @@
                       a customer row carrying payments[], and an order carrying
                       amount_due — and deleting one used to leave the other's
                       money on the books. Both go now, so the dialog says so. %>
-                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" onsubmit="return confirm(<%- JSON.stringify('Delete ' + c.customer_name + '?' + (c.order_ref ? '\n\nThis also deletes order ' + c.order_ref + ' and takes its \u20b1' + (c.price || 0) + ' out of your monthly totals.' : '')) %>)">
+                  <%# The confirmation text rides in a data-* attribute read by the
+                      delegated handler below, NOT inline in onsubmit. An earlier
+                      version interpolated raw JSON.stringify into a double-quoted
+                      onsubmit — JSON's own quotes closed the attribute, so the
+                      dialog was broken for every customer, and a name containing a
+                      quote could inject a live event handler. customer_name is the
+                      fb_name typed on the public order form, so that is reachable
+                      by anyone who can place an order. EJS escaping applies here. %>
+                  <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" class="cst-confirm"
+                        data-confirm="Delete <%= c.customer_name %>?<%= c.order_ref ? ' This also deletes order ' + c.order_ref + ' and takes its \u20b1' + (c.price || 0) + ' out of your monthly totals.' : '' %>">
                     <button type="submit" class="btn-delete">🗑</button>
                   </form>
                 </div>
@@ -376,6 +387,29 @@
         clearTimeout(btn._flashTimer);
         btn._flashTimer = setTimeout(() => { btn.textContent = original; }, 1800);
       }
+      // Confirmation text comes from a data-* attribute so EJS escapes it. An
+      // inline onsubmit with interpolated values is what broke, and what let a
+      // customer name inject an attribute.
+      document.addEventListener('submit', function(e){
+        const form = e.target.closest('.cst-confirm');
+        if (!form) return;
+        if (!confirm(form.dataset.confirm || 'Are you sure?')) e.preventDefault();
+      });
+
+      document.addEventListener('click', function(e){
+        const x = e.target.closest('.cst-extend');
+        if (!x) return;
+        xtOpen({
+          id: x.dataset.id,
+          name: x.dataset.name || '',
+          game: x.dataset.game || '',
+          end: x.dataset.end || '',
+          p7: parseInt(x.dataset.p7) || 0,
+          p30: parseInt(x.dataset.p30) || 0,
+          today: x.dataset.today || ''
+        });
+      });
+
       document.addEventListener('click', function(e){
         const btn = e.target.closest('.rem-copy');
         if (!btn) return;
