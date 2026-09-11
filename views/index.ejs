@@ -697,7 +697,11 @@ window.toggleCollapsible = window.toggleCollapsible || function(id, btn) {
 </div>
 
 <!-- Reviews Section -->
-<% if (reviews && reviews.length > 0) { %>
+<%# `reviews` is only the ones with something written; `recommend` counts every
+    review submitted. A run of one-tap 👍 with no comments would leave the first
+    empty and the second full, and gating solely on quotes would throw away the
+    "100% would recommend us" bar — the most persuasive thing on the page. %>
+<% if ((reviews && reviews.length > 0) || (typeof recommend !== 'undefined' && recommend && recommend.total > 0)) { %>
 <section class="section" id="reviewsSection" style="padding-bottom:var(--section-gap);">
   <h2 class="section-title" style="color:#fff;margin-bottom:1.75rem;">
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">

@@ -628,10 +628,15 @@ function getCustomers() { return (db.get('customers').value() || []).map(normali
 // list many games at once (there is no single title to prefer there).
 function reviewBlockLocals(gameTitle) {
   const all = db.get('reviews').value() || [];
-  const pool = all.filter(r => r && r.visible === true && !r.private);
+  const published = all.filter(r => r && r.visible === true && !r.private);
+  // A one-tap 👍 leaves no words behind. It still counts toward "would
+  // recommend us" — that is the whole point of counting the ratio separately —
+  // but a card with nothing in it rendered as a bare pair of quote marks and
+  // told a reader nothing. Only reviews with something written get a card.
+  const quoted = published.filter(r => String(r.text || '').trim() !== '');
   return {
-    reviews: reviewRules.sortForGame(pool, gameTitle || ''),
-    reviewStats: reviewRules.aggregate(pool),
+    reviews: reviewRules.sortForGame(quoted, gameTitle || ''),
+    reviewStats: reviewRules.aggregate(published),
     // Counted over EVERY review, not just the published ones — see
     // reviewRules.recommendStats for why that matters.
     recommend: reviewRules.recommendStats(all),

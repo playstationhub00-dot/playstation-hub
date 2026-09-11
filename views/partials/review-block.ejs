@@ -18,17 +18,16 @@
   exactly true. Do not put EJS delimiters inside this block — the parser reads
   the first close tag it finds, wherever it appears.
 %>
-<% if (reviews && reviews.length) { %>
+<%# `recommend` counts every review submitted; `reviews` is only the ones with
+    something written. They diverge whenever someone taps 👍 and adds nothing,
+    so the headline has to be able to stand on its own — otherwise six silent
+    recommends would render no block at all. %>
+<% var rec = (typeof recommend !== 'undefined' && recommend) ? recommend : null; %>
+<% if ((reviews && reviews.length) || (rec && rec.total > 0)) { %>
 <div class="gdrq" id="gdrq">
   <div class="gdrq-head">
-    <%# Reviews are a thumb now, not one to five stars, so the headline is the
-        share of people who would recommend us — counted over EVERY review
-        submitted, including the negative ones that are never published. A
-        ratio counted over the visible pool would read 100% forever.
-
-        Falls back to the old star average only for an install that somehow has
+    <%# Falls back to the old star average only for an install that somehow has
         reviews but no recommend figure, so this can never render "0%". %>
-    <% var rec = (typeof recommend !== 'undefined' && recommend) ? recommend : null; %>
     <% if (rec && rec.total > 0) { %>
     <div class="gdrq-avg"><%= rec.pct %><span class="gdrq-avg-pct">%</span></div>
     <div>
@@ -50,6 +49,9 @@
     </div>
     <% } %>
   </div>
+  <%# No cards when nobody wrote anything — the headline above still
+      speaks for the silent recommends. %>
+  <% if (reviews && reviews.length) { %>
   <div class="gdrq-vp" id="gdrqVp">
     <div class="gdrq-track" id="gdrqTrack">
       <%
@@ -85,6 +87,7 @@
       <% reviews.forEach(r => gdrqBuildCard(r, true)) %>
     </div>
   </div>
+  <% } %>
 </div>
 <script>
 (function(){
