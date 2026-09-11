@@ -98,14 +98,15 @@
   var cardCount = <%= reviews.length %>;
 
   function layout() {
-    // The track holds two copies back to back, so half its width is one full
-    // pass of the real set — that's what "not overflowing" and the slide
-    // distance are both measured against.
-    var halfWidth = track.scrollWidth / 2;
-    if (reduceMotion || halfWidth <= vp.clientWidth + 1) {
-      // Nothing to slide: either motion is off, or the cards already fit.
-      // Center the single real set and drop the duplicate out of flow so it
-      // can't be tabbed to or take up layout space.
+    // Used to stay still once the row fit the screen — "no point animating
+    // text that isn't scrolling." That made sense with a big pool, but this
+    // partial now shows far fewer cards (only the ones with something
+    // written), so "fits the screen" started being the common case on an
+    // ordinary desktop instead of the rare one, and the strip read as dead.
+    // A quote wall is meant to feel alive; always drifting is what does that,
+    // fits or not. reduceMotion and a single lonely card (nothing to
+    // meaningfully loop) are the only real reasons to hold still.
+    if (reduceMotion || cardCount <= 1) {
       track.classList.remove('gdrq-sliding');
       track.style.animation = 'none';
       track.style.justifyContent = 'center';
@@ -119,8 +120,10 @@
     track.style.setProperty('--gdrq-duration', (cardCount * 8) + 's');
   }
 
+  // No longer measures anything at resize time — the decision is just
+  // reduceMotion and cardCount, both fixed at load — so there is nothing left
+  // for a resize listener to recompute.
   layout();
-  window.addEventListener('resize', layout);
 
   // Touch has no hover, so pause-on-hover does nothing for a phone — a quote
   // someone touches to read would otherwise keep sliding out from under their
