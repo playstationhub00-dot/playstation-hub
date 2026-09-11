@@ -34,13 +34,20 @@
   const trSlots = game.trophy_slots || 0;
   const totalSlots = ntSlots + trSlots;
   const allFull = totalSlots === 0;
+  // Same "one left" urgency cue as the released-game page, over the poster.
+  const udIsLastSlot = totalSlots === 1;
 
-  // Permanent pre-order. Same 50%-now / 50%-on-release model as a reservation,
-  // so it rides the existing reserve flow rather than /order/buy (which only
-  // knows about already-released catalogue rows).
+  // Permanent pre-order. Paid in full now (no rental deposit to hold back
+  // against, so nothing to split) — still rides /order/reserve rather than
+  // /order/buy, because /order/buy only knows about already-released
+  // catalogue rows and this game doesn't exist as one yet.
   const udBuyNt = game.buy_nt_price || 0;
   const udBuyTr = game.buy_tr_price || 0;
   const udHasBuy = udBuyNt > 0 || udBuyTr > 0;
+  const udPromo = settings.promo || {};
+  const udBuyPromoOn = !!(udPromo.buy_promo_enabled && udPromo.buy_promo_pct > 0);
+  const udBuyNtFinal = udBuyPromoOn ? Math.round(udBuyNt * (1 - udPromo.buy_promo_pct / 100)) : udBuyNt;
+  const udBuyTrFinal = udBuyPromoOn ? Math.round(udBuyTr * (1 - udPromo.buy_promo_pct / 100)) : udBuyTr;
 %>
 
 <div class="usd-page">
@@ -98,6 +105,17 @@
         <% if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster">
         <% } %>
+        <!-- Same poster badges as the released-game page: platform corner chip,
+             plus an urgency banner when a rental slot is scarce. Meaningless
+             for a permanent pre-order (that has no slot pool), so it reflects
+             the RENT side's slot count either way — matches how it reads on
+             the released page too, where it sits above both panels. -->
+        <div class="gd-platform-badge"><%= game.platform %></div>
+        <% if (udIsLastSlot) { %>
+          <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
+        <% } else if (allFull) { %>
+          <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
+        <% } %>
         <!-- Description only, matching the rent page. The release countdown used
              to repeat here, but the banner directly above already states it
              verbatim ("16 DAYS UNTIL RELEASE · September 15, 2026"). -->
@@ -128,6 +146,9 @@
             </button>
             <% } %>
           </div>
+
+          <!-- ════════ RENT PANEL ════════ -->
+          <div id="udRentPanel">
 
           <% if (hasNt || showTr) { %>
           <div class="gd-type-options" id="typeOptions">
@@ -177,7 +198,7 @@
             <% } %>
           </div>
 
-          <div id="udDurWrap"><div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div></div>
+          <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
 
           <!-- Same summary box as the rent page down to the last element: always
                visible, rows on top, a "To send now" final line, the green rider
@@ -205,7 +226,6 @@
               <input type="hidden" name="game_id" value="<%= game.id %>">
               <input type="hidden" name="account_type" id="reserveType" value="">
               <input type="hidden" name="days" id="reserveDays" value="">
-              <input type="hidden" name="kind" id="reserveKind" value="">
               <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
               <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve Now →</button>
               <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay 50% now via GCash or Maya · balance on release day</div>
@@ -227,6 +247,96 @@
               <div class="gd-reserve-cta">📘 Join Waitlist →</div>
             </a>
           </div>
+
+          </div><!-- /udRentPanel -->
+
+          <!-- ════════ BUY PERMANENT PANEL ════════
+               Dedicated cards, not the shared type-pill/summary-box furniture
+               above — mirrors the released-game page's #buyPanel exactly (same
+               classes, same card shape) rather than reusing the reservation
+               layout, because a permanent price has nothing to reserve and no
+               balance to show: one price, one button. Paid in full now — no
+               downpayment split, since there is no rental deposit being held
+               back against that a later payment would need to complete. -->
+          <% if (udHasBuy) { %>
+          <div id="udBuyPanel" style="display:none;">
+
+            <% if (udBuyPromoOn) { %>
+            <div style="background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;border-radius:10px;padding:0.6rem 1rem;font-size:0.85rem;font-weight:800;text-align:center;margin-bottom:1.25rem;letter-spacing:0.3px;">
+              🎉 <%= udPromo.buy_promo_pct %>% OFF Permanent Access — Limited Time!
+            </div>
+            <% } %>
+
+            <div class="gd-section-label" style="margin-top:0;">SELECT ACCOUNT TYPE</div>
+
+            <% if (udBuyNt > 0) { %>
+            <div class="gd-type-card" id="udBuyNtCard" onclick="selectUdBuyType('nt')" style="cursor:pointer;margin-bottom:0.75rem;border-color:#222;">
+              <div style="display:none;"><input type="radio" name="udBuyType" value="nt" id="udBuyRadioNt"></div>
+              <div class="gd-type-body">
+                <div class="gd-type-header">
+                  <span class="gd-type-icon">🎮</span>
+                  <span class="gd-type-name">Non-Trophy — Permanent Access</span>
+                </div>
+                <div class="gd-type-desc">Played on our account. No trophy tracking. One-time payment, lifetime access.</div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+                  <% if (udBuyPromoOn) { %>
+                    <span style="font-size:0.85rem;color:#555;text-decoration:line-through;">₱<%= udBuyNt %></span>
+                  <% } %>
+                  <span style="font-size:1.5rem;font-weight:900;color:#22c55e;">₱<%= udBuyNtFinal %></span>
+                  <span style="font-size:0.72rem;color:#555;background:#1a1a1a;padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <% if (udBuyTr > 0 && showTr) { %>
+            <div class="gd-type-card" id="udBuyTrCard" onclick="selectUdBuyType('tr')" style="cursor:pointer;margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
+              <div style="display:none;"><input type="radio" name="udBuyType" value="tr" id="udBuyRadioTr"></div>
+              <div class="gd-type-body">
+                <div class="gd-type-header">
+                  <span class="gd-type-icon">🏆</span>
+                  <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
+                </div>
+                <div class="gd-type-desc" style="color:#886600;">Earn trophies on your own PSN account. Play at your own pace forever.</div>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+                  <% if (udBuyPromoOn) { %>
+                    <span style="font-size:0.85rem;color:#664d00;text-decoration:line-through;">₱<%= udBuyTr %></span>
+                  <% } %>
+                  <span style="font-size:1.5rem;font-weight:900;color:#ffc400;">₱<%= udBuyTrFinal %></span>
+                  <span style="font-size:0.72rem;color:#664d00;background:rgba(255,196,0,0.1);padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+                </div>
+              </div>
+            </div>
+            <% } %>
+
+            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
+              <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem;">What You Get</div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
+                <div>♾️ &nbsp;Permanent access — no time limit, once <%= game.title %> releases</div>
+                <div>🔓 &nbsp;Play anytime, as many times as you want</div>
+                <div>💳 &nbsp;Pay online via GCash or Maya</div>
+              </div>
+            </div>
+
+            <form method="POST" action="/order/reserve" class="gd-order-form" id="udBuyForm">
+              <input type="hidden" name="game_id" value="<%= game.id %>">
+              <input type="hidden" name="account_type" id="udBuyOrderType" value="">
+              <input type="hidden" name="kind" value="buy">
+              <input type="text" name="fb_name" id="udBuyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+              <button type="submit" class="gd-order-btn" id="udBuyCtaBtn" onclick="return handleUdBuyClick(event)">
+                📘 Pre-order Permanent Access
+              </button>
+              <div class="gd-order-sub">Pay in full — nothing more due on release</div>
+            </form>
+            <div id="udBuyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+            <% if (order_error === '1') { %>
+            <div class="gd-order-error">⚠️ Please pick an account type and enter your Facebook name, before continuing.</div>
+            <% } %>
+
+            <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-link" style="display:block;text-align:center;margin-top:0.5rem;">or message us on Facebook instead</a>
+
+          </div><!-- /udBuyPanel -->
+          <% } %>
 
         </div>
       </div>
@@ -276,21 +386,32 @@ const NT_PRICES  = { 7: <%= game.nt_price_7d||0 %>, 30: <%= game.nt_price_30d||0
 const TR_PRICES  = { 7: <%= game.tr_price_7d||0 %>, 30: <%= game.tr_price_30d||0 %> };
 const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;
 const TR_SLOTS   = <%= game.trophy_slots||0 %>;
-const BUY_PRICES = { nt: <%= udBuyNt %>, tr: <%= udBuyTr %> };
-const HAS_BUY    = <%= udHasBuy ? 'true' : 'false' %>;
 </script>
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 
 let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
 let selectedDays = null;
-// 'rent' = reserve a rental (duration-based). 'buy' = pre-order permanent
-// access (no duration). Both submit through /order/reserve; the buy branch is
-// distinguished by the hidden `kind` field.
+let selectedBuyType = null;
+// 'rent' = reserve a rental (duration-based, 50% now). 'buy' = pre-order
+// permanent access, paid in full, on its own dedicated panel — it has no
+// duration and no downpayment split, so it no longer shares the rent
+// panel's summary box, CTA or Messenger link the way it used to.
 let upcomingMode = 'rent';
 
 function setUpcomingMode(mode) {
   upcomingMode = mode === 'buy' ? 'buy' : 'rent';
+  const isRent = upcomingMode === 'rent';
+
+  const rentPanel = document.getElementById('udRentPanel');
+  if (rentPanel) rentPanel.style.display = isRent ? '' : 'none';
+  const buyPanel = document.getElementById('udBuyPanel');
+  if (buyPanel) buyPanel.style.display = isRent ? 'none' : '';
+  // Fall in Line is a rental-slot concept — a permanent pre-order isn't
+  // limited by the same slot pool, so it has nothing to wait in line for.
+  const waitlist = document.getElementById('ctaWaitlist');
+  if (waitlist) waitlist.style.display = (isRent && ALL_FULL) ? '' : 'none';
+
   const rentBtn = document.getElementById('udToggleRent');
   const buyBtn  = document.getElementById('udToggleBuy');
   // Guarded separately, not as a pair: the toggle bar now renders on every
@@ -299,26 +420,15 @@ function setUpcomingMode(mode) {
   // set. A combined `rentBtn && buyBtn` check would skip both in that case.
   const on = 'var(--ps-blue)', onText = '#000', offText = '#555';
   if (rentBtn) {
-    rentBtn.style.background = upcomingMode === 'rent' ? on : 'transparent';
-    rentBtn.style.color      = upcomingMode === 'rent' ? onText : offText;
+    rentBtn.style.background = isRent ? on : 'transparent';
+    rentBtn.style.color      = isRent ? onText : offText;
   }
   if (buyBtn) {
-    buyBtn.style.background = upcomingMode === 'buy' ? on : 'transparent';
-    buyBtn.style.color      = upcomingMode === 'buy' ? onText : offText;
+    buyBtn.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)';
+    buyBtn.style.color      = isRent ? offText : '#fff';
   }
-  // A permanent purchase has no rental length, so the duration picker is
-  // irrelevant in buy mode.
-  const durWrap = document.getElementById('udDurWrap');
-  if (durWrap) durWrap.style.display = upcomingMode === 'buy' ? 'none' : '';
-  const kindEl = document.getElementById('reserveKind');
-  if (kindEl) kindEl.value = upcomingMode === 'buy' ? 'buy' : '';
-  updateSummary();
-  updateCta();
-  updateLinks();
+  if (isRent) { updateSummary(); updateCta(); updateLinks(); }
 }
-
-// Permanent price for the selected type, 0 when that type isn't sold outright.
-function getBuyPrice() { return (selectedType === 'tr' ? BUY_PRICES.tr : BUY_PRICES.nt) || 0; }
 
 // Setup-panel handlers, same behaviour as the rent page's: the disclosure
 // opens once and shows whichever type is currently selected, rather than each
@@ -399,28 +509,6 @@ function updateSummary() {
   const hintEl  = document.getElementById('sumHint');
   if (!rowsEl || !finalEl) return;
 
-  if (upcomingMode === 'buy') {
-    // Buying the account outright — no rental deposit, nothing to return.
-    const bp = getBuyPrice();
-    if (!bp) {
-      rowsEl.innerHTML = '';
-      finalEl.textContent = '—';
-      riderEl.style.display = 'none';
-      hintEl.textContent = 'Not sold permanently for this type — pick the other one.';
-      hintEl.style.display = '';
-      return;
-    }
-    const bDown = Math.ceil(bp * 0.5);
-    rowsEl.innerHTML =
-      '<div class="gd-total-row"><span>Permanent access</span><span>₱' + bp + '</span></div>' +
-      '<div class="gd-total-row"><span>Total</span><span>₱' + bp + '</span></div>';
-    finalEl.textContent = '₱' + bDown;
-    riderEl.textContent = '↩ Remaining ₱' + (bp - bDown) + ' due when the game releases.';
-    riderEl.style.display = '';
-    hintEl.style.display = 'none';
-    return;
-  }
-
   if (!selectedDays) {
     rowsEl.innerHTML = '';
     finalEl.textContent = '—';
@@ -447,16 +535,11 @@ function updateSummary() {
   hintEl.style.display = 'none';
 }
 
-// The rent page's CTA pattern: one button that either states the missing
-// choice and stays disabled, or names the action. The wording that used to
-// live in a separate header block above the form now rides on the button's
-// sub-line, and its figures come off the summary box above.
 // The rent page's updateCtaState() pattern, one for one: while the choice is
 // incomplete the button names the missing step, greys out via .gd-cta-wait and
 // the sub-line stays hidden; once complete it names the action and carries the
-// amount the customer sends right now. Buy mode mirrors that page's buy panel,
-// whose button states the action without a figure and leaves the amount to the
-// summary box.
+// amount the customer sends right now. Rent-only — Buy Permanent has its own
+// static button on its own panel (see the udBuyPanel markup / selectUdBuyType).
 function updateCta() {
   const btn = document.getElementById('ctaReserveBtn');
   const sub = document.getElementById('ctaReserveSub');
@@ -475,12 +558,6 @@ function updateCta() {
     if (sub) { sub.textContent = subText; sub.style.display = ''; }
   };
 
-  if (upcomingMode === 'buy') {
-    if (!getBuyPrice()) return setWait('Not sold permanently for this type');
-    return setReady('📘 Pre-order Permanent Access',
-      'Pay 50% now via GCash or Maya · balance on release day');
-  }
-
   if (!selectedDays) return setWait('Pick a duration');
 
   const price   = getPrices()[selectedDays] || 0;
@@ -493,26 +570,9 @@ function updateCta() {
       : 'No slots free right now — pay 50% to request one. We refund you if one never opens.');
 }
 
+// Rent-only. Buy Permanent's Messenger link is static (no duration, no split
+// to report), same as the released-game page's own buy panel.
 function updateLinks() {
-  const typeNameB = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
-  // Buy mode has its own figures. updateCta() already wrote the correct
-  // permanent downpayment into the fee line, and this function used to
-  // overwrite it with the RENTAL downpayment — showing "Pay ₱350" under a
-  // "Total ₱1999" summary. It also has no duration to report to Messenger.
-  if (upcomingMode === 'buy') {
-    const bp = getBuyPrice();
-    const bDown = bp ? Math.ceil(bp * 0.5) : 0;
-    const buyMsg = encodeURIComponent(
-      'Hi! I want to PRE-ORDER PERMANENT ACCESS for:\n' +
-      'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
-      'Type: ' + typeNameB + '\n' +
-      'Permanent Total: ' + (bp ? '₱' + bp : 'TBD') + '\n' +
-      '50% Downpayment: ' + (bDown ? '₱' + bDown : 'TBD')
-    );
-    const be = document.getElementById('reserveLinkSlot');
-    if (be) be.href = 'http://m.me/PlaystationHub00?text=' + buyMsg;
-    return;
-  }
   if (!selectedDays) return;
   const typeName = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
   const price    = getPrices()[selectedDays] || 0;
@@ -556,7 +616,6 @@ function shakeDurGrid() {
 }
 
 function handleReserveClick(e, mode) {
-  if (upcomingMode === 'buy') return true;
   if (!ALL_FULL && !selectedDays) {
     e.preventDefault();
     shakeDurGrid();
@@ -566,15 +625,6 @@ function handleReserveClick(e, mode) {
 }
 
 function handleReserveSubmit(e) {
-  // Buy mode has no duration to validate — it is gated on the selected type
-  // actually having a permanent price instead.
-  if (upcomingMode === 'buy') {
-    if (!getBuyPrice()) { e.preventDefault(); return false; }
-    document.getElementById('reserveType').value = selectedType;
-    document.getElementById('reserveDays').value = '';
-    document.getElementById('reserveKind').value = 'buy';
-    return true;
-  }
   if (!selectedDays) {
     e.preventDefault();
     shakeDurGrid();
@@ -582,7 +632,44 @@ function handleReserveSubmit(e) {
   }
   document.getElementById('reserveType').value = selectedType;
   document.getElementById('reserveDays').value = selectedDays;
-  document.getElementById('reserveKind').value = '';
+  return true;
+}
+
+// ── Buy Permanent panel ── mirrors the released-game page's selectBuyType /
+// handleBuyClick: a click-to-select card (not a radio pill) and validation on
+// submit rather than a disabled button, since there is nothing to compute —
+// just "did they pick a type" and "did they type a name".
+function selectUdBuyType(type) {
+  selectedBuyType = type;
+  const ntCard = document.getElementById('udBuyNtCard');
+  const trCard = document.getElementById('udBuyTrCard');
+  if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
+  if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
+  const typeField = document.getElementById('udBuyOrderType');
+  if (typeField) typeField.value = type;
+}
+
+function handleUdBuyClick(e) {
+  const el = document.getElementById('udBuyValidationMsg');
+  if (!selectedBuyType) {
+    e.preventDefault();
+    el.textContent = '⚠️ Please select Non-Trophy or Trophy account type first.';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+    ['udBuyNtCard', 'udBuyTrCard'].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) { c.style.transform = 'translateX(4px)'; setTimeout(() => c.style.transform = '', 200); }
+    });
+    return false;
+  }
+  const nameField = document.getElementById('udBuyFbName');
+  if (!nameField || !nameField.value.trim()) {
+    e.preventDefault();
+    el.textContent = '⚠️ Please enter your Facebook name.';
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+    return false;
+  }
   return true;
 }
 

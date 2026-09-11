@@ -409,7 +409,10 @@
   <div class="ord-step">
     <% if (order.upcoming_game_id) { %>
     <div class="ord-step-label">Your slot is locked in</div>
-    <p class="ord-help">Expected release: <strong><%= order.release_date || 'TBA' %></strong>. We'll message you here or on Facebook when it's time to set up your account and collect the remaining ₱<%= order.remaining_due || 0 %>.</p>
+    <%# A permanent pre-order is paid in full (remaining_due 0), so this must
+        not always claim there is a balance left to collect — unconditional
+        text here would say "collect the remaining ₱0" after this change. %>
+    <p class="ord-help">Expected release: <strong><%= order.release_date || 'TBA' %></strong>. We'll message you here or on Facebook when it's time to set up your account<%= order.remaining_due > 0 ? ' and collect the remaining ₱' + order.remaining_due : '' %>.</p>
     <% } else { %>
     <div class="ord-step-label">You're on the priority list</div>
     <p class="ord-help">We'll message you here or on Facebook as soon as a slot opens to set up your account<%= order.remaining_due > 0 ? ' and collect the remaining ₱' + order.remaining_due : '' %>.</p>

@@ -2087,13 +2087,15 @@ app.post('/order/create-psplus', async (req, res) => {
   }
 });
 
-// Creates a reservation order — either a 50% downpayment on a Coming Soon
-// game (locking a slot ahead of release) or a flat ₱100 priority-reservation
-// fee on an available game whose selected type has no open slot right now
-// (matching the fee the site has always quoted for that). Both reuse the
-// same order-status page and payment-proof flow as /order/create, but settle
-// into 'reserved' instead of progressing to a console sign-in — there's
-// either nothing to sign into yet, or no free slot to sign into.
+// Creates a reservation order — a 50% downpayment on a Coming Soon rental
+// reservation, a full payment on a Coming Soon PERMANENT pre-order (there is
+// no rental deposit to hold back against, so nothing is split), or a flat
+// ₱100 priority-reservation fee on an available game whose selected type has
+// no open slot right now (matching the fee the site has always quoted for
+// that). All three reuse the same order-status page and payment-proof flow
+// as /order/create, but settle into 'reserved' instead of progressing to a
+// console sign-in — there's either nothing to sign into yet, or no free slot
+// to sign into.
 app.post('/order/reserve', async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
@@ -2145,13 +2147,17 @@ app.post('/order/reserve', async (req, res) => {
   let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
 
   if (isBuyPreorder) {
-    // Permanent price, no rental deposit — the customer is buying the account
-    // outright, so there is nothing to return.
+    // Permanent price, paid in full now — no deposit (nothing to return) and
+    // no split with a release-day balance, unlike a rental reservation. The
+    // account still doesn't exist until release, so this stays a pre-order:
+    // amount_due is the whole price, remaining_due is 0, and every "remaining
+    // ₱X due on release" line elsewhere collapses on its own since each one
+    // is gated on remaining_due > 0.
     const base = (type === 'tr' ? game.buy_tr_price : game.buy_nt_price) || 0;
     if (!base) return res.redirect(errRedirect);
     depositDue = 0;
-    amountDue = Math.ceil(base * 0.5);
-    remainingDue = base - amountDue;
+    amountDue = base;
+    remainingDue = 0;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
   } else if (isUpcoming) {
@@ -3292,7 +3298,12 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       end_date: '',
       price: order.amount_due || 0,
       status: 'reservation',
-      notes: 'Web reservation ' + order.ref + ' — downpayment ₱' + (order.amount_due || 0) + ', ₱' + (order.remaining_due || 0) + ' due on release',
+      // A rental reservation splits 50/50; a permanent pre-order is paid in
+      // full up front (remaining_due is 0), so "downpayment ₱2499, ₱0 due on
+      // release" would read as a lie about there being a balance at all.
+      notes: 'Web reservation ' + order.ref + ' — ' + (order.is_buy
+        ? 'paid in full ₱' + (order.amount_due || 0)
+        : 'downpayment ₱' + (order.amount_due || 0) + ', ₱' + (order.remaining_due || 0) + ' due on release'),
       created_at: new Date().toISOString(),
       payments: order.amount_due > 0
         ? [{ amount: order.amount_due, date: orders.manilaDate(new Date()), kind: 'reservation' }]
