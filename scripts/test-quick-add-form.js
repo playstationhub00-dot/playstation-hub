@@ -176,4 +176,71 @@ ok('a purchase has no end date at all', () => {
   assert.strictEqual(f.el('qaEndDate').value, '', 'a bought game is never returned');
 });
 
+console.log('\nQuick Add — a purchase has no duration');
+
+ok('choosing Bought hides the duration control and disables it', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '30';
+  f.win.qaDaysChanged();
+
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+
+  // Hidden AND disabled: a hidden select still posts its value, and a stale
+  // "30" reaching the server is how a purchase got a duration in the first
+  // place.
+  assert.strictEqual(f.el('qaDays').hidden, true, 'the duration select is hidden');
+  assert.strictEqual(f.el('qaDays').disabled, true, 'and cannot post a stale value');
+  assert.strictEqual(f.el('qaCustomDays').hidden, true, 'the custom box goes too');
+  assert.strictEqual(f.el('qaCustomDays').disabled, true);
+  assert.strictEqual(f.el('qaNoDuration').hidden, false, '"Yours to keep" takes its place');
+});
+
+ok('choosing Bought clears the end date and hides the field', () => {
+  const f = loadForm();
+  f.el('qaStart').value = '2026-09-12';
+  f.el('qaDays').value = '30';
+  f.win.qaDaysChanged();
+  assert.strictEqual(f.el('qaEndDate').value, '2026-10-12');
+
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+  assert.strictEqual(f.el('qaEndDate').value, '', 'no return date on something they own');
+  assert.strictEqual(f.el('qaEndWrap').hidden, true);
+  assert.strictEqual(f.el('qaEndDate').disabled, true);
+});
+
+ok('a purchase posts mode=buy', () => {
+  const f = loadForm();
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+  assert.strictEqual(f.el('qaMode').value, 'buy');
+});
+
+ok('switching back to Renting gives the duration back', () => {
+  const f = loadForm();
+  f.el('qaStart').value = '2026-09-12';
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+  assert.strictEqual(f.el('qaDays').hidden, true);
+
+  f.el('qaStBought').checked = false;
+  f.el('qaDays').value = '7';
+  f.win.qaStatusChanged();
+  assert.strictEqual(f.el('qaDays').hidden, false, 'the duration comes back');
+  assert.strictEqual(f.el('qaDays').disabled, false, 'and can post again');
+  assert.strictEqual(f.el('qaNoDuration').hidden, true, '"Yours to keep" goes away');
+  assert.strictEqual(f.el('qaEndWrap').hidden, false);
+  assert.strictEqual(f.el('qaEndDate').value, '2026-09-19', 'and the end date is rebuilt');
+});
+
+ok('the CSS guard that actually hides it is still present', () => {
+  // hidden is only an attribute; a class with an explicit display beats it.
+  // .qa-in carries no display of its own, but it sits in a grid, and this
+  // modal has already been bitten twice by exactly this. The rule is the
+  // thing doing the hiding, so its absence is a regression.
+  assert.ok(/\.qa-in\[hidden\][^{]*\{[^}]*display\s*:\s*none\s*!important/.test(src),
+    'quick-add.ejs still has the .qa-in[hidden] display:none !important guard');
+});
+
 console.log('\n' + passed + ' assertions passed\n');

@@ -4315,8 +4315,14 @@ app.get('/admin', requireAuth, async (req, res) => {
     extendTiers[c.id] = { p7: t[7] || 0, p30: t[30] || 0 };
   });
   const qaGames = games.map(g => {
-    const nt = promotedTier(g, 'nt', qaPromo);
-    const tr = promotedTier(g, 'tr', qaPromo);
+    // resolveGamePrices FIRST, exactly as computeRentPricing does on the save
+    // path. A game priced through a price category carries no tier fields of
+    // its own, so reading the raw record here previewed "no price set for this
+    // type and duration" on a game the server would have priced and saved
+    // without complaint. Same preview-vs-save split the promo bug had.
+    const resolved = resolveGamePrices(g);
+    const nt = promotedTier(resolved, 'nt', qaPromo);
+    const tr = promotedTier(resolved, 'tr', qaPromo);
     // Buy prices go through computeBuyPricing rather than being read raw, so
     // the picker cannot preview an undiscounted sale price while the save
     // applies the buy promo — the same trap the rent tiers had. A game with no
