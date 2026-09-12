@@ -270,6 +270,52 @@ const tabs = ['dashboard','orders','customers','games','accounts','content','mes
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
 const LEGACY_TABS = { announcements: 'content', visitors: 'dashboard', security: 'settings' };
 
+// ── Stay where you were after a save ──
+// Every admin action is a plain POST that redirects back here, so the page
+// reloads and lands at the top of whatever tab the redirect happened to name.
+// Working through a list — five rentals to tick off, a run of slot edits —
+// meant re-picking the tab and scrolling back down after every single one.
+//
+// The tab and scroll position are stashed on submit and reapplied on the way
+// back in. sessionStorage, not localStorage: this is about one round trip, and
+// a tab left open overnight should not jump when it is finally reloaded.
+const RETURN_KEY = 'adminReturnTo';
+
+document.addEventListener('submit', function (e) {
+  const form = e.target;
+  if (!form || form.tagName !== 'FORM') return;
+  // A form handled in JS (Quick Add, the extend modal) calls preventDefault and
+  // never navigates. Remembering a position for one of those would fire on
+  // some later, unrelated reload instead. A bubble-phase listener sees the
+  // flag the form's own handler already set.
+  if (e.defaultPrevented) return;
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify({
+      tab: localStorage.getItem(TAB_KEY) || 'dashboard',
+      y: window.scrollY || window.pageYOffset || 0,
+      at: Date.now()
+    }));
+  } catch (err) { /* private mode: the save still works, you just land at the top */ }
+});
+
+// Read once and clear: a restore must never apply twice, or a later manual
+// reload would yank the page somewhere the owner did not ask for.
+function takeReturnTo() {
+  let raw = null;
+  try {
+    raw = sessionStorage.getItem(RETURN_KEY);
+    sessionStorage.removeItem(RETURN_KEY);
+  } catch (err) { return null; }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    // Only honour a fresh one. Anything older than half a minute is not this
+    // round trip — it is a stale entry from a form that never navigated.
+    if (parsed && typeof parsed.at === 'number' && Date.now() - parsed.at < 30000) return parsed;
+  } catch (err) {}
+  return null;
+}
+
 // ── Sidebar ──
 // One width variable on <body> drives both the sidebar and the content margin,
 // so they can never disagree about how much room the sidebar is taking.
@@ -355,9 +401,25 @@ function switchTab(name) {
     bg_saved:'posters', bg_removed:'posters', poster_error:'posters'
   };
 
-  const rawInitial = urlTab || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'dashboard';
+  // Where the owner actually was, if they just saved something from here.
+  const returnTo = takeReturnTo();
+  // An explicit ?tab= still wins: that is the server deliberately sending you
+  // somewhere, and it is almost always the tab the action belonged to anyway.
+  // Below that, where you were beats msgTabMap, which is a fixed guess at where
+  // a given message belongs and was the thing yanking you off your own tab.
+  const rawInitial = urlTab || (returnTo && returnTo.tab) || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'dashboard';
   const initial = LEGACY_TABS[rawInitial] || rawInitial;
   switchTab(initial);
+
+  // Scroll AFTER switchTab: every panel is display:none until its tab is the
+  // active one, so the page is barely tall enough to scroll before that runs.
+  // Re-applied on load as well, because images resolving above the target
+  // change the page height underneath a scroll that already happened.
+  if (returnTo && returnTo.y > 0) {
+    const goBack = () => window.scrollTo(0, returnTo.y);
+    requestAnimationFrame(goBack);
+    window.addEventListener('load', goBack, { once: true });
+  }
 
   // Toast notifications
   if (msg) {
@@ -370,7 +432,9 @@ function switchTab(name) {
       document.body.appendChild(toast);
       setTimeout(() => toast.classList.add('show'), 100);
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
-      history.replaceState({}, '', '/admin?tab=' + (msgTabMap[msg] || initial));
+      // `initial`, not msgTabMap: the URL has to name the tab that is actually
+      // on screen, or reloading after a toast lands somewhere else again.
+      history.replaceState({}, '', '/admin?tab=' + initial);
     }
     // The Sign-In QR Guide used to need re-opening after a save; it is a
     // plain always-visible panel now, so landing on the tab is enough.
