@@ -5210,7 +5210,7 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   res.render('edit-customer', { customer, games, upcoming: getUpcoming(), settings: getSiteSettings(), accounts: getAccounts(), currentAssign });
 });
 
-app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
+app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 7);
   const existing = getCustomer(req.params.id);
@@ -5336,6 +5336,35 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
     notes: notes || '',
     payments: existingPayments,
   }).write();
+
+  // The customer row and the order hold the same rental twice, and the
+  // customer's own link renders the ORDER — game, account type, duration,
+  // rent and both dates all read off it (views/order-status.ejs). Editing
+  // here changed only the admin table, so moving a rental from monthly to
+  // weekly left the customer looking at the old duration, the old price and
+  // the old return date. Extend already pushed its changes through; this
+  // form, which is the other way every one of those fields gets changed,
+  // did not.
+  //
+  // Skipped for a reservation: an upcoming game's order keys off
+  // upcoming_game_id and carries no rental window, so pushing a customer row's
+  // 'upcoming_<id>' game_id and dates onto it would corrupt a pre-order.
+  if (existing.order_ref && !isUpcomingNew && !wasUpcoming) {
+    const isBuy = (status || existing.status) === 'bought';
+    await orders.syncFromCustomer(existing.order_ref, {
+      game_id: finalGameId,
+      game_title: newGame ? newGame.title : existing.game_title,
+      account_type: account_type || existing.account_type,
+      // A purchase has no duration and no return date, and an order carrying
+      // an end_date is exactly what advanceEndedRentals sweeps into
+      // "awaiting return" — asking someone who owns the game to give it back.
+      days: isBuy ? null : actualDays,
+      start_date: start_date || existing.start_date,
+      end_date: isBuy ? '' : (end_date || existing.end_date),
+      amount_due: finalPrice
+    }).catch(e => console.error('[customer edit -> order sync]', existing.order_ref, e.message));
+  }
+
   res.redirect('/admin?tab=customers&msg=customer_updated');
 });
 
