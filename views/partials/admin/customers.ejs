@@ -94,8 +94,8 @@
             was a discount you meant to give are all reasonable, and only you
             know which. This lists them; you decide. %>
         <% if (qaShort.length) { %>
-        <div class="rem-panel unlinked-panel">
-          <div class="rem-title">⚖️ Priced short (<%= qaShort.length %>)</div>
+        <div class="rem-panel unlinked-panel" id="pzPanel">
+          <div class="rem-title">⚖️ Priced short (<span id="pzCount"><%= qaShort.length %></span>)</div>
           <div class="unlinked-note">
             These were charged for a shorter rental than they are booked for — a week's rate
             against a month on the calendar. Read each one before acting: a price you set
@@ -122,7 +122,7 @@
             <%# "That price was deliberate." Stores the days and price it was
                 said about, so re-pricing this rental later asks again rather
                 than riding an old dismissal. %>
-            <form method="POST" action="/admin/customers/<%= m.id %>/price-ok" style="display:inline">
+            <form method="POST" action="/admin/customers/<%= m.id %>/price-ok" style="display:inline" class="pz-ignore">
               <button type="submit" class="btn-copy">Ignore</button>
             </form>
           </div>
@@ -132,7 +132,7 @@
           <% const qaIgnored = (typeof rentIgnored !== 'undefined' && rentIgnored) ? rentIgnored : []; %>
           <% if (qaIgnored.length) { %>
           <details class="rem-ignored">
-            <summary><%= qaIgnored.length %> ignored — custom prices you've already okayed</summary>
+            <summary><span id="pzIgnCount"><%= qaIgnored.length %></span> ignored — custom prices you've already okayed</summary>
             <% qaIgnored.forEach(g => { %>
             <div class="rem-row">
               <div class="rem-info">
@@ -487,3 +487,61 @@
       </div></div><!-- /card all-customers -->
 
   </div><!-- /tab-customers -->
+
+
+<script>
+// Ignoring a priced-short row happens in place. It is a small action repeated
+// down a list, and routing each one through a POST + redirect meant a full
+// reload, a fresh tab decision and a scroll reset every single time.
+//
+// Progressive enhancement, not a replacement: the form still posts normally if
+// this never runs or the request fails, so the button is never dead.
+(function () {
+  function el(id) { return document.getElementById(id); }
+
+  function recount() {
+    var panel = el('pzPanel');
+    if (!panel) return;
+    var left = panel.querySelectorAll('.rem-row').length;
+    var ignored = panel.querySelector('.rem-ignored');
+    // Rows inside the collapsed "ignored" list are not open findings.
+    if (ignored) left -= ignored.querySelectorAll('.rem-row').length;
+    var count = el('pzCount');
+    if (count) count.textContent = String(left);
+    // Nothing left to answer for: the panel has done its job and an empty
+    // "needs attention" card every day is how you learn to stop reading it.
+    if (left <= 0) panel.hidden = true;
+  }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.classList || !form.classList.contains('pz-ignore')) return;
+    e.preventDefault();
+
+    var row = form.closest('.rem-row');
+    var btn = form.querySelector('button');
+    if (btn) { btn.disabled = true; btn.textContent = 'Ignoring...'; }
+
+    fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'fetch' },
+      credentials: 'same-origin'
+    }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    }).then(function (data) {
+      if (!data || !data.ok) throw new Error('refused');
+      if (row) row.parentNode.removeChild(row);
+      var ign = el('pzIgnCount');
+      if (ign) ign.textContent = String((parseInt(ign.textContent, 10) || 0) + 1);
+      recount();
+    }).catch(function () {
+      // Hand it back to the browser rather than leave a dead button. Calling
+      // the prototype method directly because a form containing a control
+      // named "submit" shadows form.submit().
+      if (btn) { btn.disabled = false; btn.textContent = 'Ignore'; }
+      HTMLFormElement.prototype.submit.call(form);
+    });
+  });
+})();
+</script>

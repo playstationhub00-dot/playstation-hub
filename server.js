@@ -5357,6 +5357,11 @@ app.post('/admin/customers/:id/price-ok', requireAuth, (req, res) => {
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({
     price_audit_ok: { days: base.days, price: base.price, at: new Date().toISOString() }
   }).write();
+  // Answered in place when the panel asks with fetch. Ignoring is a small,
+  // repeated, per-row action; making each one a full page load meant a reload,
+  // a tab decision and a scroll reset every time you ticked one off. The plain
+  // redirect stays for a submit that never reached the fetch path.
+  if (req.get('x-requested-with') === 'fetch') return res.json({ ok: true, id: parseInt(req.params.id) });
   res.redirect('/admin?tab=customers&msg=price_ignored#sec-attention');
 });
 
