@@ -4308,7 +4308,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     accountsSlotUse: dashboard.accountsSlotUse(accountsView.accounts),
     payback: dashboard.gamePayback(games, customers),
     topRented: dashboard.topRented(customers, dashPeriod, 5),
-    recentActivity: dashboard.recentActivity(allOrders, 6),
+    recentActivity: dashboard.recentActivity(allOrders, 4),
     fullyBooked,
     topRequest: openRequests[0] || null,
     repeat: dashboard.repeatRate(customers),

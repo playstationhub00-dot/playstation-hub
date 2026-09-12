@@ -202,7 +202,7 @@
         <% if (!dashMetrics.accountsSlotUse.length) { %>
           <div class="dm-empty">No accounts yet.</div>
         <% } else { %>
-          <% dashMetrics.accountsSlotUse.slice(0, 6).forEach(a => { %>
+          <% dashMetrics.accountsSlotUse.slice(0, 4).forEach(a => { %>
           <div class="dm-row"><span class="dm-row-n"><%= a.label %></span>
             <span class="dm-row-v <%= a.idle >= a.total ? 'r' : a.idle ? 'y' : 'g' %>"><%= a.filled %>/<%= a.total %></span></div>
           <div class="dm-bar"><i class="<%= a.idle >= a.total ? 'warn' : a.idle ? 'warn' : 'ok' %>" style="width:<%= a.pct %>%"></i></div>
