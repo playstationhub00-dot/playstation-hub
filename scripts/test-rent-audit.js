@@ -145,4 +145,81 @@ ok('a null tier skips that row without skipping the rest', () => {
   assert.deepStrictEqual(rows.map(r => r.id), [2]);
 });
 
+console.log('\ndismissing a row the owner has judged');
+
+ok('a dismissed row stops being raised', () => {
+  const c = renter({ days: 30, price: 149 });
+  assert.ok(audit.check(c, TIER), 'flagged before');
+  c.price_audit_ok = { days: 30, price: 149, at: '2026-09-12T10:00:00Z' };
+  assert.strictEqual(audit.check(c, TIER), null, 'silent after');
+});
+
+ok('the dismissal only covers the rental it was made about', () => {
+  // The owner says "₱149 for 30 days was deliberate". If the rental is later
+  // re-priced or re-dated, that judgement no longer applies to what is there
+  // now, and the row comes back rather than staying quietly dismissed.
+  const c = renter({ days: 30, price: 149, price_audit_ok: { days: 30, price: 149 } });
+  assert.strictEqual(audit.check(c, TIER), null);
+
+  c.days = 60;
+  assert.ok(audit.check(c, TIER), 'a longer booking is a new question');
+
+  const c2 = renter({ days: 30, price: 149, price_audit_ok: { days: 30, price: 149 } });
+  c2.price = 100;
+  assert.ok(audit.check(c2, TIER), 'a changed price is a new question');
+});
+
+ok('a bare true is honoured as permanent', () => {
+  const c = renter({ days: 30, price: 149, price_audit_ok: true });
+  assert.strictEqual(audit.check(c, TIER), null);
+  c.days = 60;
+  assert.strictEqual(audit.check(c, TIER), null, 'never re-raised at the owner');
+});
+
+ok('clearing it with null brings the row back', () => {
+  // The undo route writes null rather than deleting the key, because lodash
+  // unset() returns a boolean and would corrupt the lowdb write.
+  const c = renter({ days: 30, price: 149, price_audit_ok: null });
+  assert.ok(audit.check(c, TIER), 'null means not dismissed');
+  assert.deepStrictEqual(audit.dismissedRows([c]), [], 'and it is not listed as ignored');
+});
+
+ok('junk in the field does not dismiss anything', () => {
+  assert.ok(audit.check(renter({ days: 30, price: 149, price_audit_ok: 'yes' }), TIER));
+  assert.ok(audit.check(renter({ days: 30, price: 149, price_audit_ok: 0 }), TIER));
+});
+
+ok('scan leaves dismissed rows out of the list and the bell', () => {
+  const rows = audit.scan([
+    renter({ id: 1, days: 30, price: 149 }),
+    renter({ id: 2, days: 30, price: 149, price_audit_ok: { days: 30, price: 149 } })
+  ], tierFor);
+  assert.deepStrictEqual(rows.map(r => r.id), [1]);
+});
+
+console.log('\ndismissedRows()');
+
+ok('lists what was ignored, so it can be undone', () => {
+  const rows = audit.dismissedRows([
+    renter({ id: 5, customer_name: 'Bryce', days: 30, price: 600, price_audit_ok: { days: 30, price: 600, at: '2026-09-12T10:00:00Z' } }),
+    renter({ id: 6, customer_name: 'Nobody', days: 30, price: 149 })
+  ]);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].id, 5);
+  assert.strictEqual(rows[0].customer_name, 'Bryce');
+  assert.strictEqual(rows[0].recordedDays, 30);
+  assert.strictEqual(rows[0].paidPrice, 600);
+  assert.strictEqual(rows[0].at, '2026-09-12T10:00:00Z');
+});
+
+ok('a finished rental is not listed as ignored', () => {
+  const rows = audit.dismissedRows([renter({ id: 7, status: 'done', price_audit_ok: true })]);
+  assert.deepStrictEqual(rows, []);
+});
+
+ok('bad input does not throw', () => {
+  assert.deepStrictEqual(audit.dismissedRows(null), []);
+  assert.deepStrictEqual(audit.dismissedRows([null, undefined]), []);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

@@ -3665,3 +3665,14 @@ label.buy-tier:hover { border-color: #444; }
 
 /* Homepage counterpart of .gdr-badge-verified — a review submitted on the site
    by someone with a real paid order behind it. */
+
+/* The dismissed half of the Priced Short panel. Collapsed by default: once a
+   price has been judged deliberate it is reference, not a daily task. */
+.rem-ignored { margin-top: 0.9rem; border-top: 1px solid #1f1f1f; padding-top: 0.6rem; }
+.rem-ignored > summary { cursor: pointer; font-size: 0.74rem; color: #6d6d6d; font-weight: 700; list-style: none; }
+.rem-ignored > summary::-webkit-details-marker { display: none; }
+.rem-ignored > summary::before { content: "▸ "; }
+.rem-ignored[open] > summary::before { content: "▾ "; }
+.rem-ignored > summary:hover { color: #aaa; }
+body.light-mode .rem-ignored { border-top-color: #e4e7eb; }
+body.light-mode .rem-ignored > summary { color: #8b939c; }

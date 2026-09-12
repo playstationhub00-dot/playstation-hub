@@ -4440,13 +4440,15 @@ app.get('/admin', requireAuth, async (req, res) => {
     return promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', rentPromo);
   });
 
+  const rentIgnored = rentAudit.dismissedRows(customers);
+
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
     negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
     rentMismatches, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { qaUpcoming, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -5343,6 +5345,32 @@ app.post('/admin/customers/edit/:id', requireAuth, (req, res) => {
 // orders.setRentalWindow for why that mattered).
 //
 // Returns JSON: the modal stays open to show the message to copy, same as
+
+// "That price was deliberate." Records WHICH rental the owner judged, not just
+// that they judged one, so a later re-pricing of the same customer is asked
+// about again instead of riding the old dismissal. lib/rent-audit owns that
+// comparison; this only stores the snapshot it compares against.
+app.post('/admin/customers/:id/price-ok', requireAuth, (req, res) => {
+  const c = getCustomer(req.params.id);
+  if (!c) return res.redirect('/admin?tab=customers&msg=bad_customer');
+  const base = rentAudit.baselineOf(c);
+  db.get('customers').find({ id: parseInt(req.params.id) }).assign({
+    price_audit_ok: { days: base.days, price: base.price, at: new Date().toISOString() }
+  }).write();
+  res.redirect('/admin?tab=customers&msg=price_ignored#sec-attention');
+});
+
+// Undo, because a mis-click on "Ignore" should not permanently hide money.
+app.post('/admin/customers/:id/price-recheck', requireAuth, (req, res) => {
+  const c = getCustomer(req.params.id);
+  if (!c) return res.redirect('/admin?tab=customers&msg=bad_customer');
+  // assign(null), not unset(): lodash's unset returns a boolean, so chaining
+  //   .unset('price_audit_ok').write()
+  // hands lowdb  to write instead of the record. Null reads as
+  // not-dismissed everywhere, which is exactly what this means.
+  db.get('customers').find({ id: parseInt(req.params.id) }).assign({ price_audit_ok: null }).write();
+  res.redirect('/admin?tab=customers&msg=price_rechecked#sec-attention');
+});
 // Quick Add.
 app.post('/admin/customers/:id/extend', requireAuth, async (req, res) => {
   const b = req.body || {};
