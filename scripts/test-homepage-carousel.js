@@ -96,4 +96,62 @@ ok('all three rows drift, and only Coming Soon runs in reverse', () => {
   assert.ok(/upcomingSlider/.test(reversed[0]), 'and it is Coming Soon: ' + reversed[0]);
 });
 
+console.log('\nsix cards still have to loop');
+
+ok('a row that fits the screen is no longer given up on', () => {
+  // This used to return early when the content was no wider than the row.
+  // With ten cards it never fired; at six on a wide monitor it fires every
+  // time, and the loop would silently never start.
+  const drift = autoDriftSource();
+  assert.ok(!/scrollWidth\s*<=\s*slider\.clientWidth/.test(drift),
+    'autoDrift must not bail out just because the row fits');
+});
+
+ok('it clones as many copies as the row needs, not always one', () => {
+  const drift = autoDriftSource();
+  assert.ok(/var copies\s*=/.test(drift), 'the copy count is computed');
+  assert.ok(/clientWidth/.test(drift.match(/var copies\s*=[^;]+;/)[0]),
+    'and it is computed from the visible width: ' + drift.match(/var copies\s*=[^;]+;/)[0]);
+});
+
+ok('one set is measured off the cards, not off scrollWidth', () => {
+  // scrollWidth reports the CONTAINER width when the content is narrower than
+  // it, which overstates one set, undercounts the copies, and leaves the row
+  // fitting and motionless.
+  const drift = autoDriftSource();
+  const m = drift.match(/var copyWidth\s*=\s*([^;]+);/);
+  assert.ok(m, 'copyWidth is still derived');
+  assert.ok(!/scrollWidth/.test(m[1]),
+    'copyWidth must not come from scrollWidth: ' + m[1]);
+  assert.ok(/getBoundingClientRect/.test(drift), 'measured from the cards themselves');
+});
+
+ok('the wrap distance follows the copy count', () => {
+  const drift = autoDriftSource();
+  assert.ok(!/scrollWidth\s*\/\s*2/.test(drift),
+    'a hardcoded half only holds when there are exactly two copies');
+  assert.ok(/function period\(\)/.test(drift), 'the wrap distance is derived from copies');
+});
+
+console.log('\nthe homepage rows are trimmed to six');
+
+ok('Coming Soon renders six', () => {
+  assert.ok(/upcoming-section[\s\S]{0,120}upcoming:\s*upcoming\.slice\(0,\s*6\)/.test(src),
+    'the Coming Soon include still slices to 6');
+});
+
+ok('New Releases renders six', () => {
+  assert.ok(/newReleases\.slice\(0,\s*6\)\.forEach/.test(src),
+    'the New Releases row still slices to 6');
+});
+
+ok('but the hero still draws from the whole list', () => {
+  // heroGames takes six that HAVE cover art. Capping the shared list would
+  // leave the hero short whenever one of the top six has no artwork.
+  const hero = src.match(/const heroGames\s*=\s*heroSource[^;]+;/);
+  assert.ok(hero, 'heroGames is still built from heroSource');
+  assert.ok(/const heroSource\s*=\s*\(newReleases[^;]+;/.test(src),
+    'and heroSource is the uncapped newReleases');
+});
+
 console.log('\n' + passed + ' assertions passed\n');

@@ -336,7 +336,10 @@
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideSection('newReleasesSlider',-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="newReleasesSlider">
-      <% newReleases.forEach(game => { %><div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
+      <%# Sliced here, not where newReleases is built: the hero above picks its
+          six slides from this same list but only from games that have cover art,
+          so a shared cap would leave it short whenever one of the top six has none. %>
+      <% newReleases.slice(0, 6).forEach(game => { %><div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true }) %></div><% }) %>
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideSection('newReleasesSlider',1)" aria-label="Next">&#8250;</button>
   </div>
@@ -344,7 +347,9 @@
 <% } %>
 
 <!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 10), noBorderTop: true, viewAllHref: '/browse#comingSoon' }) %>
+<%# Six on the homepage, looping. The rest are a click away behind View All,
+    and a row long enough to need scrolling stops reading as a highlight reel. %>
+<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 6), noBorderTop: true, viewAllHref: '/browse#comingSoon' }) %>
 
 <!-- PRICE TIERS -->
 <% if (priceCategories && priceCategories.length) { %>
@@ -777,8 +782,6 @@ function slideSection(id, dir) {
   function autoDrift(id, pxPerSecond, reverse) {
     var slider = document.getElementById(id);
     if (!slider || reduced) return;
-    // Nothing to drift through if the row already fits on screen.
-    if (slider.scrollWidth <= slider.clientWidth + 8) return;
 
     // onScreen starts true so a browser whose IntersectionObserver reports late
     // (or not at all) still animates; the observer corrects it on its first
@@ -786,24 +789,58 @@ function slideSection(id, dir) {
     var raf = null, stopped = false, hovered = false, onScreen = true;
     var last = 0;
 
-    // A second copy of the cards, so reaching the end of the first set can wrap
-    // to the identical point in the second without anything visibly jumping.
-    // Hidden from assistive tech and taken out of the tab order — they are the
-    // same links twice, and nobody should have to tab through them again.
     var originals = Array.prototype.slice.call(slider.children);
-    var clones = originals.map(function (node) {
-      var c = node.cloneNode(true);
-      c.setAttribute('aria-hidden', 'true');
-      // The card itself is the link in the Coming Soon row, while the game rows
-      // wrap theirs in a div — so the clone has to be checked as well as its
-      // descendants, or half the duplicates stay in the tab order.
-      if (c.matches('a, button')) c.setAttribute('tabindex', '-1');
-      c.querySelectorAll('a, button').forEach(function (el) { el.setAttribute('tabindex', '-1'); });
-      slider.appendChild(c);
-      return c;
-    });
+    if (!originals.length) return;
+
+    // Width of one full set, measured off the cards themselves rather than
+    // scrollWidth. When the content is narrower than its container scrollWidth
+    // reports the CONTAINER's width, which reads as a much wider set than
+    // exists — the copy count then comes out too low, the row still fits, and
+    // nothing ever loops. Spans are scroll-invariant (every card moves
+    // together), so this is safe to take at any scroll position.
+    function setWidth() {
+      var first = originals[0].getBoundingClientRect();
+      var last = originals[originals.length - 1].getBoundingClientRect();
+      var gap = originals.length > 1
+        ? originals[1].getBoundingClientRect().left - first.right
+        : 0;
+      return (last.right - first.left) + Math.max(0, gap);
+    }
+    var copyWidth = setWidth();
+    if (copyWidth <= 0) return;
+
+    // How many copies the row needs. Scrolling runs from zero to one copy width
+    // and then wraps, so the most that is ever needed is a copy plus the visible
+    // width. Anything short of that and the row simply fits the screen, which is
+    // where this used to give up and never loop — fine while these rows carried
+    // ten cards, wrong now they are trimmed to six and a wide monitor shows all
+    // of them at once.
+    var copies = Math.max(2, Math.ceil(slider.clientWidth / copyWidth) + 1);
+
+    // Duplicate sets, so reaching the end of one wraps to the identical point in
+    // the next without anything visibly jumping. Hidden from assistive tech and
+    // taken out of the tab order — they are the same links again, and nobody
+    // should have to tab through them twice.
+    var clones = [];
+    for (var copy = 1; copy < copies; copy++) {
+      originals.forEach(function (node) {
+        var c = node.cloneNode(true);
+        c.setAttribute('aria-hidden', 'true');
+        // The card itself is the link in the Coming Soon row, while the game rows
+        // wrap theirs in a div — so the clone has to be checked as well as its
+        // descendants, or half the duplicates stay in the tab order.
+        if (c.matches('a, button')) c.setAttribute('tabindex', '-1');
+        c.querySelectorAll('a, button').forEach(function (el) { el.setAttribute('tabindex', '-1'); });
+        slider.appendChild(c);
+        clones.push(c);
+      });
+    }
 
     slider.style.scrollSnapType = 'none';
+
+    // One copy's worth of scrolling. Measured after cloning so the gap between
+    // copies is counted the same way the gaps inside a copy are.
+    function period() { return slider.scrollWidth / copies; }
 
     // Reverse starts mid-wrap (the seam between the two identical copies)
     // rather than at 0, since there is nothing before position 0 to decrease
@@ -811,7 +848,7 @@ function slideSection(id, dir) {
     // and counting down reaches 0 exactly when the content there is once
     // again identical to the far end, which is the same invisible-wrap trick
     // the forward direction uses, just approached from the other side.
-    var pos = reverse ? slider.scrollWidth / 2 : slider.scrollLeft;
+    var pos = reverse ? period() : slider.scrollLeft;
     if (reverse) slider.scrollLeft = pos;
 
     function frame(now) {
@@ -819,13 +856,13 @@ function slideSection(id, dir) {
       var dt = last ? Math.min(now - last, 100) : 0; // clamp: a backgrounded tab
       last = now;                                    // must not lurch on return
       if (!hovered && onScreen && !document.hidden) {
-        var half = slider.scrollWidth / 2;
+        var p = period();
         if (reverse) {
           pos -= (pxPerSecond * dt) / 1000;
-          if (pos <= 0) pos += half; // identical content, so this is invisible
+          if (pos <= 0) pos += p; // identical content, so this is invisible
         } else {
           pos += (pxPerSecond * dt) / 1000;
-          if (pos >= half) pos -= half;
+          if (pos >= p) pos -= p;
         }
         slider.scrollLeft = pos;
       }
@@ -839,8 +876,8 @@ function slideSection(id, dir) {
       if (stopped) return;
       stopped = true;
       if (raf) cancelAnimationFrame(raf);
-      var half = slider.scrollWidth / 2;
-      if (slider.scrollLeft >= half) slider.scrollLeft = slider.scrollLeft - half;
+      var p = period();
+      if (p > 0) slider.scrollLeft = slider.scrollLeft % p;
       clones.forEach(function (c) { c.remove(); });
       slider.style.scrollSnapType = '';
     }
