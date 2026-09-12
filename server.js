@@ -22,6 +22,7 @@ const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
 const rentAudit = require('./lib/rent-audit');
+const buyPricing = require('./lib/buy-pricing');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
@@ -1081,13 +1082,8 @@ function computeRentPricing(game, type, days) {
 // Same one-time-purchase pricing math as POST /order/buy's single-game branch.
 function computeBuyPricing(game, type) {
   if (!game || !['nt', 'tr'].includes(type)) return null;
-  const base = type === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
-  if (!base) return null;
-  const s = getSiteSettings();
-  const promo = s.promo || {};
-  const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
-    ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
-  return { amountDue: price };
+  const priced = buyPricing.priceFor(game, type, getSiteSettings().promo || {});
+  return priced ? { amountDue: priced.amount } : null;
 }
 
 // Effective price for `game` at the given duration/account type/status, with the
@@ -2163,31 +2159,21 @@ app.post('/order/reserve', async (req, res) => {
   // not apply to it.
   if (!name || !type) return res.redirect(errRedirect);
   if (isBuyPreorder) {
-    if (!isUpcoming) return res.redirect(errRedirect);
-  } else if (isWaitlist) {
-    // Coming Soon keeps its own separate (Messenger-only) waitlist card —
-    // this recorded Fall in Line path is only for already-released games
-    // and PS Plus, both of which reach this route with isUpcoming === false.
-    if (isUpcoming || !PROMO_DURATIONS.includes(d)) return res.redirect(errRedirect);
-  } else if (!PROMO_DURATIONS.includes(d)) {
-    return res.redirect(errRedirect);
-  }
-
-  const s = getSiteSettings();
-  const promo = s.promo || {};
-  let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
-
-  if (isBuyPreorder) {
     // Permanent price, paid in full now — no deposit (nothing to return) and
     // no split with a release-day balance, unlike a rental reservation. The
     // account still doesn't exist until release, so this stays a pre-order:
     // amount_due is the whole price, remaining_due is 0, and every "remaining
     // ₱X due on release" line elsewhere collapses on its own since each one
     // is gated on remaining_due > 0.
-    const base = (type === 'tr' ? game.buy_tr_price : game.buy_nt_price) || 0;
-    if (!base) return res.redirect(errRedirect);
+    //
+    // Priced through computeBuyPricing rather than off the raw buy_* fields.
+    // Reading them raw here skipped the buy promo, so the Coming Soon page
+    // quoted a discounted pre-order and this route charged the full price —
+    // the customer was billed more than the page they bought from advertised.
+    const priced = computeBuyPricing(game, type === 'tr' ? 'tr' : 'nt');
+    if (!priced) return res.redirect(errRedirect);
     depositDue = 0;
-    amountDue = base;
+    amountDue = priced.amountDue;
     remainingDue = 0;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
@@ -2828,7 +2814,12 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   const name = String(b.customer_name || '').trim();
   if (!name) return res.status(400).json({ ok: false, reason: 'bad_name', message: 'Enter the customer name.' });
 
-  const game = getGame(b.game_id);
+  // A Coming Soon game arrives as "upcoming_<id>". Resolved BEFORE the
+  // catalogue lookup, because getGame() parseInts its argument and would read
+  // "upcoming_7" as NaN and report "pick a game" on a game that was picked.
+  const upcomingPick = /^upcoming_(\d+)$/.exec(String(b.game_id || ''));
+  const upcomingGame = upcomingPick ? getUpcomingGame(upcomingPick[1]) : null;
+  const game = upcomingGame || getGame(b.game_id);
   if (!game) return res.status(400).json({ ok: false, reason: 'bad_game', message: 'Pick a game.' });
 
   // Status decides everything, and it decides it HERE rather than trusting the
@@ -2839,6 +2830,18 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // date — asking someone who owns the game outright to give it back.
   const status = b.status === 'bought' ? 'bought' : (b.status === 'done' ? 'done' : 'renting');
   const mode = status === 'bought' ? 'buy' : 'rent';
+  // An unreleased game has no account to sign anyone into, so it can only be
+  // a pre-order — never a rental with dates, never a finished one. The picker
+  // already switches the form over; this is the server-side half of that, so
+  // a stale form or a hand-posted request cannot create a rental for a game
+  // that does not exist yet.
+  if (upcomingGame && status !== 'bought') {
+    return res.status(400).json({
+      ok: false, reason: 'upcoming_buy_only',
+      message: game.title + ' has not released yet, so it can only be recorded as a pre-order. Pick "Bought".'
+    });
+  }
+
 
   // PS4 Primary has no buy price field of its own, so a permanent PS4 sale
   // borrows the Non-Trophy price — the same fallback the rental side uses.
@@ -2855,7 +2858,8 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // The guard the Orders form never had. Refuse before writing anything: a
   // half-recorded rental is worse than a rejected one, because the customer row
   // exists while the slot still reads free — exactly the Onimusha case.
-  if ((status === 'renting' || status === 'bought')
+  if (!upcomingGame
+      && (status === 'renting' || status === 'bought')
       && !b.account_assign
       && requiresSlotAssignment(game.id, type)) {
     return res.status(400).json({
@@ -2905,6 +2909,7 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // the order page showed the sign-in guide and hid the review box, which is
   // gated on the customer actually having played.
   const initialState = !paid ? 'awaiting_payment'
+    : upcomingGame ? 'reserved'
     : status === 'done' ? 'closed'
     : b.signed_in === 'no' ? 'awaiting_qr'
     : 'active';
@@ -2919,6 +2924,17 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
     }, paid ? {
       payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
     } : {}, mode === 'buy' ? { is_buy: true } : {},
+    // The same fields POST /order/reserve writes for a permanent pre-order,
+    // so an owner-entered one is indistinguishable from a customer-entered
+    // one downstream. remaining_due is 0 because a permanent pre-order is
+    // paid in full: every "remaining due on release" line is gated on it
+    // being above zero and collapses on its own.
+    upcomingGame ? {
+      upcoming_game_id: game.id,
+      release_date: game.release_date || '',
+      remaining_due: 0,
+      is_reservation: true
+    } : {},
     // computeBuyPricing returns an amount and nothing else — no tier, no
     // snapshot — so these belong to the rental path only.
     (override != null || mode === 'buy') ? {} : {
@@ -2933,25 +2949,33 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
     db.get('customers').push({
       id: customerId,
       customer_name: name,
-      game_id: game.id,
+      // 'upcoming_<id>' is the existing convention for a reservation row —
+      // the same shape POST /order/reserve writes, so the upcoming game's
+      // live slot count picks this up without any new mechanism.
+      game_id: upcomingGame ? 'upcoming_' + game.id : game.id,
       game_title: game.title,
       days: mode === 'buy' ? null : days,
       account_type: type,
-      start_date: startDate,
-      end_date: mode === 'buy' ? '' : endDate,
+      // A pre-order has no dates at all: it has not started, and there is
+      // nothing to give back. Filing it as 'bought' would drop it into the
+      // active list as though they already had access.
+      start_date: upcomingGame ? '' : startDate,
+      end_date: (upcomingGame || mode === 'buy') ? '' : endDate,
       price: amountDue,
-      status: mode === 'buy' ? 'bought' : status,
+      status: upcomingGame ? 'reservation' : (mode === 'buy' ? 'bought' : status),
       notes: String(b.notes || '').trim(),
       order_ref: order.ref,
       order_key: order.url_key,
       created_at: new Date().toISOString(),
       payments: paid && amountDue > 0
-        ? [{ amount: amountDue, date: startDate, kind: mode === 'buy' ? 'purchase' : 'rent' }]
+        ? [{ amount: amountDue, date: startDate,
+             kind: upcomingGame ? 'reservation' : (mode === 'buy' ? 'purchase' : 'rent') }]
         : []
     }).write();
     await orders.setCustomerId(order.ref, customerId).catch(() => {});
 
-    if (b.account_assign) {
+    // An unreleased game has no account slots to assign yet.
+    if (b.account_assign && !upcomingGame) {
       applyAccountAssignment(b.account_assign, {
         customerId, customerName: name,
         status: mode === 'buy' ? 'bought' : status,
@@ -4337,6 +4361,27 @@ app.get('/admin', requireAuth, async (req, res) => {
     };
   }).sort((a, b) => a.title.localeCompare(b.title));
 
+  // Coming Soon games belong in the picker too — a pre-order arranged over
+  // Messenger had nowhere to be recorded, so it was either typed in as a
+  // rental of a game that does not exist or not recorded at all.
+  //
+  // Rent tiers are deliberately zero. An unreleased game cannot be rented
+  // here, and the form refuses that combination anyway; a zero tier means the
+  // price box says "no price set" rather than quoting a rental for a game
+  // nobody can sign into.
+  const qaUpcoming = getUpcoming().map(u => {
+    const buyNt = computeBuyPricing(u, 'nt');
+    const buyTr = computeBuyPricing(u, 'tr');
+    return {
+      id: 'upcoming_' + u.id,
+      title: u.title,
+      release_date: u.release_date || '',
+      nt7: 0, nt30: 0, tr7: 0, tr30: 0,
+      buynt: buyNt ? buyNt.amountDue : 0,
+      buytr: buyTr ? buyTr.amountDue : 0
+    };
+  }).sort((a, b) => a.title.localeCompare(b.title));
+
   // The topbar bell. Built from the same queues the tabs render, so the badge
   // can never claim work that the tab it points at does not show.
   // Thumbs-down reviews the owner has not dealt with yet. They never reach the
@@ -4401,7 +4446,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     rentMismatches, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

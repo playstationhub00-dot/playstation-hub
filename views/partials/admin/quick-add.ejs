@@ -35,7 +35,7 @@
 
       <div class="qa-l">What they're getting</div>
       <div class="qa-g3">
-        <select class="qa-in" name="game_id" id="qaGame" onchange="qaPrice()" required>
+        <select class="qa-in" name="game_id" id="qaGame" onchange="qaGameChanged()" required>
           <option value="">— Game —</option>
           <%# Prices come from qaGames, not the raw game records: they have the
               running promo already taken off, the same way the save path
@@ -47,6 +47,18 @@
             data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"
             data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
           <% }) %>
+          <%# Coming Soon games can only be pre-ordered, so they carry
+              data-upcoming and the form locks itself to Bought when one is
+              picked. Their rent tiers are zero on purpose. %>
+          <% if ((typeof qaUpcoming !== 'undefined' ? qaUpcoming : []).length) { %>
+          <optgroup label="Coming soon — pre-order only">
+            <% qaUpcoming.forEach(g => { %>
+            <option value="<%= g.id %>" data-upcoming="1" data-release="<%= g.release_date %>"
+              data-nt7="0" data-nt30="0" data-tr7="0" data-tr30="0"
+              data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
+            <% }) %>
+          </optgroup>
+          <% } %>
         </select>
         <select class="qa-in" name="account_type" id="qaType" onchange="qaPrice()">
           <option value="nt">🎮 Non-Trophy</option>
@@ -63,6 +75,7 @@
         <div class="qa-nodur" id="qaNoDuration" hidden>Yours to keep</div>
       </div>
       <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaEnd(); qaPrice()" style="margin-top:0.45rem;">
+      <div class="qa-warn" id="qaUpcomingNote" hidden></div>
       <div class="qa-price" id="qaPriceBox">Pick a game to see the price</div>
 
       <div class="qa-l">Account slot</div>
@@ -214,6 +227,9 @@
   #qaStBought:checked + .qa-mode { border-color:var(--ps-blue); background:rgba(240,165,0,0.12); color:#f0a500; }
   #qaStDone:checked + .qa-mode { border-color:#555; background:#141414; color:#ddd; }
   .qa-modes input:focus-visible + .qa-mode { outline:2px solid var(--ps-blue); outline-offset:2px; }
+  /* A Coming Soon game can only be pre-ordered, so Renting and Finished are
+     switched off rather than silently ignored. */
+  .qa-modes input:disabled + .qa-mode { opacity:0.35; cursor:not-allowed; }
   /* Sits where the duration select was, so the row keeps its shape. */
   .qa-nodur { display:flex; align-items:center; justify-content:center; border:1px dashed #333; border-radius:8px; color:#777; font-size:0.78rem; padding:0.55rem 0.4rem; box-sizing:border-box; }
   .qa-nodur[hidden] { display:none; }
@@ -287,6 +303,9 @@
     el('qaTitle').textContent = 'Quick Add — customer & order';
     el('qaCustomDays').hidden = true;
     el('qaStart').value = new Date().toISOString().slice(0, 10);
+    el('qaStRent').disabled = false;
+    el('qaStDone').disabled = false;
+    el('qaUpcomingNote').hidden = true;
     qaPaidChanged(); qaStatusChanged();
   };
 
@@ -299,6 +318,38 @@
   // Status decides the shape of the form: a purchase has no duration, no end
   // date, and is priced from the buy fields rather than the rental tiers.
   // Everything that used to assume "rental" asks this first.
+  // Picking a game decides more than the price when it is a Coming Soon one:
+  // an unreleased game has no account to sign into, so it can only be a
+  // pre-order. Renting and Finished are switched off rather than silently
+  // ignored, and the server refuses the combination too — this half is so the
+  // owner is never offered a choice that will bounce.
+  window.qaGameChanged = function () {
+    var opt = el('qaGame').selectedOptions[0];
+    var upcoming = !!(opt && opt.dataset && opt.dataset.upcoming);
+
+    el('qaStRent').disabled = upcoming;
+    el('qaStDone').disabled = upcoming;
+
+    var note = el('qaUpcomingNote');
+    if (upcoming) {
+      var when = (opt.dataset.release || '').trim();
+      note.textContent = 'Not released yet — this is a pre-order. No duration and no dates, and there is no account to sign into'
+        + (when ? ' until it launches on ' + when + '.' : ' until it launches.');
+      note.hidden = false;
+    } else {
+      note.hidden = true;
+    }
+
+    // Switching to a pre-order flips the form to Bought, which recalculates
+    // the price on its own — calling qaPrice() again here would just repeat it.
+    if (upcoming && !qaIsBuy()) {
+      el('qaStBought').checked = true;
+      qaStatusChanged();
+      return;
+    }
+    qaPrice();
+  };
+
   window.qaStatusChanged = function () {
     var buy = qaIsBuy();
     el('qaMode').value = buy ? 'buy' : 'rent';

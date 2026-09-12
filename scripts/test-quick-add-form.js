@@ -243,4 +243,86 @@ ok('the CSS guard that actually hides it is still present', () => {
     'quick-add.ejs still has the .qa-in[hidden] display:none !important guard');
 });
 
+console.log('\nQuick Add — Coming Soon games are pre-orders');
+
+// The shape the optgroup renders: zero rent tiers, a real buy price, and the
+// data-upcoming flag the form keys off.
+function pickUpcoming(f, over) {
+  const opt = Object.assign({
+    value: 'upcoming_4',
+    dataset: { upcoming: '1', release: '2026-11-14', nt7: '0', nt30: '0', tr7: '0', tr30: '0', buynt: '2249', buytr: '2749' }
+  }, over || {});
+  f.el('qaGame').value = opt.value;
+  f.el('qaGame').selectedOptions = [opt];
+  f.win.qaGameChanged();
+  return opt;
+}
+
+ok('picking one flips the form to a purchase on its own', () => {
+  const f = loadForm();
+  assert.strictEqual(f.el('qaStBought').checked, false, 'starts on Renting');
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStBought').checked, true, 'switched itself to Bought');
+  assert.strictEqual(f.el('qaMode').value, 'buy');
+  assert.strictEqual(f.el('qaDays').hidden, true, 'no duration on an unreleased game');
+  assert.strictEqual(f.el('qaEndDate').value, '', 'and no dates');
+});
+
+ok('Renting and Finished are switched off, not silently ignored', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStRent').disabled, true);
+  assert.strictEqual(f.el('qaStDone').disabled, true);
+});
+
+ok('it says why, and when the game lands', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  const note = f.el('qaUpcomingNote');
+  assert.strictEqual(note.hidden, false);
+  assert.ok(note.textContent.includes('pre-order'), note.textContent);
+  assert.ok(note.textContent.includes('2026-11-14'), 'names the release date: ' + note.textContent);
+});
+
+ok('a release date it does not have is not invented', () => {
+  const f = loadForm();
+  pickUpcoming(f, { dataset: { upcoming: '1', release: '', buynt: '2249', buytr: '0', nt7: '0', nt30: '0', tr7: '0', tr30: '0' } });
+  const note = f.el('qaUpcomingNote');
+  assert.ok(note.textContent.includes('until it launches.'), note.textContent);
+  assert.ok(!note.textContent.includes('undefined'), note.textContent);
+});
+
+ok('it is priced from the buy price, not a rental tier', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('2,249'),
+    'shows the pre-order price: ' + f.el('qaPriceBox').innerHTML);
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('purchase'), 'priced as a purchase');
+});
+
+ok('choosing a released game afterwards gives the choices back', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStRent').disabled, true);
+
+  const normal = { value: '12', dataset: { nt7: '199', nt30: '599', buynt: '799', buytr: '999' } };
+  f.el('qaGame').value = '12';
+  f.el('qaGame').selectedOptions = [normal];
+  f.win.qaGameChanged();
+
+  assert.strictEqual(f.el('qaStRent').disabled, false, 'Renting is available again');
+  assert.strictEqual(f.el('qaStDone').disabled, false);
+  assert.strictEqual(f.el('qaUpcomingNote').hidden, true, 'and the note goes');
+});
+
+ok('reopening the form does not leave the lock on for the next customer', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStRent').disabled, true);
+  f.win.qaReset();
+  assert.strictEqual(f.el('qaStRent').disabled, false, 'qaReset clears it');
+  assert.strictEqual(f.el('qaStDone').disabled, false);
+  assert.strictEqual(f.el('qaUpcomingNote').hidden, true);
+});
+
 console.log('\n' + passed + ' assertions passed\n');
