@@ -61,6 +61,19 @@
       .dm-note { font-size:0.62rem; color:#4d4d4d; margin-top:0.15rem; }
       .dm-empty { color:#666; font-size:0.78rem; padding:0.9rem 0; line-height:1.6; }
       .dm-empty a { color:var(--ps-blue); text-decoration:none; font-weight:700; }
+      .dm-mix { margin-top:0.3rem; }
+      .dm-mix > summary { cursor:pointer; font-size:0.7rem; color:#666; font-weight:700; list-style:none; }
+      .dm-mix > summary::-webkit-details-marker { display:none; }
+      .dm-mix > summary::before { content:"▸ "; }
+      .dm-mix[open] > summary::before { content:"▾ "; }
+      .dm-mix > summary:hover { color:#aaa; }
+      .dm-mix-list { margin-top:0.4rem; padding-left:0.1rem; border-left:2px solid #1e1e1e; }
+      .dm-mix-row { display:grid; grid-template-columns:5.5rem 1fr auto auto; gap:0.5rem; align-items:center; font-size:0.72rem; color:#999; padding:0.3rem 0 0.3rem 0.6rem; border-bottom:1px solid #161616; }
+      .dm-mix-row:last-child { border-bottom:none; }
+      .dm-mix-ref { color:#ccc; font-weight:700; }
+      .dm-mix-who { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .dm-mix-when { color:#555; white-space:nowrap; }
+      .dm-mix-amt { color:#aaa; font-weight:700; white-space:nowrap; }
 
       .dash-section { background:#0a0a0a; border:1px solid #1a1a1a; border-radius:14px; padding:1rem; }
       .dash-section-head { display:flex; align-items:center; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; margin-bottom:0.9rem; padding-bottom:0.7rem; border-bottom:1px solid #171717; }
@@ -122,6 +135,13 @@
       body.light-mode .dm-row-v { color:#5b636c; }
       body.light-mode .dm-bar { background:#eceef1; }
       body.light-mode .dm-empty { color:#6b7280; }
+      body.light-mode .dm-mix > summary { color:#8b939c; }
+      body.light-mode .dm-mix > summary:hover { color:#4b5259; }
+      body.light-mode .dm-mix-list { border-left-color:#e6e9ec; }
+      body.light-mode .dm-mix-row { color:#6b737b; border-bottom-color:#f0f2f4; }
+      body.light-mode .dm-mix-ref { color:#14171a; }
+      body.light-mode .dm-mix-when { color:#9aa2ab; }
+      body.light-mode .dm-mix-amt { color:#4b5259; }
 
       body.light-mode .dash-section { background:#fff; border-color:#e6e9ec; }
       body.light-mode .dash-section-head { border-bottom-color:#eef0f2; }

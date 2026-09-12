@@ -39,6 +39,22 @@
           <span class="dm-row-v"><%= m.count %> · ₱<%= m.amount.toLocaleString() %></span>
         </div>
         <div class="dm-bar"><i style="width:<%= Math.round((m.count / payMax) * 100) %>%"></i></div>
+        <%# The bar above stays visible either way — this only reveals the
+            orders behind it, so a figure that looks wrong can be checked
+            against the actual orders instead of taken on faith. %>
+        <details class="dm-mix">
+          <summary>Show <%= m.count %> order<%= m.count !== 1 ? 's' : '' %></summary>
+          <div class="dm-mix-list">
+            <% (m.orders || []).forEach(o => { %>
+            <div class="dm-mix-row">
+              <span class="dm-mix-ref"><%= o.ref || '—' %></span>
+              <span class="dm-mix-who"><%= [o.name, o.game].filter(Boolean).join(' · ') || '—' %></span>
+              <span class="dm-mix-when"><%= String(o.date || '').slice(0, 10) || '—' %></span>
+              <span class="dm-mix-amt">₱<%= o.amount.toLocaleString() %></span>
+            </div>
+            <% }) %>
+          </div>
+        </details>
         <% }) %>
       <% } %>
     </div>

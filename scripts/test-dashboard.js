@@ -137,6 +137,28 @@ check('payment mix groups paid orders by method, biggest first', () => {
   assert.ok(mix.some(m => m.method === 'unrecorded'));
 });
 
+check('each payment mix group carries the orders behind its total', () => {
+  // The bar chart is a total nobody can check against anything unless the
+  // orders that make it up are attached to the same group that reports it.
+  const orders = [
+    { ref: 'PH-0010', fb_name: 'Ana', game_title: 'GT7', state: 'active', payment_method: 'gcash',
+      amount_due: 300, deposit_due: 100, created_at: '2026-09-02T00:00:00Z' },
+    { ref: 'PH-0011', fb_name: 'Ben', game_title: 'FIFA', state: 'closed', payment_method: 'gcash',
+      amount_due: 300, deposit_due: 0, created_at: '2026-09-05T00:00:00Z' }
+  ];
+  const mix = dash.paymentMix(orders, dash.periodRange('month', NOW));
+  const gcash = mix.find(m => m.method === 'gcash');
+  assert.strictEqual(gcash.orders.length, 2);
+  // Sum of the rows has to equal the total the tile already shows, or the
+  // drill-down would contradict the number it is supposed to explain.
+  assert.strictEqual(gcash.orders.reduce((s, o) => s + o.amount, 0), gcash.amount);
+  // Newest first — that is the order an owner scanning for a mistake reads in.
+  assert.strictEqual(gcash.orders[0].ref, 'PH-0011');
+  assert.strictEqual(gcash.orders[0].name, 'Ben');
+  assert.strictEqual(gcash.orders[0].game, 'FIFA');
+  assert.strictEqual(gcash.orders[0].amount, 300);
+});
+
 // ── slots ────────────────────────────────────────────────────────────────────
 check('slot utilisation counts only enabled slots', () => {
   const accounts = [
