@@ -62,7 +62,7 @@
             so a hidden control cannot still post a value. %>
         <div class="qa-nodur" id="qaNoDuration" hidden>Yours to keep</div>
       </div>
-      <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaPrice()" style="margin-top:0.45rem;">
+      <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaEnd(); qaPrice()" style="margin-top:0.45rem;">
       <div class="qa-price" id="qaPriceBox">Pick a game to see the price</div>
 
       <div class="qa-l">Account slot</div>
@@ -332,8 +332,11 @@
     return parseInt(el('qaDays').value) || 0;
   }
 
-  // End date follows start + duration, but only while the owner has not typed
-  // their own — an edited end date is a decision, not a default to overwrite.
+  // End date always follows start + duration, and every control that can change
+  // either one has to call this. The custom-days box did not: it updated the
+  // price for the new duration and left the end date on the previous one, so a
+  // 10-day rental was saved with a 30-day return date and the copied message
+  // told the customer the wrong day to give the account back.
   window.qaEnd = function () {
     if (qaIsBuy()) { el('qaEndDate').value = ''; return; }
     var start = el('qaStart').value, d = daysValue();

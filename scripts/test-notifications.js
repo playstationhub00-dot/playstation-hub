@@ -370,4 +370,45 @@ ok('nothing raised when every order is in step', () => {
   assert.strictEqual(n.build(Object.assign({}, empty, { staleEndDates: [null] })).count, 0);
 });
 
+console.log('\nbuild() — rentals priced short');
+
+ok('many short rentals collapse into one row, not one per person', () => {
+  const r = n.build(Object.assign({}, empty, {
+    rentMismatches: [
+      { id: 1, customer_name: 'Ana', game_title: 'Elden Ring', shortfall: 200 },
+      { id: 2, customer_name: 'Ben', game_title: 'GT7', shortfall: 150 },
+      { id: 3, customer_name: 'Cara', game_title: 'FIFA', shortfall: 50 }
+    ]
+  }));
+  const rows = r.items.filter(i => i.kind === 'rent_mismatch');
+  assert.strictEqual(rows.length, 1, 'one grouped row');
+  assert.ok(rows[0].title.includes('3'), 'counts them: ' + rows[0].title);
+  assert.ok(rows[0].sub.includes('400'), 'totals the shortfall: ' + rows[0].sub);
+  assert.strictEqual(rows[0].tab, 'customers', 'points at the full list');
+  assert.strictEqual(rows[0].urgency, 'warn');
+});
+
+ok('a single one is phrased as one, not as a count', () => {
+  const r = n.build(Object.assign({}, empty, {
+    rentMismatches: [{ id: 1, customer_name: 'Ana', shortfall: 200 }]
+  }));
+  const row = r.items.find(i => i.kind === 'rent_mismatch');
+  assert.ok(!/^\d/.test(row.title), 'reads as prose, not "1 rentals": ' + row.title);
+  assert.ok(row.sub.includes('Ana'), 'names the worst one: ' + row.sub);
+});
+
+ok('nothing found means no row at all', () => {
+  assert.strictEqual(n.build(Object.assign({}, empty, { rentMismatches: [] })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { rentMismatches: null })).count, 0);
+  assert.strictEqual(n.build(Object.assign({}, empty, { rentMismatches: [null] })).count, 0);
+});
+
+ok('it sits below anything on a clock', () => {
+  const r = n.build(Object.assign({}, empty, {
+    rentMismatches: [{ id: 1, customer_name: 'Ana', shortfall: 200 }],
+    orderQueue: [{ ref: 'PH-1', state: 'qr_pending', qr_expires_at: '2026-09-10T12:05:00Z' }]
+  }));
+  assert.deepStrictEqual(r.items.map(i => i.kind), ['qr_pending', 'rent_mismatch']);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

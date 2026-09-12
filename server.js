@@ -21,6 +21,7 @@ const dashboard = require('./lib/dashboard');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
+const rentAudit = require('./lib/rent-audit');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
@@ -4377,12 +4378,24 @@ app.get('/admin', requireAuth, async (req, res) => {
     && !liveCustomerIds.has(o.customer_id)
   );
 
-  const notifs = notifications.build({
-    orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
-    negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates, paymongoHealth, now: dashNowDate
+  // Rentals charged for one duration but recorded as another — the "paid for a
+  // week, holding the account for a month" mistake. Judged against today's tier
+  // prices, which is the only tier available from a customer row, so a game
+  // whose prices changed since can surface here innocently. The panel says so.
+  const rentPromo = getSiteSettings().promo || {};
+  const rentMismatches = rentAudit.scan(customers, c => {
+    const g = getGame(c.game_id);
+    if (!g) return null;
+    return promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', rentPromo);
   });
 
-  res.render('admin', { notifs, negativeReviews, boughtWithDuration, staleEndDates, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  const notifs = notifications.build({
+    orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
+    negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
+    rentMismatches, paymongoHealth, now: dashNowDate
+  });
+
+  res.render('admin', { notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older

@@ -21,7 +21,8 @@
         "Needs attention" card every day trains you to ignore it. %>
     <% const qaBought = (typeof boughtWithDuration !== 'undefined' && boughtWithDuration) ? boughtWithDuration : []; %>
     <% const qaStaleEnd = (typeof staleEndDates !== 'undefined' && staleEndDates) ? staleEndDates : []; %>
-    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length || qaBought.length || qaStaleEnd.length) { %>
+    <% const qaShort = (typeof rentMismatches !== 'undefined' && rentMismatches) ? rentMismatches : []; %>
+    <% if ((typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) || needsReminder.length || qaBought.length || qaStaleEnd.length || qaShort.length) { %>
     <!-- NEEDS ATTENTION -->
     <div class="adm-card" id="sec-attention">
       <div class="adm-card-head" style="border-left:3px solid #ef4444;">
@@ -83,6 +84,40 @@
                   class="cst-confirm" data-confirm="File <%= o.ref %> as a purchase? This clears its duration and end date so no return is ever asked for.">
               <button type="submit" class="btn-copy">Fix it</button>
             </form>
+          </div>
+          <% }) %>
+        </div>
+        <% } %>
+        <%# Rentals charged for a shorter duration than they were booked for.
+            Deliberately has no Fix button: there is no single right answer.
+            Collecting the difference, shortening their end date, or deciding it
+            was a discount you meant to give are all reasonable, and only you
+            know which. This lists them; you decide. %>
+        <% if (qaShort.length) { %>
+        <div class="rem-panel unlinked-panel">
+          <div class="rem-title">⚖️ Priced short (<%= qaShort.length %>)</div>
+          <div class="unlinked-note">
+            These were charged for a shorter rental than they are booked for — a week's rate
+            against a month on the calendar. Read each one before acting: a price you set
+            deliberately looks exactly like this, and so does a rental that started before you
+            changed the game's prices. Nothing here has been changed for you.
+          </div>
+          <% qaShort.forEach(m => { %>
+          <div class="rem-row">
+            <div class="rem-info">
+              <span class="rem-name"><%= m.customer_name || 'Unnamed customer' %></span>
+              <% if (m.order_ref) { %><span class="rem-badge rem-overdue"><%= m.order_ref %></span><% } %>
+              <% if (m.extended) { %><span class="rem-badge">extended since</span><% } %>
+              <div class="rem-meta">
+                <%= m.game_title || '' %> · paid ₱<%= m.paidPrice.toLocaleString() %><%
+                  %><%= m.paidForDays ? ' (' + m.paidForDays + ' day' + (m.paidForDays === 1 ? '' : 's') + ' of rent)' : '' %><%
+                  %> but booked for <%= m.recordedDays %> days
+              </div>
+              <div class="rem-meta">
+                <%= m.recordedDays %> days at today's prices is ₱<%= m.expectedPrice.toLocaleString() %>
+                · <strong>₱<%= m.shortfall.toLocaleString() %> under</strong><%= m.end_date ? ' · ends ' + m.end_date : '' %>
+              </div>
+            </div>
           </div>
           <% }) %>
         </div>
