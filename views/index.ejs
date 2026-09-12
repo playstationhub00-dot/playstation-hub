@@ -869,12 +869,30 @@ function slideSection(id, dir) {
       if (Math.abs(t.clientX - tx) > Math.abs(t.clientY - ty)) stop();
     }, { passive: true });
 
-    // A deliberate mouse press on the row. Restricted to mouse because
-    // pointerdown covers touch too, which would reintroduce the same
-    // vertical-swipe problem.
+    // A deliberate mouse DRAG along the row — not merely a press.
+    //
+    // stop() tears the row down: it folds the scroll position back into the
+    // real set and removes every cloned card. Running that on pointerdown
+    // pulled the content out from under the cursor between press and release,
+    // so mousedown and mouseup had no common target and the browser never
+    // fired a click at all. That is why a Coming Soon card had to be clicked
+    // twice — the first press only reset the row, and the second worked
+    // because stop() had already run and returns early.
+    //
+    // A press needs no separate pause: the animation is already held by
+    // `hovered`, which mouseenter set before the press could happen. Only an
+    // actual grab has to take the row over, so only movement triggers it.
+    var downX = null;
     slider.addEventListener('pointerdown', function (e) {
-      if (e.pointerType === 'mouse') stop();
+      if (e.pointerType === 'mouse') downX = e.clientX;
     }, { passive: true });
+    slider.addEventListener('pointermove', function (e) {
+      if (downX === null || e.pointerType !== 'mouse') return;
+      if (Math.abs(e.clientX - downX) > 8) { downX = null; stop(); }
+    }, { passive: true });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (evt) {
+      slider.addEventListener(evt, function () { downX = null; }, { passive: true });
+    });
 
     var wrap = slider.closest('.upcoming-slider-wrap');
     if (wrap) wrap.querySelectorAll('.slider-arrow').forEach(function (b) { b.addEventListener('click', stop); });
