@@ -222,4 +222,53 @@ ok('bad input does not throw', () => {
   assert.deepStrictEqual(audit.dismissedRows([null, undefined]), []);
 });
 
+
+console.log('\ndaysCoveredBy() must never hang the process on bad data');
+
+ok('a merely large days value still returns fast and correct', () => {
+  const t0 = Date.now();
+  const r = audit.daysCoveredBy(149, TIER, 3000);
+  assert.ok(Date.now() - t0 < 200, 'took too long for a bounded loop: ' + (Date.now() - t0) + 'ms');
+  assert.strictEqual(r, 7);
+});
+
+ok('an absurd days value from a corrupted record does not hang the request', () => {
+  // This exact call, unguarded, brought production down: rentAudit runs on
+  // every /admin page load, on Node's single thread, and one malformed
+  // customer row with a days value like this made the whole app stop
+  // responding to every request until the process was restarted.
+  const t0 = Date.now();
+  const r = audit.daysCoveredBy(149, TIER, 50000000);
+  const elapsed = Date.now() - t0;
+  assert.ok(elapsed < 500, 'the cap did not hold: took ' + elapsed + 'ms for 50 million days');
+  assert.strictEqual(r, 7, 'still answers correctly within the capped range');
+});
+
+ok('Infinity is refused outright, not looped on', () => {
+  const t0 = Date.now();
+  const r = audit.daysCoveredBy(149, TIER, Infinity);
+  assert.ok(Date.now() - t0 < 200);
+  assert.strictEqual(r, 0);
+});
+
+ok('NaN and negative values are refused, not looped on', () => {
+  assert.strictEqual(audit.daysCoveredBy(199, TIER, NaN), 0);
+  assert.strictEqual(audit.daysCoveredBy(199, TIER, -50), 0);
+});
+
+ok('the full scan survives one poisoned row among many normal ones', () => {
+  // Reproduces the actual failure mode: rentAudit.scan() runs across every
+  // renting customer on every admin page load. One bad row must not take the
+  // whole request down with it, and every OTHER row must still be judged.
+  const t0 = Date.now();
+  const rows = audit.scan([
+    renter({ id: 1, days: 30, price: 149 }),
+    renter({ id: 2, days: 99999999999, price: 199 }),
+    renter({ id: 3, days: 7, price: 149 })
+  ], tierFor);
+  assert.ok(Date.now() - t0 < 1000, 'the whole scan hung: ' + (Date.now() - t0) + 'ms');
+  assert.ok(rows.some(r => r.id === 1), 'the normal underpriced row is still caught');
+  assert.ok(!rows.some(r => r.id === 3), 'the correctly priced row is still silent');
+});
+
 console.log('\n' + passed + ' assertions passed\n');
