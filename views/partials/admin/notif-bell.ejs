@@ -161,5 +161,60 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  // ── Keeping the bell current without a reload ────────────────────────────
+  //
+  // A payment confirmed in another tab, an order that just came in, a rental
+  // that fell due — none of it reached this bell until the page was reloaded
+  // by hand, so the badge could sit at zero while three things waited.
+  //
+  // It re-fetches this page and lifts the freshly rendered bell out of it,
+  // rather than asking a JSON endpoint and rebuilding the markup in JavaScript.
+  // The bell's markup then exists once, here, and cannot drift from a second
+  // copy — the same reason the pricing rules in this project live in one
+  // module each. The cost is a page render; everything below exists to make
+  // sure that cost is only paid when it can actually change something.
+  var REFRESH_MS = 30000;
+  var wrap = document.querySelector('.nb-wrap');
+  var busy = false;
+
+  function refresh() {
+    // A hidden tab cannot show anyone anything, and an admin panel left open
+    // on a second monitor overnight should not re-render this page all night.
+    if (busy || document.hidden || !wrap || !window.fetch) return;
+    // Never swap the list out from under someone reading it — mid-click, the
+    // button they are pressing would stop existing. It picks up next tick.
+    var p = panel();
+    if (p && !p.hidden) return;
+
+    busy = true;
+    fetch(window.location.pathname + window.location.search, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' }
+    }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.text();
+    }).then(function (html) {
+      var fresh = new DOMParser().parseFromString(html, 'text/html').querySelector('.nb-wrap');
+      if (!fresh) return;
+      // Re-check: the panel may have been opened while the request was in
+      // flight, and the whole point is not to disturb it.
+      var open = panel();
+      if (open && !open.hidden) return;
+      if (fresh.innerHTML !== wrap.innerHTML) {
+        wrap.innerHTML = fresh.innerHTML;
+        tick();
+      }
+    }).catch(function () {
+      // A failed refresh is not worth telling the owner about — the bell is
+      // simply as current as its last successful one.
+    }).then(function () { busy = false; });
+  }
+
+  setInterval(refresh, REFRESH_MS);
+  // Coming back to the tab is the moment the badge is most likely to be stale.
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refresh();
+  });
 })();
 </script>

@@ -2349,6 +2349,26 @@ app.get('/order/:ref', async (req, res) => {
 });
 
 // Unlinks a just-processed upload when the transition it was meant for didn't
+// The state of one order, for the customer's own page to poll while it waits.
+//
+// "Checking your payment" used to sit there until the customer thought to
+// reload. They send the money over Messenger, the owner confirms it in the
+// admin panel seconds later, and the page in front of the customer still says
+// nobody has looked at it — so they message again to ask.
+//
+// Authorised exactly like the page it serves: the ref alone is not enough,
+// url_key has to match, and a wrong key is answered the same way a missing
+// order is so this cannot be used to discover which refs exist. Returns the
+// state and nothing else — no name, no amount, nothing worth harvesting.
+app.get('/order/:ref/state', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const order = await orders.getByRef(req.params.ref).catch(() => null);
+  if (!order || !order.url_key || req.query.k !== order.url_key) {
+    return res.status(404).json({ ok: false });
+  }
+  res.json({ ok: true, state: order.state });
+});
+
 // actually apply, so a failed/stale submission doesn't leave an orphaned file
 // behind in uploadsDir. Matches the fs.existsSync + fs.unlinkSync pattern used
 // elsewhere in this file (e.g. the admin payment-methods QR replacement).
