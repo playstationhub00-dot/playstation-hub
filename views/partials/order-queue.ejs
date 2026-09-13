@@ -393,18 +393,25 @@
 <div class="oq-abandoned">
   <div class="oq-abandoned-title">👥 Waiting for a slot (<%= waitlistOrders.length %>)</div>
   <%
-    // Queue order, not recency: oldest first, matching what the customer is
-    // told on the game page. Sorting newest-first (as this did) meant serving
-    // from the top of this list served the most recently joined person while
-    // the site told them they were last. Positions are per game + account type,
-    // because that is the scope a slot actually opens in.
+    // Priority first, then free — the same tier order queueRules.buildQueue
+    // already used to number each row, so the sort here can never show a
+    // priority customer beneath someone who paid nothing. Within a tier,
+    // oldest first: the game page tells the customer that order, and serving
+    // from the top of a newest-first list (as this did) served the most
+    // recent joiner while the site told them they were last. Grouped per
+    // game + account type, because that is the scope a slot actually opens in.
     const sortedWaitlist = [...waitlistOrders].sort((a, b) => {
+      const ka = String(a.game_id) + '|' + a.account_type;
+      const kb = String(b.game_id) + '|' + b.account_type;
+      if (ka !== kb) return ka < kb ? -1 : 1;
+      const ta = a.state === 'reserved' ? 0 : 1;
+      const tb = b.state === 'reserved' ? 0 : 1;
+      if (ta !== tb) return ta - tb;
       const da = Date.parse(a.created_at || '') || 0;
       const db = Date.parse(b.created_at || '') || 0;
       if (da !== db) return da - db;
       return String(a.ref).localeCompare(String(b.ref));
     });
-    const wlSeen = {};
   %>
   <% sortedWaitlist.forEach(o => {
     const wlTypeLabel = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
@@ -413,23 +420,41 @@
     const wlMsg = '👋 Hi ' + wlFirstName + '! A slot just opened up for ' + o.game_title + ' (' + wlTypeLabel + ', ' + wlDurLabel + ') —\n\n'
       + 'Still want it? Reply here and we\'ll get you set up.\n\n'
       + '🔖 Reference: ' + o.ref;
-    const wlKey = String(o.game_id) + '|' + o.account_type;
-    wlSeen[wlKey] = (wlSeen[wlKey] || 0) + 1;
-    const wlPos = wlSeen[wlKey];
+    const wlPriority = o.state === 'reserved';
   %>
   <div class="oq-ab-row oq-sv-wait">
     <div>
-      <span class="oq-wl-pos">#<%= wlPos %></span>
+      <%# queuePosition comes from queueRules.buildQueue on the server — the
+          exact function that numbers this same order on the customer's own
+          page, so the two can never disagree. null means an expired free
+          entry: still shown here, per lib/queue.js's own "the admin card
+          still shows the row" rule, but it no longer counts toward anyone's
+          position. %>
+      <span class="oq-wl-pos"><%= o.queuePosition ? '#' + o.queuePosition : (o.queueExpired ? '—' : '#?') %></span>
       <span class="oq-ref"><%= o.ref %></span>
       <span class="oq-ab-name"><%= o.fb_name %></span>
       <div class="oq-meta">
-        <%= o.game_title %> · <%= wlTypeLabel %> · <%= wlDurLabel %> · Free entry
+        <%= o.game_title %> · <%= wlTypeLabel %> · <%= wlDurLabel %> ·
+        <%= wlPriority ? '⭐ Priority — paid' : 'Free entry' %><%= o.queueExpired ? ' · waiting 30+ days' : '' %>
       </div>
     </div>
     <div class="oq-ab-right">
       <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       <div class="oq-ab-btns">
         <button type="button" class="btn-copy rem-copy" data-msg="<%= wlMsg %>" title="Copy slot-open message">📋 Copy</button>
+        <% if (wlPriority) { %>
+          <%# Undo puts them back on the free list at their original join
+              date. /cancel refuses a 'reserved' order outright, so it cannot
+              stand in here. Only offered on the flag the priority upgrade
+              itself sets — a Coming Soon downpayment shares this state but is
+              a different queue, and is excluded from this whole panel
+              server-side (upcoming_game_id/is_buy) regardless. %>
+          <% if (o.upgraded_from_waitlist) { %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
+            <button type="submit" class="oq-btn-no" title="Put this customer back on the free waiting list">↩ Undo priority</button>
+          </form>
+          <% } %>
+        <% } else { %>
         <%# For a ₱100 that arrived over Messenger or GCash rather than through
             the site. Confirms first because it books money and moves them above
             everyone still on a free entry. %>
@@ -439,6 +464,7 @@
         <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Remove ' + <%= JSON.stringify(o.ref) %> + ' from the waiting list?');">
           <button type="submit" class="oq-btn-no" title="Remove this waitlist entry">Remove</button>
         </form>
+        <% } %>
       </div>
     </div>
   </div>

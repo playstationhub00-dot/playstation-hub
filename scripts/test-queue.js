@@ -207,4 +207,116 @@ check('isExpired only ever fires on a stale free entry', () => {
   assert.strictEqual(queue.isExpired(entry({ state: 'active', created_at: daysAgo(400) }), NOW), false);
 });
 
+
+console.log('\nforAdminPanel() — the "Waiting for a slot" panel, admin-wide');
+
+check('a priority-paid entry is not just kept, it is bumped above the free ones', () => {
+  // This is the bug report itself: marking a customer priority paid used to
+  // remove them from this exact list.
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0301', game_id: 5, account_type: 'nt', created_at: daysAgo(10) }),
+    entry({ ref: 'PH-0302', game_id: 5, account_type: 'nt', state: 'reserved',
+            upgraded_from_waitlist: true, created_at: daysAgo(3) })
+  ], NOW);
+  const refs = rows.map(r => r.ref);
+  assert.ok(refs.includes('PH-0302'), 'the priority-paid order is on the list at all');
+  const priority = rows.find(r => r.ref === 'PH-0302');
+  const free = rows.find(r => r.ref === 'PH-0301');
+  assert.strictEqual(priority.queuePosition, 1, 'priority takes the top spot despite joining later');
+  assert.strictEqual(free.queuePosition, 2);
+});
+
+check('position here is the exact function that numbers the customer\'s own page', () => {
+  // Not a second implementation of the sort — the SAME buildQueue call, so
+  // the two can never quote different numbers for the same order.
+  const orders = [
+    entry({ ref: 'PH-0303', game_id: 7, account_type: 'tr', created_at: daysAgo(5) }),
+    entry({ ref: 'PH-0304', game_id: 7, account_type: 'tr', state: 'reserved',
+            upgraded_from_waitlist: true, created_at: daysAgo(1) })
+  ];
+  const panelRows = queue.forAdminPanel(orders, NOW);
+  const customerRows = queue.buildQueue(orders, NOW).tr;
+  panelRows.forEach(p => {
+    assert.strictEqual(p.queuePosition, queue.positionOf(customerRows, p.ref));
+  });
+});
+
+check('an expired free entry stays on the panel, unlike everywhere else', () => {
+  // "This is a DISPLAY filter only: nothing is deleted and the admin card
+  // still shows the row" — lib/queue.js's own comment on QUEUE_EXPIRY_DAYS.
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0305', game_id: 5, account_type: 'nt', created_at: daysAgo(45) })
+  ], NOW);
+  assert.strictEqual(rows.length, 1, 'the stale entry is not dropped');
+  assert.strictEqual(rows[0].queuePosition, null, 'but it no longer holds a countable place');
+  assert.strictEqual(rows[0].queueExpired, true);
+});
+
+check('a priority entry never carries queueExpired, no matter how old', () => {
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0306', game_id: 5, account_type: 'nt', state: 'reserved',
+            upgraded_from_waitlist: true, created_at: daysAgo(400) })
+  ], NOW);
+  assert.strictEqual(rows[0].queuePosition, 1);
+  assert.strictEqual(rows[0].queueExpired, false);
+});
+
+check('a mid-upgrade payment holds its free-tier place but is not listed twice', () => {
+  // The design is explicit that an upgrader stays at their ORIGINAL free
+  // position until the ₱100 clears — "they only move up, never off" — so a
+  // waitlisted order that joined earlier still outranks it. It already
+  // surfaces in the action queue elsewhere on the same screen (orderQueue,
+  // built from OWNER_STATES), so it is left off this list, not duplicated.
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0307', game_id: 5, account_type: 'nt', created_at: daysAgo(10) }),
+    entry({ ref: 'PH-0308', game_id: 5, account_type: 'nt', state: 'verifying_payment',
+            upgraded_from_waitlist: true, created_at: daysAgo(1) })
+  ], NOW);
+  assert.strictEqual(rows.length, 1, 'only the plain waitlisted row is listed');
+  assert.strictEqual(rows[0].ref, 'PH-0307');
+  assert.strictEqual(rows[0].queuePosition, 1, 'still first — it joined before the mid-upgrade order');
+});
+
+check('but a mid-upgrade payment does occupy a real slot in that count', () => {
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0313', game_id: 6, account_type: 'nt', state: 'verifying_payment',
+            upgraded_from_waitlist: true, created_at: daysAgo(10) }),
+    entry({ ref: 'PH-0314', game_id: 6, account_type: 'nt', created_at: daysAgo(1) })
+  ], NOW);
+  assert.strictEqual(rows.length, 1, 'the mid-upgrade order itself is still not rendered');
+  assert.strictEqual(rows[0].ref, 'PH-0314');
+  assert.strictEqual(rows[0].queuePosition, 2, 'bumped to second — the earlier upgrader still holds a place ahead of it');
+});
+
+check('a Coming Soon downpayment never appears here, despite sharing the state', () => {
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0309', game_id: 11, account_type: 'nt', state: 'reserved', upcoming_game_id: 11 })
+  ], NOW);
+  assert.deepStrictEqual(rows, []);
+});
+
+check('a permanent purchase reservation never appears here either', () => {
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0310', game_id: 5, account_type: 'nt', state: 'reserved', is_buy: true })
+  ], NOW);
+  assert.deepStrictEqual(rows, []);
+});
+
+check('separate games never share a queue', () => {
+  const rows = queue.forAdminPanel([
+    entry({ ref: 'PH-0311', game_id: 5, account_type: 'nt', state: 'reserved',
+            upgraded_from_waitlist: true, created_at: daysAgo(1) }),
+    entry({ ref: 'PH-0312', game_id: 9, account_type: 'nt', created_at: daysAgo(20) })
+  ], NOW);
+  const g5 = rows.find(r => r.ref === 'PH-0311');
+  const g9 = rows.find(r => r.ref === 'PH-0312');
+  assert.strictEqual(g5.queuePosition, 1, 'first in its own game, despite the other game having an older entry');
+  assert.strictEqual(g9.queuePosition, 1, 'and vice versa');
+});
+
+check('bad input does not throw', () => {
+  assert.deepStrictEqual(queue.forAdminPanel(null, NOW), []);
+  assert.deepStrictEqual(queue.forAdminPanel([null, undefined], NOW), []);
+});
+
 console.log('\n' + passed + ' assertions passed');

@@ -4013,7 +4013,13 @@ app.get('/admin', requireAuth, async (req, res) => {
   // Fall in Line entries, listed separately from the action queue: they have
   // no completing action the way a payment or return check does, so they
   // would sit in orderQueue forever and bury real work if merged into it.
-  const waitlistOrders = await orders.listByStates(['waitlisted']);
+  //
+  // Priority ('reserved') entries belong in this same panel — lib/queue.js's
+  // own comment says the admin card must keep showing a row regardless of
+  // tier or expiry. This used to query only 'waitlisted', so marking someone
+  // priority paid made them vanish from the very list the owner manages the
+  // line from, even though they are still waiting for a slot.
+  const waitlistOrders = queueRules.forAdminPanel(allOrders, new Date());
   // Weekly funnel readout: how many orders started, how many completed
   // (reached active or beyond), and what fraction that is of game-page
   // traffic in the same window. The single number the conversion plan's
