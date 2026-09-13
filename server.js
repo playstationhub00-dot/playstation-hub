@@ -3911,6 +3911,17 @@ app.get('/admin/app', requireAuth, (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.get('/admin', requireAuth, async (req, res) => {
+  // Everything below runs inside this guard. An async route handler that
+  // rejects is an UNHANDLED rejection — Node's default for that is to kill
+  // the process, so one bad row in one panel took the entire site down for
+  // every visitor, not just this page. It also took the error message with
+  // it: the owner saw a Railway 502 and the reason went to a log nobody was
+  // reading. This turns both of those into a page that says what broke.
+  //
+  // Not re-indented on purpose — wrapping 500 lines to add a try is a diff
+  // nobody can review, and the point of this change is that it is small
+  // enough to be obviously correct while production is down.
+  try {
   const games = [...getGames()].sort((a, b) => b.id - a.id).map(resolveGamePrices);
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
@@ -4455,6 +4466,22 @@ app.get('/admin', requireAuth, async (req, res) => {
   });
 
   res.render('admin', { qaUpcoming, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  } catch (err) {
+    // Behind requireAuth, so the detail is only ever shown to the owner.
+    // It is deliberately the real message and stack: a generic "something
+    // went wrong" here would have cost another round of guessing at which
+    // panel was at fault.
+    console.error('[admin render]', err && err.stack ? err.stack : err);
+    res.status(500).type('html').send(
+      '<body style="background:#0b0b0b;color:#eee;font:14px system-ui;padding:2rem;line-height:1.6">'
+      + '<h1 style="color:#f0a500">The admin panel hit an error</h1>'
+      + '<p>The rest of the site is unaffected. Send this to Claude:</p>'
+      + '<pre style="background:#161616;border:1px solid #2a2a2a;border-radius:8px;padding:1rem;'
+      + 'white-space:pre-wrap;word-break:break-word;color:#ff8a80">'
+      + String(err && err.stack ? err.stack : err).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+      + '</pre></body>'
+    );
+  }
 });
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
@@ -6601,6 +6628,23 @@ app.use((err, req, res, next) => {
     return res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=file_too_large');
   }
   res.status(500).send('Something went wrong. Please try again.');
+});
+
+// ── Last line of defence ─────────────────────────────────────────────────────
+// Node kills the process on an unhandled rejection, and an async Express
+// handler that throws produces exactly that. A single bad record in a single
+// admin panel therefore took the whole site offline for everyone — customers
+// included — and restarted it into the same crash on the next visit.
+//
+// Staying alive is the right trade here: one route answering 500 is a bad
+// page, while exiting is a bad SITE. These log loudly rather than quietly
+// swallowing, so a crash that would have been invisible in a restart loop is
+// greppable in the deploy logs instead.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason && reason.stack ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err && err.stack ? err.stack : err);
 });
 
 app.listen(PORT, () => {
