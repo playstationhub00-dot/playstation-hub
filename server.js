@@ -4021,16 +4021,6 @@ app.get('/admin', requireAuth, async (req, res) => {
   // the badge cannot claim "test" while real money is moving.
   const paymongoMode = paymongo.keyMode(process.env.PAYMONGO_SECRET_KEY);
   const paymongoHealth = await orders.webhookHealth().catch(() => null);
-  // Fall in Line entries, listed separately from the action queue: they have
-  // no completing action the way a payment or return check does, so they
-  // would sit in orderQueue forever and bury real work if merged into it.
-  //
-  // Priority ('reserved') entries belong in this same panel — lib/queue.js's
-  // own comment says the admin card must keep showing a row regardless of
-  // tier or expiry. This used to query only 'waitlisted', so marking someone
-  // priority paid made them vanish from the very list the owner manages the
-  // line from, even though they are still waiting for a slot.
-  const waitlistOrders = queueRules.forAdminPanel(allOrders, new Date());
   // Weekly funnel readout: how many orders started, how many completed
   // (reached active or beyond), and what fraction that is of game-page
   // traffic in the same window. The single number the conversion plan's
@@ -4043,6 +4033,24 @@ app.get('/admin', requireAuth, async (req, res) => {
   // as a failed sale. Both the weekly funnel and the ledger below exclude
   // them at the source so no downstream stat has to know about the carve-out.
   const paidPathOrders = allOrders.filter(o => o.state !== 'waitlisted');
+
+  // Fall in Line entries, listed separately from the action queue: they have
+  // no completing action the way a payment or return check does, so they
+  // would sit in orderQueue forever and bury real work if merged into it.
+  //
+  // Priority ('reserved') entries belong in this same panel — lib/queue.js's
+  // own comment says the admin card must keep showing a row regardless of
+  // tier or expiry. This used to query only 'waitlisted', so marking someone
+  // priority paid made them vanish from the very list the owner manages the
+  // line from, even though they are still waiting for a slot.
+  //
+  // Declared AFTER allOrders, which is the whole point: this used to sit
+  // six lines above it and run its own query, so switching it to read
+  // allOrders put a const reference ahead of that const's declaration.
+  // Every authenticated admin load then threw "Cannot access 'allOrders'
+  // before initialization" from the temporal dead zone, which as an
+  // unhandled rejection killed the process and took the whole site down.
+  const waitlistOrders = queueRules.forAdminPanel(allOrders, new Date());
   // "Money taken this month" for the dashboard's Right Now row — same
   // created_at-month attribution the orders ledger groups by, so the two
   // numbers can never disagree about which orders belong to the month.
