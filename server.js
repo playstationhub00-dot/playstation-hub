@@ -4324,7 +4324,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   }
 
   const accountsView = buildAccountsView();
-  const postersView = buildPostersView();
+  const postersView = buildPostersView({ hideFull: req.query.pfull === 'hide' });
   // ── Dashboard metrics ────────────────────────────────────────────
   // The arithmetic lives in lib/dashboard.js so it can be asserted without a
   // database; this route stays a caller. The period is resolved here rather
@@ -5822,23 +5822,46 @@ function buildPosterGroup(name, games, discount10) {
   return { name, density, pages, count: games.length, missingCovers };
 }
 // Shared by the Posters tab and the old standalone URL redirect below.
-function buildPostersView() {
+// hideFull drops every game with no slot free right now.
+//
+// This does NOT put availability on the poster — the header's promise that a
+// posted image stays accurate still holds, because nothing printed here claims
+// how many slots exist. It only decides which games are worth printing at all:
+// advertising a title nobody can rent today costs a reply explaining that it is
+// full. Off by default, because the opposite case is just as real — a poster
+// that outlives a busy week is still bringing in the games it listed.
+function buildPostersView(opts) {
+  const o = opts || {};
   const settings = getSiteSettings();
   const promo = settings.promo;
+
+  // Computed only when the filter is on: resolveSlotDays walks the customer
+  // list once per game, and every admin page load should not pay for a filter
+  // nobody asked for.
+  const fullIds = o.hideFull
+    ? computeAvailability.fullGameIds(
+        getGames().map(resolveGamePrices).map(resolveSlotDays),
+        o.accountSummaryMap || buildAccountSummaryMap())
+    : new Set();
   // Weekly is always the cheapest tier, so it's what "From ₱X" shows —
   // apply that duration's promo discount (if any) so the poster stays accurate.
   const discount10 = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
   // Games added this month get pulled into their own "New Arrivals" poster instead of
   // sitting mixed into their price-category poster — same "added this month" rule as
   // the site-wide NEW badge, so the two stay consistent.
-  const newArrivalGames = getGames().map(resolveGamePrices).filter(isAddedThisMonth).sort((a, b) => a.title.localeCompare(b.title));
+  const newArrivalGames = getGames().map(resolveGamePrices)
+    .filter(isAddedThisMonth)
+    .filter(g => !fullIds.has(g.id))
+    .sort((a, b) => a.title.localeCompare(b.title));
   const newArrivalIds = new Set(newArrivalGames.map(g => g.id));
-  const groups = gamesByPriceCategory(newArrivalIds);
+  // Both sets are skipped by the category grouping: New Arrivals because those
+  // games have their own poster, full ones because they were filtered out.
+  const groups = gamesByPriceCategory(new Set([...newArrivalIds, ...fullIds]));
   const posterGroups = groups.map(g => buildPosterGroup(g.name, g.games, discount10));
   if (newArrivalGames.length) posterGroups.unshift(buildPosterGroup('🆕 New Arrivals', newArrivalGames, discount10));
   // Which durations currently have an active discount, for the poster's promo banner
   const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
-  return { posterGroups, activePromos };
+  return { posterGroups, activePromos, hideFull: !!o.hideFull, hiddenFullCount: fullIds.size };
 }
 
 // Old bookmarks/links land on the merged Posters tab instead of a page that

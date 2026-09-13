@@ -43,6 +43,13 @@
     .poster-tile-title-wrap { position: absolute; left: 8px; right: 8px; bottom: 8px; text-align: center; }
     .poster-tile-title { display: -webkit-inline-box; background: rgba(10,5,20,0.82); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 12px; font-size: 15px; font-weight: 700; line-height: 1.25; max-width: 100%; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .poster-grid.large .poster-tile-title { font-size: 21px; padding: 8px 16px; }
+    .pg-fullfilter { text-decoration: none; display: inline-flex; align-items: center; }
+    .pg-fullfilter.on { border-color: var(--ps-blue); color: var(--ps-blue); }
+    .poster-tile-price-wrap { display: block; margin-top: 5px; }
+    .poster-tile-price { display: inline-block; background: rgba(10,5,20,0.82); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 3px 10px; font-size: 13px; font-weight: 700; color: #ffd34d; line-height: 1.2; }
+    .poster-tile-price b { color: #fff; font-weight: 800; }
+    .poster-grid.large .poster-tile-price-wrap { margin-top: 7px; }
+    .poster-grid.large .poster-tile-price { font-size: 17px; padding: 5px 14px; }
     .poster-footer { position: absolute; bottom: 40px; left: 54px; right: 54px; text-align: center; }
     .poster-footer .site { font-size: 20px; font-weight: 800; color: #FFD700; margin-bottom: 6px; }
     .poster-footer .trial { font-size: 14px; color: #22c55e; font-weight: 700; margin-bottom: 8px; }
@@ -79,7 +86,24 @@
       <option value="2">HD (2160×2700)</option>
       <option value="3" selected>Ultra HD (3240×4050)</option>
     </select>
+
+    <%# A page reload rather than a client-side hide: dropping games changes how
+        many pages each category needs, and hiding tiles in the browser would
+        leave gaps in a grid that is about to be rendered to an image. %>
+    <a class="pg-btn outline pg-fullfilter<%= postersView.hideFull ? ' on' : '' %>"
+       href="/admin?tab=posters<%= postersView.hideFull ? '' : '&pfull=hide' %>">
+      <%= postersView.hideFull ? '✓ Hiding full games' : 'Hide full games' %><%
+        %><% if (postersView.hideFull && postersView.hiddenFullCount) { %> (<%= postersView.hiddenFullCount %>)<% } %>
+    </a>
   </div>
+
+  <% if (postersView.hideFull) { %>
+  <div class="pg-warn" style="margin-bottom:1rem;">
+    <%= postersView.hiddenFullCount %> game<%= postersView.hiddenFullCount === 1 ? '' : 's' %> left out of these posters
+    because every slot is taken right now. The posters themselves still print no slot counts,
+    so what you post stays true for as long as the prices do.
+  </div>
+  <% } %>
 
   <div class="pg-cat-tabs">
     <% postersView.posterGroups.forEach((grp, gi) => { %>
@@ -138,7 +162,19 @@
                 <% } else { %>
                   <div class="poster-tile-cover placeholder">🎮</div>
                 <% } %>
-                <div class="poster-tile-title-wrap"><div class="poster-tile-title"><%= g.title %></div></div>
+                <%# Reads like the cards on the site: cover, title, "from ₱X".
+                    The price is this game's own cheapest weekly rate with the
+                    running promo already taken off — the same number the card
+                    shows — rather than the page-wide "starts at" figure above,
+                    which only ever describes the cheapest game on the page. %>
+                <div class="poster-tile-title-wrap">
+                  <div class="poster-tile-title"><%= g.title %></div>
+                  <% if (g.fromPrice) { %>
+                  <%# The pill hugs its text, so it needs a block of its own to
+                      sit under the title rather than beside it. %>
+                  <div class="poster-tile-price-wrap"><span class="poster-tile-price">from <b>₱<%= g.fromPrice %></b></span></div>
+                  <% } %>
+                </div>
               </div>
             <% }) %>
           </div>
