@@ -23,6 +23,7 @@ const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
 const rentAudit = require('./lib/rent-audit');
 const buyPricing = require('./lib/buy-pricing');
+const reservations = require('./lib/reservations');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
@@ -2178,13 +2179,15 @@ app.post('/order/reserve', async (req, res) => {
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
   } else if (isUpcoming) {
-    const priceField = type + '_price_' + d + 'd';
-    const base = game[priceField] || 0;
-    if (!base) return res.redirect(errRedirect);
-    depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
-    const total = base + depositDue;
-    amountDue = Math.ceil(total * 0.5);
-    remainingDue = total - amountDue;
+    // Priced through lib/reservations so the admin's Quick Add records the
+    // same reservation this route creates. Two copies of a price rule is
+    // exactly how the Coming Soon pre-order came to quote one figure and
+    // charge another.
+    const priced = reservations.preorderPricing(game, type, d, promo);
+    if (!priced) return res.redirect(errRedirect);
+    depositDue = priced.deposit;
+    amountDue = priced.amountDue;
+    remainingDue = priced.remainingDue;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
   } else if (isWaitlist) {
@@ -2830,15 +2833,22 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // date — asking someone who owns the game outright to give it back.
   const status = b.status === 'bought' ? 'bought' : (b.status === 'done' ? 'done' : 'renting');
   const mode = status === 'bought' ? 'buy' : 'rent';
-  // An unreleased game has no account to sign anyone into, so it can only be
-  // a pre-order — never a rental with dates, never a finished one. The picker
-  // already switches the form over; this is the server-side half of that, so
-  // a stale form or a hand-posted request cannot create a rental for a game
-  // that does not exist yet.
-  if (upcomingGame && status !== 'bought') {
+  // An unreleased game has no account to sign anyone into, so it can never be
+  // a live rental with dates, and never a finished one. It CAN be reserved,
+  // two ways, which is what the site itself already sells:
+  //
+  //   Bought  → a permanent pre-order, paid in full
+  //   Renting → a rental slot held with a downpayment, the rest owed on release
+  //
+  // Both rest in 'reserved' and neither has dates. 'Finished' is the only one
+  // with no meaning here. The picker already switches the form over; this is
+  // the server-side half, so a stale form or a hand-posted request cannot
+  // create a live rental for a game that does not exist yet.
+  const upcomingReservation = !!upcomingGame && status === 'renting';
+  if (upcomingGame && status === 'done') {
     return res.status(400).json({
-      ok: false, reason: 'upcoming_buy_only',
-      message: game.title + ' has not released yet, so it can only be recorded as a pre-order. Pick "Bought".'
+      ok: false, reason: 'upcoming_not_finished',
+      message: game.title + ' has not released yet, so it cannot be recorded as finished.'
     });
   }
 
@@ -2872,7 +2882,16 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // admin-entered rental cannot drift from what a customer would have paid.
   // An explicit override wins, because a hand-arranged deal is a real thing.
   const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
-  const pricing = mode === 'buy' ? computeBuyPricing(game, buyType) : computeRentPricing(game, type, days);
+  // A reservation is half of list price plus the deposit, quoted off the
+  // upcoming record with no promo applied — lib/reservations owns that rule and
+  // POST /order/reserve prices from the same function, so an owner-entered
+  // reservation and a customer-entered one can never disagree.
+  const reservationPricing = upcomingReservation
+    ? reservations.preorderPricing(game, type, days, getSiteSettings().promo || {})
+    : null;
+  const pricing = upcomingReservation ? reservationPricing
+    : mode === 'buy' ? computeBuyPricing(game, buyType)
+    : computeRentPricing(game, type, days);
   if (!pricing && override == null) {
     // Most of the catalogue has no per-game buy price set, so refusing every
     // purchase outright would make "Bought" unusable. Ask for the number
@@ -2881,11 +2900,22 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
       ok: false, reason: 'bad_pricing',
       message: mode === 'buy'
         ? 'No buy price set for this game — type the amount in Price override.'
-        : 'That game has no price set for this type and duration.'
+        : upcomingReservation
+          ? 'No price set for that type and duration on this Coming Soon game — type the downpayment in Price override.'
+          : 'That game has no price set for this type and duration.'
     });
   }
   const amountDue = override != null && override >= 0 ? override : pricing.amountDue;
-  const depositDue = mode === 'buy' ? 0 : pricing.depositDue;
+  // A reservation's deposit is carried on the order the way the web flow
+  // carries it; a purchase has none.
+  const depositDue = upcomingReservation ? (reservationPricing ? reservationPricing.deposit : 0)
+    : mode === 'buy' ? 0
+    : pricing.depositDue;
+  // What is still owed when the game launches. An overridden downpayment
+  // recomputes it against the same total, so the two halves still add up.
+  const remainingDue = upcomingReservation && reservationPricing
+    ? Math.max(0, reservationPricing.total - amountDue)
+    : 0;
 
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.start_date || '')) ? b.start_date : orders.manilaDate();
   let endDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.end_date || '')) ? b.end_date : '';
@@ -2932,7 +2962,11 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
     upcomingGame ? {
       upcoming_game_id: game.id,
       release_date: game.release_date || '',
-      remaining_due: 0,
+      // Zero for a permanent pre-order, which is paid in full; the unpaid half
+      // for a rental reservation. Every "remaining due on release" line in the
+      // app is gated on this being above zero, so the pre-order collapses them
+      // on its own without needing to know about them.
+      remaining_due: remainingDue,
       is_reservation: true
     } : {},
     // computeBuyPricing returns an amount and nothing else — no tier, no
@@ -2963,7 +2997,14 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
       end_date: (upcomingGame || mode === 'buy') ? '' : endDate,
       price: amountDue,
       status: upcomingGame ? 'reservation' : (mode === 'buy' ? 'bought' : status),
-      notes: String(b.notes || '').trim(),
+      // Same wording POST /order/reserve writes, so a reservation reads the
+      // same whichever side of the counter it was taken on. An owner's own
+      // note wins if they typed one.
+      notes: String(b.notes || '').trim() || (upcomingGame
+        ? (mode === 'buy'
+            ? 'Pre-order — paid in full ₱' + amountDue
+            : 'Reservation — downpayment ₱' + amountDue + ', ₱' + remainingDue + ' due on release')
+        : ''),
       order_ref: order.ref,
       order_key: order.url_key,
       created_at: new Date().toISOString(),
@@ -4401,7 +4442,13 @@ app.get('/admin', requireAuth, async (req, res) => {
       id: 'upcoming_' + u.id,
       title: u.title,
       release_date: u.release_date || '',
-      nt7: 0, nt30: 0, tr7: 0, tr30: 0,
+      // The upcoming record's own list prices, which is what a reservation is
+      // quoted from — no category to resolve and no promo applied, matching
+      // lib/reservations and the public reserve route exactly. The form halves
+      // these itself to preview the downpayment; test-reservations.js pins that
+      // client arithmetic against the module so the two cannot drift.
+      nt7: Number(u.nt_price_7d) || 0, nt30: Number(u.nt_price_30d) || 0,
+      tr7: Number(u.tr_price_7d) || 0, tr30: Number(u.tr_price_30d) || 0,
       buynt: buyNt ? buyNt.amountDue : 0,
       buytr: buyTr ? buyTr.amountDue : 0
     };
@@ -4473,7 +4520,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     rentMismatches, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { qaUpcoming, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something

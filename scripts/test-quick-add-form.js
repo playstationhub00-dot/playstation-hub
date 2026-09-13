@@ -52,9 +52,21 @@ function loadForm() {
   const paid = stubEl('paidRadio');
   paid.value = 'yes';
 
+  // The status buttons are labels driven by `for`, and the form rewrites their
+  // text when an unreleased game is picked, so the stub has to serve them.
+  const labels = {
+    qaStRent: stubEl('label-qaStRent'),
+    qaStBought: stubEl('label-qaStBought')
+  };
+
   const doc = {
     getElementById(id) { return (els[id] = els[id] || stubEl(id)); },
-    querySelector(sel) { return sel === 'input[name=paid]:checked' ? paid : null; },
+    querySelector(sel) {
+      if (sel === 'input[name=paid]:checked') return paid;
+      const forMatch = /^label\[for="(\w+)"\]$/.exec(sel);
+      if (forMatch) return labels[forMatch[1]] || null;
+      return null;
+    },
     createElement() { return stubEl('scratch'); },
     body: { appendChild() {}, removeChild() {} },
     addEventListener() {},
@@ -77,8 +89,18 @@ function loadForm() {
   gameEl.value = '12';
   gameEl.selectedOptions = [game];
   doc.getElementById('qaType').value = 'nt';
+  // The Trophy deposit reaches the script through the modal's data attribute,
+  // exactly the way the template supplies it.
+  doc.getElementById('qaOverlay').dataset.resDeposit = '100';
 
-  return { win: sandbox, el: id => doc.getElementById(id), sandbox };
+  return {
+    win: sandbox,
+    el: id => doc.getElementById(id),
+    sandbox,
+    get labels() {
+      return { qaStRent: labels.qaStRent.textContent, qaStBought: labels.qaStBought.textContent };
+    }
+  };
 }
 
 // Fires whatever the template actually wires to a control, rather than calling
@@ -243,14 +265,16 @@ ok('the CSS guard that actually hides it is still present', () => {
     'quick-add.ejs still has the .qa-in[hidden] display:none !important guard');
 });
 
-console.log('\nQuick Add — Coming Soon games are pre-orders');
+console.log('\nQuick Add — a Coming Soon game can be reserved or pre-ordered');
 
-// The shape the optgroup renders: zero rent tiers, a real buy price, and the
-// data-upcoming flag the form keys off.
+// The shape the optgroup renders for an unreleased game: real list prices, so
+// a downpayment can be quoted, plus the data-upcoming flag the form keys off.
 function pickUpcoming(f, over) {
   const opt = Object.assign({
     value: 'upcoming_4',
-    dataset: { upcoming: '1', release: '2026-11-14', nt7: '0', nt30: '0', tr7: '0', tr30: '0', buynt: '2249', buytr: '2749' }
+    dataset: { upcoming: '1', release: '2026-11-14',
+               nt7: '349', nt30: '699', tr7: '449', tr30: '899',
+               buynt: '2249', buytr: '2749' }
   }, over || {});
   f.el('qaGame').value = opt.value;
   f.el('qaGame').selectedOptions = [opt];
@@ -258,70 +282,136 @@ function pickUpcoming(f, over) {
   return opt;
 }
 
-ok('picking one flips the form to a purchase on its own', () => {
+ok('both ways of reserving stay open; only Finished is meaningless', () => {
+  // Renting on an unreleased game means "hold a slot with a downpayment",
+  // which is a real thing the site sells. It used to be disabled outright, so
+  // the only option the owner had was a pre-order paid in full.
   const f = loadForm();
-  assert.strictEqual(f.el('qaStBought').checked, false, 'starts on Renting');
   pickUpcoming(f);
-  assert.strictEqual(f.el('qaStBought').checked, true, 'switched itself to Bought');
-  assert.strictEqual(f.el('qaMode').value, 'buy');
-  assert.strictEqual(f.el('qaDays').hidden, true, 'no duration on an unreleased game');
-  assert.strictEqual(f.el('qaEndDate').value, '', 'and no dates');
+  assert.strictEqual(f.el('qaStRent').disabled, false, 'reserving is a real option');
+  assert.strictEqual(f.el('qaStDone').disabled, true, 'but nobody finished a game that has not shipped');
 });
 
-ok('Renting and Finished are switched off, not silently ignored', () => {
+ok('the buttons say which of the two things they now record', () => {
   const f = loadForm();
   pickUpcoming(f);
-  assert.strictEqual(f.el('qaStRent').disabled, true);
+  assert.strictEqual(f.labels.qaStRent, '🔖 Reserve');
+  assert.strictEqual(f.labels.qaStBought, '🛒 Pre-order');
+});
+
+ok('a reservation keeps its duration but loses its dates', () => {
+  const f = loadForm();
+  f.el('qaStart').value = '2026-09-13';
+  f.el('qaDays').value = '30';
+  f.win.qaDaysChanged();
+  assert.strictEqual(f.el('qaEndDate').value, '2026-10-13', 'a released rental has an end date');
+
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStBought').checked, false, 'still on Renting, which now means reserving');
+  assert.strictEqual(f.el('qaDays').hidden, false, 'a weekly or monthly slot is what they are reserving');
+  assert.strictEqual(f.el('qaDays').disabled, false);
+  assert.strictEqual(f.el('qaEndWrap').hidden, true, 'but the game has no start or return yet');
+  assert.strictEqual(f.el('qaEndDate').value, '', 'and no stale date may reach the server');
+});
+
+ok('it quotes the downpayment and the balance, not the whole rent', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '30';
+  f.win.qaDaysChanged();
+  pickUpcoming(f);
+  const box = f.el('qaPriceBox').innerHTML;
+  // 699 monthly, non-trophy so no deposit: 350 now, 349 on release.
+  assert.ok(box.includes('350'), 'downpayment: ' + box);
+  assert.ok(box.includes('349'), 'balance due on release: ' + box);
+  assert.ok(/downpayment/i.test(box), box);
+  assert.ok(/due on release/i.test(box), box);
+});
+
+ok('a trophy reservation carries the deposit into both halves', () => {
+  const f = loadForm();
+  f.el('qaType').value = 'tr';
+  f.el('qaDays').value = '30';
+  f.win.qaDaysChanged();
+  pickUpcoming(f);
+  const box = f.el('qaPriceBox').innerHTML;
+  // 899 + 100 deposit = 999 -> 500 now, 499 on release.
+  assert.ok(box.includes('500'), 'downpayment includes half the deposit: ' + box);
+  assert.ok(box.includes('499'), box);
+});
+
+ok('a duration the game has no price for asks for an override', () => {
+  const f = loadForm();
+  f.el('qaDays').value = 'custom';
+  f.win.qaDaysChanged();
+  f.el('qaCustomDays').value = '12';
+  pickUpcoming(f);
+  const box = f.el('qaPriceBox').textContent;
+  assert.ok(/override/i.test(box), 'only 7 and 30 exist on an upcoming record: ' + box);
+});
+
+ok('switching to Pre-order prices it in full and drops the duration', () => {
+  const f = loadForm();
+  pickUpcoming(f);
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+  assert.strictEqual(f.el('qaDays').hidden, true, 'nothing to choose on a permanent copy');
+  assert.strictEqual(f.el('qaMode').value, 'buy');
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('2,249'), f.el('qaPriceBox').innerHTML);
+  assert.ok(/purchase/i.test(f.el('qaPriceBox').innerHTML));
+});
+
+ok('Finished moves itself to Pre-order rather than being silently ignored', () => {
+  const f = loadForm();
+  f.el('qaStDone').checked = true;
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaStBought').checked, true);
   assert.strictEqual(f.el('qaStDone').disabled, true);
 });
 
-ok('it says why, and when the game lands', () => {
+ok('the note explains both options, and names the release date', () => {
   const f = loadForm();
   pickUpcoming(f);
   const note = f.el('qaUpcomingNote');
   assert.strictEqual(note.hidden, false);
-  assert.ok(note.textContent.includes('pre-order'), note.textContent);
+  assert.ok(/reserve/i.test(note.textContent), note.textContent);
+  assert.ok(/pre-order/i.test(note.textContent), note.textContent);
   assert.ok(note.textContent.includes('2026-11-14'), 'names the release date: ' + note.textContent);
 });
 
 ok('a release date it does not have is not invented', () => {
   const f = loadForm();
-  pickUpcoming(f, { dataset: { upcoming: '1', release: '', buynt: '2249', buytr: '0', nt7: '0', nt30: '0', tr7: '0', tr30: '0' } });
+  pickUpcoming(f, { dataset: { upcoming: '1', release: '',
+                               nt7: '349', nt30: '699', tr7: '449', tr30: '899',
+                               buynt: '2249', buytr: '0' } });
   const note = f.el('qaUpcomingNote');
   assert.ok(note.textContent.includes('until it launches.'), note.textContent);
   assert.ok(!note.textContent.includes('undefined'), note.textContent);
 });
 
-ok('it is priced from the buy price, not a rental tier', () => {
+ok('choosing a released game restores the wording, the dates and Finished', () => {
   const f = loadForm();
   pickUpcoming(f);
-  assert.ok(f.el('qaPriceBox').innerHTML.includes('2,249'),
-    'shows the pre-order price: ' + f.el('qaPriceBox').innerHTML);
-  assert.ok(f.el('qaPriceBox').innerHTML.includes('purchase'), 'priced as a purchase');
-});
-
-ok('choosing a released game afterwards gives the choices back', () => {
-  const f = loadForm();
-  pickUpcoming(f);
-  assert.strictEqual(f.el('qaStRent').disabled, true);
-
   const normal = { value: '12', dataset: { nt7: '199', nt30: '599', buynt: '799', buytr: '999' } };
+  f.el('qaStart').value = '2026-09-13';
   f.el('qaGame').value = '12';
   f.el('qaGame').selectedOptions = [normal];
+  f.el('qaDays').value = '7';
   f.win.qaGameChanged();
 
-  assert.strictEqual(f.el('qaStRent').disabled, false, 'Renting is available again');
+  assert.strictEqual(f.labels.qaStRent, '🟢 Renting');
+  assert.strictEqual(f.labels.qaStBought, '🛒 Bought');
   assert.strictEqual(f.el('qaStDone').disabled, false);
   assert.strictEqual(f.el('qaUpcomingNote').hidden, true, 'and the note goes');
+  assert.strictEqual(f.el('qaEndWrap').hidden, false, 'a real rental has dates again');
+  assert.strictEqual(f.el('qaEndDate').value, '2026-09-20');
 });
 
 ok('reopening the form does not leave the lock on for the next customer', () => {
   const f = loadForm();
   pickUpcoming(f);
-  assert.strictEqual(f.el('qaStRent').disabled, true);
+  assert.strictEqual(f.el('qaStDone').disabled, true);
   f.win.qaReset();
-  assert.strictEqual(f.el('qaStRent').disabled, false, 'qaReset clears it');
-  assert.strictEqual(f.el('qaStDone').disabled, false);
+  assert.strictEqual(f.el('qaStDone').disabled, false, 'qaReset clears it');
   assert.strictEqual(f.el('qaUpcomingNote').hidden, true);
 });
 

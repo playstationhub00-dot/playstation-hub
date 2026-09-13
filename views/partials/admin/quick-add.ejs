@@ -3,7 +3,11 @@
     can never drift into different forms again, which is how this job ended up
     split across two half-forms in the first place. %>
 
-<div class="qa-overlay" id="qaOverlay" onclick="if(event.target===this)qaClose()">
+<%# The Trophy deposit rides on the element rather than being written into
+    the script below. Keeping template tags out of that block is what lets
+    the tests parse and execute it: the inline-script gate skips any block
+    containing them, and this form is exactly the one that needs covering. %>
+<div class="qa-overlay" id="qaOverlay" data-res-deposit="<%= typeof qaResDeposit !== 'undefined' ? (Number(qaResDeposit) || 0) : 0 %>" onclick="if(event.target===this)qaClose()">
   <div class="qa-box" role="dialog" aria-modal="true" aria-labelledby="qaTitle">
 
     <div class="qa-head">
@@ -47,14 +51,16 @@
             data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"
             data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
           <% }) %>
-          <%# Coming Soon games can only be pre-ordered, so they carry
-              data-upcoming and the form locks itself to Bought when one is
-              picked. Their rent tiers are zero on purpose. %>
+          <%# Coming Soon games carry data-upcoming, which switches the form
+              over: Renting becomes Reserve (a downpayment, the rest owed on
+              release) and Bought becomes Pre-order (paid in full). Their rent
+              tiers are the real list prices, which is what a reservation is
+              quoted from. %>
           <% if ((typeof qaUpcoming !== 'undefined' ? qaUpcoming : []).length) { %>
-          <optgroup label="Coming soon — pre-order only">
+          <optgroup label="Coming soon — reserve or pre-order">
             <% qaUpcoming.forEach(g => { %>
             <option value="<%= g.id %>" data-upcoming="1" data-release="<%= g.release_date %>"
-              data-nt7="0" data-nt30="0" data-tr7="0" data-tr30="0"
+              data-nt7="<%= g.nt7 %>" data-nt30="<%= g.nt30 %>" data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"
               data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
             <% }) %>
           </optgroup>
@@ -315,6 +321,13 @@
     return !!(b && b.checked);
   }
 
+  // Is the selected game one that has not released? A reservation and a
+  // pre-order both hang off this: neither has dates, whatever the status says.
+  function qaIsUpcoming() {
+    var opt = el('qaGame').selectedOptions[0];
+    return !!(opt && opt.dataset && opt.dataset.upcoming);
+  }
+
   // Status decides the shape of the form: a purchase has no duration, no end
   // date, and is priced from the buy fields rather than the rental tiers.
   // Everything that used to assume "rental" asks this first.
@@ -323,49 +336,70 @@
   // pre-order. Renting and Finished are switched off rather than silently
   // ignored, and the server refuses the combination too — this half is so the
   // owner is never offered a choice that will bounce.
+  // A Coming Soon game can be reserved two ways, which is what the site sells:
+  // Renting holds a rental slot with a downpayment and owes the rest on
+  // release; Bought is a permanent pre-order paid in full. Neither has dates,
+  // and neither has an account to sign into yet. Only "Finished" is meaningless
+  // for a game nobody can have played.
   window.qaGameChanged = function () {
     var opt = el('qaGame').selectedOptions[0];
     var upcoming = !!(opt && opt.dataset && opt.dataset.upcoming);
 
-    el('qaStRent').disabled = upcoming;
+    // Renting stays available on an unreleased game — it means "reserve" —
+    // so the labels say which of the two things each button now records.
     el('qaStDone').disabled = upcoming;
+    var rentLabel = document.querySelector('label[for="qaStRent"]');
+    var buyLabel = document.querySelector('label[for="qaStBought"]');
+    if (rentLabel) rentLabel.textContent = upcoming ? '🔖 Reserve' : '🟢 Renting';
+    if (buyLabel) buyLabel.textContent = upcoming ? '🛒 Pre-order' : '🛒 Bought';
 
     var note = el('qaUpcomingNote');
     if (upcoming) {
       var when = (opt.dataset.release || '').trim();
-      note.textContent = 'Not released yet — this is a pre-order. No duration and no dates, and there is no account to sign into'
+      note.textContent = 'Not released yet. Reserve holds a slot with a downpayment and the rest is due on release;'
+        + ' Pre-order is paid in full. Either way there are no dates and no account to sign into'
         + (when ? ' until it launches on ' + when + '.' : ' until it launches.');
       note.hidden = false;
     } else {
       note.hidden = true;
     }
 
-    // Switching to a pre-order flips the form to Bought, which recalculates
-    // the price on its own — calling qaPrice() again here would just repeat it.
-    if (upcoming && !qaIsBuy()) {
+    // Only "Finished" has to be moved off, and only when it was the choice.
+    if (upcoming && el('qaStDone').checked) {
       el('qaStBought').checked = true;
       qaStatusChanged();
       return;
     }
-    qaPrice();
+    // A reservation has no dates either, so the form still needs re-shaping
+    // when Renting is what is selected on an unreleased game.
+    qaStatusChanged();
   };
 
   window.qaStatusChanged = function () {
     var buy = qaIsBuy();
+    var upcoming = qaIsUpcoming();
     el('qaMode').value = buy ? 'buy' : 'rent';
 
     // Hidden AND disabled: a hidden select still posts its value, and a stale
     // "30" reaching the server is how a purchase got a duration in the first
     // place. The server ignores days for a buy anyway — this is the second lock.
+    //
+    // A reservation KEEPS its duration: the customer is reserving a weekly or
+    // a monthly slot, and that is half of what they are paying for. Only a
+    // purchase has nothing to pick.
     el('qaDays').hidden = buy;
     el('qaDays').disabled = buy;
     el('qaNoDuration').hidden = !buy;
     if (buy) { el('qaCustomDays').hidden = true; el('qaCustomDays').disabled = true; }
     else { el('qaCustomDays').disabled = false; qaDaysChanged(); }
 
-    el('qaEndWrap').hidden = buy;
-    el('qaEndDate').disabled = buy;
-    if (buy) el('qaEndDate').value = '';
+    // Dates are the part a reservation shares with a purchase: the game does
+    // not exist yet, so there is nothing to start or return. An order carrying
+    // an end_date is what advanceEndedRentals sweeps into "awaiting return".
+    var noDates = buy || upcoming;
+    el('qaEndWrap').hidden = noDates;
+    el('qaEndDate').disabled = noDates;
+    if (noDates) el('qaEndDate').value = '';
 
     qaEnd();
     qaPrice();
@@ -389,7 +423,7 @@
   // 10-day rental was saved with a 30-day return date and the copied message
   // told the customer the wrong day to give the account back.
   window.qaEnd = function () {
-    if (qaIsBuy()) { el('qaEndDate').value = ''; return; }
+    if (qaIsBuy() || qaIsUpcoming()) { el('qaEndDate').value = ''; return; }
     var start = el('qaStart').value, d = daysValue();
     if (!start || d < 1) return;
     var end = new Date(Date.parse(start + 'T00:00:00Z') + d * 86400000).toISOString().slice(0, 10);
@@ -408,6 +442,32 @@
   //   7 < d < 30   straight line between the weekly and monthly price
   //   d > 30       pro-rata at the monthly rate
   // Standard durations charge their tier exactly.
+  // The deposit the server would charge on a Trophy reservation. Read off the
+  // modal rather than guessed: the browser has no access to promo settings,
+  // and a downpayment quoted without it would be short by half the deposit.
+  function qaResDepositValue() {
+    var root = el('qaOverlay');
+    return (root && Number(root.dataset.resDeposit)) || 0;
+  }
+
+  // A reservation is quoted off the upcoming game's own list price for the
+  // chosen duration — no interpolation, because only 7 and 30 are offered.
+  function qaResBase(d, p7, p30) {
+    return d === 7 ? p7 : d === 30 ? p30 : 0;
+  }
+
+  // Mirrors lib/reservations.preorderPricing: deposit on Trophy only, half of
+  // the total rounded UP, so an odd total leaves the smaller half for release
+  // day rather than the larger.
+  function qaReservation(base, type) {
+    var b = Number(base) || 0;
+    if (b <= 0) return { total: 0, amountDue: 0, remainingDue: 0 };
+    var deposit = type === 'tr' ? qaResDepositValue() : 0;
+    var total = b + deposit;
+    var amountDue = Math.ceil(total * 0.5);
+    return { total: total, amountDue: amountDue, remainingDue: total - amountDue };
+  }
+
   function qaAmountForDays(d, p7, p30) {
     if (!d || d < 1 || d !== Math.floor(d)) return 0;
     if (!p7 && !p30) return 0;
@@ -453,6 +513,29 @@
 
     var p7 = parseInt(opt.dataset[pre + '7']) || 0;
     var p30 = parseInt(opt.dataset[pre + '30']) || 0;
+
+    // A reservation on a game that has not released: half the list price plus
+    // the deposit now, the rest owed on launch day. Mirrors
+    // lib/reservations.preorderPricing exactly, and scripts/test-reservations.js
+    // pulls this arithmetic out of the template and runs it against that module
+    // so the quote on screen cannot drift from the one that gets saved.
+    if (qaIsUpcoming()) {
+      var resBase = qaResBase(d, p7, p30);
+      if (!resBase && override === '') {
+        box.className = 'qa-price qa-price-empty';
+        box.textContent = 'No ' + (d === 7 ? 'weekly' : 'monthly') + ' price set for this type on that game — type the downpayment in Price override.';
+        return;
+      }
+      var res = qaReservation(resBase, type);
+      var down = override !== '' ? (parseInt(override) || 0) : res.amountDue;
+      var rest = Math.max(0, res.total - down);
+      box.className = 'qa-price';
+      box.innerHTML = '<b>₱' + down.toLocaleString() + '</b> downpayment'
+        + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
+        + ' <span style="color:#7a7a7a;">· ₱' + rest.toLocaleString() + ' due on release</span>';
+      return;
+    }
+
     // Mirrors lib/rent-pricing.js exactly. It used to pro-rate everything under
     // 30 days at the WEEKLY rate and claim the server matched — the server
     // rejected the save outright, so the form promised a price it could not
