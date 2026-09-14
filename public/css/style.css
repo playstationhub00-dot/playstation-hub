@@ -3086,6 +3086,24 @@ footer {
 
 .ord-online { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; border-radius: 9px; padding: 0.65rem 0.85rem; font-size: 0.82rem; font-weight: 700; margin-bottom: 0.85rem; }
 /* .ord-offline is already defined in Task 4 — do not redeclare it here. */
+
+/* The "your code expired" notice. Amber rather than red: nothing has gone
+   wrong for the customer, they have simply been beaten by a ten-minute clock,
+   and a red panel on a page they already paid on reads like a failed payment. */
+.ord-expired { background: #140d00; border: 1px solid #3d2a00; border-radius: 11px; padding: 0.9rem 1rem; margin-bottom: 1rem; }
+.ord-expired-t { font-weight: 800; font-size: 0.92rem; color: var(--ps-blue); margin-bottom: 0.35rem; }
+.ord-expired-p { font-size: 0.83rem; color: #cfc4ad; line-height: 1.65; margin: 0; }
+.ord-expired-shot { margin-top: 0.85rem; }
+.ord-expired-shot-l { font-size: 0.72rem; color: #9a8c72; font-weight: 700; margin-bottom: 0.4rem; }
+.ord-expired-shot img { width: 100%; max-width: 320px; border-radius: 9px; border: 1px solid #3d2a00; display: block; }
+.ord-expired-alt { margin-top: 0.95rem; border-top: 1px solid #3d2a00; padding-top: 0.8rem; }
+.ord-expired-alt-l { font-size: 0.75rem; color: #9a8c72; line-height: 1.5; margin-bottom: 0.5rem; }
+body.light-mode .ord-expired { background: #fff8e8; border-color: #f0dca8; }
+body.light-mode .ord-expired-p { color: #6b5b3a; }
+body.light-mode .ord-expired-shot-l,
+body.light-mode .ord-expired-alt-l { color: #8a7c5f; }
+body.light-mode .ord-expired-shot img { border-color: #e6d3a4; }
+body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .ord-confidence { margin-bottom: 1.1rem; }
 .ord-confidence .ord-online, .ord-confidence .ord-offline { margin-bottom: 0.7rem; }
 .ord-conf-steps { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 0.85rem; margin-bottom: 0.7rem; }

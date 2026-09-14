@@ -47,6 +47,18 @@
     'Amount: PHP ' + totalDue + '\n' +
     'Here\'s my proof of payment:';
 
+  // For someone whose sign-in code ran out. They have already paid and already
+  // done their part once, so this asks for help rather than making them explain
+  // the situation from scratch.
+  // NL from a char code: a newline written as a backslash escape has been
+  // mangled twice by the tooling that edits this file.
+  const NL = String.fromCharCode(10);
+  const expiredMsg = [
+    'Hi! Order ' + order.ref + ' (' + order.game_title + ').',
+    'My sign-in code expired before it was used. Are you free to sign me in now?',
+    'I will bring the screen up and send a fresh code.'
+  ].join(NL);
+
   // ?ref= is invisible to the customer but comes back to our webhook paired
   // with their PSID, which is the only way we ever learn which Facebook thread
   // belongs to this order.
@@ -326,7 +338,37 @@
 
   <% if (order.state === 'awaiting_qr') { %>
   <div class="ord-step" id="ordQrStep">
-    <div class="ord-step-label">Send your sign-in code</div>
+    <%# The order has come back here from qr_pending because the ten minutes ran
+        out. Without saying so, the page simply reappears asking for a code, which
+        reads as though the first one was never received — and the usual next move
+        is to message and ask what went wrong rather than to send another. %>
+    <% if (order.qr_expired_at) { %>
+    <div class="ord-expired">
+      <div class="ord-expired-t">⏳ That code ran out</div>
+      <p class="ord-expired-p">
+        A PlayStation sign-in code only lasts about 10 minutes, and
+        <%= (order.qr_expired_count || 1) > 1 ? 'the last one you sent expired' : 'the one you sent expired' %>
+        before we got to it. Nothing is lost and you don't need to pay again —
+        bring the screen up once more and send the new code below.
+      </p>
+      <% if (settings.signin_code_example_path) { %>
+      <div class="ord-expired-shot">
+        <div class="ord-expired-shot-l">This is the bit we need:</div>
+        <img src="<%= settings.signin_code_example_path %>" alt="Where the sign-in code appears on your console screen">
+      </div>
+      <% } %>
+      <% if (mmLink) { %>
+      <div class="ord-expired-alt">
+        <div class="ord-expired-alt-l">Rather just message us? Copy this and send it over:</div>
+        <div class="ord-msg-box" id="ordExpMsg"><%= expiredMsg %></div>
+        <button type="button" class="ord-btn-secondary" id="ordExpCopyBtn">Copy this message</button>
+        <a class="ord-btn-secondary" style="display:block;text-align:center;margin-top:0.5rem;"
+           target="_blank" rel="noopener" href="<%= mmLink %>">Open Messenger &amp; paste it</a>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+    <div class="ord-step-label"><%= order.qr_expired_at ? 'Send a fresh code' : 'Send your sign-in code' %></div>
     <% if (ownerOnline) { %>
     <div class="ord-online">🟢 We're online right now — send your code and we'll sign you in straight away.</div>
     <% } else { %>
@@ -573,6 +615,45 @@
   });
 
   schedule();
+})();
+</script>
+
+<script>
+// Copy-to-clipboard for the expired-code notice.
+//
+// Its own handler rather than the payment step's: the two never appear on the
+// same page (one is awaiting_qr, the other is awaiting_payment), and sharing
+// one would have meant editing a money-adjacent flow that already works to
+// save a few lines here.
+//
+// The fallback matters more than usual on this page — customers arrive from
+// the Facebook in-app browser, where navigator.clipboard is often unavailable,
+// and a dead Copy button is worse than no button at all.
+(function () {
+  var btn = document.getElementById('ordExpCopyBtn');
+  var box = document.getElementById('ordExpMsg');
+  if (!btn || !box) return;
+
+  function done() {
+    btn.textContent = 'Copied ✓';
+    setTimeout(function () { btn.textContent = 'Copy this message'; }, 1800);
+  }
+
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = box.textContent;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (e) { btn.textContent = 'Press and hold the text to copy'; }
+    document.body.removeChild(ta);
+  }
+
+  btn.addEventListener('click', function () {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(box.textContent).then(done).catch(fallback);
+    } else { fallback(); }
+  });
 })();
 </script>
 

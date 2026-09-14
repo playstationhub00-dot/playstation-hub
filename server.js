@@ -6584,7 +6584,7 @@ const uploadSigninStep = multer({
 app.post('/admin/signin-steps/add', requireAuth, uploadSigninStep.single('image'), async (req, res) => {
   const { console: cons, text } = req.body;
   if (!['ps5', 'ps4'].includes(cons) || !text || !text.trim()) {
-    return res.redirect('/admin?tab=settings&msg=error');
+    return res.redirect('/admin?msg=signin_step_error');
   }
   const image = req.file ? await processUploadedImage(req.file, 900) : null;
   const existing = db.get('signin_steps').filter({ console: cons }).value();
@@ -6594,13 +6594,13 @@ app.post('/admin/signin-steps/add', requireAuth, uploadSigninStep.single('image'
     id, console: cons, rank, text: text.trim(), image, created_at: new Date().toISOString()
   }).write();
   db.set('nextSigninStepId', id + 1).write();
-  res.redirect('/admin?tab=settings&msg=signin_step_saved');
+  res.redirect('/admin?msg=signin_step_saved');
 });
 
 app.post('/admin/signin-steps/:id', requireAuth, uploadSigninStep.single('image'), async (req, res) => {
   const id = parseInt(req.params.id);
   const step = db.get('signin_steps').find({ id }).value();
-  if (!step) return res.redirect('/admin?tab=settings&msg=error');
+  if (!step) return res.redirect('/admin?msg=signin_step_missing');
   const patch = { text: (req.body.text || step.text).trim() };
   if (req.body.remove_image === 'on' && step.image) {
     const fp = path.join(uploadsDir, path.basename(step.image));
@@ -6614,7 +6614,7 @@ app.post('/admin/signin-steps/:id', requireAuth, uploadSigninStep.single('image'
     patch.image = await processUploadedImage(req.file, 900);
   }
   db.get('signin_steps').find({ id }).assign(patch).write();
-  res.redirect('/admin?tab=settings&msg=signin_step_saved');
+  res.redirect('/admin?msg=signin_step_saved');
 });
 
 app.post('/admin/signin-steps/:id/delete', requireAuth, (req, res) => {
@@ -6625,23 +6625,57 @@ app.post('/admin/signin-steps/:id/delete', requireAuth, (req, res) => {
     if (fs.existsSync(fp)) fs.unlinkSync(fp);
   }
   db.get('signin_steps').remove({ id }).write();
-  res.redirect('/admin?tab=settings&msg=signin_step_deleted');
+  res.redirect('/admin?msg=signin_step_deleted');
 });
 
 app.post('/admin/signin-steps/:id/move', requireAuth, (req, res) => {
   const id = parseInt(req.params.id);
   const dir = req.body.dir === 'up' ? -1 : req.body.dir === 'down' ? 1 : 0;
   const step = db.get('signin_steps').find({ id }).value();
-  if (!step || !dir) return res.redirect('/admin?tab=settings&msg=error');
+  if (!step || !dir) return res.redirect('/admin?msg=signin_step_missing');
   const siblings = db.get('signin_steps').filter({ console: step.console }).sortBy('rank').value();
   const idx = siblings.findIndex(s => s.id === id);
   const swapIdx = idx + dir;
-  if (swapIdx < 0 || swapIdx >= siblings.length) return res.redirect('/admin?tab=settings&msg=signin_step_saved');
+  if (swapIdx < 0 || swapIdx >= siblings.length) return res.redirect('/admin?msg=signin_step_saved');
   const swapWith = siblings[swapIdx];
   const stepRank = step.rank;
   db.get('signin_steps').find({ id: step.id }).assign({ rank: swapWith.rank }).write();
   db.get('signin_steps').find({ id: swapWith.id }).assign({ rank: stepRank }).write();
-  res.redirect('/admin?tab=settings&msg=signin_step_saved');
+  res.redirect('/admin?msg=signin_step_saved');
+});
+
+// One picture of the sign-in screen with the code on it, shown to a customer
+// whose code has just expired.
+//
+// Separate from the numbered guide steps rather than reusing one of them: the
+// steps are a sequence to follow, and this is a single "here is the thing you
+// are looking for" image. Picking a step's image automatically would mean
+// guessing which of them shows the code, and that guess would quietly be wrong
+// the first time the steps were reordered.
+app.post('/admin/signin-code-example', requireAuth, uploadSigninStep.single('image'), async (req, res) => {
+  if (!req.file) return res.redirect('/admin?msg=signin_example_error');
+  // Resized and re-encoded like every other guide image. This one is shown to
+  // a customer whose sign-in code just ran out — usually on phone data, often
+  // in the Messenger browser — so shipping an untouched 8MB phone screenshot
+  // would be the worst possible moment for a slow page.
+  const stored = await processUploadedImage(req.file, 900);
+  const settings = getSiteSettings();
+  if (settings.signin_code_example_path) {
+    const oldFp = path.join(uploadsDir, path.basename(settings.signin_code_example_path));
+    if (fs.existsSync(oldFp)) { try { fs.unlinkSync(oldFp); } catch (e) {} }
+  }
+  db.set('site_settings.signin_code_example_path', stored).write();
+  res.redirect('/admin?msg=signin_example_saved');
+});
+
+app.post('/admin/signin-code-example/remove', requireAuth, (req, res) => {
+  const settings = getSiteSettings();
+  if (settings.signin_code_example_path) {
+    const fp = path.join(uploadsDir, path.basename(settings.signin_code_example_path));
+    if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
+  }
+  db.set('site_settings.signin_code_example_path', '').write();
+  res.redirect('/admin?msg=signin_example_removed');
 });
 
 // ── Reviews ──────────────────────────────────────────────────────────────────

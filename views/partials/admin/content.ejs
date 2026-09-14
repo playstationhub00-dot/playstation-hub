@@ -70,6 +70,39 @@
       </div>
       <div class="adm-card-body" id="ssgAccordionBody">
     <div style="border-color:rgba(56,189,248,0.3);background:linear-gradient(135deg,#04141c,#071d2a);padding:1.25rem;">
+      <%# Shown to a customer whose code just expired, so they can see at a
+          glance which characters on the screen they are meant to send back.
+          One image, not a step — see POST /admin/signin-code-example. %>
+      <div style="background:#0a0a0a;border:1px solid #1e1e1e;border-radius:10px;padding:0.9rem 1rem;margin-bottom:1rem;">
+        <div style="font-weight:800;font-size:0.85rem;margin-bottom:0.2rem;">🔎 "This is the code" picture</div>
+        <div style="font-size:0.75rem;color:#777;line-height:1.55;margin-bottom:0.7rem;">
+          A screenshot of the sign-in screen with the code visible. Shown when someone's code runs
+          out, so they know exactly what to look for the second time. Optional — without it they
+          still get the wording and the Messenger option.
+        </div>
+        <div style="display:flex;gap:0.8rem;align-items:flex-start;flex-wrap:wrap;">
+          <% if (settings.signin_code_example_path) { %>
+            <img src="<%= settings.signin_code_example_path %>" alt="Current code example"
+                 style="width:150px;border-radius:8px;border:1px solid #2a2a2a;">
+          <% } else { %>
+            <div style="width:150px;height:90px;border:1px dashed #333;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#555;font-size:0.7rem;text-align:center;padding:6px;">
+              No picture set
+            </div>
+          <% } %>
+          <div style="display:flex;flex-direction:column;gap:0.5rem;">
+            <form method="POST" action="/admin/signin-code-example" enctype="multipart/form-data" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+              <input type="file" name="image" accept="image/*" required style="font-size:0.75rem;">
+              <button type="submit" class="btn-copy">⬆ Upload</button>
+            </form>
+            <% if (settings.signin_code_example_path) { %>
+            <form method="POST" action="/admin/signin-code-example/remove" onsubmit="return confirm('Remove the code example picture?');">
+              <button type="submit" class="btn-copy">Remove</button>
+            </form>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
         <button type="button" class="ssg-tab ssg-tab-on" data-c="ps5" onclick="ssgSwitch('ps5')">PS5 steps</button>
         <button type="button" class="ssg-tab" data-c="ps4" onclick="ssgSwitch('ps4')">PS4 steps</button>
