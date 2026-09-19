@@ -192,7 +192,16 @@
       // overview, so send them there rather than to a pane that no longer exists.
       const LEGACY = { now: 'overview', games: 'overview', customers: 'overview' };
 
-      window.switchDash = function (name) {
+      // updateUrl defaults to true for every real switch (a pill click, a
+      // card link). The one call that must NOT touch the URL is the initial
+      // restore below: this whole script runs on every /admin load, whichever
+      // top-level tab is actually active, because the dashboard panel — sub-tabs
+      // included — is always in the DOM. Writing tab=dashboard here unconditionally
+      // stomped the real tab (and dropped msg, killing the save toast) on every
+      // page load, so saving from Customers — or any other tab — silently bounced
+      // the owner back to the dashboard.
+      window.switchDash = function (name, updateUrl) {
+        if (updateUrl === undefined) updateUrl = true;
         name = LEGACY[name] || name;
         if (!SUBS.includes(name)) name = 'overview';
         SUBS.forEach(s => {
@@ -204,6 +213,7 @@
         try { localStorage.setItem(DSUB_KEY, name); } catch (e) {}
         const carry = document.getElementById('dsubPeriodSub');
         if (carry) carry.value = name;
+        if (!updateUrl) return;
         const q = new URLSearchParams(window.location.search);
         q.set('tab', 'dashboard');
         if (name === 'overview') q.delete('sub'); else q.set('sub', name);
@@ -218,7 +228,7 @@
       if (!initial) { try { initial = localStorage.getItem(DSUB_KEY); } catch (e) {} }
       if (params.get('month')) initial = 'money';
       initial = LEGACY[initial] || initial;
-      switchDash(SUBS.includes(initial) ? initial : 'overview');
+      switchDash(SUBS.includes(initial) ? initial : 'overview', false);
     })();
     </script>
 
