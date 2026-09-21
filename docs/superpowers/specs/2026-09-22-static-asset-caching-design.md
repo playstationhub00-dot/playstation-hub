@@ -34,12 +34,26 @@ Asset facts:
 
 ## The two facts this design rests on
 
-**Uploads are content-stable.** `multer.diskStorage` names every upload
-`Date.now() + ext` (server.js:295), and `processUploadedImage` converts to
-`<same-timestamp>.webp`. Replacing a cover produces a *new* filename and the
-record points at the new URL. A given `/uploads/*` URL's bytes therefore never
-change, which makes an immutable year-long cache correct by construction rather
-than by convention.
+**Uploads are content-stable — with four fixed-name exceptions.**
+`multer.diskStorage` names every upload `Date.now() + ext` (server.js:295), and
+`processUploadedImage` converts to `<same-timestamp>.webp`. Replacing a cover
+produces a *new* filename and the record points at the new URL — a given
+`/uploads/*` URL's bytes never change, for uploads that go through this path.
+
+That guarantee does **not** hold for branding assets. `POST
+/admin/site-settings` (server.js:5069) writes site favicon, logo, and hero
+background under **fixed** filenames it reuses on every update —
+`favicon-custom<ext>`, `logo-custom<ext>`, `hero-bg-image<ext>`,
+`hero-bg-video<ext>` (server.js:5080, 5090, 5103) — via `fs.renameSync`, not the
+timestamped multer path. `settings.logo_path`, `settings.favicon_path`, and
+`settings.hero_bg.path` are rendered with no version suffix
+(`views/partials/nav.ejs:7`, `views/partials/footer.ejs:38`,
+`views/index.ejs:142`), so the URL an admin's browser and every visitor's
+browser requests does not change when the file underneath it does. Caching
+these four names for a year would hide a logo, favicon, or hero-image change
+from returning visitors for up to a year — this was caught during planning,
+before any code was written, and is the reason the design below treats
+`/uploads` as two tiers rather than one blanket rule.
 
 **Only `style.css` is version-busted.** `app.locals.assetV` (server.js:360) is
 the stylesheet's mtime, and every view requests `/css/style.css?v=<%= assetV %>`.
@@ -80,16 +94,39 @@ populated, `res.req.query.v` reads `123` for `/t.css?v=123` and `undefined` for
 `public, max-age=31536000, immutable` and `public, max-age=3600` respectively.
 No URL-parsing fallback is needed.
 
-### 2. Immutable caching for `/uploads`
+### 2. Two-tier caching for `/uploads`
+
+Game covers and every other timestamp-named upload get the immutable year-long
+cache. The four fixed-name branding files get the same one-hour cache as other
+unversioned assets, because their URL does not change when an admin replaces
+them.
 
 ```js
+// These four filenames are the only /uploads entries POST /admin/site-settings
+// overwrites in place (server.js:5069) — every other upload is named
+// Date.now()+ext, so its URL changes whenever its content does. Caching these
+// four for a year would hide a branding change from returning visitors.
+const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|hero-bg-video)\./;
+
 app.use('/uploads', express.static(uploadsDir, {
-  setHeaders: (res) => res.setHeader('Cache-Control', CACHE_IMMUTABLE)
+  setHeaders: (res, filePath) => {
+    const isBranding = UNVERSIONED_UPLOAD_NAMES.test(path.basename(filePath));
+    res.setHeader('Cache-Control', isBranding ? CACHE_SHORT : CACHE_IMMUTABLE);
+  }
 }));
 ```
 
-Unconditional, justified by the timestamped-filename guarantee above. This is the
-largest bandwidth win in the phase — game covers dominate repeat-visit transfer.
+`express.static`'s `setHeaders` receives `(res, filePath, stat)` — `filePath` is
+the absolute path on disk, so `path.basename` recovers the filename to test
+against the fixed names, independent of the `?v=` query mechanism used for
+`public/`. Verified empirically against a throwaway probe before accepting the
+design: a request for `/uploads/favicon-custom.png` produced
+`max-age=3600` and a request for a timestamp-named file produced
+`max-age=31536000, immutable`, exactly as intended.
+
+This is still the largest bandwidth win in the phase — Date.now()-named game
+covers dominate repeat-visit transfer, and branding files are a small minority
+of `/uploads` by both count and by how often they're requested per page.
 
 The existing `/uploads/jpg/:name` route (server.js:386) sets its own
 `max-age=86400` and is registered *before* this handler, so it is unaffected.
@@ -103,9 +140,17 @@ every deploy, so the script is busted whenever the site is redeployed.
 
 ### 4. Audit `hero-bg-image.webp`
 
-169 KB, above the fold on the homepage, render-critical. Confirm it is actually
-referenced, then check whether it can be reduced at equal visual quality. Change
-it **only** if the reduction is meaningful and produces no visible regression;
+169 KB, above the fold on the homepage, render-critical. Confirmed live: it is
+the default hero background, referenced via `site_settings.hero_bg.path` in
+`games.json` (`"/hero-bg-image.webp"`) and rendered by `views/index.ejs:142`'s
+`background-image:url('<%= settings.hero_bg.path %>')`. It is served from
+`public/` at a bare, unversioned path — distinct from the `/uploads/hero-bg-*`
+admin-override path in Design 2 above, so the two never collide. It already
+falls under Design 1's "no `?v=` → one-hour cache" rule with no special-casing
+needed.
+
+Check whether the file itself can be reduced at equal visual quality. Change it
+**only** if the reduction is meaningful and produces no visible regression;
 otherwise leave it and record the finding. This is an investigation, not a
 committed change.
 
@@ -153,10 +198,15 @@ response headers, and shuts down.
 | `/css/style.css?v=123` | `public, max-age=31536000, immutable` |
 | `/css/style.css` | `public, max-age=3600` |
 | `/manifest.json` | `public, max-age=3600` |
-| `/uploads/<temp file>` | `public, max-age=31536000, immutable` |
+| `/uploads/<timestamp-named temp file>` | `public, max-age=31536000, immutable` |
+| `/uploads/favicon-custom.png` | `public, max-age=3600` |
+| `/uploads/logo-custom.png` | `public, max-age=3600` |
+| `/uploads/hero-bg-image.jpg` | `public, max-age=3600` |
+| `/uploads/hero-bg-video.mp4` | `public, max-age=3600` |
 
-The `/uploads` case creates a throwaway file in `uploadsDir` and removes it
-afterwards, so the test does not depend on production data being present.
+The `/uploads` cases create throwaway files in `uploadsDir` (one timestamp-named,
+one per fixed branding name) and remove them afterwards, so the test does not
+depend on production data being present.
 
 The test must be proven non-vacuous: stash the change and confirm it fails
 against the current code before accepting a pass.
@@ -179,12 +229,14 @@ against the current code before accepting a pass.
 | Risk | Mitigation |
 |---|---|
 | An unversioned asset cached too long | One-hour ceiling for anything without `?v=` |
-| `/uploads` immutability assumption breaks | Only holds while filenames stay timestamped; noted at both the multer config and the static handler |
+| `/uploads` immutability assumption breaks | Only holds while filenames stay timestamped; the four known fixed-name exceptions (favicon/logo/hero) are explicitly excluded by `UNVERSIONED_UPLOAD_NAMES`; any future fixed-name upload route must be added to that pattern |
 | Two uploads in the same millisecond collide | Pre-existing, unchanged by this work; out of scope |
 
 ## Success criteria
 
-- `/css/style.css?v=…` and `/uploads/*` return a one-year immutable cache
+- `/css/style.css?v=…` and every timestamp-named `/uploads/*` file return a
+  one-year immutable cache; the four fixed-name branding files return
+  `max-age=3600`
 - Unversioned assets under `public/` return `max-age=3600`
 - Repeat-visit transfer drops to essentially the HTML alone
 - No visual regression on public or admin pages
