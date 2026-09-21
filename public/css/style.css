@@ -719,8 +719,15 @@ nav {
    same flex-basis and gap as #typeOptions above it, so each pill lines up
    under its own card instead of the row just left-aligning and leaving the
    cards' actual columns unmarked. */
-.gd-avail-soon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
-.gd-avail-soon-row .gd-avail-soon { flex: 1 1 140px; margin-top: 0; text-align: center; }
+.gd-avail-soon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
+/* Plain text here, not the bordered pill .gd-avail-soon is elsewhere — sitting
+   right under the Trophy/Non-Trophy cards, a bordered box read as a third
+   selectable option next to them even though nothing about it responds to a
+   click. */
+.gd-avail-soon-row .gd-avail-soon {
+  flex: 1 1 140px; margin-top: 0; text-align: center;
+  background: none; border: none; padding: 0; display: block;
+}
 
 .gd-noslot-banner {
   display: flex; align-items: flex-start; gap: 0.75rem;
