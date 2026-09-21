@@ -21,6 +21,8 @@
   <a href="/admin?tab=games" class="back-link">← Back to Admin</a>
   <h1>Add Upcoming Game</h1>
 
+  <%- include('partials/upload-error-banner', { msg, nothingSavedNote: "Nothing was saved — please pick a different picture and re-enter the game's details." }) %>
+
   <div class="form-card">
     <form method="POST" action="/admin/upcoming/add" enctype="multipart/form-data">
       <div class="form-grid">

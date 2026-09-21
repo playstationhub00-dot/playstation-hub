@@ -23,6 +23,8 @@
   <h1>Edit Upcoming Game</h1>
   <div style="display:inline-flex;align-items:center;gap:0.4rem;background:linear-gradient(135deg,rgba(74,0,128,0.3),rgba(241,7,163,0.2));border:1px solid #5a2a8a;border-radius:8px;padding:0.35rem 0.75rem;font-size:0.78rem;color:#a855f7;font-weight:600;margin-bottom:1.5rem;">🔜 COMING SOON — Open for Reservation</div>
 
+  <%- include('partials/upload-error-banner', { msg, nothingSavedNote: 'None of the changes below were saved — please fix the picture and re-enter the rest.' }) %>
+
   <div class="form-card" style="border-color:#2a1a3a;">
     <form method="POST" action="/admin/upcoming/edit/<%= game.id %>" enctype="multipart/form-data">
       <div class="form-grid">

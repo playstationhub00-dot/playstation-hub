@@ -1,0 +1,19 @@
+<%
+// Shared by every game-picture form (Add/Edit Game, Add/Edit Upcoming Game).
+// A rejected picture used to fail with nothing on screen: the route ran
+// anyway, saved everything else, and reloaded showing the old picture with
+// no explanation — which is exactly what "the picture isn't working" looks
+// like. Both real causes are named so the next attempt actually succeeds,
+// and callers pass their own last line since a fresh add loses every typed
+// field on this failure, while an edit reload keeps them (it re-reads the
+// saved record) — that distinction matters enough to say out loud.
+const uploadErrors = {
+  file_too_large: 'That picture is too large — the limit is 5MB. Try a smaller file, or a screenshot instead of the original photo.',
+  bad_file_type: "That file type isn't supported — use a JPG, PNG, GIF, or WEBP. An iPhone photo saved as HEIC is the usual culprit; export or share it as JPEG first."
+};
+%>
+<% if (uploadErrors[msg]) { %>
+<div style="background:#2a1200;border:1px solid #5a3200;color:#ffb84d;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.5;">
+  ⚠️ <%= uploadErrors[msg] %> <%= nothingSavedNote %>
+</div>
+<% } %>

@@ -4637,7 +4637,7 @@ app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image
 app.get('/admin/upcoming/edit/:id', requireAuth, (req, res) => {
   const game = getUpcomingGame(req.params.id);
   if (!game) return res.redirect('/admin');
-  res.render('edit-upcoming', { game, settings: getSiteSettings() });
+  res.render('edit-upcoming', { game, settings: getSiteSettings(), msg: req.query.msg || null });
 });
 
 app.post('/admin/upcoming/edit/:id', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {
@@ -4834,7 +4834,7 @@ app.get('/admin/add/game', requireAuth, (req, res) => {
 });
 
 app.get('/admin/add/upcoming', requireAuth, (req, res) => {
-  res.render('add-upcoming', { settings: getSiteSettings() });
+  res.render('add-upcoming', { settings: getSiteSettings(), msg: req.query.msg || null });
 });
 
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
