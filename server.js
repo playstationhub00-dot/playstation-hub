@@ -1043,6 +1043,18 @@ function promotedTier(resolved, priceType, promo) {
   return tier;
 }
 
+// The Extend modal's { p7, p30 } price preview for one customer, through the
+// same promotedTier() the /extend save route prices from — the admin list
+// view (every renting customer) and the Edit Customer page (one customer) both
+// call this, so the two pages can never preview one number and save another.
+function extendTierFor(customer, promo) {
+  if (!customer || customer.status !== 'renting') return { p7: 0, p30: 0 };
+  const g = getGame(customer.game_id);
+  if (!g) return { p7: 0, p30: 0 };
+  const t = promotedTier(resolveGamePrices(g), customer.account_type === 'tr' ? 'tr' : 'nt', promo);
+  return { p7: t[7] || 0, p30: t[30] || 0 };
+}
+
 const TYPE_LABELS_SHORT = { tr: 'Trophy', nt: 'Non-Trophy', ps4: 'PS4 Primary' };
 function computeRentPricing(game, type, days) {
   if (!game || !['nt', 'tr', 'ps4'].includes(type)) return null;
@@ -4414,18 +4426,14 @@ app.get('/admin', requireAuth, async (req, res) => {
   // previewed the undiscounted price and then saved the discounted one. These
   // come off the same promotedTier() the save path prices from.
   const qaPromo = getSiteSettings().promo || {};
-  // Price tiers for the Extend modal, keyed by customer id. Built here through
-  // promotedTier — the same function the extend route prices from — so the
-  // modal cannot preview one number and save another, the way the rent tiers
-  // drifted before they were single-sourced.
+  // Price tiers for the Extend modal, keyed by customer id. extendTierFor()
+  // is the same function GET /admin/customers/edit/:id calls for the one
+  // customer it renders, so the two pages can never drift.
   const todayManila = orders.manilaDate();
   const extendTiers = {};
   customers.forEach(c => {
     if (!c || c.status !== 'renting') return;
-    const g = getGame(c.game_id);
-    if (!g) return;
-    const t = promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', qaPromo);
-    extendTiers[c.id] = { p7: t[7] || 0, p30: t[30] || 0 };
+    extendTiers[c.id] = extendTierFor(c, qaPromo);
   });
   const qaGames = games.map(g => {
     // resolveGamePrices FIRST, exactly as computeRentPricing does on the save
@@ -5319,7 +5327,13 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   if (!customer) return res.redirect('/admin?tab=customers');
   const games = getGames().map(resolveGamePrices).sort((a, b) => a.title.localeCompare(b.title));
   const currentAssign = findAccountAssignmentForCustomer(customer.id);
-  res.render('edit-customer', { customer, games, upcoming: getUpcoming(), settings: getSiteSettings(), accounts: getAccounts(), currentAssign });
+  // Same extendTierFor() the /admin list uses, for the one customer this page
+  // renders — the Extend button here prices off the identical number.
+  const extendTier = extendTierFor(customer, getSiteSettings().promo || {});
+  res.render('edit-customer', {
+    customer, games, upcoming: getUpcoming(), settings: getSiteSettings(), accounts: getAccounts(), currentAssign,
+    extendTier, todayManila: orders.manilaDate()
+  });
 });
 
 app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {

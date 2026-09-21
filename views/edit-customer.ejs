@@ -139,10 +139,22 @@
       <div class="form-actions">
         <button type="submit" class="btn btn-primary" style="background:#166534;">Save Changes</button>
         <a href="/admin?tab=customers" class="btn btn-outline">Cancel</a>
+        <%# Same one-action extend the Customers table row offers — extra
+            days, price, new end date and the message, all together — so
+            extending from here never means hand-editing Price/End Date
+            above and hoping they agree with each other. %>
+        <% if (customer.status === 'renting') { %>
+        <button type="button" class="btn btn-outline cst-extend" title="Extend this rental"
+          data-id="<%= customer.id %>" data-name="<%= customer.customer_name || '' %>" data-game="<%= customer.game_title || '' %>"
+          data-end="<%= customer.end_date || '' %>" data-p7="<%= extendTier.p7 %>" data-p30="<%= extendTier.p30 %>"
+          data-today="<%= todayManila %>">⏩ Extend</button>
+        <% } %>
       </div>
     </form>
   </div>
 </div>
+
+<%- include('partials/admin/extend') %>
 
 <script>
 const CUST_ORIGINAL_GAME_ID = <%- JSON.stringify(String(customer.game_id)) %>;

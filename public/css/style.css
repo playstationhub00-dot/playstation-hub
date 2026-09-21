@@ -3726,3 +3726,105 @@ label.buy-tier:hover { border-color: #444; }
 .rem-ignored > summary:hover { color: #aaa; }
 body.light-mode .rem-ignored { border-top-color: #e4e7eb; }
 body.light-mode .rem-ignored > summary { color: #8b939c; }
+
+/* ── Quick Add / Extend modal shell ──────────────────────────────────────────
+   Shared by views/partials/admin/quick-add.ejs and views/partials/admin/extend.ejs.
+   Lives here, not inside either partial, because a page can include one
+   without the other (Edit Customer includes only the extend partial) — these
+   rules used to live inside quick-add.ejs and only reached extend.ejs's modal
+   by coincidence of both partials loading on the same admin page. */
+.qa-launch { display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; margin-bottom:1rem; }
+.qa-launch span { font-size:0.75rem; color:#666; }
+.qa-overlay { display:none; position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); align-items:flex-start; justify-content:center; padding:3vh 1rem; overflow-y:auto; }
+.qa-overlay.open { display:flex; }
+.qa-box { background:#101010; border:1px solid #272727; border-radius:16px; width:min(580px,100%); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.7); animation:qaPop 0.16s ease; }
+@keyframes qaPop { from { transform:scale(0.96); opacity:0 } to { transform:scale(1); opacity:1 } }
+.qa-head { display:flex; align-items:center; gap:0.6rem; padding:0.85rem 1.1rem; background:#151515; border-bottom:1px solid #1f1f1f; }
+.qa-title { font-weight:800; font-size:0.95rem; color:#fff; }
+.qa-x { margin-left:auto; background:none; border:none; color:#666; font-size:1rem; cursor:pointer; }
+.qa-x:hover { color:#fff; }
+.qa-body { padding:1rem 1.1rem; }
+/* [hidden] sets display:none, but a class with an explicit display wins.
+   Without this the form footer stays on screen over the success view. */
+.qa-foot[hidden], .qa-body[hidden] { display:none !important; }
+.qa-foot { display:flex; align-items:center; gap:0.5rem; padding:0.85rem 1.1rem; border-top:1px solid #1f1f1f; background:#0c0c0c; flex-wrap:wrap; }
+.qa-grow { flex:1; }
+.qa-btn { border:none; border-radius:8px; padding:0.55rem 1rem; font-weight:800; font-size:0.82rem; cursor:pointer; }
+.qa-gold { background:var(--ps-blue); color:#000; }
+.qa-gold:disabled { opacity:0.55; cursor:default; }
+.qa-ghost { background:#161616; border:1px solid #282828; color:#bbb; }
+.qa-ghost:hover { color:#fff; }
+.qa-l { font-size:0.63rem; text-transform:uppercase; letter-spacing:0.6px; color:#5a5a5a; font-weight:800; margin:0.9rem 0 0.35rem; }
+.qa-body > .qa-l:first-of-type, .qa-err:not([hidden]) + .qa-l { margin-top:0; }
+.qa-in { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:8px; padding:0.55rem 0.7rem; color:#fff; font-size:0.85rem; font-family:inherit; box-sizing:border-box; }
+.qa-in:focus { outline:none; border-color:var(--ps-blue); }
+.qa-g3 { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:0.45rem; }
+/* Rent / Bought / Finished. Radios hidden, labels are the buttons — no JS
+   needed to paint the selected one, matching how the review thumbs work. */
+.qa-modes { display:grid; grid-template-columns:repeat(3,1fr); gap:0.4rem; }
+.qa-modes input { position:absolute; opacity:0; width:0; height:0; }
+.qa-mode { display:flex; align-items:center; justify-content:center; gap:0.3rem; padding:0.55rem 0.4rem; border:1px solid #2a2a2a; border-radius:8px; background:#0a0a0a; color:#8a8a8a; font-size:0.8rem; font-weight:700; cursor:pointer; box-sizing:border-box; }
+.qa-mode:hover { border-color:#3a3a3a; color:#ccc; }
+#qaStRent:checked + .qa-mode { border-color:#22c55e; background:rgba(34,197,94,0.12); color:#4ade80; }
+#qaStBought:checked + .qa-mode { border-color:var(--ps-blue); background:rgba(240,165,0,0.12); color:#f0a500; }
+#qaStDone:checked + .qa-mode { border-color:#555; background:#141414; color:#ddd; }
+.qa-modes input:focus-visible + .qa-mode { outline:2px solid var(--ps-blue); outline-offset:2px; }
+/* A Coming Soon game can only be pre-ordered, so Renting and Finished are
+   switched off rather than silently ignored. */
+.qa-modes input:disabled + .qa-mode { opacity:0.35; cursor:not-allowed; }
+/* Sits where the duration select was, so the row keeps its shape. */
+.qa-nodur { display:flex; align-items:center; justify-content:center; border:1px dashed #333; border-radius:8px; color:#777; font-size:0.78rem; padding:0.55rem 0.4rem; box-sizing:border-box; }
+.qa-nodur[hidden] { display:none; }
+body.light-mode .qa-mode { background:#f7f9fa; border-color:#e0e4e8; color:#6b737b; }
+body.light-mode .qa-nodur { border-color:#d7dce1; color:#8b939c; }
+.qa-g2 { display:grid; grid-template-columns:1fr 1fr; gap:0.45rem; }
+.qa-sub { display:block; font-size:0.68rem; color:#666; }
+/* An explicit `display` beats the hidden attribute, so hiding the Ends field
+   for a purchase left it on screen at full size. Same trap the success-screen
+   footer hit. Anything in this modal that gets toggled needs this guard. */
+.qa-sub[hidden], .qa-in[hidden], .qa-modes[hidden] { display:none !important; }
+.qa-sub .qa-in { margin-top:0.2rem; }
+.qa-warn { background:#100a00; border:1px solid #3a2a00; color:#e8c06a; border-radius:8px; padding:0.5rem 0.7rem; font-size:0.72rem; margin-top:0.35rem; line-height:1.55; }
+.qa-warn a { color:var(--ps-blue); font-weight:700; }
+.qa-hint { font-size:0.66rem; color:#4d4d4d; margin-top:0.3rem; }
+.qa-price { margin-top:0.5rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.55rem 0.8rem; font-size:0.8rem; color:#9fd8ae; }
+.qa-price b { color:#22c55e; font-size:1rem; }
+.qa-price.qa-price-empty { background:#0d0d0d; border-color:#1e1e1e; color:#555; }
+.qa-radios { display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center; }
+.qa-radio { flex:0 0 auto; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:9px; padding:0.5rem 0.8rem; font-size:0.82rem; font-weight:700; color:#999; cursor:pointer; }
+.qa-radio input { display:none; }
+.qa-radio.qa-on { border-color:var(--ps-blue); background:#1a1500; color:var(--ps-blue); }
+.qa-more { margin-top:0.9rem; border-top:1px solid #1c1c1c; padding-top:0.7rem; }
+.qa-more > summary { cursor:pointer; font-size:0.75rem; color:#777; font-weight:700; list-style:none; }
+.qa-more > summary::-webkit-details-marker { display:none; }
+.qa-more > summary:hover { color:#ccc; }
+.qa-more[open] > summary { margin-bottom:0.6rem; }
+.qa-err { background:#1a0a0a; border:1px solid #3a1a1a; color:#f3a2a2; border-radius:9px; padding:0.6rem 0.8rem; font-size:0.78rem; margin-bottom:0.8rem; line-height:1.5; }
+.qa-ok { display:flex; align-items:center; gap:0.7rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:11px; padding:0.8rem 1rem; }
+.qa-ok-tick { font-size:1.5rem; }
+.qa-ok-ref { font-weight:900; color:#22c55e; font-size:1rem; }
+.qa-ok-sub { font-size:0.74rem; color:#888; margin-top:0.1rem; }
+.qa-chips { margin-top:0.6rem; }
+.qa-chips span { display:inline-block; background:#141414; border:1px solid #262626; border-radius:20px; padding:0.15rem 0.55rem; font-size:0.67rem; color:#888; margin:0 0.3rem 0.3rem 0; }
+.qa-msg { background:#0a0a0a; border:1px solid #262626; border-radius:10px; padding:0.8rem 0.9rem; font-size:0.78rem; line-height:1.65; white-space:pre-wrap; color:#ccc; max-height:230px; overflow:auto; }
+/* The extend modal's own success screen — "Extension saved" plus the message
+   to copy. Never had CSS anywhere in the codebase before this move; it only
+   ever rendered as unstyled default-browser markup. */
+.qa-done { text-align:center; }
+.qa-done-ic { font-size:2rem; margin-bottom:0.3rem; }
+.qa-done-t { font-weight:800; font-size:1.05rem; color:#fff; margin-bottom:0.3rem; }
+.qa-done-sum { font-size:0.8rem; color:#9fd8ae; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.5rem 0.8rem; margin-bottom:0.9rem; display:inline-block; }
+.qa-copy-l { text-align:left; font-size:0.63rem; text-transform:uppercase; letter-spacing:0.6px; color:#5a5a5a; font-weight:800; margin-bottom:0.35rem; }
+.qa-copy-box { width:100%; background:#0a0a0a; border:1px solid #262626; border-radius:10px; padding:0.8rem 0.9rem; font-size:0.78rem; line-height:1.65; color:#ccc; font-family:inherit; resize:vertical; box-sizing:border-box; }
+.qa-copy-btn { width:100%; margin-top:0.6rem; }
+.qa-copy-warn { font-size:0.72rem; color:#e8c06a; margin-top:0.4rem; }
+body.light-mode .qa-box { background:#fff; border-color:#e4e7eb; }
+body.light-mode .qa-head { background:#f7f9fa; border-bottom-color:#e9ecef; }
+body.light-mode .qa-title, body.light-mode .qa-in { color:#14171a; }
+body.light-mode .qa-in { background:#fff; border-color:#dfe3e8; }
+body.light-mode .qa-foot { background:#f7f9fa; border-top-color:#e9ecef; }
+body.light-mode .qa-msg, body.light-mode .qa-copy-box { background:#f7f9fa; border-color:#e4e7eb; color:#333; }
+body.light-mode .qa-done-t { color:#14171a; }
+@media (max-width: 620px) {
+  .qa-g3, .qa-g2 { grid-template-columns:1fr; }
+}

@@ -87,6 +87,15 @@
   // way Quick Add's preview does, so the number on screen is the number saved.
   var XT = { id: null, p7: 0, p30: 0, end: '', today: '' };
 
+  // True only while the success screen (from a saved extension) is showing.
+  // A page that also displays this rental's price/end date elsewhere on the
+  // same load — the Edit Customer form's own fields, for one — would show
+  // stale values if the modal were dismissed any way but the Done button, and
+  // saving that page would then write the stale values back over the
+  // extension just made. xtClose() checks this flag so EVERY way of
+  // dismissing a successful extend reloads, not just Done.
+  var XT_SAVED = false;
+
   function amountForDays(d, p7, p30) {
     if (!d || d < 1 || d !== Math.floor(d)) return 0;
     if (!p7 && !p30) return 0;
@@ -173,6 +182,7 @@
   // to look the rental up again.
   window.xtOpen = function (opts) {
     XT = { id: opts.id, p7: opts.p7 || 0, p30: opts.p30 || 0, end: opts.end || '', today: opts.today || '' };
+    XT_SAVED = false;
     el('xtForm').reset();
     el('xtForm').hidden = false;
     el('xtFootForm').hidden = false;
@@ -199,8 +209,15 @@
     xtChanged();
   };
 
-  window.xtClose = function () { el('xtOverlay').classList.remove('open'); };
-  window.xtDoneClose = function () { xtClose(); location.reload(); };
+  window.xtClose = function () {
+    // A successful extend must reload however the modal gets dismissed —
+    // not just via the Done button — or a page that also shows this rental's
+    // price/end date elsewhere (Edit Customer's own form fields) keeps
+    // showing the pre-extension values.
+    if (XT_SAVED) { window.xtDoneClose(); return; }
+    el('xtOverlay').classList.remove('open');
+  };
+  window.xtDoneClose = function () { el('xtOverlay').classList.remove('open'); location.reload(); };
 
   window.xtSubmit = function () {
     var btn = el('xtSubmit'), err = el('xtErr');
@@ -220,6 +237,7 @@
         err.hidden = false;
         return;
       }
+      XT_SAVED = true;
       el('xtForm').hidden = true;
       el('xtFootForm').hidden = true;
       el('xtIcon').textContent = '✅';
@@ -258,5 +276,23 @@
       fallback();
     }
   };
+
+  // Delegated so it works for a .cst-extend button on any page that includes
+  // this partial — the Customers table row and Edit Customer's own button
+  // both fire this the same way, reading only the clicked button's own
+  // data-* attributes.
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest('.cst-extend');
+    if (!x) return;
+    xtOpen({
+      id: x.dataset.id,
+      name: x.dataset.name || '',
+      game: x.dataset.game || '',
+      end: x.dataset.end || '',
+      p7: parseInt(x.dataset.p7) || 0,
+      p30: parseInt(x.dataset.p30) || 0,
+      today: x.dataset.today || ''
+    });
+  });
 })();
 </script>

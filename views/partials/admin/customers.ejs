@@ -458,19 +458,10 @@
         if (!confirm(form.dataset.confirm || 'Are you sure?')) e.preventDefault();
       });
 
-      document.addEventListener('click', function(e){
-        const x = e.target.closest('.cst-extend');
-        if (!x) return;
-        xtOpen({
-          id: x.dataset.id,
-          name: x.dataset.name || '',
-          game: x.dataset.game || '',
-          end: x.dataset.end || '',
-          p7: parseInt(x.dataset.p7) || 0,
-          p30: parseInt(x.dataset.p30) || 0,
-          today: x.dataset.today || ''
-        });
-      });
+      // The .cst-extend click listener that used to live here moved into
+      // partials/admin/extend.ejs's own script — Edit Customer includes that
+      // partial but not this one, and the listener works identically either
+      // way (it only reads the clicked button's data-* attributes).
 
       document.addEventListener('click', function(e){
         const btn = e.target.closest('.rem-copy');

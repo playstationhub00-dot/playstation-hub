@@ -261,8 +261,14 @@ ok('the CSS guard that actually hides it is still present', () => {
   // .qa-in carries no display of its own, but it sits in a grid, and this
   // modal has already been bitten twice by exactly this. The rule is the
   // thing doing the hiding, so its absence is a regression.
-  assert.ok(/\.qa-in\[hidden\][^{]*\{[^}]*display\s*:\s*none\s*!important/.test(src),
-    'quick-add.ejs still has the .qa-in[hidden] display:none !important guard');
+  //
+  // Moved out of quick-add.ejs's own <style> block into the global stylesheet
+  // (public/css/style.css) — shared with partials/admin/extend.ejs, which
+  // needs the same modal-shell rules on a page that doesn't include this
+  // partial at all. Checked there now, not in this template's own source.
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
+  assert.ok(/\.qa-in\[hidden\][^{]*\{[^}]*display\s*:\s*none\s*!important/.test(css),
+    'public/css/style.css no longer has the .qa-in[hidden] display:none !important guard');
 });
 
 console.log('\nQuick Add — a Coming Soon game can be reserved or pre-ordered');
