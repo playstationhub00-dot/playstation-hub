@@ -57,10 +57,41 @@
   </form>
 
   <%#
+    Stocked strip comes first now — it's the payoff, proof that requesting
+    works, and used to sit dead last below every voting row. No vote count on
+    these cards on purpose: the votes did their job, and a number beside a
+    game you can already rent only invites "why so few?". The one caption
+    that mattered ("you asked, we stocked it") moved to the section heading
+    so it isn't repeated on every narrow card in the strip.
+  %>
+  <% if (stockedRequests.length) { %>
+  <div class="req-listhead req-listhead-stocked">
+    <span class="req-listtitle">✓ Now available</span>
+    <span class="req-count">you asked, we stocked <%= stockedRequests.length %></span>
+  </div>
+
+  <div class="req-stocked-strip">
+    <% stockedRequests.forEach(r => { %>
+    <div class="req-stocked-card" id="req-<%= r.slug %>">
+      <% if (r.cover_image) { %>
+        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
+      <% } else { %>
+        <div class="req-stocked-cover req-cover-empty">🎮</div>
+      <% } %>
+      <div class="req-stocked-title"><%= r.title %></div>
+      <% if (r.game_id) { %>
+        <a href="/game/<%= r.slug %>" class="req-btn req-btn-rent">Rent</a>
+      <% } %>
+    </div>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <%#
     Two lists, not one sorted list. "Still voting" is where a customer can do
-    something; "Now available" is proof that doing it works. Mixed together the
-    stocked titles sat among games that still needed votes, wearing a vote count
-    that no longer meant anything.
+    something; "Now available" (above) is proof that doing it works. Mixed
+    together the stocked titles sat among games that still needed votes,
+    wearing a vote count that no longer meant anything.
   %>
   <div class="req-listhead">
     <span class="req-listtitle">Most requested</span>
@@ -75,55 +106,31 @@
         No requests yet — be the first to ask for a game.
       <% } %>
     </div>
-  <% } %>
-
-  <% votingRequests.forEach(r => { const votes = (r.voters || []).length; %>
-  <div class="req-row" id="req-<%= r.slug %>">
-    <span class="req-votes"><%= votes %></span>
-    <% if (r.cover_image) { %>
-      <img class="req-cover" src="<%= r.cover_image %>" alt="">
-    <% } else { %>
-      <div class="req-cover req-cover-empty">🎮</div>
-    <% } %>
-    <div class="req-main">
-      <div class="req-title"><%= r.title %></div>
-      <%# Initials, not names: this list is public, and who asked for a game is
-          nobody else's business. The count carries the social proof. %>
-      <div class="req-voters">
-        requested by <%= (r.voters || []).slice(0, 3).map(v => initials(v.fb_name)).join(', ') %><% if (votes > 3) { %> +<%= votes - 3 %> more<% } %>
+  <% } else { %>
+  <div class="req-list">
+    <% votingRequests.forEach(r => { const votes = (r.voters || []).length; %>
+    <div class="req-row" id="req-<%= r.slug %>">
+      <span class="req-votes"><%= votes %></span>
+      <% if (r.cover_image) { %>
+        <img class="req-cover" src="<%= r.cover_image %>" alt="">
+      <% } else { %>
+        <div class="req-cover req-cover-empty">🎮</div>
+      <% } %>
+      <div class="req-main">
+        <div class="req-title"><%= r.title %></div>
+        <%# Initials, not names: this list is public, and who asked for a game is
+            nobody else's business. The count carries the social proof. %>
+        <div class="req-voters">
+          requested by <%= (r.voters || []).slice(0, 3).map(v => initials(v.fb_name)).join(', ') %><% if (votes > 3) { %> +<%= votes - 3 %> more<% } %>
+        </div>
       </div>
+      <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
+        <input type="text" name="fb_name" placeholder="Your name" required autocomplete="off">
+        <button type="submit" class="req-btn">Vote</button>
+      </form>
     </div>
-    <form method="POST" action="/requests/<%= r.slug %>/vote" class="req-voteform">
-      <input type="text" name="fb_name" placeholder="Your name" required autocomplete="off">
-      <button type="submit" class="req-btn">Vote</button>
-    </form>
+    <% }) %>
   </div>
-  <% }) %>
-
-  <% if (stockedRequests.length) { %>
-  <div class="req-listhead req-listhead-stocked">
-    <span class="req-listtitle">✓ Now available</span>
-    <span class="req-count">you asked, we stocked <%= stockedRequests.length %></span>
-  </div>
-
-  <% stockedRequests.forEach(r => { %>
-  <%# No vote count here on purpose: the votes did their job, and a number
-      beside a game you can already rent only invites "why so few?". %>
-  <div class="req-row req-row-stocked" id="req-<%= r.slug %>">
-    <% if (r.cover_image) { %>
-      <img class="req-cover" src="<%= r.cover_image %>" alt="">
-    <% } else { %>
-      <div class="req-cover req-cover-empty">🎮</div>
-    <% } %>
-    <div class="req-main">
-      <div class="req-title"><%= r.title %></div>
-      <div class="req-stocked-note">Now available — you asked, we stocked it</div>
-    </div>
-    <% if (r.game_id) { %>
-      <a href="/game/<%= r.slug %>" class="req-btn req-btn-rent">Rent</a>
-    <% } %>
-  </div>
-  <% }) %>
   <% } %>
 
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
