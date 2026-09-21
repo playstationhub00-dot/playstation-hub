@@ -255,14 +255,14 @@
           // that has genuinely been rented before — "set up on order" already
           // covers the type nobody has stocked yet.
           const soonTypes = [];
-          if (hasTrophy && !trAvail && !trNotStocked && trNext != null && trNext > 0) soonTypes.push({ icon: '🏆', label: 'Trophy', days: trNext });
-          if (!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) soonTypes.push({ icon: '🎮', label: 'Non-Trophy', days: ntNext });
-          if (showPs4 && !ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) soonTypes.push({ icon: '🕹️', label: 'PS4 Primary', days: ps4Next });
+          if (hasTrophy && !trAvail && !trNotStocked && trNext != null && trNext > 0) soonTypes.push({ icon: '🏆', days: trNext });
+          if (!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) soonTypes.push({ icon: '🎮', days: ntNext });
+          if (showPs4 && !ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) soonTypes.push({ icon: '🕹️', days: ps4Next });
         %>
         <% if (soonTypes.length) { %>
         <div class="gd-avail-soon-row">
           <% soonTypes.forEach(s => { %>
-          <span class="gd-avail-soon"><%= s.icon %> <%= s.label %> available in <strong><%= s.days %> day<%= s.days !== 1 ? 's' : '' %></strong></span>
+          <span class="gd-avail-soon"><%= s.icon %> Available in <strong><%= s.days %> day<%= s.days !== 1 ? 's' : '' %></strong></span>
           <% }) %>
         </div>
         <% } %>
