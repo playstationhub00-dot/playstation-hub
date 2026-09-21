@@ -715,12 +715,12 @@ nav {
   display: inline-block;
 }
 .gd-avail-soon strong { color: #fbbf24; }
-/* Sits right under the Trophy/Non-Trophy/PS4 cards — .gd-avail-soon's own
-   margin-top already spaces it from that row; this only handles more than
-   one pill (e.g. both Trophy and Non-Trophy full) wrapping onto their own
-   lines instead of the inline-block pills stacking with no gap between them. */
-.gd-avail-soon-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
-.gd-avail-soon-row .gd-avail-soon { margin-top: 0; }
+/* Sits right under the Trophy/Non-Trophy/PS4 cards, one pill per full type —
+   same flex-basis and gap as #typeOptions above it, so each pill lines up
+   under its own card instead of the row just left-aligning and leaving the
+   cards' actual columns unmarked. */
+.gd-avail-soon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.gd-avail-soon-row .gd-avail-soon { flex: 1 1 140px; margin-top: 0; text-align: center; }
 
 .gd-noslot-banner {
   display: flex; align-items: flex-start; gap: 0.75rem;
