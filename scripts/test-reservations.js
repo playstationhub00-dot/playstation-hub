@@ -15,40 +15,41 @@ function game(over) {
   }, over || {});
 }
 
-console.log('\npreorderPricing() — half now, half on release');
+console.log('\npreorderPricing() — paid in full, nothing owed on release');
 
-ok('a non-trophy weekly reservation is half the list price', () => {
+ok('a non-trophy weekly reservation is the full list price', () => {
   const r = reservations.preorderPricing(game(), 'nt', 7, PROMO);
   assert.strictEqual(r.base, 349);
   assert.strictEqual(r.deposit, 0, 'no deposit on non-trophy');
   assert.strictEqual(r.total, 349);
-  assert.strictEqual(r.amountDue, 175, 'rounded up');
-  assert.strictEqual(r.remainingDue, 174);
+  assert.strictEqual(r.amountDue, 349, 'the whole total, not half of it');
+  assert.strictEqual(r.remainingDue, 0);
 });
 
-ok('the two halves always add back to the total', () => {
+ok('amountDue always equals the total, and remainingDue is always zero', () => {
+  // The split this project used to charge is gone — nothing is still owed
+  // once the game releases, for either duration or account type.
   [7, 30].forEach(d => ['nt', 'tr'].forEach(t => {
     const r = reservations.preorderPricing(game(), t, d, PROMO);
-    assert.strictEqual(r.amountDue + r.remainingDue, r.total,
-      t + ' ' + d + 'd: ' + r.amountDue + ' + ' + r.remainingDue + ' !== ' + r.total);
+    assert.strictEqual(r.amountDue, r.total,
+      t + ' ' + d + 'd: amountDue ' + r.amountDue + ' !== total ' + r.total);
+    assert.strictEqual(r.remainingDue, 0);
   }));
 });
 
-ok('an odd total leaves the SMALLER half for release day', () => {
-  // Paying the extra peso now, while they are already paying, beats being
-  // surprised by it on launch day.
+ok('an odd total is still paid in full, not split into an odd/even pair', () => {
   const r = reservations.preorderPricing(game({ nt_price_7d: 349 }), 'nt', 7, PROMO);
-  assert.ok(r.amountDue > r.remainingDue);
-  assert.strictEqual(r.amountDue - r.remainingDue, 1);
+  assert.strictEqual(r.amountDue, 349);
+  assert.strictEqual(r.remainingDue, 0);
 });
 
-ok('trophy carries the deposit into the total', () => {
+ok('trophy carries the deposit into the total, paid in full with it', () => {
   const r = reservations.preorderPricing(game(), 'tr', 30, PROMO);
   assert.strictEqual(r.base, 899);
   assert.strictEqual(r.deposit, 100);
   assert.strictEqual(r.total, 999);
-  assert.strictEqual(r.amountDue, 500);
-  assert.strictEqual(r.remainingDue, 499);
+  assert.strictEqual(r.amountDue, 999);
+  assert.strictEqual(r.remainingDue, 0);
 });
 
 ok('no promo discount is applied, unlike a released rental', () => {
@@ -134,10 +135,10 @@ ok('the form and the module agree on every price, type and duration', () => {
             return;
           }
           assert.strictEqual(shown.amountDue, server.amountDue,
-            'downpayment differs for ' + type + ' ' + d + 'd @' + price + ' dep' + dep
+            'amount due differs for ' + type + ' ' + d + 'd @' + price + ' dep' + dep
             + ': form ' + shown.amountDue + ', server ' + server.amountDue);
           assert.strictEqual(shown.remainingDue, server.remainingDue,
-            'balance differs for ' + type + ' ' + d + 'd @' + price + ' dep' + dep);
+            'remaining due differs for ' + type + ' ' + d + 'd @' + price + ' dep' + dep);
           assert.strictEqual(shown.total, server.total);
         });
       });

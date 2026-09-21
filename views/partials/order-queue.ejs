@@ -44,7 +44,7 @@
     qr_pending: 'Scan QR',
     verifying_return: 'Check return'
   };
-  // Reservation downpayments settle into 'reserved' rather than moving on to
+  // A reservation payment settles into 'reserved' rather than moving on to
   // a console sign-in — the button text and post-confirm action differ from
   // a normal rental order's, even though both sit in verifying_payment.
   const queueAction = o => (o.is_reservation && o.state === 'verifying_payment') ? 'Reservation confirmed' : QUEUE_ACTION[o.state];
@@ -122,7 +122,7 @@
       </div>
       <div class="oq-meta">
         <%= o.game_title %> · <%= o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy' %>
-        · <%= o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly') %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? (o.upcoming_game_id ? ' downpayment (₱' + (o.remaining_due || 0) + ' on release)' : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
+        · <%= o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly') %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? (o.upcoming_game_id ? ' reservation, paid in full' + ((o.remaining_due || 0) > 0 ? ' (₱' + o.remaining_due + ' still due on release)' : '') : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
@@ -292,7 +292,7 @@
           <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">📋</button>
           <% } %>
           <%# Only on orders the priority-paid button created — a Coming Soon
-              downpayment rests in the same state but paid for a game, not a
+              reservation rests in the same state but paid for a game, not a
               queue place, and must not be undoable into a free entry. %>
           <% if (o.state === 'reserved' && o.upgraded_from_waitlist) { %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
@@ -446,7 +446,7 @@
           <%# Undo puts them back on the free list at their original join
               date. /cancel refuses a 'reserved' order outright, so it cannot
               stand in here. Only offered on the flag the priority upgrade
-              itself sets — a Coming Soon downpayment shares this state but is
+              itself sets — a Coming Soon reservation shares this state but is
               a different queue, and is excluded from this whole panel
               server-side (upcoming_game_id/is_buy) regardless. %>
           <% if (o.upgraded_from_waitlist) { %>

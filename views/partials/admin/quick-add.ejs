@@ -52,10 +52,10 @@
             data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
           <% }) %>
           <%# Coming Soon games carry data-upcoming, which switches the form
-              over: Renting becomes Reserve (a downpayment, the rest owed on
-              release) and Bought becomes Pre-order (paid in full). Their rent
-              tiers are the real list prices, which is what a reservation is
-              quoted from. %>
+              over: Renting becomes Reserve (a rental slot, paid in full now)
+              and Bought becomes Pre-order (permanent, also paid in full).
+              Their rent tiers are the real list prices, which is what a
+              reservation is quoted from. %>
           <% if ((typeof qaUpcoming !== 'undefined' ? qaUpcoming : []).length) { %>
           <optgroup label="Coming soon — reserve or pre-order">
             <% qaUpcoming.forEach(g => { %>
@@ -254,10 +254,10 @@
   // ignored, and the server refuses the combination too — this half is so the
   // owner is never offered a choice that will bounce.
   // A Coming Soon game can be reserved two ways, which is what the site sells:
-  // Renting holds a rental slot with a downpayment and owes the rest on
-  // release; Bought is a permanent pre-order paid in full. Neither has dates,
-  // and neither has an account to sign into yet. Only "Finished" is meaningless
-  // for a game nobody can have played.
+  // Renting holds a rental slot, paid in full now; Bought is a permanent
+  // pre-order, also paid in full. Neither has dates, and neither has an
+  // account to sign into yet. Only "Finished" is meaningless for a game
+  // nobody can have played.
   window.qaGameChanged = function () {
     var opt = el('qaGame').selectedOptions[0];
     var upcoming = !!(opt && opt.dataset && opt.dataset.upcoming);
@@ -273,8 +273,8 @@
     var note = el('qaUpcomingNote');
     if (upcoming) {
       var when = (opt.dataset.release || '').trim();
-      note.textContent = 'Not released yet. Reserve holds a slot with a downpayment and the rest is due on release;'
-        + ' Pre-order is paid in full. Either way there are no dates and no account to sign into'
+      note.textContent = 'Not released yet. Reserve holds a rental slot; Pre-order is permanent access.'
+        + ' Both are paid in full now, and either way there are no dates and no account to sign into'
         + (when ? ' until it launches on ' + when + '.' : ' until it launches.');
       note.hidden = false;
     } else {
@@ -361,7 +361,7 @@
   // Standard durations charge their tier exactly.
   // The deposit the server would charge on a Trophy reservation. Read off the
   // modal rather than guessed: the browser has no access to promo settings,
-  // and a downpayment quoted without it would be short by half the deposit.
+  // and a quote without it would be short by the deposit.
   function qaResDepositValue() {
     var root = el('qaOverlay');
     return (root && Number(root.dataset.resDeposit)) || 0;
@@ -373,16 +373,14 @@
     return d === 7 ? p7 : d === 30 ? p30 : 0;
   }
 
-  // Mirrors lib/reservations.preorderPricing: deposit on Trophy only, half of
-  // the total rounded UP, so an odd total leaves the smaller half for release
-  // day rather than the larger.
+  // Mirrors lib/reservations.preorderPricing: deposit on Trophy only, paid in
+  // full now — nothing owed on release.
   function qaReservation(base, type) {
     var b = Number(base) || 0;
     if (b <= 0) return { total: 0, amountDue: 0, remainingDue: 0 };
     var deposit = type === 'tr' ? qaResDepositValue() : 0;
     var total = b + deposit;
-    var amountDue = Math.ceil(total * 0.5);
-    return { total: total, amountDue: amountDue, remainingDue: total - amountDue };
+    return { total: total, amountDue: total, remainingDue: 0 };
   }
 
   function qaAmountForDays(d, p7, p30) {
@@ -431,8 +429,8 @@
     var p7 = parseInt(opt.dataset[pre + '7']) || 0;
     var p30 = parseInt(opt.dataset[pre + '30']) || 0;
 
-    // A reservation on a game that has not released: half the list price plus
-    // the deposit now, the rest owed on launch day. Mirrors
+    // A reservation on a game that has not released: the list price plus the
+    // deposit, paid in full now — nothing owed on launch day. Mirrors
     // lib/reservations.preorderPricing exactly, and scripts/test-reservations.js
     // pulls this arithmetic out of the template and runs it against that module
     // so the quote on screen cannot drift from the one that gets saved.
@@ -440,16 +438,15 @@
       var resBase = qaResBase(d, p7, p30);
       if (!resBase && override === '') {
         box.className = 'qa-price qa-price-empty';
-        box.textContent = 'No ' + (d === 7 ? 'weekly' : 'monthly') + ' price set for this type on that game — type the downpayment in Price override.';
+        box.textContent = 'No ' + (d === 7 ? 'weekly' : 'monthly') + ' price set for this type on that game — type the amount in Price override.';
         return;
       }
       var res = qaReservation(resBase, type);
-      var down = override !== '' ? (parseInt(override) || 0) : res.amountDue;
-      var rest = Math.max(0, res.total - down);
+      var paid = override !== '' ? (parseInt(override) || 0) : res.amountDue;
       box.className = 'qa-price';
-      box.innerHTML = '<b>₱' + down.toLocaleString() + '</b> downpayment'
+      box.innerHTML = '<b>₱' + paid.toLocaleString() + '</b> reservation'
         + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
-        + ' <span style="color:#7a7a7a;">· ₱' + rest.toLocaleString() + ' due on release</span>';
+        + ' <span style="color:#7a7a7a;">· paid in full, nothing due on release</span>';
       return;
     }
 

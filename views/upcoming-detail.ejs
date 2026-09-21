@@ -90,7 +90,7 @@
       <span class="rsv-full-icon">🚫</span>
       <div>
         <div class="rsv-full-title">All Slots Full</div>
-        <div class="rsv-full-sub">You can still request a slot with a downpayment below, or join the free waitlist.</div>
+        <div class="rsv-full-sub">You can still request a slot below, or join the free waitlist.</div>
       </div>
     </div>
     <% } %>
@@ -202,9 +202,9 @@
 
           <!-- Same summary box as the rent page down to the last element: always
                visible, rows on top, a "To send now" final line, the green rider
-               beneath it and the grey hint below that. Only the rows themselves
-               differ, because a reservation splits into a downpayment now and a
-               balance on release day. -->
+               beneath it and the grey hint below that. The rows are a reservation's
+               own breakdown (base + deposit); the total is paid in full now, same
+               as the rent page's own total is. -->
           <div class="gd-total-box" id="orderSummary">
             <div class="gd-total-label">ORDER SUMMARY</div>
             <div class="gd-total-rows" id="sumRows"></div>
@@ -228,7 +228,7 @@
               <input type="hidden" name="days" id="reserveDays" value="">
               <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
               <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve Now →</button>
-              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay 50% now via GCash or Maya · balance on release day</div>
+              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full via GCash or Maya · nothing more due on release</div>
             </form>
             <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
                onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
@@ -393,10 +393,10 @@ const TR_SLOTS   = <%= game.trophy_slots||0 %>;
 let selectedType = document.querySelector('input[name="rental_type"]:checked')?.value || 'nt';
 let selectedDays = null;
 let selectedBuyType = null;
-// 'rent' = reserve a rental (duration-based, 50% now). 'buy' = pre-order
-// permanent access, paid in full, on its own dedicated panel — it has no
-// duration and no downpayment split, so it no longer shares the rent
-// panel's summary box, CTA or Messenger link the way it used to.
+// 'rent' = reserve a rental (duration-based, paid in full now). 'buy' =
+// pre-order permanent access, also paid in full, on its own dedicated
+// panel — it has no duration, so it doesn't share the rent panel's summary
+// box, CTA or Messenger link.
 let upcomingMode = 'rent';
 
 function setUpcomingMode(mode) {
@@ -522,16 +522,17 @@ function updateSummary() {
   const isTrophy  = selectedType === 'tr';
   const deposit   = isTrophy ? 100 : 0;
   const total     = price + deposit;
-  const downpay   = Math.ceil(total * 0.5);
 
   rowsEl.innerHTML =
     '<div class="gd-total-row"><span>Base (' + selectedDays + ' days)</span><span>' + (price ? '₱' + price : '—') + '</span></div>' +
     '<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱' + deposit + '</span></div>' +
     '<div class="gd-total-row"><span>Total</span><span>' + (total ? '₱' + total : '—') + '</span></div>';
-  finalEl.textContent = total ? '₱' + downpay : '—';
-  riderEl.textContent = '↩ Remaining ₱' + (total - downpay) + ' due when the game releases.' +
-    (deposit ? ' ₱' + deposit + ' of that comes back when you finish.' : '');
-  riderEl.style.display = total ? '' : 'none';
+  // Paid in full now — nothing owed when the game releases. The deposit
+  // (Trophy only) is still refundable on its own terms, independent of that;
+  // the rider only exists to say so, and has nothing to say otherwise.
+  finalEl.textContent = total ? '₱' + total : '—';
+  riderEl.textContent = deposit ? '↩ ₱' + deposit + ' of that (the deposit) comes back when you finish.' : '';
+  riderEl.style.display = (total && deposit) ? '' : 'none';
   hintEl.style.display = 'none';
 }
 
@@ -562,12 +563,12 @@ function updateCta() {
 
   const price   = getPrices()[selectedDays] || 0;
   const deposit = selectedType === 'tr' ? 100 : 0;
-  const downpay = Math.ceil((price + deposit) * 0.5);
+  const total   = price + deposit;
   const hasSlot = getSlots() > 0;
-  setReady((hasSlot ? '🎮 Reserve now — ₱' : '🎮 Request now — ₱') + downpay,
+  setReady((hasSlot ? '🎮 Reserve now — ₱' : '🎮 Request now — ₱') + total,
     hasSlot
-      ? 'Pay 50% now via GCash or Maya · balance on release day'
-      : 'No slots free right now — pay 50% to request one. We refund you if one never opens.');
+      ? 'Pay in full via GCash or Maya · nothing more due on release'
+      : 'No slots free right now — pay in full to request one. We refund you if one never opens.');
 }
 
 // Rent-only. Buy Permanent's Messenger link is static (no duration, no split
@@ -578,9 +579,7 @@ function updateLinks() {
   const price    = getPrices()[selectedDays] || 0;
   const deposit  = selectedType === 'tr' ? 100 : 0;
   const total    = price + deposit;
-  const downpay2 = total ? Math.ceil(total * 0.5) : 0;
   const priceStr = total ? '₱' + total : 'TBD';
-  const dpStr    = downpay2 ? '₱' + downpay2 : 'TBD';
   const hasSlot  = getSlots() > 0;
 
   const msg = encodeURIComponent(
@@ -588,8 +587,7 @@ function updateLinks() {
     'Game: ' + GAME_TITLE + ' (Coming Soon)\n' +
     'Type: ' + typeName + '\n' +
     'Duration: ' + selectedDays + ' Days\n' +
-    'Total: ' + priceStr + '\n' +
-    '50% Downpayment: ' + dpStr
+    'Total (paid in full): ' + priceStr
   );
   const el = document.getElementById('reserveLinkSlot');
   if (el) el.href = 'http://m.me/PlaystationHub00?text=' + msg;

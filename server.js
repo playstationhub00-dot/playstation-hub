@@ -2130,11 +2130,11 @@ app.post('/order/create-psplus', async (req, res) => {
   }
 });
 
-// Creates a reservation order — a 50% downpayment on a Coming Soon rental
-// reservation, a full payment on a Coming Soon PERMANENT pre-order (there is
-// no rental deposit to hold back against, so nothing is split), or a flat
-// ₱100 priority-reservation fee on an available game whose selected type has
-// no open slot right now (matching the fee the site has always quoted for
+// Creates a reservation order — a full payment on a Coming Soon rental
+// reservation, a full payment on a Coming Soon PERMANENT pre-order too (both
+// are paid in full now, nothing owed on release), or a flat ₱100
+// priority-reservation fee on an available game whose selected type has no
+// open slot right now (matching the fee the site has always quoted for
 // that). All three reuse the same order-status page and payment-proof flow
 // as /order/create, but settle into 'reserved' instead of progressing to a
 // console sign-in — there's either nothing to sign into yet, or no free slot
@@ -2146,8 +2146,8 @@ app.post('/order/reserve', async (req, res) => {
   const { game_id, account_type, days, fb_name, kind } = req.body;
   // 'buy' = pre-ordering PERMANENT access to a not-yet-released game. It reuses
   // this route (not /order/buy) because the money model is the reservation
-  // one — 50% now, remainder on release — and /order/buy only knows about
-  // already-released catalogue rows.
+  // one — paid in full now — and /order/buy only knows about already-released
+  // catalogue rows.
   const isBuyPreorder = kind === 'buy';
   // Fall in Line: a free, unpaid entry. PS Plus reuses this same route and
   // the same "This type has no slot right now" UI, so it must be allowed
@@ -2174,6 +2174,15 @@ app.post('/order/reserve', async (req, res) => {
   // A permanent pre-order has no rental duration, so the 7/30-day guard must
   // not apply to it.
   if (!name || !type) return res.redirect(errRedirect);
+  // Lost in a previous refactor (b813100) along with the validation block it
+  // sat next to — every branch below reads `promo`, so every real submission
+  // through this route (rental reservation, Fall in Line, PS Plus, priority
+  // fee — every kind except the pre-order branch, which prices through
+  // computeBuyPricing instead) threw ReferenceError: promo is not defined and
+  // hung with no response. Found while testing the reservation-pricing
+  // change below; restored here.
+  const promo = getSiteSettings().promo || {};
+  let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
   if (isBuyPreorder) {
     // Permanent price, paid in full now — no deposit (nothing to return) and
     // no split with a release-day balance, unlike a rental reservation. The
@@ -2873,7 +2882,7 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // two ways, which is what the site itself already sells:
   //
   //   Bought  → a permanent pre-order, paid in full
-  //   Renting → a rental slot held with a downpayment, the rest owed on release
+  //   Renting → a rental slot held with a reservation, also paid in full
   //
   // Both rest in 'reserved' and neither has dates. 'Finished' is the only one
   // with no meaning here. The picker already switches the form over; this is
@@ -2936,7 +2945,7 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
       message: mode === 'buy'
         ? 'No buy price set for this game — type the amount in Price override.'
         : upcomingReservation
-          ? 'No price set for that type and duration on this Coming Soon game — type the downpayment in Price override.'
+          ? 'No price set for that type and duration on this Coming Soon game — type the amount in Price override.'
           : 'That game has no price set for this type and duration.'
     });
   }
@@ -2946,8 +2955,9 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   const depositDue = upcomingReservation ? (reservationPricing ? reservationPricing.deposit : 0)
     : mode === 'buy' ? 0
     : pricing.depositDue;
-  // What is still owed when the game launches. An overridden downpayment
-  // recomputes it against the same total, so the two halves still add up.
+  // Zero unless the owner typed a price below the real total (a hand-arranged
+  // partial payment) — a reservation is paid in full by default now, same as
+  // a pre-order.
   const remainingDue = upcomingReservation && reservationPricing
     ? Math.max(0, reservationPricing.total - amountDue)
     : 0;
@@ -3034,11 +3044,13 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
       status: upcomingGame ? 'reservation' : (mode === 'buy' ? 'bought' : status),
       // Same wording POST /order/reserve writes, so a reservation reads the
       // same whichever side of the counter it was taken on. An owner's own
-      // note wins if they typed one.
+      // note wins if they typed one. remainingDue is only ever above zero
+      // here when the owner typed a price below the real total — the default
+      // path pays both kinds in full, so there is nothing to call out.
       notes: String(b.notes || '').trim() || (upcomingGame
         ? (mode === 'buy'
             ? 'Pre-order — paid in full ₱' + amountDue
-            : 'Reservation — downpayment ₱' + amountDue + ', ₱' + remainingDue + ' due on release')
+            : 'Reservation — paid in full ₱' + amountDue + (remainingDue > 0 ? ', ₱' + remainingDue + ' due on release' : ''))
         : ''),
       order_ref: order.ref,
       order_key: order.url_key,
@@ -3429,12 +3441,12 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
       end_date: '',
       price: order.amount_due || 0,
       status: 'reservation',
-      // A rental reservation splits 50/50; a permanent pre-order is paid in
-      // full up front (remaining_due is 0), so "downpayment ₱2499, ₱0 due on
-      // release" would read as a lie about there being a balance at all.
-      notes: 'Web reservation ' + order.ref + ' — ' + (order.is_buy
-        ? 'paid in full ₱' + (order.amount_due || 0)
-        : 'downpayment ₱' + (order.amount_due || 0) + ', ₱' + (order.remaining_due || 0) + ' due on release'),
+      // Both a rental reservation and a permanent pre-order are paid in full
+      // up front now — remaining_due is 0 for either by default, so calling
+      // out a balance here would read as a lie about there being one at all.
+      // The only way it's above zero is a hand-arranged partial payment.
+      notes: 'Web reservation ' + order.ref + ' — paid in full ₱' + (order.amount_due || 0)
+        + ((order.remaining_due || 0) > 0 ? ', ₱' + order.remaining_due + ' due on release' : ''),
       created_at: new Date().toISOString(),
       payments: order.amount_due > 0
         ? [{ amount: order.amount_due, date: orders.manilaDate(new Date()), kind: 'reservation' }]
@@ -4475,9 +4487,9 @@ app.get('/admin', requireAuth, async (req, res) => {
       release_date: u.release_date || '',
       // The upcoming record's own list prices, which is what a reservation is
       // quoted from — no category to resolve and no promo applied, matching
-      // lib/reservations and the public reserve route exactly. The form halves
-      // these itself to preview the downpayment; test-reservations.js pins that
-      // client arithmetic against the module so the two cannot drift.
+      // lib/reservations and the public reserve route exactly. The form adds
+      // the deposit itself to preview the total; test-reservations.js pins
+      // that client arithmetic against the module so the two cannot drift.
       nt7: Number(u.nt_price_7d) || 0, nt30: Number(u.nt_price_30d) || 0,
       tr7: Number(u.tr_price_7d) || 0, tr30: Number(u.tr_price_30d) || 0,
       buynt: buyNt ? buyNt.amountDue : 0,

@@ -274,7 +274,7 @@ ok('the CSS guard that actually hides it is still present', () => {
 console.log('\nQuick Add — a Coming Soon game can be reserved or pre-ordered');
 
 // The shape the optgroup renders for an unreleased game: real list prices, so
-// a downpayment can be quoted, plus the data-upcoming flag the form keys off.
+// a reservation price can be quoted, plus the data-upcoming flag the form keys off.
 function pickUpcoming(f, over) {
   const opt = Object.assign({
     value: 'upcoming_4',
@@ -289,9 +289,9 @@ function pickUpcoming(f, over) {
 }
 
 ok('both ways of reserving stay open; only Finished is meaningless', () => {
-  // Renting on an unreleased game means "hold a slot with a downpayment",
+  // Renting on an unreleased game means "hold a slot, paid in full now",
   // which is a real thing the site sells. It used to be disabled outright, so
-  // the only option the owner had was a pre-order paid in full.
+  // the only option the owner had was a pre-order.
   const f = loadForm();
   pickUpcoming(f);
   assert.strictEqual(f.el('qaStRent').disabled, false, 'reserving is a real option');
@@ -320,29 +320,27 @@ ok('a reservation keeps its duration but loses its dates', () => {
   assert.strictEqual(f.el('qaEndDate').value, '', 'and no stale date may reach the server');
 });
 
-ok('it quotes the downpayment and the balance, not the whole rent', () => {
+ok('it quotes the full reservation price, not half of it', () => {
   const f = loadForm();
   f.el('qaDays').value = '30';
   f.win.qaDaysChanged();
   pickUpcoming(f);
   const box = f.el('qaPriceBox').innerHTML;
-  // 699 monthly, non-trophy so no deposit: 350 now, 349 on release.
-  assert.ok(box.includes('350'), 'downpayment: ' + box);
-  assert.ok(box.includes('349'), 'balance due on release: ' + box);
-  assert.ok(/downpayment/i.test(box), box);
-  assert.ok(/due on release/i.test(box), box);
+  // 699 monthly, non-trophy so no deposit: paid in full, nothing on release.
+  assert.ok(box.includes('699'), 'full reservation price: ' + box);
+  assert.ok(!/downpayment/i.test(box), 'the split this used to charge is gone: ' + box);
+  assert.ok(/nothing due on release/i.test(box), box);
 });
 
-ok('a trophy reservation carries the deposit into both halves', () => {
+ok('a trophy reservation carries the deposit into the total, paid in full with it', () => {
   const f = loadForm();
   f.el('qaType').value = 'tr';
   f.el('qaDays').value = '30';
   f.win.qaDaysChanged();
   pickUpcoming(f);
   const box = f.el('qaPriceBox').innerHTML;
-  // 899 + 100 deposit = 999 -> 500 now, 499 on release.
-  assert.ok(box.includes('500'), 'downpayment includes half the deposit: ' + box);
-  assert.ok(box.includes('499'), box);
+  // 899 + 100 deposit = 999, paid in full — nothing owed when it releases.
+  assert.ok(box.includes('999'), 'full total including the deposit: ' + box);
 });
 
 ok('a duration the game has no price for asks for an override', () => {

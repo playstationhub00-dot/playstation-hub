@@ -288,7 +288,7 @@ check('but a mid-upgrade payment does occupy a real slot in that count', () => {
   assert.strictEqual(rows[0].queuePosition, 2, 'bumped to second — the earlier upgrader still holds a place ahead of it');
 });
 
-check('a Coming Soon downpayment never appears here, despite sharing the state', () => {
+check('a Coming Soon reservation never appears here, despite sharing the state', () => {
   const rows = queue.forAdminPanel([
     entry({ ref: 'PH-0309', game_id: 11, account_type: 'nt', state: 'reserved', upcoming_game_id: 11 })
   ], NOW);
