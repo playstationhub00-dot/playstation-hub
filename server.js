@@ -351,7 +351,26 @@ app.locals.buyTypeSellable = buyTypeSellable;
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Two cache lifetimes used across every static registration below.
+// Immutable is safe only for URLs that are provably unique to their content
+// (a version query, or a Date.now()-stamped filename) — see the comments at
+// each call site for why a given path qualifies.
+const CACHE_IMMUTABLE = 'public, max-age=31536000, immutable';
+const CACHE_SHORT = 'public, max-age=3600';
+
+// A request carrying ?v=<assetV> (see app.locals.assetV just below) is
+// deploy-busted — the URL itself changes on every deploy, so it is safe to
+// cache forever. A bare path is not: manifest.json, favicon.svg and the
+// default hero-bg-image.webp are all requested unversioned, so caching them
+// for a year would hide a real change (e.g. swapping the hero image) from
+// returning visitors for up to a year. One hour bounds that instead.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => {
+    const hasVersion = !!(res.req && res.req.query && res.req.query.v);
+    res.setHeader('Cache-Control', hasVersion ? CACHE_IMMUTABLE : CACHE_SHORT);
+  }
+}));
 
 // The edge caches /css/style.css for hours and ignores any Cache-Control we
 // set, so a deploy would otherwise leave visitors on stale styles. Cache keys
@@ -406,7 +425,21 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 });
 
 // Serve uploads from persistent data directory
-app.use('/uploads', express.static(uploadsDir));
+//
+// Every /uploads file EXCEPT these four fixed names is written by multer
+// with a Date.now()+ext filename (see the diskStorage config above), so its
+// URL changes whenever its content does — safe to cache forever. These four
+// are the exception: POST /admin/site-settings (search "Handle favicon
+// upload" below) overwrites them in place under the SAME filename every time
+// an admin updates branding, so the URL a browser already cached would
+// silently go stale for up to a year if these got the long cache too.
+const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|hero-bg-video)\./;
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res, filePath) => {
+    const isBranding = UNVERSIONED_UPLOAD_NAMES.test(path.basename(filePath));
+    res.setHeader('Cache-Control', isBranding ? CACHE_SHORT : CACHE_IMMUTABLE);
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 // A webhook signature is computed over the exact bytes the provider sent, and
 // express.json() re-serialises the body — key order or spacing shifting by one
