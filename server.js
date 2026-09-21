@@ -2209,8 +2209,13 @@ app.post('/order/reserve', async (req, res) => {
     // charge another.
     const priced = reservations.preorderPricing(game, type, d, promo);
     if (!priced) return res.redirect(errRedirect);
+    // priced.amountDue is base + deposit (the whole figure a caller with no
+    // separate deposit tracking can charge in one go). This order model
+    // tracks amount_due and deposit_due as two fields that order-status.ejs
+    // adds back together for "To send now" — so amountDue here must be the
+    // base alone, or the deposit gets counted twice.
     depositDue = priced.deposit;
-    amountDue = priced.amountDue;
+    amountDue = priced.base;
     remainingDue = priced.remainingDue;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
@@ -2949,7 +2954,13 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
           : 'That game has no price set for this type and duration.'
     });
   }
-  const amountDue = override != null && override >= 0 ? override : pricing.amountDue;
+  // For a reservation, pricing.amountDue is base + deposit — this order model
+  // tracks amount_due and deposit_due as two fields added back together for
+  // display, so amount_due must be the base alone or the deposit is charged
+  // twice (see POST /order/reserve, which has the same split).
+  const amountDue = override != null && override >= 0 ? override
+    : upcomingReservation ? pricing.base
+    : pricing.amountDue;
   // A reservation's deposit is carried on the order the way the web flow
   // carries it; a purchase has none.
   const depositDue = upcomingReservation ? (reservationPricing ? reservationPricing.deposit : 0)
@@ -2959,7 +2970,7 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
   // partial payment) — a reservation is paid in full by default now, same as
   // a pre-order.
   const remainingDue = upcomingReservation && reservationPricing
-    ? Math.max(0, reservationPricing.total - amountDue)
+    ? Math.max(0, reservationPricing.total - (amountDue + depositDue))
     : 0;
 
   const startDate = /^\d{4}-\d{2}-\d{2}$/.test(String(b.start_date || '')) ? b.start_date : orders.manilaDate();
