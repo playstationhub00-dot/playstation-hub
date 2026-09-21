@@ -21,6 +21,23 @@
   <a href="/admin" class="back-link">← Back to Admin</a>
   <h1>Edit Game</h1>
 
+  <%
+    // A rejected picture used to fail with nothing on screen: the form still
+    // saved everything else and reloaded showing the same old image, which is
+    // exactly what "the picture isn't working" looks like. Both causes are
+    // named here rather than a generic "something went wrong" so the next
+    // attempt actually succeeds.
+    const uploadErrors = {
+      file_too_large: 'That picture is too large — the limit is 5MB. Try a smaller file, or a screenshot instead of the original photo.',
+      bad_file_type: "That file type isn't supported — use a JPG, PNG, GIF, or WEBP. An iPhone photo saved as HEIC is the usual culprit; export or share it as JPEG first."
+    };
+  %>
+  <% if (uploadErrors[msg]) { %>
+  <div style="background:#2a1200;border:1px solid #5a3200;color:#ffb84d;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.5;">
+    ⚠️ <%= uploadErrors[msg] %> None of the changes below were saved — please fix the picture and re-enter the rest.
+  </div>
+  <% } %>
+
   <div class="form-card">
     <form method="POST" action="/admin/edit/<%= game.id %>" enctype="multipart/form-data">
       <div class="form-grid">

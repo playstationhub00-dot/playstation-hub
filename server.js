@@ -8,6 +8,7 @@ const sharp = require('sharp');
 const session = require('express-session');
 const sessionStore = require('./lib/session-store');
 const computeAvailability = require('./lib/availability');
+const { imageFileFilter } = require('./lib/upload-filters');
 const buyTypeSellable = computeAvailability.buyTypeSellable;
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
@@ -295,7 +296,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  fileFilter: (req, file, cb) => cb(null, /jpeg|jpg|png|gif|webp/.test(file.mimetype)),
+  fileFilter: imageFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 // Poster background images tend to be larger (full-bleed photography), so give
@@ -4816,7 +4817,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
 app.get('/admin/edit/:id', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (!game) return res.redirect('/admin');
-  res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories(), accounts: getAccounts() });
+  res.render('edit', { game, settings: getSiteSettings(), priceCategories: getPriceCategories(), accounts: getAccounts(), msg: req.query.msg || null });
 });
 
 // Add forms live on their own pages, matching the convention /admin/edit/:id
@@ -4827,7 +4828,8 @@ app.get('/admin/add/game', requireAuth, (req, res) => {
     settings: getSiteSettings(),
     priceCategories: getPriceCategories(),
     accounts: getAccounts(),
-    presetBundle: req.query.bundle === '1'
+    presetBundle: req.query.bundle === '1',
+    msg: req.query.msg || null
   });
 });
 
@@ -6757,9 +6759,22 @@ app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
 app.use((err, req, res, next) => {
   console.error(`[error] ${req.method} ${req.originalUrl}:`, err);
   if (res.headersSent) return next(err);
-  if (err && err.code === 'LIMIT_FILE_SIZE') {
-    const back = req.get('referer') || '/admin';
-    return res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=file_too_large');
+  if (err && (err.code === 'LIMIT_FILE_SIZE' || err.code === 'BAD_FILE_TYPE')) {
+    // The referer is the page the form was submitted from — normally clean,
+    // but a retry right after an earlier rejection (without navigating away)
+    // arrives already carrying that failed attempt's own ?msg=. Stripped
+    // before appending the new one, or req.query.msg on the next load comes
+    // back as an array (Express's handling of a repeated query key) and the
+    // page's `uploadErrors[msg]` lookup silently misses, same silent failure
+    // this whole thing exists to fix.
+    let back = req.get('referer') || '/admin';
+    try {
+      const u = new URL(back);
+      u.searchParams.delete('msg');
+      back = u.pathname + (u.search || '') + u.hash;
+    } catch (e) { /* not a parseable absolute URL — fall back to it as-is */ }
+    const kind = err.code === 'LIMIT_FILE_SIZE' ? 'file_too_large' : 'bad_file_type';
+    return res.redirect(back + (back.includes('?') ? '&' : '?') + 'msg=' + kind);
   }
   res.status(500).send('Something went wrong. Please try again.');
 });
