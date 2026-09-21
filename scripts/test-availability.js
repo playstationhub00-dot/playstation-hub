@@ -5,7 +5,7 @@
 // game the site shows as fully booked is exactly the one the poster leaves out.
 const assert = require('assert');
 const computeAvailability = require('../lib/availability');
-const { fullGameIds } = computeAvailability;
+const { fullGameIds, buyTypeSellable } = computeAvailability;
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -98,6 +98,42 @@ ok('it returns a Set, which is what the caller filters with', () => {
   assert.ok(ids instanceof Set);
   assert.strictEqual(ids.has(3), true);
   assert.strictEqual(ids.has(99), false);
+});
+
+console.log('\nbuyTypeSellable() — permanent-access gating per slot type');
+
+ok('a linked account with a genuinely sellable slot is sellable', () => {
+  assert.strictEqual(buyTypeSellable({ non_trophy: { total: 2, sellable: 1 } }, 'non_trophy'), true);
+});
+
+ok('a linked account with every slot sold/offline is not sellable', () => {
+  // Deliberately NOT the same as "full from renters" — a linked account's
+  // rented slots stay sellable (see the next block); this is buyed/na/maintenance.
+  assert.strictEqual(buyTypeSellable({ non_trophy: { total: 2, sellable: 0 } }, 'non_trophy'), false);
+});
+
+ok('no linked account and never rented before stays sellable — the account is set up on order', () => {
+  assert.strictEqual(buyTypeSellable(null, 'non_trophy', { everStocked: false, avail: false }), true);
+  assert.strictEqual(buyTypeSellable({}, 'trophy', { everStocked: false, avail: false }), true);
+});
+
+ok('no linked account, rented before, and a free legacy slot right now is sellable', () => {
+  assert.strictEqual(buyTypeSellable(null, 'non_trophy', { everStocked: true, avail: true }), true);
+});
+
+ok('no linked account, rented before, and no free legacy slot is NOT sellable', () => {
+  // The bug this exists for: a legacy type with every slot taken by a renter
+  // has no known end date to sell against (unlike a linked account), so it
+  // must show as full rather than still being offered.
+  assert.strictEqual(buyTypeSellable(null, 'non_trophy', { everStocked: true, avail: false }), false);
+  assert.strictEqual(buyTypeSellable({}, 'trophy', { everStocked: true, avail: false }), false);
+});
+
+ok('with no legacy context at all, the old always-sellable fallback still holds', () => {
+  // Every existing call site that hasn't been taught about legacy availability
+  // yet must keep behaving exactly as before.
+  assert.strictEqual(buyTypeSellable(null, 'non_trophy'), true);
+  assert.strictEqual(buyTypeSellable({}, 'trophy', undefined), true);
 });
 
 console.log('\n' + passed + ' assertions passed\n');

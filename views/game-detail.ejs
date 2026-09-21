@@ -32,10 +32,22 @@
   const anyNotStocked = trNotStocked || ntNotStocked || ps4NotStocked;
   // Buy is gated on slot state, not just on a price being set: an account already
   // sold (or taken offline) must stop being offered, the same way it already stops
-  // being rentable. Each tier is judged against its own slot type.
-  const buyNt = (buyTypeSellable(sum, 'non_trophy') ? (game.buy_nt_price || 0) : 0);
-  const buyTr = (buyTypeSellable(sum, 'trophy') ? (game.buy_tr_price || 0) : 0);
-  const hasBuy = buyNt > 0 || buyTr > 0;
+  // being rentable. Each tier is judged against its own slot type. A linked
+  // account keeps a rented slot sellable (it hands over on a known date); a
+  // legacy slot that has actually been rented before has no such date to sell
+  // against, so once every one of its slots is taken by a renter, buying it is
+  // shown as full rather than offered.
+  const buyNtSellable = buyTypeSellable(sum, 'non_trophy', { everStocked: !ntNotStocked, avail: ntAvail });
+  const buyTrSellable = buyTypeSellable(sum, 'trophy', { everStocked: !trNotStocked, avail: trAvail });
+  const buyNt = (buyNtSellable ? (game.buy_nt_price || 0) : 0);
+  const buyTr = (buyTrSellable ? (game.buy_tr_price || 0) : 0);
+  // Priced to sell, blocked only because every legacy slot of a type that has
+  // actually been rented before is currently taken — as opposed to no price
+  // ever being set, or a linked account genuinely sold/offline, both of which
+  // stay hidden entirely rather than shown as full.
+  const buyNtFull = (game.buy_nt_price || 0) > 0 && !hasNtAcc && !ntNotStocked && !ntAvail;
+  const buyTrFull = (game.buy_tr_price || 0) > 0 && !hasTrophyAcc && !trNotStocked && !trAvail;
+  const hasBuy = buyNt > 0 || buyTr > 0 || buyNtFull || buyTrFull;
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
   const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;
   const buyTrFinal = buyPromo ? Math.round(buyTr * (1 - promo.buy_promo_pct / 100)) : buyTr;
@@ -393,6 +405,20 @@
             </div>
           </div>
         </div>
+        <% } else if (buyNtFull) { %>
+        <!-- NT full — every legacy slot of this type is taken by a renter, with no
+             known handover date to sell against, so it's shown as full rather
+             than offered. Same treatment as the rent panel's own "Full Slot". -->
+        <div class="gd-type-card gd-type-disabled" id="buyNtCard" style="margin-bottom:0.75rem;border-color:#222;">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🎮</span>
+              <span class="gd-type-name">Non-Trophy — Permanent Access</span>
+              <span class="gd-type-status gd-status-rented">Full Slot</span>
+            </div>
+            <div class="gd-type-desc">Every Non-Trophy slot is currently rented out — none free to hand over.</div>
+          </div>
+        </div>
         <% } %>
 
         <!-- TR Buy card -->
@@ -414,6 +440,18 @@
             </div>
           </div>
         </div>
+        <% } else if (buyTrFull && hasTrophy) { %>
+        <!-- TR full — same reasoning as the NT full card above. -->
+        <div class="gd-type-card gd-type-disabled" id="buyTrCard" style="margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
+          <div class="gd-type-body">
+            <div class="gd-type-header">
+              <span class="gd-type-icon">🏆</span>
+              <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
+              <span class="gd-type-status gd-status-rented">Full Slot</span>
+            </div>
+            <div class="gd-type-desc" style="color:#886600;">Every Trophy slot is currently rented out — none free to hand over.</div>
+          </div>
+        </div>
         <% } %>
 
         <!-- What you get -->
@@ -426,7 +464,10 @@
           </div>
         </div>
 
-        <!-- Buy CTA: order on the site -->
+        <!-- Buy CTA: order on the site — only when a type is actually sellable.
+             With every type full there is nothing selectedBuyType could ever
+             become, so the button would just repeat "pick a type" forever. -->
+        <% if (buyNt > 0 || buyTr > 0) { %>
         <form method="POST" action="/order/buy" class="gd-order-form" id="gdBuyForm">
           <input type="hidden" name="kind" value="game">
           <input type="hidden" name="game_id" value="<%= game.id %>">
@@ -438,6 +479,15 @@
           <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
         </form>
         <div id="buyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+        <% } else { %>
+        <div class="gd-noslot-banner" style="margin-top:0.25rem;">
+          <span class="gd-noslot-icon">⏳</span>
+          <div>
+            <div class="gd-noslot-title">Nothing to buy right now</div>
+            <div class="gd-noslot-sub">Every account type is currently rented out. Message us and we'll let you know the moment one opens up for sale.</div>
+          </div>
+        </div>
+        <% } %>
 
         <!-- Secondary: Messenger, always one tap away -->
         <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-link" style="display:block;text-align:center;margin-top:0.5rem;">or message us on Facebook instead</a>
@@ -599,7 +649,20 @@ function updateBuyPriceHeader() {
     const kEl = document.getElementById('phKicker');
     const amtEl = document.getElementById('phAmount');
     if (!kEl) return;
-    setPriceHeader(kEl.dataset.defaultKicker, amtEl.dataset.defaultBuyAmount, null, null, null);
+    const buyFrom = Number(amtEl.dataset.defaultBuyAmount) || 0;
+    // Every type full means there is no price to quote at all yet — the
+    // "nothing to buy right now" note in the panel already says why, so this
+    // just clears the amount rather than showing ₱0.
+    if (buyFrom <= 0) {
+      kEl.textContent = 'Buy Permanent';
+      amtEl.textContent = '—';
+      document.getElementById('phWas').style.display = 'none';
+      document.getElementById('phSave').style.display = 'none';
+      const riderEl = document.getElementById('phRider');
+      if (riderEl) riderEl.style.display = 'none';
+      return;
+    }
+    setPriceHeader(kEl.dataset.defaultKicker, buyFrom, null, null, null);
     return;
   }
   const typeName = selectedBuyType === 'tr' ? 'trophy · permanent' : 'non-trophy · permanent';

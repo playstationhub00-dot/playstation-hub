@@ -8,6 +8,7 @@ const sharp = require('sharp');
 const session = require('express-session');
 const sessionStore = require('./lib/session-store');
 const computeAvailability = require('./lib/availability');
+const buyTypeSellable = computeAvailability.buyTypeSellable;
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
 const reviewRules = require('./lib/reviews');
@@ -762,21 +763,6 @@ function buildAccountSummaryMap() {
     });
   });
   return map;
-}
-
-// Can this game still be sold as permanent access on the given slot type?
-// Single source of truth for every buy surface (the /buy list, the detail page's
-// buy panel, and the POST /order/buy re-check) — this rule living in three
-// separate places, derived from price alone, is what let sold-out accounts stay
-// on sale in the first place.
-//
-// No linked slot of this type means "set up on order": the account is created
-// after the first sale, so it must stay offered rather than being treated as
-// sold out.
-function buyTypeSellable(summary, slotKey) {
-  const s = summary && summary[slotKey];
-  if (!s || !s.total) return true;
-  return s.sellable > 0;
 }
 
 function getPriceCategories() { return db.get('price_categories').value() || []; }
@@ -1652,10 +1638,19 @@ app.get('/buy', (req, res) => {
   const singleGames = allGames
     .map(g => {
       const sum = buySummaryMap[g.id] || null;
+      // Same legacy-fullness rule game-detail.ejs's buy panel judges each tier
+      // against — a type that has actually been rented before and currently
+      // has no free legacy slot must drop off the list the same way a card
+      // it can no longer sell drops off already, rather than still
+      // advertising a price for it.
+      const avail = computeAvailability(g, sum);
+      const neverRented = !g.renters && !g.stocked;
       return {
         g,
-        ntOk: (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy'),
-        trOk: (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy')
+        ntOk: (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy',
+          { everStocked: !neverRented, avail: avail.ntAvail }),
+        trOk: (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy',
+          { everStocked: !neverRented, avail: avail.trAvail })
       };
     })
     .filter(x => x.ntOk || x.trOk)
@@ -2041,9 +2036,16 @@ app.post('/order/buy', async (req, res) => {
   if (!base) return res.redirect('/buy?order_error=1');
   // Re-check sellability at order time, exactly as the bundle branch above does —
   // the page a customer loaded may be stale, and hiding a card is presentation
-  // only. This route is what actually prevents selling an account twice.
+  // only. This route is what actually prevents selling an account twice, and
+  // the same legacy-fullness rule the detail page's buy panel judges against.
   const slotKey = type === 'tr' ? 'trophy' : 'non_trophy';
-  if (!buyTypeSellable(gameAccountSummary(game.id), slotKey)) {
+  const buySum = gameAccountSummary(game.id);
+  const buyAvail = computeAvailability(game, buySum);
+  const buyNeverRented = !game.renters && !game.stocked;
+  if (!buyTypeSellable(buySum, slotKey, {
+    everStocked: !buyNeverRented,
+    avail: type === 'tr' ? buyAvail.trAvail : buyAvail.ntAvail
+  })) {
     return res.redirect('/buy?order_error=sold');
   }
   const s = getSiteSettings();
