@@ -245,6 +245,28 @@
 
         </div>
 
+        <%
+          // How long until a full type frees up, surfaced right under the type
+          // cards rather than left buried inside the "How setup works" accordion
+          // below — the moment someone sees "Full Slot" is the moment they want
+          // to know when that changes. Only shown when the date is actually
+          // known (a linked account's slot carries its renter's end date; a
+          // legacy-only game has nothing to count down to) and only for a type
+          // that has genuinely been rented before — "set up on order" already
+          // covers the type nobody has stocked yet.
+          const soonTypes = [];
+          if (hasTrophy && !trAvail && !trNotStocked && trNext != null && trNext > 0) soonTypes.push({ icon: '🏆', label: 'Trophy', days: trNext });
+          if (!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) soonTypes.push({ icon: '🎮', label: 'Non-Trophy', days: ntNext });
+          if (showPs4 && !ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) soonTypes.push({ icon: '🕹️', label: 'PS4 Primary', days: ps4Next });
+        %>
+        <% if (soonTypes.length) { %>
+        <div class="gd-avail-soon-row">
+          <% soonTypes.forEach(s => { %>
+          <span class="gd-avail-soon"><%= s.icon %> <%= s.label %> available in <strong><%= s.days %> day<%= s.days !== 1 ? 's' : '' %></strong></span>
+          <% }) %>
+        </div>
+        <% } %>
+
         <!-- Shared setup guide. Each type's original copy is preserved verbatim;
              only the selected type's block is shown, so nothing is lost by
              consolidating the three per-card accordions into one. -->
