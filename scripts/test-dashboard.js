@@ -425,8 +425,34 @@ check('two games in the same month sum into one entry', () => {
 });
 
 check('an empty or missing games list does not throw', () => {
-  assert.deepStrictEqual(dash.monthlyGameCost([]), { byMonth: {}, missingCost: 0, undated: 0, total: 0 });
-  assert.deepStrictEqual(dash.monthlyGameCost(null), { byMonth: {}, missingCost: 0, undated: 0, total: 0 });
+  assert.deepStrictEqual(dash.monthlyGameCost([]), { byMonth: {}, items: {}, missingCost: 0, undated: 0, total: 0 });
+  assert.deepStrictEqual(dash.monthlyGameCost(null), { byMonth: {}, items: {}, missingCost: 0, undated: 0, total: 0 });
+});
+
+check('a game charged to a month appears in that month\'s items with id, title, cost', () => {
+  const r = dash.monthlyGameCost([
+    { id: 7, title: 'Test Game A', cost: 2500, release_date: '2026-09-15' }
+  ]);
+  assert.deepStrictEqual(r.items, { '2026-09': [{ id: 7, title: 'Test Game A', cost: 2500 }] });
+});
+
+check('two games in the same month both appear in items, in iteration order', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, title: 'First', cost: 2000, release_date: '2026-09-05' },
+    { id: 2, title: 'Second', cost: 1500, release_date: '2026-09-20' }
+  ]);
+  assert.deepStrictEqual(r.items['2026-09'], [
+    { id: 1, title: 'First', cost: 2000 },
+    { id: 2, title: 'Second', cost: 1500 }
+  ]);
+});
+
+check('a costless or undated game does not appear in items for any month', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, title: 'No Cost', cost: 0, release_date: '2026-09-01' },
+    { id: 2, title: 'No Date', cost: 900 }
+  ]);
+  assert.deepStrictEqual(r.items, {});
 });
 
 console.log('\n' + passed + ' assertions passed');
