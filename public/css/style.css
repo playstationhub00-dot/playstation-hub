@@ -2010,6 +2010,13 @@ select.ss-native {
 /* Business Dashboard — year filter, live-status tag, month drill-down */
 .dash-tag { font-size: 0.75rem; font-weight: 700; color: #666; text-transform: none; letter-spacing: 0; background: #1a1a1a; border-radius: 4px; padding: 0.05rem 0.35rem; margin-left: 0.3rem; }
 .dash-month-stat { background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.6rem 0.5rem; text-align: center; }
+.dash-profit-line { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.1rem; cursor: pointer; font-size: 0.75rem; }
+.dash-profit-line:hover { background: #0f0f0f; }
+.dash-profit-line-label { color: #999; }
+.dash-profit-line-val { color: #fff; font-weight: 700; }
+.dash-profit-items { padding: 0 0.5rem 0.5rem 0.5rem; }
+.dash-profit-item { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; font-size: 0.7rem; color: #aaa; border-bottom: 1px solid #161616; }
+.dash-profit-item:last-child { border-bottom: none; }
 .dash-month-val { font-size: 1.1rem; font-weight: 900; line-height: 1.1; }
 .dash-month-lbl { font-size: 0.75rem; color: #555; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.4px; }
 
