@@ -715,10 +715,15 @@ nav {
   display: inline-block;
 }
 .gd-avail-soon strong { color: #fbbf24; }
-/* Sits right under the Trophy/Non-Trophy/PS4 cards, one pill per full type —
-   same flex-basis and gap as #typeOptions above it, so each pill lines up
-   under its own card instead of the row just left-aligning and leaving the
-   cards' actual columns unmarked. */
+/* Sits right under the Trophy/Non-Trophy/PS4 cards, one slot per VISIBLE
+   card (game-detail.ejs renders an invisible placeholder for a card that
+   isn't "soon") — same flex-basis and gap as #typeOptions above it, so
+   every slot lines up under its own card. This only holds because the view
+   always renders the SAME NUMBER of items in this row as in #typeOptions:
+   flex-grow divides a row across however many items THAT row has, with no
+   knowledge of the cards row above it, so a row with fewer real pills than
+   cards would stretch and mis-center instead of lining up — found and fixed
+   when only one of two types was full. */
 .gd-avail-soon-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.4rem; }
 /* Plain text here, not the bordered pill .gd-avail-soon is elsewhere — sitting
    right under the Trophy/Non-Trophy cards, a bordered box read as a third

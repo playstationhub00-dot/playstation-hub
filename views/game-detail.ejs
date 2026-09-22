@@ -254,15 +254,31 @@
           // legacy-only game has nothing to count down to) and only for a type
           // that has genuinely been rented before — "set up on order" already
           // covers the type nobody has stocked yet.
-          const soonTypes = [];
-          if (hasTrophy && !trAvail && !trNotStocked && trNext != null && trNext > 0) soonTypes.push({ icon: '🏆', days: trNext });
-          if (!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) soonTypes.push({ icon: '🎮', days: ntNext });
-          if (showPs4 && !ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) soonTypes.push({ icon: '🕹️', days: ps4Next });
+          //
+          // One slot per VISIBLE type card, in the same order and behind the
+          // same hasTrophy/showPs4 gates #typeOptions uses above — not just one
+          // entry per type that happens to be soon. flex-grow on .gd-avail-soon
+          // divides the row across however many items THIS row has, with no
+          // knowledge of the cards row above it; if Trophy alone is full, a
+          // one-item row would stretch that single pill across the full width
+          // and center it between both cards instead of sitting under Trophy's
+          // own column. Keeping one slot per card (blank ones invisible but
+          // still occupying their flex share) makes the two rows divide the
+          // same width into the same number of pieces, so every pill lands
+          // under the card it describes regardless of which types are full.
+          const soonSlots = [];
+          if (hasTrophy) soonSlots.push((!trAvail && !trNotStocked && trNext != null && trNext > 0) ? { icon: '🏆', days: trNext } : null);
+          soonSlots.push((!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) ? { icon: '🎮', days: ntNext } : null);
+          if (showPs4) soonSlots.push((!ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) ? { icon: '🕹️', days: ps4Next } : null);
         %>
-        <% if (soonTypes.length) { %>
+        <% if (soonSlots.some(s => s)) { %>
         <div class="gd-avail-soon-row">
-          <% soonTypes.forEach(s => { %>
+          <% soonSlots.forEach(s => { %>
+          <% if (s) { %>
           <span class="gd-avail-soon"><%= s.icon %> Available in <strong><%= s.days %> day<%= s.days !== 1 ? 's' : '' %></strong></span>
+          <% } else { %>
+          <span class="gd-avail-soon" aria-hidden="true" style="visibility:hidden;"></span>
+          <% } %>
           <% }) %>
         </div>
         <% } %>
