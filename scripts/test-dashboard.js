@@ -379,4 +379,54 @@ check('accounts slot use reports fill per account, worst first', () => {
   assert.strictEqual(rows[2].total, 2);             // disabled slot not counted
 });
 
+console.log('\nmonthlyGameCost()');
+
+check('a game with a release_date charges its cost to that month', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, cost: 2500, release_date: '2026-09-15', created_at: '2026-01-01T00:00:00.000Z' }
+  ]);
+  assert.deepStrictEqual(r.byMonth, { '2026-09': 2500 });
+  assert.strictEqual(r.missingCost, 0);
+  assert.strictEqual(r.undated, 0);
+});
+
+check('a game with no release_date falls back to created_at', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, cost: 1800, created_at: '2026-03-10T04:00:00.000Z' }
+  ]);
+  assert.deepStrictEqual(r.byMonth, { '2026-03': 1800 });
+});
+
+check('a game with a cost but neither date is counted in undated, not charged to any month', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, cost: 900 }
+  ]);
+  assert.deepStrictEqual(r.byMonth, {});
+  assert.strictEqual(r.undated, 1);
+  assert.strictEqual(r.missingCost, 0);
+});
+
+check('a game with no cost is counted in missingCost and contributes nothing', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, cost: 0, release_date: '2026-09-01' },
+    { id: 2, release_date: '2026-09-01' }
+  ]);
+  assert.deepStrictEqual(r.byMonth, {});
+  assert.strictEqual(r.missingCost, 2);
+  assert.strictEqual(r.total, 2);
+});
+
+check('two games in the same month sum into one entry', () => {
+  const r = dash.monthlyGameCost([
+    { id: 1, cost: 2000, release_date: '2026-09-05' },
+    { id: 2, cost: 1500, release_date: '2026-09-20' }
+  ]);
+  assert.deepStrictEqual(r.byMonth, { '2026-09': 3500 });
+});
+
+check('an empty or missing games list does not throw', () => {
+  assert.deepStrictEqual(dash.monthlyGameCost([]), { byMonth: {}, missingCost: 0, undated: 0, total: 0 });
+  assert.deepStrictEqual(dash.monthlyGameCost(null), { byMonth: {}, missingCost: 0, undated: 0, total: 0 });
+});
+
 console.log('\n' + passed + ' assertions passed');
