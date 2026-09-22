@@ -9,6 +9,7 @@ const requests = require('../lib/requests');
 
 let passed = 0;
 function check(name, fn) { fn(); passed++; console.log('  ok - ' + name); }
+async function checkAsync(name, fn) { await fn(); passed++; console.log('  ok - ' + name); }
 
 check('first name is the leading word', () => {
   assert.strictEqual(requests.firstName('Walid Khatib'), 'Walid');
@@ -53,4 +54,22 @@ check('a non-Latin name is abbreviated without throwing', () => {
   assert.ok(requests.initials('Мария Иванова').length <= 6);
 });
 
-console.log('\n' + passed + ' assertions passed');
+// listByStatus is the one read this page's own TTFB fix (see
+// docs/superpowers/specs/2026-09-22-requests-page-ttfb-design.md) removes the
+// app's only safety net from — a fake collection whose find() rejects proves
+// the page still renders (an empty list) instead of hanging on an unhandled
+// rejection, the same class of bug this project already hit once with the
+// promo variable in /order/reserve.
+(async () => {
+  await checkAsync('a Mongo read failure in listByStatus returns an empty list instead of throwing', async () => {
+    requests.init(async () => ({
+      collection: () => ({
+        find: () => ({ toArray: async () => { throw new Error('connection reset'); } })
+      })
+    }));
+    const rows = await requests.listPublic();
+    assert.deepStrictEqual(rows, []);
+  });
+
+  console.log('\n' + passed + ' assertions passed');
+})().catch(e => { console.error(e); process.exit(1); });
