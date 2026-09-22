@@ -143,6 +143,8 @@
       const DASH_DATA = <%- JSON.stringify(dashboardData).replace(/</g, '\\u003c') %>;
       const MONTH_LOGS = {};
       (<%- JSON.stringify(monthLogs).replace(/</g, '\\u003c') %>).forEach(function(m) { MONTH_LOGS[m.key] = m; });
+      const GAME_COST_BY_MONTH = <%- JSON.stringify(gameCostByMonth.byMonth).replace(/</g, '\\u003c') %>;
+      const GAME_COST_META = <%- JSON.stringify({ missingCost: gameCostByMonth.missingCost, undated: gameCostByMonth.undated, total: gameCostByMonth.total }).replace(/</g, '\\u003c') %>;
       function monthKeyFor(year, month) { return year + '-' + String(month + 1).padStart(2, '0'); }
       let dashSelectedMonth = null; // { year, month } or null
       let dashMonthLogEditMode = false;
