@@ -30,9 +30,16 @@ const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
+const mongoConnection = require('./lib/mongo-connection');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// One connection for the whole app — orders, game requests, and admin
+// sessions all read through this. See lib/mongo-connection.js for why it
+// connects once instead of pinging before every call.
+const _mongo = mongoConnection.createConnection(process.env, require('mongodb').MongoClient);
+const _getMongoDb = _mongo.getDb;
 
 // The two rental durations the whole site offers. Every duration-driven loop,
 // form, and price lookup reads from this — changing durations again later is a
@@ -601,22 +608,6 @@ function newPsplusPopularId() {
 }
 
 // MongoDB sync — saves entire db state after every write
-let _mongoSaveClient = null;
-async function _getMongoDb() {
-  if (!process.env.MONGODB_URI) return null;
-  const { MongoClient } = require('mongodb');
-  // Reconnect if client is gone or connection dropped
-  if (_mongoSaveClient) {
-    try { await _mongoSaveClient.db('admin').command({ ping: 1 }); }
-    catch { try { await _mongoSaveClient.close(); } catch {} _mongoSaveClient = null; }
-  }
-  if (!_mongoSaveClient) {
-    _mongoSaveClient = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
-    await _mongoSaveClient.connect();
-    console.log('[mongo] Connected to MongoDB Atlas');
-  }
-  return _mongoSaveClient.db('pshub');
-}
 function syncToMongo() {
   if (!process.env.MONGODB_URI) return;
   _getMongoDb().then(mdb => {
@@ -630,7 +621,7 @@ function syncToMongo() {
     if (r) console.log('[mongo] Synced to MongoDB ✅');
   }).catch(e => {
     console.log('[mongo sync error]', e.message);
-    _mongoSaveClient = null; // force reconnect next time
+    _mongo.reset(); // force reconnect next time
   });
 }
 const _origWrite = db.write.bind(db);
