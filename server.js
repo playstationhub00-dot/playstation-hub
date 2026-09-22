@@ -41,6 +41,16 @@ const PORT = process.env.PORT || 3000;
 const _mongo = mongoConnection.createConnection(process.env, require('mongodb').MongoClient);
 const _getMongoDb = _mongo.getDb;
 
+// Express 4 does not catch a rejected promise inside an async route handler
+// — it just hangs, since nothing ever calls next(err). This routes any such
+// rejection into the existing error middleware below instead. See
+// docs/superpowers/specs/2026-09-22-order-routes-error-handling-design.md.
+function asyncRoute(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
 // The two rental durations the whole site offers. Every duration-driven loop,
 // form, and price lookup reads from this — changing durations again later is a
 // one-line edit here instead of a repo-wide hunt. `days` also drives the
@@ -2342,7 +2352,7 @@ const uploadOrderFile = multer({
   limits: { fileSize: 8 * 1024 * 1024 }
 });
 
-app.get('/order/:ref', async (req, res) => {
+app.get('/order/:ref', asyncRoute(async (req, res) => {
   // Sweep before rendering: lapsed QR windows go back to awaiting_qr so the
   // customer is asked for a fresh code rather than shown a dead countdown, and
   // rentals past their end date move to awaiting_return so the customer is
@@ -2399,7 +2409,7 @@ app.get('/order/:ref', async (req, res) => {
     // real median approval time, not invented urgency.
     approvalEtaMinutes: getApprovalEtaMinutes(),
   }, reviewBlockLocals('')));
-});
+}));
 
 // Unlinks a just-processed upload when the transition it was meant for didn't
 // The state of one order, for the customer's own page to poll while it waits.
@@ -2431,7 +2441,7 @@ function cleanupOrphanedUpload(filePath) {
   if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
 }
 
-app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (req, res) => {
+app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
@@ -2467,7 +2477,7 @@ app.post('/order/:ref/payment-proof', uploadOrderFile.single('proof'), async (re
   // customer just chose is in the message.
   notifyOwnerOrder(r, 'review');
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=payment_submitted');
-});
+}));
 
 // Fall in Line -> Priority. Upgrades the customer's EXISTING order in place
 // rather than cancelling it and creating a new one, which is what lets them
@@ -2514,7 +2524,7 @@ function priorityUpgradePatch(order) {
   };
 }
 
-app.post('/order/:ref/upgrade-priority', async (req, res) => {
+app.post('/order/:ref/upgrade-priority', asyncRoute(async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
@@ -2531,14 +2541,14 @@ app.post('/order/:ref/upgrade-priority', async (req, res) => {
   const updated = await orders.transition(order.ref, 'awaiting_payment', patch);
   if (!updated) return res.redirect(back + '&msg=stale');
   res.redirect(back + '&msg=upgrade_started');
-});
+}));
 
 // A review written by the customer from their own order page. Always lands
 // unapproved: the site's review section is its trust surface, so nothing
 // reaches it without the owner looking first. Name and game come from the
 // order rather than the form — the customer supplies only a rating and a
 // sentence, so a review can never claim a rental that did not happen.
-app.post('/order/:ref/review', async (req, res) => {
+app.post('/order/:ref/review', asyncRoute(async (req, res) => {
   if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
     return res.redirect('/browse?order_error=rate');
   }
@@ -2579,7 +2589,7 @@ app.post('/order/:ref/review', async (req, res) => {
   // notification bell with the rest of the owner's queue, where it stays
   // visible until it is dealt with rather than scrolling away in a chat.
   res.redirect(back + '&msg=' + (isDown ? 'review_sorry' : 'review_thanks'));
-});
+}));
 
 // ── Online payments (PayMongo) ───────────────────────────────────────────────
 // Hosted checkout: the customer is redirected to PayMongo, so card details
@@ -2834,7 +2844,7 @@ async function createPaymongoCheckout(order, opts) {
   }
 }
 
-app.post('/order/:ref/pay', async (req, res) => {
+app.post('/order/:ref/pay', asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   const back = '/order/' + order.ref + '?k=' + order.url_key;
@@ -2844,7 +2854,7 @@ app.post('/order/:ref/pay', async (req, res) => {
   });
   if (!result.ok) return res.redirect(back + '&msg=' + result.reason);
   res.redirect(result.url);
-});
+}));
 
 // Admin "💳 Payment link" button: creates the same hosted checkout session as
 // the customer's own Pay now button, but hands the URL back as JSON so the
@@ -2852,7 +2862,7 @@ app.post('/order/:ref/pay', async (req, res) => {
 // Messenger — nothing here is customer-facing. success/cancel both return to
 // the admin orders tab since it's the owner's browser making the request, not
 // the customer's.
-app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/payment-link', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.status(404).json({ ok: false, reason: 'not_found' });
   const result = await createPaymongoCheckout(order, {
@@ -2861,7 +2871,7 @@ app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
   });
   if (!result.ok) return res.status(422).json({ ok: false, reason: result.reason });
   res.json({ ok: true, url: result.url });
-});
+}));
 
 // Admin "Create order" for a customer who never touches the site — the owner
 // sends their own GCash/Maya QR over Messenger, gets paid there directly, and
@@ -2885,7 +2895,7 @@ app.post('/admin/orders/:ref/payment-link', requireAuth, async (req, res) => {
 //
 // Returns JSON — the modal stays open to show the message to copy, so a redirect
 // would throw away the one thing the owner opened it for.
-app.post('/admin/quick-add', requireAuth, async (req, res) => {
+app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   const b = req.body || {};
   const name = String(b.customer_name || '').trim();
   if (!name) return res.status(400).json({ ok: false, reason: 'bad_name', message: 'Enter the customer name.' });
@@ -3135,9 +3145,9 @@ app.post('/admin/quick-add', requireAuth, async (req, res) => {
     console.error('[quick-add]', e.message);
     res.status(500).json({ ok: false, reason: 'create_failed', message: 'Could not save that — try again.' });
   }
-});
+}));
 
-app.post('/admin/orders/create-manual', requireAuth, async (req, res) => {
+app.post('/admin/orders/create-manual', requireAuth, asyncRoute(async (req, res) => {
   const { game_id, account_type, mode, fb_name } = req.body;
   const game = getGame(game_id);
   if (!game) return res.status(400).json({ ok: false, reason: 'bad_game' });
@@ -3184,13 +3194,13 @@ app.post('/admin/orders/create-manual', requireAuth, async (req, res) => {
     console.error('[admin create-manual order]', e.message);
     res.status(500).json({ ok: false, reason: 'create_failed' });
   }
-});
+}));
 
 // PayMongo calls this. Everything it decides comes from lib/gateway.js, so this
 // handler only verifies the sender, normalises the payload, and applies the
 // decision. Always answers 200 once the signature checks out — a non-2xx makes
 // PayMongo retry, and retrying will not fix an order that is in the wrong state.
-app.post('/webhooks/paymongo', async (req, res) => {
+app.post('/webhooks/paymongo', asyncRoute(async (req, res) => {
   const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
   // Fail closed. With no secret configured every request is unverifiable, and
   // accepting unverified payment events would let anyone mark orders paid.
@@ -3243,11 +3253,11 @@ app.post('/webhooks/paymongo', async (req, res) => {
     });
   }
   res.status(200).send(decision.action);
-});
+}));
 
 // QR upload is website-only by design: the countdown is the whole mechanism,
 // and a code sitting in a Messenger thread has no expiry tracking.
-app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
+app.post('/order/:ref/qr', uploadOrderFile.single('qr'), asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
@@ -3266,13 +3276,13 @@ app.post('/order/:ref/qr', uploadOrderFile.single('qr'), async (req, res) => {
   }
   notifyOwnerSignin(order, null);
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
-});
+}));
 
 // The typed-code alternative to photographing the QR. A separate route rather
 // than a branch inside the upload handler above, so the working photo path is
 // not touched at all — the two are equivalent to the order, which only cares
 // that a sign-in is waiting and the clock is running.
-app.post('/order/:ref/signin-code', express.urlencoded({ extended: false }), async (req, res) => {
+app.post('/order/:ref/signin-code', express.urlencoded({ extended: false }), asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
@@ -3289,9 +3299,9 @@ app.post('/order/:ref/signin-code', express.urlencoded({ extended: false }), asy
   if (!r) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   notifyOwnerSignin(order, code);
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
-});
+}));
 
-app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), async (req, res) => {
+app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || !order.url_key || req.body.k !== order.url_key) return res.redirect('/browse');
   if (rateLimited('order_upload', clientIp(req), 30, 10 * 60 * 1000)) {
@@ -3305,7 +3315,7 @@ app.post('/order/:ref/return-proof', uploadOrderFile.single('proof'), async (req
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=return_submitted');
-});
+}));
 
 // ── Owner queue actions ───────────────────────────────────────────────────
 // One generic advance handler: each of the three owner states has exactly one
@@ -3318,7 +3328,7 @@ const ORDER_ADVANCE = {
   verifying_return: 'closed'
 };
 
-app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   let to = ORDER_ADVANCE[order.state];
@@ -3494,21 +3504,21 @@ app.post('/admin/orders/:ref/advance', requireAuth, async (req, res) => {
   }
 
   res.redirect('/admin?tab=orders&msg=order_advanced');
-});
+}));
 
-app.post('/admin/orders/:ref/reject', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/reject', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   const r = await orders.transition(order.ref, 'payment_rejected', { payment_proof: null, payment_channel: null });
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_rejected');
-});
+}));
 
 // Confirms a payment that arrived outside the site (e.g. Messenger). Lands
 // in awaiting_qr, not active — the customer still needs to send their
 // sign-in QR before the rental clock starts. Revenue is recorded later by
 // the existing advance route at that point, not here.
-app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/mark-paid', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
@@ -3533,7 +3543,7 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
   const r = await orders.transition(order.ref, target, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_marked_paid');
-});
+}));
 
 // A free waitlist entry whose ₱100 arrived outside the site — over Messenger,
 // or GCash direct. Moves them to a paid priority reservation so the queue sorts
@@ -3544,7 +3554,7 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, async (req, res) => {
 // asserting exactly that. So this walks the same legal path the customer's own
 // upgrade plus mark-paid would take, and the state history reads identically
 // whether the money arrived on the site or in a chat thread.
-app.post('/admin/orders/:ref/priority-paid', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/priority-paid', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   if (order.state !== 'waitlisted') return res.redirect('/admin?tab=orders&msg=order_bad_state');
@@ -3563,7 +3573,7 @@ app.post('/admin/orders/:ref/priority-paid', requireAuth, async (req, res) => {
   });
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_priority_paid');
-});
+}));
 
 // Undo for the button above, when the ₱100 turns out not to have arrived. Puts
 // the customer back on the free list with their ref, their link and their place
@@ -3573,7 +3583,7 @@ app.post('/admin/orders/:ref/priority-paid', requireAuth, async (req, res) => {
 // Guarded on upgraded_from_waitlist, which is the flag only the priority
 // upgrade sets. A Coming Soon downpayment rests in the same 'reserved' state
 // but paid real money for a game, and must never be reachable from here.
-app.post('/admin/orders/:ref/undo-priority', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/undo-priority', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   if (order.state !== 'reserved' || !order.upgraded_from_waitlist) {
@@ -3591,12 +3601,12 @@ app.post('/admin/orders/:ref/undo-priority', requireAuth, async (req, res) => {
   });
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_priority_undone');
-});
+}));
 
 // Owner-initiated cancellation for an unpaid order — the customer said no,
 // or never followed up. Distinct from Delete: this keeps the record (and
 // its state_history) instead of removing it.
-app.post('/admin/orders/:ref/cancel', requireAuth, async (req, res) => {
+app.post('/admin/orders/:ref/cancel', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
   if (!['awaiting_payment', 'payment_rejected', 'waitlisted'].includes(order.state)) {
@@ -3605,7 +3615,7 @@ app.post('/admin/orders/:ref/cancel', requireAuth, async (req, res) => {
   const r = await orders.transition(order.ref, 'cancelled', {});
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_cancelled');
-});
+}));
 
 app.post('/admin/requests/:slug/approve', requireAuth, async (req, res) => {
   await gameRequests.setStatus(req.params.slug, 'approved', {});
