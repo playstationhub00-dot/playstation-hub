@@ -113,13 +113,15 @@
           <span style="font-size:0.85rem;font-weight:800;color:#fff;" id="dashMonthTitle"></span>
           <button type="button" onclick="clearMonthSelection()" style="background:#161616;border:1px solid #2a2a2a;color:#999;border-radius:20px;padding:0.25rem 0.7rem;font-size:0.7rem;font-weight:700;cursor:pointer;">✕ Clear</button>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;margin-bottom:0.85rem;">
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:0.5rem;margin-bottom:0.4rem;">
           <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthEarned" style="color:#22c55e;">₱0</div><div class="dash-month-lbl">Total Earned</div></div>
           <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthTransactions" style="color:#fff;">0</div><div class="dash-month-lbl">Transactions</div></div>
           <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthRenters" style="color:#fbbf24;">0</div><div class="dash-month-lbl">Unique Renters</div></div>
           <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthReservations" style="color:#c084fc;">0</div><div class="dash-month-lbl">Reservations</div></div>
           <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthBuys" style="color:#60a5fa;">0</div><div class="dash-month-lbl">Games Bought</div></div>
+          <div class="dash-month-stat"><div class="dash-month-val" id="dashMonthProfit" style="color:#22c55e;">₱0</div><div class="dash-month-lbl">Profit</div></div>
         </div>
+        <div id="dashMonthProfitWarn" style="display:none;font-size:0.65rem;color:#f59e0b;margin-bottom:0.85rem;"></div>
         <div style="font-size:0.68rem;color:#666;margin-bottom:0.6rem;">🎮 <strong id="dashMonthStillRenting" style="color:#22c55e;">0</strong> rental<span id="dashMonthStillRentingS"></span> still active during this month</div>
         <div style="font-size:0.65rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.5rem;">Most Rented This Month</div>
         <div id="dashMonthTopGames"></div>
@@ -372,6 +374,36 @@
         setText('dashMonthBuys', buys.length);
         setText('dashMonthStillRenting', stillRenting.length);
         setText('dashMonthStillRentingS', stillRenting.length !== 1 ? 's were' : ' was');
+
+        // Profit: revenue minus the cost of games charged to THIS month minus
+        // this month's ad spend. Both cost terms are keyed the same way
+        // MONTH_LOGS already is ("YYYY-MM"), built once server-side by
+        // lib/dashboard.js's monthlyGameCost() and getMonthLogs().
+        const profitKey = monthKeyFor(year, month);
+        const gameCost = GAME_COST_BY_MONTH[profitKey] || 0;
+        const adSpend = (MONTH_LOGS[profitKey] && MONTH_LOGS[profitKey].ad_spend) || 0;
+        const profit = totalEarned - gameCost - adSpend;
+        const profitEl = document.getElementById('dashMonthProfit');
+        setText('dashMonthProfit', (profit < 0 ? '-₱' : '₱') + Math.abs(profit).toLocaleString());
+        if (profitEl) profitEl.style.color = profit < 0 ? '#ef4444' : '#22c55e';
+
+        const warnEl = document.getElementById('dashMonthProfitWarn');
+        if (warnEl) {
+          const parts = [];
+          if (GAME_COST_META.missingCost > 0) {
+            parts.push('⚠ ' + GAME_COST_META.missingCost + ' of ' + GAME_COST_META.total + ' games have no cost recorded — profit is overstated');
+          }
+          if (GAME_COST_META.undated > 0) {
+            parts.push(GAME_COST_META.undated + ' game cost' + (GAME_COST_META.undated !== 1 ? 's have no date and aren\'t' : ' has no date and isn\'t') + ' charged to any month');
+          }
+          if (parts.length) {
+            warnEl.textContent = parts.join(' · ');
+            warnEl.style.display = '';
+          } else {
+            warnEl.style.display = 'none';
+          }
+        }
+
         dashRenderTopGamesList(document.getElementById('dashMonthTopGames'), dashTopGames(list, 5), 'No rentals this month');
         renderMonthLogArea();
 
