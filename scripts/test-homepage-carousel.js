@@ -1,10 +1,12 @@
 // Run: node scripts/test-homepage-carousel.js
 //
-// The homepage carousels live in an inline <script> in views/index.ejs. These
-// are source-level guards rather than behavioural tests: the drift loop needs a
-// real layout to do anything, so the browser is where it gets exercised. What
-// is pinned here is the one invariant that broke a Coming Soon card needing two
-// clicks — the rule a future edit is most likely to undo by accident.
+// The homepage carousels live in public/js/index-4.js (extracted from an
+// inline <script> in views/index.ejs — see the inline-JS-extraction work).
+// These are source-level guards rather than behavioural tests: the drift loop
+// needs a real layout to do anything, so the browser is where it gets
+// exercised. What is pinned here is the one invariant that broke a Coming
+// Soon card needing two clicks — the rule a future edit is most likely to
+// undo by accident.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -13,10 +15,11 @@ let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'views', 'index.ejs'), 'utf8');
+const jsSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'index-4.js'), 'utf8');
 
 function autoDriftSource() {
-  const m = src.match(/function autoDrift\([\s\S]*?\n  \}/);
-  assert.ok(m, 'views/index.ejs still defines autoDrift');
+  const m = jsSrc.match(/function autoDrift\([\s\S]*?\n  \}/);
+  assert.ok(m, 'public/js/index-4.js still defines autoDrift');
   return m[0];
 }
 
@@ -89,7 +92,7 @@ ok('a tap is never treated as a drag', () => {
 console.log('\nthe rows are wired up as expected');
 
 ok('all three rows drift, and only Coming Soon runs in reverse', () => {
-  const calls = src.match(/autoDrift\('[^']+',\s*\d+(?:,\s*true)?\)/g) || [];
+  const calls = jsSrc.match(/autoDrift\('[^']+',\s*\d+(?:,\s*true)?\)/g) || [];
   assert.strictEqual(calls.length, 3, 'three rows: ' + JSON.stringify(calls));
   const reversed = calls.filter(c => /,\s*true\)/.test(c));
   assert.strictEqual(reversed.length, 1, 'exactly one reversed row: ' + JSON.stringify(reversed));
