@@ -2226,8 +2226,12 @@ footer {
   /* Kept at two columns rather than one. Stacking all four made the footer 994px
      on mobile — the tallest thing on the page, taller than the hero. The brand
      column still spans the full width (set at the 820px breakpoint above); the
-     three link columns pair up beneath it. */
+     three link columns pair up beneath it. Payments is 3rd in source order, so
+     without an explicit span it lands alone in the left column of a new row,
+     squeezing the badges into half-width and leaving the right side empty —
+     give it the full row so the badges can wrap naturally.  */
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem 1.25rem; }
+  .footer-col.footer-pay { grid-column: 1 / -1; }
   .footer-bottom { flex-direction: column; align-items: flex-start; }
 }
 
