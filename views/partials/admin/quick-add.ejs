@@ -49,7 +49,10 @@
           <option value="<%= g.id %>"
             data-nt7="<%= g.nt7 %>" data-nt30="<%= g.nt30 %>"
             data-tr7="<%= g.tr7 %>" data-tr30="<%= g.tr30 %>"
-            data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"><%= g.title %></option>
+            data-buynt="<%= g.buynt %>" data-buytr="<%= g.buytr %>"
+            data-nt7f="<%= g.nt7f %>" data-nt30f="<%= g.nt30f %>"
+            data-tr7f="<%= g.tr7f %>" data-tr30f="<%= g.tr30f %>"
+            data-buyntf="<%= g.buyntf %>" data-buytrf="<%= g.buytrf %>"><%= g.title %></option>
           <% }) %>
           <%# Coming Soon games carry data-upcoming, which switches the form
               over: Renting becomes Reserve (a rental slot, paid in full now)
@@ -82,6 +85,15 @@
       </div>
       <input class="qa-in" type="number" name="custom_days" id="qaCustomDays" min="1" max="365" placeholder="How many days?" hidden oninput="qaEnd(); qaPrice()" style="margin-top:0.45rem;">
       <div class="qa-warn" id="qaUpcomingNote" hidden></div>
+      <%# Hidden for a Coming Soon pick: reservations/pre-orders are always
+          quoted off the undiscounted list price (lib/reservations never
+          applies a promo), so the toggle would have nothing to switch. %>
+      <div class="qa-modes qa-pricing-modes" id="qaPricingModes">
+        <input type="radio" name="pricing_mode" id="qaPriceModePromo" value="promo" checked onchange="qaPrice()">
+        <label for="qaPriceModePromo" class="qa-mode">🏷️ Promo price</label>
+        <input type="radio" name="pricing_mode" id="qaPriceModeFull" value="full" onchange="qaPrice()">
+        <label for="qaPriceModeFull" class="qa-mode">Full price</label>
+      </div>
       <div class="qa-price" id="qaPriceBox">Pick a game to see the price</div>
 
       <div class="qa-l">Account slot</div>
@@ -281,6 +293,13 @@
       note.hidden = true;
     }
 
+    // A reservation is always quoted at list price — lib/reservations never
+    // applies a promo — so the toggle has nothing to do on a Coming Soon
+    // pick. Reset it back to Promo (the default) rather than leaving "Full
+    // price" checked and silently carrying over to the next game picked.
+    el('qaPricingModes').hidden = upcoming;
+    if (upcoming) el('qaPriceModePromo').checked = true;
+
     // Only "Finished" has to be moved off, and only when it was the choice.
     if (upcoming && el('qaStDone').checked) {
       el('qaStBought').checked = true;
@@ -408,11 +427,18 @@
     }
     var type = el('qaType').value, d = daysValue();
     var pre = type === 'tr' ? 'tr' : 'nt';
+    // "Full price" reads the "f"-suffixed dataset (undiscounted) instead of
+    // the promo'd one — same fields the server computes with the promo's
+    // enabled flags switched off, so this preview cannot drift from the save.
+    // Not applicable to a reservation: lib/reservations never applies a
+    // promo either way, so that branch below always reads the plain fields.
+    var full = !qaIsUpcoming() && document.querySelector('input[name=pricing_mode]:checked').value === 'full';
+    var suf = full ? 'f' : '';
 
     // A sale is priced from the buy fields, not the rental tiers. PS4 Primary
     // has no buy price of its own and borrows Non-Trophy, same as the server.
     if (qaIsBuy()) {
-      var buy = parseInt(opt.dataset[pre === 'tr' ? 'buytr' : 'buynt']) || 0;
+      var buy = parseInt(opt.dataset[(pre === 'tr' ? 'buytr' : 'buynt') + suf]) || 0;
       var amt = override !== '' ? (parseInt(override) || 0) : buy;
       if (!amt) {
         box.className = 'qa-price qa-price-empty';
@@ -421,13 +447,13 @@
       }
       box.className = 'qa-price';
       box.innerHTML = '<b>₱' + amt.toLocaleString() + '</b> purchase'
-        + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : '')
+        + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : (full ? ' <span style="color:#7a7a7a;">(full price)</span>' : ''))
         + ' <span style="color:#7a7a7a;">· no deposit, no return date</span>';
       return;
     }
 
-    var p7 = parseInt(opt.dataset[pre + '7']) || 0;
-    var p30 = parseInt(opt.dataset[pre + '30']) || 0;
+    var p7 = parseInt(opt.dataset[pre + '7' + suf]) || 0;
+    var p30 = parseInt(opt.dataset[pre + '30' + suf]) || 0;
 
     // A reservation on a game that has not released: the list price plus the
     // deposit, paid in full now — nothing owed on launch day. Mirrors
@@ -468,8 +494,9 @@
     // quote is not mistaken for a price on the Games page.
     var derived = override === '' && d !== 7 && d !== 30
       ? ' <span style="color:#7a7a7a;">· worked out for ' + d + ' day' + (d === 1 ? '' : 's') + '</span>' : '';
+    var fullTag = full ? ' <span style="color:#7a7a7a;">(full price)</span>' : '';
     box.innerHTML = '<b>₱' + amount.toLocaleString() + '</b> rent'
-      + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : derived)
+      + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : derived + fullTag)
       + ' <span style="color:#7a7a7a;">· any deposit is added when it saves</span>';
   };
 

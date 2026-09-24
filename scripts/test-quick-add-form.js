@@ -51,6 +51,11 @@ function loadForm() {
   const els = {};
   const paid = stubEl('paidRadio');
   paid.value = 'yes';
+  // Defaults to 'promo', matching the real template's checked attribute on
+  // #qaPriceModePromo — a stub the test can flip to 'full' the same way it
+  // flips `paid` above.
+  const pricingMode = stubEl('pricingModeRadio');
+  pricingMode.value = 'promo';
 
   // The status buttons are labels driven by `for`, and the form rewrites their
   // text when an unreleased game is picked, so the stub has to serve them.
@@ -63,6 +68,7 @@ function loadForm() {
     getElementById(id) { return (els[id] = els[id] || stubEl(id)); },
     querySelector(sel) {
       if (sel === 'input[name=paid]:checked') return paid;
+      if (sel === 'input[name=pricing_mode]:checked') return pricingMode;
       const forMatch = /^label\[for="(\w+)"\]$/.exec(sel);
       if (forMatch) return labels[forMatch[1]] || null;
       return null;
@@ -83,8 +89,16 @@ function loadForm() {
   vm.runInContext(m[1], sandbox);
 
   // A game the form can price: the same shape the <option> data-attributes
-  // produce in the real template.
-  const game = { value: '12', dataset: { nt7: '199', nt30: '599', buynt: '0', buytr: '0' } };
+  // produce in the real template. The "f"-suffixed fields are the undiscounted
+  // list price the Full-price toggle reads — deliberately different from the
+  // promo'd ones so a test can tell which set the form actually used.
+  const game = {
+    value: '12',
+    dataset: {
+      nt7: '199', nt30: '599', buynt: '0', buytr: '0',
+      nt7f: '249', nt30f: '699', tr7f: '349', tr30f: '899', buyntf: '0', buytrf: '0'
+    }
+  };
   const gameEl = doc.getElementById('qaGame');
   gameEl.value = '12';
   gameEl.selectedOptions = [game];
@@ -96,6 +110,7 @@ function loadForm() {
   return {
     win: sandbox,
     el: id => doc.getElementById(id),
+    pricingMode: pricingMode,
     sandbox,
     get labels() {
       return { qaStRent: labels.qaStRent.textContent, qaStBought: labels.qaStBought.textContent };
@@ -417,6 +432,52 @@ ok('reopening the form does not leave the lock on for the next customer', () => 
   f.win.qaReset();
   assert.strictEqual(f.el('qaStDone').disabled, false, 'qaReset clears it');
   assert.strictEqual(f.el('qaUpcomingNote').hidden, true);
+});
+
+console.log('\nQuick Add — Promo / Full price toggle');
+
+ok('defaults to the promo price when nothing is picked', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '30';
+  f.win.qaPrice();
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('599'), f.el('qaPriceBox').innerHTML);
+  assert.ok(!/full price/i.test(f.el('qaPriceBox').innerHTML));
+});
+
+ok('Full price reads the undiscounted tier instead', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '30';
+  f.pricingMode.value = 'full';
+  f.win.qaPrice();
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('699'), f.el('qaPriceBox').innerHTML);
+  assert.ok(/full price/i.test(f.el('qaPriceBox').innerHTML));
+});
+
+ok('Full price also applies to a purchase', () => {
+  const f = loadForm();
+  const game = { value: '12', dataset: { buynt: '1999', buyntf: '2499' } };
+  f.el('qaGame').selectedOptions = [game];
+  f.el('qaStBought').checked = true;
+  f.pricingMode.value = 'full';
+  f.win.qaPrice();
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('2,499'), f.el('qaPriceBox').innerHTML);
+});
+
+ok('a price override still wins over either pricing mode', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '30';
+  f.el('qaPriceOverride').value = '1';
+  f.pricingMode.value = 'full';
+  f.win.qaPrice();
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('>₱1<'), f.el('qaPriceBox').innerHTML);
+});
+
+ok('the toggle is hidden for a Coming Soon pick and reset back to promo', () => {
+  const f = loadForm();
+  f.pricingMode.value = 'full';
+  pickUpcoming(f);
+  assert.strictEqual(f.el('qaPricingModes').hidden, true);
+  assert.strictEqual(f.el('qaPriceModePromo').checked, true, 'reset back to the default');
 });
 
 console.log('\n' + passed + ' assertions passed\n');

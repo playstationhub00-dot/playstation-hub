@@ -1090,10 +1090,13 @@ function extendTierFor(customer, promo) {
 }
 
 const TYPE_LABELS_SHORT = { tr: 'Trophy', nt: 'Non-Trophy', ps4: 'PS4 Primary' };
-function computeRentPricing(game, type, days) {
+// promoOverride lets a caller price against a different promo than whatever
+// is currently running — Quick Add's "Full price" toggle passes {} here so
+// the admin can record a sale at list price even while a promo is live,
+// without that override touching every other caller of this function.
+function computeRentPricing(game, type, days, promoOverride) {
   if (!game || !['nt', 'tr', 'ps4'].includes(type)) return null;
-  const s = getSiteSettings();
-  const promo = s.promo || {};
+  const promo = promoOverride || getSiteSettings().promo || {};
   const resolved = resolveGamePrices(game);
   const priceType = type === 'ps4' ? 'nt' : type;
   const tier = promotedTier(resolved, priceType, promo);
@@ -1114,9 +1117,10 @@ function computeRentPricing(game, type, days) {
 }
 
 // Same one-time-purchase pricing math as POST /order/buy's single-game branch.
-function computeBuyPricing(game, type) {
+function computeBuyPricing(game, type, promoOverride) {
   if (!game || !['nt', 'tr'].includes(type)) return null;
-  const priced = buyPricing.priceFor(game, type, getSiteSettings().promo || {});
+  const promo = promoOverride || getSiteSettings().promo || {};
+  const priced = buyPricing.priceFor(game, type, promo);
   return priced ? { amountDue: priced.amount } : null;
 }
 
@@ -2986,16 +2990,28 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   // admin-entered rental cannot drift from what a customer would have paid.
   // An explicit override wins, because a hand-arranged deal is a real thing.
   const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
+  // "Full price" keeps the deposit (unrelated to any discount) but turns off
+  // the discount itself, by cloning the real promo settings with just the
+  // enabled flags flipped off rather than dropping the object outright —
+  // passing {} here would also zero promo.deposit and silently waive the
+  // Trophy deposit on a Full-price rental. Defaults to promo, per the request:
+  // an unrecognised or missing pricing_mode is 'promo', never 'full'.
+  const useFullPrice = b.pricing_mode === 'full';
+  const livePromo = getSiteSettings().promo || {};
+  const promoForPricing = useFullPrice
+    ? Object.assign({}, livePromo, { enabled: false, buy_promo_enabled: false })
+    : livePromo;
   // A reservation is half of list price plus the deposit, quoted off the
   // upcoming record with no promo applied — lib/reservations owns that rule and
   // POST /order/reserve prices from the same function, so an owner-entered
-  // reservation and a customer-entered one can never disagree.
+  // reservation and a customer-entered one can never disagree. The pricing
+  // toggle has nothing to switch here either way.
   const reservationPricing = upcomingReservation
-    ? reservations.preorderPricing(game, type, days, getSiteSettings().promo || {})
+    ? reservations.preorderPricing(game, type, days, livePromo)
     : null;
   const pricing = upcomingReservation ? reservationPricing
-    : mode === 'buy' ? computeBuyPricing(game, buyType)
-    : computeRentPricing(game, type, days);
+    : mode === 'buy' ? computeBuyPricing(game, buyType, promoForPricing)
+    : computeRentPricing(game, type, days, promoForPricing);
   if (!pricing && override == null) {
     // Most of the catalogue has no per-game buy price set, so refusing every
     // purchase outright would make "Bought" unusable. Ask for the number
@@ -4514,6 +4530,11 @@ app.get('/admin', requireAuth, async (req, res) => {
     if (!c || c.status !== 'renting') return;
     extendTiers[c.id] = extendTierFor(c, qaPromo);
   });
+  // The Full-price toggle needs the undiscounted number alongside the promo
+  // one, off the same helpers with the discount flags switched off rather
+  // than the promo object dropped — dropping it would also lose the Trophy
+  // deposit, which isn't a discount and applies either way.
+  const qaNoPromo = Object.assign({}, qaPromo, { enabled: false, buy_promo_enabled: false });
   const qaGames = games.map(g => {
     // resolveGamePrices FIRST, exactly as computeRentPricing does on the save
     // path. A game priced through a price category carries no tier fields of
@@ -4523,17 +4544,24 @@ app.get('/admin', requireAuth, async (req, res) => {
     const resolved = resolveGamePrices(g);
     const nt = promotedTier(resolved, 'nt', qaPromo);
     const tr = promotedTier(resolved, 'tr', qaPromo);
+    const ntFull = promotedTier(resolved, 'nt', qaNoPromo);
+    const trFull = promotedTier(resolved, 'tr', qaNoPromo);
     // Buy prices go through computeBuyPricing rather than being read raw, so
     // the picker cannot preview an undiscounted sale price while the save
     // applies the buy promo — the same trap the rent tiers had. A game with no
     // buy price set reports 0, and the form asks for a price override.
     const buyNt = computeBuyPricing(g, 'nt');
     const buyTr = computeBuyPricing(g, 'tr');
+    const buyNtFull = computeBuyPricing(g, 'nt', qaNoPromo);
+    const buyTrFull = computeBuyPricing(g, 'tr', qaNoPromo);
     return {
       id: g.id, title: g.title,
       nt7: nt[7], nt30: nt[30], tr7: tr[7], tr30: tr[30],
       buynt: buyNt ? buyNt.amountDue : 0,
-      buytr: buyTr ? buyTr.amountDue : 0
+      buytr: buyTr ? buyTr.amountDue : 0,
+      nt7f: ntFull[7], nt30f: ntFull[30], tr7f: trFull[7], tr30f: trFull[30],
+      buyntf: buyNtFull ? buyNtFull.amountDue : 0,
+      buytrf: buyTrFull ? buyTrFull.amountDue : 0
     };
   }).sort((a, b) => a.title.localeCompare(b.title));
 
