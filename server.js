@@ -1160,6 +1160,17 @@ app.get('/requests', async (req, res) => {
   // stocked ones among games that still need votes.
   const stocked = rows.filter(r => r.status === 'stocked');
   const voting = rows.filter(r => r.status !== 'stocked');
+  // Card link target: prefer the linked catalogue row (r.game_id, set by the
+  // owner at /admin/requests/:slug/stock), falling back to a title match for
+  // older entries that were marked stocked before that field existed — the
+  // owner has stocked requests on record with no game_id at all, which used
+  // to leave the "Now available" card with nowhere to click.
+  const games = getGames();
+  stocked.forEach(r => {
+    const linked = (r.game_id && games.find(g => g.id === r.game_id))
+      || games.find(g => gameSlug(g.title) === gameSlug(r.title));
+    r.linkedSlug = linked ? gameSlug(linked.title) : null;
+  });
   res.render('requests', Object.assign({
     requests: rows,
     stockedRequests: stocked,
