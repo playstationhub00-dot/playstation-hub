@@ -72,17 +72,19 @@
 
   <div class="req-stocked-strip">
     <% stockedRequests.forEach(r => { %>
-    <% const stockedTag = r.linkedSlug ? 'a' : 'div'; %>
-    <<%= stockedTag %> class="req-stocked-card<%= r.linkedSlug ? ' req-stocked-card-link' : '' %>" id="req-<%= r.slug %>"<% if (r.linkedSlug) { %> href="/game/<%= r.linkedSlug %>"<% } %>>
+    <% const stockedTag = r.linkedUrl ? 'a' : 'div'; %>
+    <<%= stockedTag %> class="req-stocked-card<%= r.linkedUrl ? ' req-stocked-card-link' : '' %>" id="req-<%= r.slug %>"<% if (r.linkedUrl) { %> href="<%= r.linkedUrl %>"<% } %>>
       <% if (r.cover_image) { %>
         <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
       <% } else { %>
         <div class="req-stocked-cover req-cover-empty">🎮</div>
       <% } %>
-      <div class="req-stocked-title"><%= r.title %></div>
-      <% if (r.linkedSlug) { %>
-        <span class="req-btn req-btn-rent">Rent</span>
-      <% } %>
+      <div class="req-stocked-body">
+        <div class="req-stocked-title"><%= r.title %></div>
+        <% if (r.linkedUrl) { %>
+          <span class="req-btn req-btn-rent">Rent</span>
+        <% } %>
+      </div>
     </<%= stockedTag %>>
     <% }) %>
   </div>

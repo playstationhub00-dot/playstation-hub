@@ -1164,12 +1164,22 @@ app.get('/requests', async (req, res) => {
   // owner at /admin/requests/:slug/stock), falling back to a title match for
   // older entries that were marked stocked before that field existed — the
   // owner has stocked requests on record with no game_id at all, which used
-  // to leave the "Now available" card with nowhere to click.
+  // to leave the "Now available" card with nowhere to click. A title can also
+  // match an upcoming (not-yet-released) row rather than a live catalogue
+  // one — "stocked" here means "the owner is fulfilling this ask", not
+  // necessarily "rentable today" — so upcoming is checked too, pointing at
+  // its own /upcoming/ detail route instead of /game/.
   const games = getGames();
+  const upcoming = getUpcoming();
   stocked.forEach(r => {
-    const linked = (r.game_id && games.find(g => g.id === r.game_id))
+    const linkedGame = (r.game_id && games.find(g => g.id === r.game_id))
       || games.find(g => gameSlug(g.title) === gameSlug(r.title));
-    r.linkedSlug = linked ? gameSlug(linked.title) : null;
+    if (linkedGame) {
+      r.linkedUrl = '/game/' + gameSlug(linkedGame.title);
+      return;
+    }
+    const linkedUpcoming = upcoming.find(g => gameSlug(g.title) === gameSlug(r.title));
+    r.linkedUrl = linkedUpcoming ? '/upcoming/' + gameSlug(linkedUpcoming.title) + '-' + linkedUpcoming.id : null;
   });
   res.render('requests', Object.assign({
     requests: rows,
