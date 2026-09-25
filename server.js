@@ -21,6 +21,7 @@ const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
 const dashboard = require('./lib/dashboard');
 const accountsViewLib = require('./lib/accounts-view');
+const releaseLib = require('./lib/release');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -3496,6 +3497,38 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     }
   }
 
+  // A reservation released from Coming Soon already has its customer record
+  // (made when the reservation was confirmed). Signing them in turns that same
+  // record into the live rental or purchase — never a second record, and never
+  // a second payment: the reservation payment is already on it.
+  if (to === 'active' && order.customer_id && order.released_at) {
+    const existing = getCustomer(order.customer_id);
+    if (!existing) {
+      console.error('[release] customer', order.customer_id, 'for', order.ref, 'is gone — order is active, customer record not updated');
+    } else {
+      const live = releaseLib.activatedReservationCustomer(existing, order, patch.start_date, patch.end_date);
+      db.get('customers').find({ id: existing.id }).assign({
+        status: live.status,
+        game_id: live.game_id,
+        days: live.days,
+        start_date: live.start_date,
+        end_date: live.end_date
+      }).write();
+      if (!order.is_buy) {
+        const game = getGame(order.game_id);
+        if (game) {
+          db.get('games').find({ id: game.id }).assign({
+            available_slots: Math.max(0, (game.available_slots || 0) - 1),
+            renters: (game.renters || 0) + 1
+          }).write();
+          if (order.account_type === 'tr') adjustTrophySlots(game.id, -1);
+          else if (order.account_type === 'ps4') adjustPs4Slots(game.id, -1);
+          else adjustNtSlots(game.id, -1);
+        }
+      }
+    }
+  }
+
   // A confirmed Coming Soon reservation goes into the customers table the
   // same way a Messenger-arranged one already does — the upcoming game's
   // slot count is computed live from status:'reservation' rows (see
@@ -4177,6 +4210,21 @@ app.get('/admin', requireAuth, async (req, res) => {
   const gameRequestRows = await gameRequests.listForAdmin();
   const refundsOwed = (await orders.listByStates(['closed']))
     .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
+  // Reservations a release just moved on to sign-in, still waiting for the
+  // customer's code — the "🚀 Just released" group in Needs You. Each gets a
+  // ready-to-paste "it's out" message; the link uses the same site address as
+  // the review asks, falling back to SITE_URL.
+  const releasedOrders = (await orders.listByStates(['awaiting_qr'])).filter(o => o && o.released_at);
+  {
+    const tpls = getSiteSettings().message_templates || {};
+    const base = String(tpls.website_link || SITE_URL).replace(/\/+$/, '');
+    releasedOrders.forEach(o => {
+      if (!o.url_key) return;
+      o.release_msg = releaseLib.releaseMessage({
+        gameTitle: o.game_title, ref: o.ref, link: base + '/order/' + o.ref + '?k=' + o.url_key
+      });
+    });
+  }
   // "Started but didn't pay" — every order stuck before payment is verified.
   // The form captures a Facebook name before payment, so each row is a named
   // lead the owner can message directly, not just a statistic.
@@ -4652,7 +4700,15 @@ app.get('/admin', requireAuth, async (req, res) => {
     rentMismatches, paymongoHealth, now: dashNowDate
   });
 
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  // Paid reservations per Coming Soon game, for the "N reserved" line and the
+  // release confirm prompt. Read from the customer records a confirmed
+  // reservation creates (status 'reservation', game_id 'upcoming_<id>').
+  const upcomingReservedCount = {};
+  customers.forEach(c => {
+    const m = /^upcoming_(\d+)$/.exec(String((c && c.game_id) || ''));
+    if (m && c.status === 'reservation') upcomingReservedCount[m[1]] = (upcomingReservedCount[m[1]] || 0) + 1;
+  });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -4695,6 +4751,12 @@ app.get('/upcoming/:slug', (req, res) => {
       const s = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       return slug === s || slug.startsWith(s + '-');
     });
+  }
+  if (!game && idMatch) {
+    // Released since: the Coming Soon record is gone, but reservation order
+    // pages, shares and request-board links still point here.
+    const released = releaseLib.findReleasedGame(getGames(), idMatch[1]);
+    if (released) return res.redirect(301, '/game/' + gameSlug(released.title));
   }
   if (!game) return res.redirect('/browse');
 
@@ -4806,38 +4868,38 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
   res.redirect('/admin?msg=upcoming_deleted');
 });
 
-app.post('/admin/upcoming/release/:id', requireAuth, (req, res) => {
-  const game = getUpcomingGame(req.params.id);
-  if (!game) return res.redirect('/admin');
-  // Add to available games
-  db.get('games').push({
-    id: newId(),
-    title: game.title,
-    platform: game.platform || 'PS5',
-    genre: game.genre || '',
-    description: game.description || '',
-    cover_image: game.cover_image || '',
-    gallery: game.gallery || [],
-    buy_nt_price: game.buy_nt_price || 0,
-    buy_tr_price: game.buy_tr_price || 0,
-    non_trophy_slots: game.non_trophy_slots || 0,
-    trophy_slots: game.trophy_slots || 0,
-    nt_price_7d: game.nt_price_7d || 0,
-    nt_price_30d: game.nt_price_30d || 0,
-    tr_price_7d: game.tr_price_7d || 0,
-    tr_price_30d: game.tr_price_30d || 0,
-    featured: false,
-    renters: 0,
-    // Carry the announced date over so a game promoted from Coming Soon lands in
-    // "New Releases" without re-typing it. 'TBA' means it was never announced, so
-    // it becomes blank here and the admin can fill in the real date.
-    release_date: (game.release_date && game.release_date !== 'TBA') ? game.release_date : '',
-    created_at: new Date().toISOString()
-  }).write();
-  // Remove from upcoming
-  db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
-  res.redirect('/admin?msg=game_released');
-});
+// Releases a Coming Soon game: the real game record is created, every paid
+// reservation / pre-order moves on to "send us your sign-in code" for it,
+// unpaid ones become ordinary orders, and the customer records follow — see
+// lib/release.js. The Coming Soon record is removed last.
+app.post('/admin/upcoming/release/:id', requireAuth, asyncRoute(async (req, res) => {
+  const upcoming = getUpcomingGame(req.params.id);
+  if (!upcoming) return res.redirect('/admin?tab=games');
+  // Orders live in MongoDB. Without it the reservations cannot be moved, and
+  // deleting the Coming Soon record would strand them — so refuse before
+  // writing anything.
+  if (!(await _getMongoDb())) return res.redirect('/admin?tab=games&msg=release_failed');
+  const result = await releaseLib.releaseUpcoming({
+    upcoming,
+    newGameId: newId(),
+    now: new Date(),
+    orderStore: orders,
+    gameStore: {
+      addGame: game => db.get('games').push(game).write(),
+      repointUpcomingCustomers: (upcomingId, gameId) => {
+        const key = 'upcoming_' + upcomingId;
+        const rows = db.get('customers').filter(c => String(c.game_id) === key).value();
+        rows.forEach(c => db.get('customers').find({ id: c.id }).assign({ game_id: gameId }).write());
+        return rows.length;
+      },
+      removeUpcoming: id => db.get('upcoming').remove({ id: parseInt(id) }).write()
+    }
+  });
+  if (result.failed.length) {
+    console.error('[release] could not move', result.failed.join(', '), 'while releasing', upcoming.title);
+  }
+  res.redirect('/admin?tab=orders&msg=' + (result.failed.length ? 'release_partial' : 'game_released'));
+}));
 
 app.post('/admin/announcement', requireAuth, (req, res) => {
   const { text, active } = req.body;
