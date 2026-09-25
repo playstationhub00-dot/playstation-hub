@@ -66,13 +66,28 @@
 
   function toArray(list) { return Array.prototype.slice.call(list); }
 
-  function readJson(store, key) {
-    try { return JSON.parse(store.getItem(key) || 'null'); } catch (e) { return null; }
+  function readJson(kind, key) {
+    try {
+      var store = kind === 'session' ? window.sessionStorage : window.localStorage;
+      return JSON.parse(store.getItem(key) || 'null');
+    } catch (e) { return null; }
   }
 
-  function writeJson(store, key, value) {
-    try { store.setItem(key, JSON.stringify(value)); } catch (e) { /* storage blocked: state just won't persist */ }
+  function writeJson(kind, key, value) {
+    try {
+      var store = kind === 'session' ? window.sessionStorage : window.localStorage;
+      store.setItem(key, JSON.stringify(value));
+    } catch (e) { /* storage blocked: state just won't persist */ }
   }
+
+  // Closes every other open ⋯ menu when one opens, and closes any open one
+  // when the click lands outside all of them.
+  document.addEventListener('click', function (e) {
+    var clickedMore = e.target.closest && e.target.closest('.oq-more');
+    toArray(document.querySelectorAll('.oq-more[open]')).forEach(function (d) {
+      if (d !== clickedMore) d.open = false;
+    });
+  });
 
   // Page-wide on purpose: the dashboard overview renders an .oq-timer too and
   // has no loop of its own.
@@ -99,14 +114,14 @@
   // Re-applies the owner's own open/closed choice per Needs You group; a
   // group they never touched keeps the default the template rendered.
   function initGroups() {
-    var saved = normalizeGroups(readJson(window.localStorage, GROUPS_KEY));
+    var saved = normalizeGroups(readJson('local', GROUPS_KEY));
     toArray(document.querySelectorAll('details[data-oq-group]')).forEach(function (d) {
       var key = d.getAttribute('data-oq-group');
       if (Object.prototype.hasOwnProperty.call(saved, key)) d.open = saved[key];
       d.addEventListener('toggle', function () {
-        var cur = normalizeGroups(readJson(window.localStorage, GROUPS_KEY));
+        var cur = normalizeGroups(readJson('local', GROUPS_KEY));
         cur[key] = d.open;
-        writeJson(window.localStorage, GROUPS_KEY, cur);
+        writeJson('local', GROUPS_KEY, cur);
       });
     });
   }
@@ -118,7 +133,7 @@
     var panel = document.getElementById('tab-orders');
     if (!table || !search || !typeSel || !panel) return;
 
-    var state = normalizeLedgerState(readJson(window.sessionStorage, LEDGER_KEY));
+    var state = normalizeLedgerState(readJson('session', LEDGER_KEY));
 
     function apply() {
       var shown = 0;
@@ -147,7 +162,7 @@
       var none = document.getElementById('oqNoMatch');
       if (wrap) wrap.hidden = shown === 0;
       if (none) none.hidden = shown !== 0;
-      writeJson(window.sessionStorage, LEDGER_KEY, state);
+      writeJson('session', LEDGER_KEY, state);
     }
 
     search.value = state.q;
