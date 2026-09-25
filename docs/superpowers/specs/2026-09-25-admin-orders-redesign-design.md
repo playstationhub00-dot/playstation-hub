@@ -118,7 +118,9 @@ When a row has no ⋯ items (for example a priority waitlist row that wasn't upg
 
 ### 3. All Orders ledger
 
-**Header line:** `ALL ORDERS <total> · <paidCount> completed · ₱<paidTotal> · <periodLabel>`, all from `ledgerStats` (`total`, `paidCount`, `paidTotal`) and the existing `periodLabel`.
+**Header line:** `ALL ORDERS <total> · <paidCount> paid · ₱<paidTotal> · <periodLabel>`, all from `ledgerStats` (`total`, `paidCount`, `paidTotal`) and the existing `periodLabel`.
+
+It says **paid**, not "completed": `paidCount` counts every paid order, rentals still out included, which is more than the ✅ Completed chip shows. For the same reason, the month header subtotals change their word from "completed" to "paid". Only the word changes; the numbers are the same.
 
 **Toolbar row:**
 - **Period:** the existing `<select name="operiod">` GET form that submits on change. Same options, same server behaviour.
@@ -182,7 +184,9 @@ The **pure pieces** are exposed as `window.__oqFilter` for a `vm`-sandbox test, 
 - `orderType(order)`: `'rental' | 'purchase' | 'reservation'`, per the rule above.
 - `rowMatches(row, state)`
 
-The DOM wiring runs only when `#tab-orders` exists, so the file loads cleanly in the test sandbox.
+The DOM wiring is skipped when there is no `document`, so the file loads cleanly in the test sandbox.
+
+**The QR countdown and "x ago" loops run page-wide, not just inside the Orders tab.** The dashboard overview (`views/partials/admin/dashboard/overview.ejs`) renders its own `.oq-timer` and has no loop of its own; it has always been ticked by this orders script. Ledger filtering and group memory attach only when their elements exist.
 
 The global `.rem-copy` click handler in `views/partials/admin/customers.ejs` stays where it is. Rows keep using `.rem-copy` for their copy buttons.
 
@@ -201,8 +205,15 @@ The `oq-*` rules in `public/css/style.css` are updated for the new layout. Rules
 - the export block (`.oq-export`)
 - the online box (`.oq-online-form`, `.oq-online-toggle`, replaced by pill rules)
 - the three standalone zone wrappers (`.oq-refunds*`, `.oq-abandoned*`), since those rows now render inside the Needs You groups
+- **dead rules nothing renders:** `.oq-manual-*` (an old manual-order form) and `.oq-funnel*`
 
-Every `oq-*` class was verified by grep to be used only by `order-queue.ejs`, so none are shared. Light-mode overrides are added for the new surfaces, following the Accounts tab's light-mode block.
+Several `oq-*` rules serve other templates and **must stay**:
+- `.oq-alert-*`: the Settings tab's alert self-test
+- `.oq-count`: the sidebar Orders badge
+- `.oq-timer`: also used by the dashboard overview
+- `.oq-wl-pos`: this is outside the orders block
+
+Every other `oq-*` class is used only by the orders template (verified by grep). Light-mode overrides are added for the new surfaces, following the Accounts tab's light-mode block.
 
 ### Other touch points
 
