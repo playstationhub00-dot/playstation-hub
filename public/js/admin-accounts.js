@@ -214,13 +214,21 @@
 
     return function handleClick(target, e) {
       var viewBtn = target.closest('[data-acc-view]');
-      if (viewBtn) { state.view = viewBtn.getAttribute('data-acc-view'); apply(); return true; }
+      if (viewBtn) {
+        state.view = viewBtn.getAttribute('data-acc-view');
+        apply();
+        var viewPanel = byId('accFilterPanel');
+        if (viewPanel) viewPanel.classList.remove('open');
+        return true;
+      }
       var stat = target.closest('[data-acc-stat]');
       if (stat) {
         state.status = stat.getAttribute('data-acc-stat');
         state.view = 'slots';
         syncControls();
         apply();
+        var statPanel = byId('accFilterPanel');
+        if (statPanel) statPanel.classList.remove('open');
         return true;
       }
       if (target.closest('[data-acc-clear]')) { e.preventDefault(); clearFilters(); return true; }
@@ -330,6 +338,9 @@
     }
 
     slotForm.elements.status.addEventListener('change', syncSlotFields);
+    slotForm.elements.days.addEventListener('input', function () {
+      if (slotForm.elements.days.value) slotForm.elements.end_date.value = '';
+    });
     gameSearch.addEventListener('input', filterGameList);
     accForm.addEventListener('change', function (e) {
       if (e.target && e.target.name === 'game_ids') renderGameChips();
