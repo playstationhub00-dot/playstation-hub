@@ -51,6 +51,7 @@ Accounts                                            [+ Add Account]
 ```
 
 - The explanatory paragraph at the top of the current tab is removed.
+- **`days_left` definition (applies everywhere in this spec):** whole calendar days from today's date in Asia/Manila to the slot's end date — `0` = ends today, `1` = tomorrow, `-1` = ended yesterday. This replaces the tab's use of `slotDaysLeft()`, which rounds up to end-of-day in *server* time (UTC), so a slot ending today read "1d left" and the day after read "0d left". `slotView.days_left` is read only by this tab (verified by grep), so the swap has no other consumer, and `slotDaysLeft()` is deleted once unused.
 - **Stat cards** — Total slots, Open, Rented, Ending ≤3d, Overdue. Counts cover enabled slots only (same as today).
   - **Ending ≤3d** = status `rented` and `0 <= days_left <= 3`.
   - **Overdue** = status `rented` and `days_left < 0`.
@@ -156,9 +157,12 @@ All three reuse the existing `.qa-overlay` / `.qa-box` / `.qa-head` / `.qa-body`
 
 ### Server — `lib/accounts-view.js` (new, pure)
 
-Pure functions, no DB or clock access (the caller passes `days_left` already computed), following the `lib/dashboard.js` pattern:
+Pure functions, no DB or clock access (the caller passes `today` as a `YYYY-MM-DD` Manila date), following the `lib/dashboard.js` pattern:
 
+- `daysUntil(end, today)` → integer calendar days, or `null` for a missing/malformed date.
+- `decorateSlot(slot, today)` → a copy of the slot with `days_left` (rented slots only, else `null`), `due` (`'overdue' | 'ending' | ''`), `urgency` and `pill` added.
 - `slotUrgency(slot)` → numeric bucket rank 1–7 per the sort table above.
+- `slotPillLabel(slot)` → the pill text (`OVERDUE 2d`, `ENDS TODAY`, `1d left`, `OPEN`, `BOUGHT`, …).
 - `flattenSlots(accounts)` → array of `{ account_id, account_label, type, status, enabled, end, days_left, renter_id, renter_name }` for **enabled** slots only, sorted by urgency → `days_left` (buckets 1–2) → account label → type order.
 - `slotStats(accounts)` → `{ total, open, rented, ending, overdue }` with the disjoint Ending/Overdue definitions above.
 
