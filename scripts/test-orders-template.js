@@ -255,4 +255,38 @@ ok('the sidebar badge counts Do now + Refunds', () => {
   assert.ok(admin.includes('orderQueue.length + (typeof refundsOwed !== \'undefined\' ? refundsOwed : []).length'));
 });
 
+console.log('\nstyles');
+
+const CSS = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+
+ok('every oq- class the tab renders has a rule', () => {
+  // Hooks, not styling: state classes (oq-verifying_payment, …) and the
+  // classes scripts and tests select on (oq-pill-pm, oq-group-name,
+  // oq-code-copy, oq-ledger-h, oq-paylink).
+  const HOOKS = /^oq-(verifying_payment|verifying_return|awaiting_\w+|pill-pm|group-name|code-copy|ledger-h|paylink)$/;
+  const rendered = new Set([...html.matchAll(/class="([^"]*)"/g)]
+    .flatMap(m => m[1].split(/\s+/))
+    .filter(c => /^oq-/.test(c) && !HOOKS.test(c)));
+  const missing = [...rendered].filter(c => !CSS.includes('.' + c));
+  assert.deepStrictEqual(missing, []);
+});
+
+ok('rules for removed markup and dead rules are gone', () => {
+  ['.oq-stats', '.oq-stat-v', '.oq-pm {', '.oq-pm-live', '.oq-export', '.oq-online-form', '.oq-online-toggle',
+   '.oq-manual-', '.oq-funnel', '.oq-refunds {', '.oq-refund-row', '.oq-abandoned', '.oq-ab-row', '.oq-ab-right',
+   '.oq-ab-btns', '.oq-sv-act', '.oq-sv-wait']
+    .forEach(r => assert.ok(!CSS.includes(r), r + ' should be removed'));
+});
+
+ok('rules other templates rely on are still there', () => {
+  ['.oq-alert-test', '.oq-alert-btn', '.oq-count', '.oq-wl-pos', '.oq-timer', '.oq-timer-dead']
+    .forEach(r => assert.ok(CSS.includes(r), r));
+});
+
+ok('style.css is still CRLF throughout', () => {
+  const lf = CSS.split('\n').length - 1;
+  const crlf = CSS.split('\r\n').length - 1;
+  assert.strictEqual(lf, crlf, 'every newline is CRLF');
+});
+
 console.log('\n' + passed + ' assertions passed\n');

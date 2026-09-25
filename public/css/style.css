@@ -3169,42 +3169,59 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .oq-alert-row input { margin-top: 0.15rem; width: 15px; height: 15px; flex-shrink: 0; accent-color: var(--ps-blue); }
 .oq-alert-name { display: block; font-size: 0.82rem; font-weight: 700; color: #ddd; }
 .oq-alert-note { display: block; font-size: 0.72rem; color: #666; margin-top: 0.05rem; }
-.oq-online-form { margin-bottom: 1.25rem; }
-.oq-online-toggle { display: flex; align-items: center; gap: 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; cursor: pointer; font-size: 0.85rem; color: #aaa; }
-.oq-online-toggle input { accent-color: #22c55e; }
-/* Gateway mode + webhook health. Loud when live, louder when broken — the
-   owner should never have to wonder whether the site is taking real money. */
-.oq-pm { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 1rem; margin-bottom: 0.85rem; }
-.oq-pm-badge { font-size: 0.78rem; font-weight: 800; color: #888; white-space: nowrap; }
-.oq-pm-sub { font-size: 0.75rem; color: #777; line-height: 1.5; }
-.oq-pm-live { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
-.oq-pm-live .oq-pm-badge { color: #f87171; }
-.oq-pm-bad { border-color: #ef4444; background: rgba(239,68,68,0.12); }
-.oq-pm-bad .oq-pm-sub { color: #fca5a5; }
-body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
-.oq-export { display:flex; align-items:center; gap:0.7rem; flex-wrap:wrap; margin-bottom:0.85rem; font-size:0.78rem; }
-.oq-export a { background:#111; border:1px solid #2a2a2a; border-radius:8px; padding:0.4rem 0.85rem; color:var(--ps-blue); text-decoration:none; font-weight:700; }
-.oq-export a:hover { border-color:var(--ps-blue); }
-.oq-export span { color:#666; }
-.oq-manual-order { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; margin-top: 0.85rem; padding: 0 1rem; }
-.oq-manual-title { padding: 0.85rem 0; font-size: 0.85rem; font-weight: 700; color: #ccc; }
-.oq-manual-form { padding: 1rem 0 1.1rem; }
-.oq-manual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-bottom: 0.9rem; }
-.oq-manual-field { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.72rem; color: #777; font-weight: 700; }
-.oq-manual-full { grid-column: 1 / -1; }
-.oq-manual-field input, .oq-manual-field select { background: #111; border: 1px solid #222; border-radius: 8px; padding: 0.55rem 0.7rem; color: #eee; font-size: 0.85rem; font-family: inherit; font-weight: 500; }
-.oq-manual-result { margin-top: 0.75rem; font-size: 0.82rem; padding: 0.6rem 0.8rem; border-radius: 8px; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-.oq-manual-ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; }
-.oq-manual-err { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
-.oq-manual-result .rem-copy { background: #1a1a1a; color: #ddd; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
-@media (max-width: 640px) { .oq-manual-grid { grid-template-columns: 1fr 1fr; } }
+/* ── Orders tab ──────────────────────────────────────────────────────────
+   Markup: views/partials/admin/orders/{strip,needs-you,ledger}.ejs.
+   Behaviour: public/js/admin-orders.js. */
+
+/* Indicator strip: Quick Add, then small status pills. */
+.oq-strip { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+.oq-ind { display:flex; align-items:center; gap:0.45rem; flex-wrap:wrap; }
+.oq-ind-online { margin:0; }
+.oq-pill { position:relative; display:inline-flex; align-items:center; gap:0.4rem; background:#111; border:1px solid #262626; border-radius:20px; padding:0.32rem 0.75rem; font-size:0.74rem; font-weight:700; color:#999; white-space:nowrap; text-decoration:none; }
+.oq-pill input { position:absolute; opacity:0; width:0; height:0; }
+.oq-pill-dot { width:7px; height:7px; border-radius:50%; background:#555; flex-shrink:0; }
+.oq-ind-online .oq-pill { cursor:pointer; }
+.oq-ind-online .oq-pill:focus-within { outline:2px solid var(--ps-blue); outline-offset:2px; }
+.oq-pill-on { color:#d1fae5; border-color:rgba(34,197,94,0.45); }
+.oq-pill-on .oq-pill-dot, .oq-pill-ok .oq-pill-dot { background:#22c55e; }
+.oq-pill-idle .oq-pill-dot { background:#777; }
+.oq-pill-bad { color:#fecaca; border-color:#ef4444; background:rgba(239,68,68,0.12); }
+.oq-pill-bad .oq-pill-dot { background:#ef4444; }
+.oq-pill-link { color:var(--ps-blue); cursor:pointer; }
+.oq-pill-link:hover { border-color:var(--ps-blue); }
+.oq-pm-warn { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.4); border-radius:10px; color:#fca5a5; font-size:0.76rem; line-height:1.5; padding:0.55rem 0.85rem; margin:-0.4rem 0 1rem; }
+
+/* Zone headings: Needs you / All orders. */
+.oq-zone { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin: 1.75rem 0 0.75rem; }
+.oq-zone:first-child { margin-top: 0; }
+.oq-zone-act { color: var(--ps-blue); margin-top: 0.5rem; }
+.oq-zone-all { color: #8a8a8a; }
+.oq-zone-n { font-variant-numeric: tabular-nums; color: #5a5a5a; font-weight: 700; }
+.oq-zone-sub { margin-left: auto; font-size: 0.66rem; letter-spacing: 0.04em; text-transform: none; color: #5a5a5a; font-weight: 600; }
 .oq-empty { color: #555; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
-.oq-row { display: flex; gap: 1rem; align-items: flex-start; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.9rem 1rem; margin-bottom: 0.7rem; }
+.oq-empty a { color: var(--ps-blue); font-weight: 700; }
+
+/* Needs You groups. */
+.oq-group { margin-bottom: 0.6rem; }
+.oq-group-h { display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; list-style:none; cursor:pointer; padding:0.45rem 0.1rem; font-size:0.8rem; font-weight:800; color:#ddd; }
+.oq-group-h::-webkit-details-marker { display:none; }
+.oq-group-h::before { content:'▸'; color:#666; font-size:0.7rem; transition:transform 0.15s; }
+.oq-group[open] > .oq-group-h::before { transform:rotate(90deg); }
+.oq-group-n { font-variant-numeric:tabular-nums; background:#1a1a1a; color:#aaa; border-radius:20px; padding:0.05rem 0.5rem; font-size:0.7rem; }
+.oq-group-sub { font-size:0.7rem; font-weight:600; color:#666; }
+.oq-group-now .oq-row { border-left:3px solid var(--ps-blue); }
+.oq-group-refunds .oq-row, .oq-group-followups .oq-row { border-left:3px solid #f59e0b; }
+.oq-group-waitlist .oq-row { border-left:3px solid #3a3a3a; }
+
+/* Rows, shared by all four groups. */
+.oq-row { display: flex; gap: 1rem; align-items: flex-start; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; }
 .oq-qr_pending { border-color: rgba(0,112,209,0.4); }
 .oq-main { flex: 1; min-width: 0; }
 .oq-top { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.35rem; }
 .oq-ref { font-weight: 900; color: var(--ps-blue); font-size: 0.95rem; }
 .oq-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; background: #1a1a1a; color: #888; padding: 0.15rem 0.5rem; border-radius: 5px; }
+.oq-badge-res { background:#3a1a5c; color:#c9a4ff; }
+.oq-badge-buy { background:#2a0a3a; color:#d9a7f0; }
 .oq-timer { font-size: 0.75rem; font-weight: 800; color: #f59e0b; font-variant-numeric: tabular-nums; }
 .oq-timer-dead { color: #ef4444; }
 .oq-meta { font-size: 0.82rem; color: #888; margin-bottom: 0.25rem; }
@@ -3226,68 +3243,48 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 /* The fee-inclusive figure a PayPal customer was actually asked to send. */
 .oq-expected { font-size: 0.75rem; opacity: 0.75; margin-left: 0.4rem; white-space: nowrap; }
 .oq-via-fb { color: #f59e0b; }
-.oq-actions { display: flex; flex-direction: column; gap: 0.4rem; flex-shrink: 0; }
+.oq-refund-amt { font-weight: 900; color: #f59e0b; }
+.oq-ab-name { font-weight: 700; color: #ddd; }
+.oq-ab-rejected { color: #ef4444; }
+.oq-ab-age { font-size: 0.72rem; color: #666; white-space: nowrap; margin-left: auto; }
+.oq-actions { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.oq-actions form { margin: 0; }
 .oq-btn-go { background: var(--ps-blue); color: #fff; border: 0; border-radius: 9px; padding: 0.6rem 0.9rem; font-weight: 800; font-size: 0.82rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.oq-btn-no { background: transparent; color: #666; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.oq-btn-no:hover { color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.oq-btn-ghost { background: transparent; color: #bbb; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.5rem 0.8rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-btn-ghost:hover { border-color: #444; color: #fff; }
 /* Priority-paid. Amber to match the ⭐ tier everywhere else on the site, and
-   outlined rather than solid so it does not outrank the primary action on rows
-   that have one. */
+   outlined so it does not outrank the primary action on rows that have one. */
 .oq-btn-pri { background: transparent; color: #f59e0b; border: 1px solid rgba(245,158,11,0.4); border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .oq-btn-pri:hover { background: rgba(245,158,11,0.12); border-color: #f59e0b; }
 .oq-count { background: var(--ps-blue); color: #fff; border-radius: 20px; padding: 0.05rem 0.4rem; font-size: 0.7rem; font-weight: 900; margin-left: 0.3rem; }
 
-.oq-refunds { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1.25rem; }
-.oq-refunds-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.75rem; }
-.oq-refund-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #0d0d0d; border: 1px solid rgba(245,158,11,0.25); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
-.oq-refund-amt { font-weight: 900; color: #f59e0b; margin-left: 0.5rem; }
+/* ⋯ menu for rare or destructive row actions. */
+.oq-more { position: relative; }
+.oq-more-btn { list-style: none; cursor: pointer; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid #2a2a2a; border-radius: 9px; color: #888; font-weight: 900; font-size: 1rem; line-height: 1; }
+.oq-more-btn::-webkit-details-marker { display: none; }
+.oq-more-btn:hover, .oq-more[open] > .oq-more-btn { border-color: #444; color: #fff; }
+.oq-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 170px; background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 0.3rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 0.15rem; }
+.oq-more-menu form { margin: 0; }
+.oq-more-item { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 7px; padding: 0.5rem 0.65rem; color: #ccc; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-more-item:hover { background: #1e1e1e; color: #fff; }
+.oq-more-danger { color: #f87171; }
+.oq-more-danger:hover { background: rgba(239,68,68,0.12); color: #fca5a5; }
 
-
-.oq-abandoned { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1.25rem; }
-.oq-abandoned-title { font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin-bottom: 0.75rem; }
-.oq-ab-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
-.oq-ab-name { font-weight: 700; color: #ddd; margin-left: 0.5rem; }
-.oq-ab-rejected { color: #ef4444; }
-.oq-ab-age { font-size: 0.75rem; color: #666; white-space: nowrap; flex-shrink: 0; }
-.oq-ab-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; flex-shrink: 0; }
-
-.oq-funnel { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.82rem; background: #0d0d0d; border: 1px solid #222; border-radius: 8px; padding: 0.6rem 0.9rem; color: #9aa4b0; margin-bottom: 1.25rem; overflow-x: auto; white-space: nowrap; }
-.oq-funnel strong { color: #ddd; font-weight: 700; }
-.oq-funnel-ab { color: #f59e0b; font-weight: 700; }
-.oq-funnel-rate { color: var(--ps-blue); font-weight: 700; }
-
-/* ── Orders: stat tiles ── */
-.oq-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; margin-bottom: 1.25rem; }
-@media (max-width: 700px) { .oq-stats { grid-template-columns: repeat(2, 1fr); } }
-.oq-stat { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.7rem 0.85rem; }
-.oq-stat-k { font-size: 0.62rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #5a5a5a; margin-bottom: 0.18rem; }
-.oq-stat-v { font-size: 1.35rem; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.oq-stat-s { font-size: 0.66rem; color: #5a5a5a; margin-top: 0.15rem; }
-
-/* ── Orders: zone headings + severity stripes ── */
-.oq-zone { display: flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; margin: 1.75rem 0 0.75rem; }
-.oq-zone:first-child { margin-top: 0; }
-.oq-zone-act { color: var(--ps-blue); }
-.oq-zone-all { color: #8a8a8a; }
-.oq-zone-n { font-variant-numeric: tabular-nums; color: #5a5a5a; font-weight: 700; }
-.oq-zone-sub { margin-left: auto; font-size: 0.66rem; letter-spacing: 0.04em; text-transform: none; color: #5a5a5a; font-weight: 600; }
-.oq-row.oq-sv-act { border-left: 3px solid var(--ps-blue); }
-.oq-ab-row.oq-sv-wait { border-left: 3px solid #f59e0b; }
-
-/* ── Orders: ledger controls ── */
+/* Ledger controls. */
 .oq-ledger-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
 .oq-period { display: flex; align-items: center; gap: 0.45rem; margin: 0; }
 .oq-period label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #5a5a5a; }
 .oq-period select { background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #ddd; padding: 0.38rem 0.65rem; font-size: 0.78rem; font-family: inherit; }
 .oq-search { flex: 1; min-width: 180px; max-width: 280px; background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; padding: 0.4rem 0.75rem; font-size: 0.78rem; font-family: inherit; }
 .oq-search::placeholder { color: #4a4a4a; }
+.oq-type { background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #ddd; padding: 0.38rem 0.65rem; font-size: 0.78rem; font-family: inherit; }
 .oq-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.8rem; }
 .oq-chip { background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.28rem 0.7rem; font-size: 0.74rem; font-weight: 700; color: #8a8a8a; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .oq-chip:hover { border-color: #3a3a3a; color: #bbb; }
 .oq-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
 .oq-chip-n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 0.24rem; }
 
-/* ── Orders: ledger table ── */
+/* Ledger table. */
 .oq-tw { overflow-x: auto; border: 1px solid #222; border-radius: 10px; }
 .oq-tbl { width: 100%; border-collapse: collapse; font-size: 0.78rem; min-width: 680px; }
 .oq-tbl th { text-align: left; font-size: 0.63rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #5a5a5a; padding: 0.6rem 0.7rem; background: #111; border-bottom: 1px solid #222; white-space: nowrap; }
@@ -3300,21 +3297,17 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-lgame { color: #c4c4c4; }
 .oq-lmeta { white-space: nowrap; }
 .oq-lnum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.oq-ldates { white-space: nowrap; }
 .oq-ltot { color: #fff; font-weight: 800; }
+.oq-lst { min-width: 0; }
 .oq-lact { text-align: right; white-space: nowrap; }
+.oq-lact form { display: inline-block; }
 .oq-lact-del { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; line-height: 1; padding: 0.32rem 0.5rem; cursor: pointer; font-family: inherit; }
 .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
-/* Undo priority. Same ghost shape as its neighbours; amber on hover because it
-   walks back the amber priority action rather than destroying anything. */
+/* Undo priority: amber on hover because it walks back the amber priority
+   action rather than destroying anything. */
 .oq-lact-undo { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; line-height: 1; padding: 0.32rem 0.5rem; cursor: pointer; font-family: inherit; margin-right: 0.3rem; }
 .oq-lact-undo:hover { border-color: #f59e0b; color: #f59e0b; }
-/* Review-ask copy button, paired with the delete button in the same cell. The
-   form is block by default, so it needs to go inline for the two to sit side by
-   side. The .rem-copy chrome is overridden down to the delete button's ghost
-   style so they read as one control group — same precedent as the
-   .oq-manual-result .rem-copy override above. Amber, not red: it is the safe
-   action of the pair. */
-.oq-lact form { display: inline-block; }
 .oq-lact .rem-copy { background: none; border: 1px solid #2a2a2a; border-radius: 7px; color: #666; font-size: 0.8rem; font-weight: 400; line-height: 1; padding: 0.32rem 0.5rem; margin-right: 0.3rem; }
 .oq-lact .rem-copy:hover { border-color: #f59e0b; color: #f59e0b; }
 .oq-st { display: inline-flex; align-items: center; gap: 0.32rem; font-size: 0.7rem; font-weight: 700; white-space: nowrap; }
@@ -3325,24 +3318,54 @@ body.light-mode .oq-pm { background: #fff; border-color: #ddd; }
 .oq-st-dead { color: #ef4444; }
 .oq-dep { font-size: 0.65rem; color: #f59e0b; margin-top: 0.15rem; }
 .oq-dep-ok { color: #7c8794; }
-/* Wraps rather than overflowing: .oq-ab-right is flex-shrink:0, so without this
-   a row with enough buttons pushes past the viewport on a phone instead of
-   stacking. The waitlist row gained a third button and the abandoned row
-   already carries up to five. */
-.oq-ab-btns { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+/* [hidden] loses to any class that sets display, so filtered rows need this. */
+.oq-tw[hidden], .oq-lr[hidden], .oq-grp[hidden], .oq-empty[hidden] { display: none !important; }
 
-/* ── Orders: light mode ── */
-body.light-mode .oq-stat,
+@media (max-width: 640px) {
+  .oq-strip-add { width: 100%; }
+  .oq-row { flex-direction: column; gap: 0.6rem; position: relative; }
+  .oq-actions { justify-content: flex-start; width: 100%; }
+  /* Anchored to the row card, not the ⋯ button: the button can sit anywhere
+     from the left edge to mid-row, so a menu anchored to it ran off one side
+     of the screen or the other. */
+  .oq-more { position: static; }
+  .oq-more-menu { left: 0.8rem; right: 0.8rem; top: calc(100% - 0.4rem); min-width: 0; }
+  .oq-ledger-bar { flex-direction: column; align-items: stretch; }
+  .oq-period { width: 100%; }
+  .oq-period select, .oq-period .ss-wrap { flex: 1; }
+  .oq-search { max-width: none; width: 100%; }
+  .oq-type { width: 100%; }
+  .oq-tw { overflow: visible; border: 0; }
+  .oq-tbl { min-width: 0; }
+  .oq-tbl thead { display: none; }
+  .oq-tbl, .oq-tbl tbody, .oq-grp, .oq-grp td { display: block; }
+  .oq-grp td { border-radius: 8px; margin-top: 0.6rem; }
+  .oq-lr { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "ref ref st" "cust game game" "meta dates tot" "act act act"; gap: 0.3rem 0.6rem; background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 0.65rem 0.8rem; margin-top: 0.45rem; }
+  .oq-lr td { padding: 0; border: 0; }
+  .oq-lref { grid-area: ref; }
+  .oq-lst { grid-area: st; justify-self: end; text-align: right; }
+  .oq-lcust { grid-area: cust; }
+  .oq-lgame { grid-area: game; text-align: right; }
+  .oq-lmeta { grid-area: meta; white-space: normal; }
+  .oq-ldates { grid-area: dates; text-align: center; }
+  .oq-ltot { grid-area: tot; text-align: right; }
+  .oq-lact { grid-area: act; text-align: left; }
+}
+
+/* Orders: light mode. */
 body.light-mode .oq-row,
-body.light-mode .oq-ab-row,
-body.light-mode .oq-refund-row,
-body.light-mode .oq-online-toggle,
-body.light-mode .oq-manual-order,
-body.light-mode .oq-funnel { background: #fff; border-color: #ddd; }
-body.light-mode .oq-manual-field input,
-body.light-mode .oq-manual-field select { background: #f7f7f7; border-color: #ddd; color: #111; }
-body.light-mode .oq-stat-k,
-body.light-mode .oq-stat-s,
+body.light-mode .oq-pill,
+body.light-mode .oq-more-menu { background: #fff; border-color: #ddd; }
+body.light-mode .oq-pill { color: #555; }
+body.light-mode .oq-pill-on { color: #166534; }
+body.light-mode .oq-pill-bad { color: #b91c1c; background: #fef2f2; }
+body.light-mode .oq-pm-warn { color: #b91c1c; background: #fef2f2; }
+body.light-mode .oq-group-h { color: #14171a; }
+body.light-mode .oq-group-n { background: #eef0f2; color: #555; }
+body.light-mode .oq-more-item { color: #333; }
+body.light-mode .oq-more-item:hover { background: #f2f4f7; color: #111; }
+body.light-mode .oq-more-danger { color: #dc2626; }
+body.light-mode .oq-btn-ghost { color: #555; border-color: #ccc; }
 body.light-mode .oq-zone-n,
 body.light-mode .oq-zone-sub,
 body.light-mode .oq-period label,
@@ -3353,27 +3376,31 @@ body.light-mode .oq-meta,
 body.light-mode .oq-tbl td { color: #555; }
 body.light-mode .oq-fb { color: #777; }
 body.light-mode .oq-fb strong,
-body.light-mode .oq-lcust,
-body.light-mode .oq-lgame { color: #111; }
-body.light-mode .oq-ltot { color: #111; }
+body.light-mode .oq-ab-name { color: #111; }
+/* td-qualified so they outrank `.oq-tbl td` above — without it the customer,
+   game and total all rendered in the same grey as everything else. */
+body.light-mode .oq-tbl td.oq-lcust,
+body.light-mode .oq-tbl td.oq-lgame,
+body.light-mode .oq-tbl td.oq-ltot { color: #111; }
 body.light-mode .oq-tw,
 body.light-mode .oq-tbl th { border-color: #ddd; }
 body.light-mode .oq-tbl td { border-bottom-color: #eee; }
 body.light-mode .oq-tbl th,
 body.light-mode .oq-grp td { background: #f6f7f9; }
-body.light-mode .oq-lact-del { border-color: #ddd; color: #999; }
-body.light-mode .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
-body.light-mode .oq-lact-undo { border-color: #ddd; color: #999; }
-body.light-mode .oq-lact-undo:hover { border-color: #f59e0b; color: #f59e0b; }
+body.light-mode .oq-lact-del,
+body.light-mode .oq-lact-undo,
 body.light-mode .oq-lact .rem-copy { border-color: #ddd; color: #999; }
+body.light-mode .oq-lact-del:hover { border-color: #ef4444; color: #ef4444; }
+body.light-mode .oq-lact-undo:hover,
 body.light-mode .oq-lact .rem-copy:hover { border-color: #f59e0b; color: #f59e0b; }
 body.light-mode .oq-period select,
-body.light-mode .oq-search { background: #f8f9fa; border-color: #ccc; color: #111; }
+body.light-mode .oq-search,
+body.light-mode .oq-type { background: #f8f9fa; border-color: #ccc; color: #111; }
 body.light-mode .oq-chip { border-color: #ccc; color: #555; }
 body.light-mode .oq-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
-body.light-mode .oq-btn-no { color: #777; border-color: #ccc; }
 body.light-mode .oq-badge { background: #eee; color: #555; }
 body.light-mode .oq-empty { color: #888; }
+@media (max-width: 640px) { body.light-mode .oq-lr { background: #fff; border-color: #ddd; } }
 
 .vf-section { margin: 0 0 2rem; }
 .vf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
