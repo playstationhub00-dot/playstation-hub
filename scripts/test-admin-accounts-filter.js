@@ -151,4 +151,16 @@ ok('plural', () => {
   assert.strictEqual(F.plural(0, 'account'), '0 accounts');
 });
 
+console.log('\nwiring');
+
+ok('admin.ejs loads admin-accounts.js with a cache-busting ?v=', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'views', 'admin.ejs'), 'utf8');
+  assert.ok(/<script src="\/js\/admin-accounts\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(src));
+});
+
+ok('the file still loads cleanly with no DOM (wiring is skipped, rules still exposed)', () => {
+  const again = load();
+  assert.strictEqual(typeof again.slotMatches, 'function');
+});
+
 console.log('\n' + passed + ' assertions passed\n');
