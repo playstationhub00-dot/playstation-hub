@@ -1,0 +1,43 @@
+<%#
+  Top of the Orders tab: Quick Add on the left, three small indicators on the
+  right. This replaces the four stat cards, the full-width gateway banner, the
+  export block and the online box: each either repeated a number the queue or
+  ledger already shows, or was a status that only needs a dot. The gateway
+  takes more than a pill only when its webhook is actually failing.
+%>
+<%
+  const pmMode = typeof paymongoMode !== 'undefined' ? paymongoMode : 'none';
+  const pmH = (typeof paymongoHealth !== 'undefined' && paymongoHealth) ? paymongoHealth : null;
+  const pmFails = pmH ? (pmH.fail_count || 0) : 0;
+  const pmOks = pmH ? (pmH.ok_count || 0) : 0;
+  // Failures only matter if they are the MOST RECENT thing that happened —
+  // old ones from before a secret was fixed are history, not a live problem.
+  const pmBroken = pmFails > 0 && (!pmH.last_ok_at || String(pmH.last_fail_at || '') > String(pmH.last_ok_at || ''));
+  const pmWhen = t => { if (!t) return 'never'; const d = new Date(t); return isNaN(d) ? 'never' : d.toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }); };
+  const pmName = pmMode === 'live' ? 'LIVE' : pmMode === 'test' ? 'TEST' : 'Unrecognised key';
+  const pmState = pmBroken ? 'webhook failing' : pmOks > 0 ? 'webhook ok' : 'no webhook yet';
+  const pmClass = pmBroken ? 'oq-pill-bad' : pmOks > 0 ? 'oq-pill-ok' : 'oq-pill-idle';
+  const pmTitle = pmBroken
+    ? pmFails + ' webhook signature failure' + (pmFails === 1 ? '' : 's') + ', last ' + pmWhen(pmH.last_fail_at)
+    : pmOks > 0 ? 'Webhook healthy · ' + pmOks + ' verified · last ' + pmWhen(pmH.last_ok_at)
+    : 'No webhook received yet — the first real payment will confirm it works.';
+  const stOnline = !!(settings && settings.owner_online);
+%>
+<div class="oq-strip">
+  <button type="button" class="qa-btn qa-gold oq-strip-add" onclick="qaOpen()">⚡ Quick Add</button>
+  <div class="oq-ind">
+    <form method="POST" action="/admin/online" class="oq-ind-online">
+      <label class="oq-pill<%= stOnline ? ' oq-pill-on' : '' %>" title="I'm online now — show a live banner to customers waiting to send a QR">
+        <input type="checkbox" name="online" onchange="this.form.submit()"<%= stOnline ? ' checked' : '' %>>
+        <span class="oq-pill-dot"></span>Online
+      </label>
+    </form>
+    <% if (pmMode !== 'none') { %>
+    <span class="oq-pill oq-pill-pm <%= pmClass %>" title="<%= pmTitle %>"><span class="oq-pill-dot"></span><%= pmBroken ? '⚠ ' : '' %><%= pmName %> · <%= pmState %></span>
+    <% } %>
+    <a class="oq-pill oq-pill-link" href="/admin/api/orders-export" download title="Every order with its full state history — for the funnel report.">⬇ Export</a>
+  </div>
+</div>
+<% if (pmMode !== 'none' && pmBroken) { %>
+<div class="oq-pm-warn">⚠ <%= pmFails %> webhook signature failure<%= pmFails === 1 ? '' : 's' %>, last <%= pmWhen(pmH.last_fail_at) %> — PAYMONGO_WEBHOOK_SECRET likely doesn't match this mode, so paid orders won't advance on their own.</div>
+<% } %>

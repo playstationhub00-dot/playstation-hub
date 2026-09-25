@@ -1,0 +1,159 @@
+<%#
+  All Orders: every order in the selected period, grouped by month. The period
+  reloads from the server; the status chip, the type and the search filter the
+  loaded rows in public/js/admin-orders.js and persist for the browser session.
+  Each chip counts the rows it would show, so the five chips add up to All.
+%>
+<%
+  const PERIOD_LABEL = p => {
+    if (p === 'all') return 'All time';
+    if (/^\d{4}$/.test(p)) return p;
+    const [y, m] = p.split('-');
+    return new Date(Number(y), Number(m) - 1, 1)
+      .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+  const periodLabel = orderPeriod ? PERIOD_LABEL(orderPeriod) : 'Last 3 months';
+  const OUT_STATES = ['awaiting_qr', 'qr_pending', 'active', 'awaiting_return', 'verifying_return'];
+  const lgGroup = o => o.state === 'cancelled' ? 'cancelled'
+    : ['awaiting_payment', 'payment_rejected'].includes(o.state) ? 'unpaid'
+    : OUT_STATES.includes(o.state) ? 'out' : 'paid';
+  // Same rule as orderType() in public/js/admin-orders.js: a Coming Soon
+  // pre-order carries is_buy too, but it is a reservation first.
+  const lgType = o => o.is_reservation ? 'reservation' : o.is_buy ? 'purchase' : 'rental';
+  const lgOrders = ledgerGroups.flatMap(gr => gr.orders);
+  const lgCount = g => lgOrders.filter(o => lgGroup(o) === g).length;
+%>
+<div class="oq-zone oq-zone-all oq-ledger-h">
+  All orders <span class="oq-zone-n"><%= ledgerStats.total %></span>
+  <span class="oq-zone-sub"><%= ledgerStats.paidCount %> paid · ₱<%= ledgerStats.paidTotal.toLocaleString() %> · <%= periodLabel %></span>
+</div>
+
+<div class="oq-ledger-bar">
+  <form method="GET" action="/admin" class="oq-period">
+    <input type="hidden" name="tab" value="orders">
+    <label for="oqPeriod">Period</label>
+    <select name="operiod" id="oqPeriod" onchange="this.form.submit()">
+      <option value="" <%= orderPeriod === '' ? 'selected' : '' %>>Last 3 months</option>
+      <option value="all" <%= orderPeriod === 'all' ? 'selected' : '' %>>All time</option>
+      <% if (orderYears.length) { %>
+      <optgroup label="By year">
+        <% orderYears.forEach(y => { %>
+        <option value="<%= y %>" <%= orderPeriod === y ? 'selected' : '' %>><%= y %></option>
+        <% }) %>
+      </optgroup>
+      <optgroup label="By month">
+        <% orderPeriods.forEach(p => { %>
+        <option value="<%= p %>" <%= orderPeriod === p ? 'selected' : '' %>><%= PERIOD_LABEL(p) %></option>
+        <% }) %>
+      </optgroup>
+      <% } %>
+    </select>
+  </form>
+  <input type="search" id="oqSearch" class="oq-search" placeholder="Search ref, name or game…" autocomplete="off">
+  <select id="oqType" class="oq-type" data-ss-skip aria-label="Order type">
+    <option value="all">All types</option>
+    <option value="rental">Rentals</option>
+    <option value="purchase">Purchases</option>
+    <option value="reservation">Reservations</option>
+  </select>
+</div>
+
+<div class="oq-chips">
+  <button type="button" class="oq-chip oq-chip-on" data-g="all">All <span class="oq-chip-n"><%= lgOrders.length %></span></button>
+  <button type="button" class="oq-chip" data-g="out">🎮 Out on rent <span class="oq-chip-n"><%= lgCount('out') %></span></button>
+  <button type="button" class="oq-chip" data-g="paid">✅ Completed <span class="oq-chip-n"><%= lgCount('paid') %></span></button>
+  <button type="button" class="oq-chip" data-g="unpaid">⚠ Didn't pay <span class="oq-chip-n"><%= lgCount('unpaid') %></span></button>
+  <button type="button" class="oq-chip" data-g="cancelled">🚫 Cancelled <span class="oq-chip-n"><%= lgCount('cancelled') %></span></button>
+</div>
+
+<% if (!ledgerGroups.length) { %>
+  <div class="oq-empty">No orders in this period.</div>
+<% } else { %>
+<div class="oq-tw" id="oqLedgerWrap">
+  <table class="oq-tbl" id="oqLedger">
+    <thead>
+      <tr>
+        <th>Ref</th><th>Customer</th><th>Game</th><th>Rental</th>
+        <th>Dates</th><th>Total</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% ledgerGroups.forEach(g => { %>
+      <tr class="oq-grp" data-grp="<%= g.key %>">
+        <td colspan="8">
+          <%= PERIOD_LABEL(g.key) %>
+          <span class="oq-grp-sum"><%= g.paidCount %> paid · ₱<%= g.paidTotal.toLocaleString() %></span>
+        </td>
+      </tr>
+      <% g.orders.forEach(o => {
+           const paid = !['awaiting_payment','verifying_payment','payment_rejected','cancelled'].includes(o.state);
+           const grp = lgGroup(o);
+           const out = grp === 'out';
+           const typeLbl = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+           const durLbl = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
+           const total = (o.amount_due || 0) + (o.deposit_due || 0);
+           const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
+           const dates = o.start_date ? fmt(o.start_date) + (o.end_date ? ' – ' + fmt(o.end_date) : '') : '—';
+           const stCls = grp === 'cancelled' ? 'oq-st-dead' : grp === 'unpaid' ? 'oq-st-wait' : out ? 'oq-st-live' : 'oq-st-done';
+           const stLbl = o.state === 'cancelled' ? 'Cancelled'
+                       : o.state === 'payment_rejected' ? 'Payment rejected'
+                       : o.state === 'awaiting_payment' ? 'Awaiting payment'
+                       : o.state === 'closed' ? 'Completed'
+                       : o.state === 'reserved' ? (o.upcoming_game_id ? 'Reserved — awaiting release' : 'Priority — awaiting a slot')
+                       : out ? 'Out on rent' : 'Completed';
+           // Bundle slots aren't locked until an order reaches 'active', so two
+           // customers can both pay for the same slot before anyone notices —
+           // flagged here for manual review. Limited to the loaded period.
+           const dupSlotCount = (o.is_buy && o.account_id && o.slot_type)
+             ? lgOrders.filter(x => x.ref !== o.ref && x.account_id === o.account_id && x.slot_type === o.slot_type
+                 && !['closed','cancelled','payment_rejected'].includes(x.state)).length
+             : 0;
+      %>
+      <tr class="oq-lr" data-g="<%= grp %>" data-t="<%= lgType(o) %>"
+          data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>">
+        <td class="oq-lref"><%= o.ref %></td>
+        <td class="oq-lcust"><%= o.fb_name %></td>
+        <td class="oq-lgame"><%= o.game_title %></td>
+        <td class="oq-lmeta"><%= typeLbl %> · <%= durLbl %></td>
+        <td class="oq-lnum oq-ldates"><%= dates %></td>
+        <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %></td>
+        <td class="oq-lst">
+          <span class="oq-st <%= stCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
+          <% if (paid && (o.deposit_due || 0) > 0) { %>
+            <div class="oq-dep <%= o.deposit_refunded ? 'oq-dep-ok' : '' %>">
+              <%= o.deposit_refunded ? 'Deposit refunded' : 'Deposit not refunded' %>
+            </div>
+          <% } %>
+          <% if (dupSlotCount > 0) { %>
+            <div class="oq-dep" title="Multiple live orders are claiming the same slot — verify before fulfilling and refund manually if needed.">
+              ⚠ Duplicate slot claim — <%= dupSlotCount %> other order<%= dupSlotCount > 1 ? 's' : '' %> for this slot
+            </div>
+          <% } %>
+        </td>
+        <td class="oq-lact">
+          <%# Only present on orders that can actually be reviewed and haven't
+              been yet — server.js attaches review_msg, and its absence is the
+              whole condition. %>
+          <% if (o.review_msg) { %>
+          <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">📋</button>
+          <% } %>
+          <%# Only on orders the priority-paid button created — a Coming Soon
+              reservation rests in the same state but paid for a game, not a
+              queue place, and must not be undoable into a free entry. %>
+          <% if (o.state === 'reserved' && o.upgraded_from_waitlist) { %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
+            <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">↩</button>
+          </form>
+          <% } %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
+            <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<div class="oq-empty" id="oqNoMatch" hidden>No orders match these filters. <a href="#" data-oq-clear>Clear filters</a></div>
+<% } %>

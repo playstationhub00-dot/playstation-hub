@@ -139,7 +139,7 @@
   <div class="asb-scroll">
     <div class="sidebar-group-label">Manage</div>
     <button class="admin-tab" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="tab-icon">📊</span><span class="tab-label">Dashboard</span></button>
-    <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span><% if (orderQueue.length) { %><span class="oq-count"><%= orderQueue.length %></span><% } %></button>
+    <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span><% const oqBadge = orderQueue.length + (typeof refundsOwed !== 'undefined' ? refundsOwed : []).length; %><% if (oqBadge) { %><span class="oq-count"><%= oqBadge %></span><% } %></button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')"><span class="tab-icon">👥</span><span class="tab-label">Customers</span></button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')"><span class="tab-icon">🎮</span><span class="tab-label">Games</span></button>
     <button class="admin-tab" data-tab="accounts" onclick="switchTab('accounts')"><span class="tab-icon">🗂️</span><span class="tab-label">Accounts</span></button>
