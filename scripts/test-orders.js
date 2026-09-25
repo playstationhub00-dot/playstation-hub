@@ -117,14 +117,20 @@ check('a mis-marked priority can be undone back to the free list', () => {
   assert.strictEqual(orders.canTransition('reserved', 'waitlisted'), true);
 });
 
-check('undoing is the ONLY way out of reserved', () => {
-  // 'reserved' is otherwise still a resting state: the owner converts it to a
-  // real rental by hand once the game releases. If a later change makes it a
-  // general staging state, this fails and the decision gets made deliberately.
-  ['active', 'awaiting_qr', 'qr_pending', 'awaiting_payment', 'verifying_payment', 'closed', 'cancelled']
+check('undo and release are the only ways out of reserved', () => {
+  // 'reserved' is a resting state. Two edges leave it: undo-priority back to
+  // 'waitlisted', and releasing a Coming Soon game, which moves its paid
+  // reservations to 'awaiting_qr' (POST /admin/upcoming/release/:id, via
+  // lib/release.js). Anything else still fails here so the next change is a
+  // deliberate decision too.
+  ['active', 'qr_pending', 'awaiting_payment', 'verifying_payment', 'closed', 'cancelled']
     .forEach(to => {
       assert.strictEqual(orders.canTransition('reserved', to), false, 'reserved should not reach ' + to);
     });
+});
+
+check('a released Coming Soon reservation can move on to sign-in', () => {
+  assert.strictEqual(orders.canTransition('reserved', 'awaiting_qr'), true);
 });
 
 check('the owner-marked priority upgrade has a legal path end to end', () => {
