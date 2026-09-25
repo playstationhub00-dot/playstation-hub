@@ -1,274 +1,260 @@
-  <div class="tab-panel" id="tab-accounts">
-  <style>
-    .acc-summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
-    .acc-stat { background: #15151d; border-radius: 10px; padding: 0.7rem 1.1rem; min-width: 120px; }
-    .acc-stat .lbl { font-size: 0.72rem; color: #888; }
-    .acc-stat .val { font-size: 1.5rem; font-weight: 900; color: #fff; }
-    .acc-search-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
-    .acc-search { flex: 1; max-width: 360px; padding: 0.6rem 0.9rem; background: #15151d; border: 1px solid #2a2a35; border-radius: 8px; color: #fff; font-size: 0.85rem; }
-    .acc-search:focus { outline: none; border-color: var(--ps-blue); }
-    .acc-search-count { font-size: 0.75rem; color: #888; }
-    .acc-group { margin-bottom: 1.75rem; }
-    .acc-group-title { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 2px solid #23232e; }
-    .acc-group-count { font-size: 0.78rem; color: #666; font-weight: 500; }
-    .acc-table-scroll { overflow-x: auto; border-radius: 12px; border: 1px solid #23232e; }
-    .acc-table { border-collapse: collapse; width: 100%; min-width: 980px; font-size: 0.8rem; }
-    .acc-table th { background: #1a1a24; color: #fff; padding: 0.6rem 0.7rem; text-align: left; border: 1px solid #2a2a35; font-size: 0.72rem; letter-spacing: 0.4px; }
-    .acc-table th.tr-col { background: #14301f; }
-    .acc-table th.nt-col { background: #301416; }
-    .acc-table th.ps4-col { background: #14301f; }
-    .acc-table td { padding: 0.55rem 0.7rem; border: 1px solid #23232e; color: #ddd; vertical-align: top; }
-    .acc-table tr:nth-child(even) td { background: #111119; }
-    .acc-name-row { display: flex; align-items: flex-start; gap: 8px; }
-    .acc-covers { display: flex; flex-shrink: 0; }
-    .acc-covers img.acc-cover-thumb { object-fit: cover; }
-    .acc-cover-thumb { width: 36px; height: 48px; border-radius: 5px; border: 1.5px solid #23232e; margin-left: -12px; box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-    .acc-cover-thumb:first-child { margin-left: 0; }
-    .acc-cover-placeholder { background: #1a1a24; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #444; }
-    .acc-name { font-weight: 800; color: #fbbf24; }
-    .acc-games { font-size: 0.68rem; color: #777; margin-top: 3px; line-height: 1.4; }
-    .acc-price { text-align: center; color: #bbb; font-size: 0.74rem; white-space: nowrap; }
-    .slot-cell { min-width: 130px; }
-    .slot-pill { display: block; width: 100%; border: none; border-radius: 6px; padding: 6px 4px; font-size: 0.68rem; font-weight: 800; cursor: pointer; text-align: center; letter-spacing: 0.4px; }
-    .st-open { background: #166534; color: #dcfce7; }
-    .st-rented { background: #991b1b; color: #fee2e2; }
-    .st-buyed { background: #1e40af; color: #dbeafe; }
-    .st-na { background: #6b21a8; color: #f3e8ff; }
-    .st-maintenance { background: #92620a; color: #fef3c7; }
-    .st-disabled { background: #222; color: #666; }
-    .slot-exp { font-size: 0.66rem; color: #999; margin-top: 3px; text-align: center; }
-    .slot-exp.soon { color: #fbbf24; font-weight: 700; }
-    .slot-exp.expired { color: #f87171; font-weight: 700; }
-    details.slot-det > summary { list-style: none; cursor: pointer; }
-    details.slot-det > summary::-webkit-details-marker { display: none; }
-    .slot-form { background: #0c0c14; border: 1px solid #2a2a35; border-radius: 8px; padding: 8px; margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
-    .slot-form select, .slot-form input { width: 100%; padding: 5px; font-size: 0.72rem; background: #1a1a22; border: 1px solid #333; border-radius: 5px; color: #fff; }
-    .slot-form button { background: var(--ps-blue); color: #000; border: none; border-radius: 5px; padding: 6px; font-weight: 800; font-size: 0.72rem; cursor: pointer; }
-    .acc-actions { display: flex; gap: 6px; }
-    .acc-actions a, .acc-actions button { font-size: 0.68rem; padding: 4px 8px; border-radius: 5px; text-decoration: none; border: 1px solid #333; background: #1a1a22; color: #ccc; cursor: pointer; }
-    .acc-actions .del { border-color: rgba(239,68,68,0.4); color: #f87171; }
-    .acc-edit-form { background: #111119; border: 1px solid #23232e; border-radius: 10px; padding: 1rem; margin-top: 0.5rem; }
-    .acc-edit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
-    .acc-edit-grid label { font-size: 0.72rem; color: #aaa; display: block; margin-bottom: 3px; }
-    .acc-edit-grid input, .acc-edit-grid select, .acc-edit-grid textarea { width: 100%; padding: 6px; background: #1a1a22; border: 1px solid #333; border-radius: 5px; color: #fff; font-size: 0.8rem; }
-    .slot-toggles { display: flex; gap: 14px; flex-wrap: wrap; margin: 0.5rem 0; font-size: 0.78rem; color: #ccc; }
-    .slot-toggles label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
-  </style>
-
-  <%
-    const STATUS_LABEL = { open:'OPEN', rented:'RENTED', buyed:'BUYED', na:'NOT AVAILABLE', maintenance:'MAINTENANCE' };
-    const SLOT_LABEL = { trophy:'Trophy', non_trophy:'Non-Trophy', ps4_primary:'PS4 Primary' };
-    function gameTitleById(gs, id){ const g = gs.find(x=>x.id===id); return g ? g.title : ('#'+id); }
-    function gameById(gs, id){ return gs.find(x=>x.id===id); }
-    // Alphabetical for these dropdowns/lookups, regardless of how the caller
-    // ordered `games` for its own tab (id-descending, newest first).
-    const accGames = [...games].sort((a, b) => a.title.localeCompare(b.title));
-  %>
-
-  <p style="color:#888;font-size:0.85rem;margin-bottom:0.5rem;">Track each PSN account and its Trophy / Non-Trophy / PS4 Primary slots. Click a status pill to change it.</p>
-
-  <div class="acc-summary">
-    <div class="acc-stat"><div class="lbl">Total slots</div><div class="val"><%= accountsView.stats.total %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#4ade80;">Open</div><div class="val" style="color:#4ade80;"><%= accountsView.stats.open %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#f87171;">Rented</div><div class="val" style="color:#f87171;"><%= accountsView.stats.rented %></div></div>
-    <div class="acc-stat"><div class="lbl" style="color:#fbbf24;">Ending ≤3 days</div><div class="val" style="color:#fbbf24;"><%= accountsView.stats.ending %></div></div>
-  </div>
-
-  <!-- ADD ACCOUNT -->
-  <div class="adm-card" id="sec-add-account">
-    <div class="adm-card-head" style="border-left:3px solid #22c55e;">
-      <div class="sa-left">
-        <div class="sa-icon" style="background:rgba(34,197,94,0.15);">➕</div>
-        <div><div class="sa-title">Add Account</div><div class="sa-desc">Create a PSN account and its Trophy / Non-Trophy / PS4 slots</div></div>
-      </div>
-    </div>
-    <div class="adm-card-body" style="padding:1.15rem;">
-    <form method="POST" action="/admin/accounts/add" class="acc-edit-form">
-      <div class="acc-edit-grid">
-        <div style="grid-column:1/-1;"><label>Account Label *</label><input type="text" name="label" placeholder="e.g. PSHub Main Account" required></div>
-        <div style="grid-column:1/-1;"><label>Games in this account (free text — shown internally)</label><textarea name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6..."></textarea></div>
-        <div style="grid-column:1/-1;"><label>Link catalog games (optional — powers the game-card summary)</label>
-          <select name="game_ids" multiple size="5" style="height:auto;">
-            <% accGames.forEach(g => { %><option value="<%= g.id %>"><%= g.title %> (<%= g.platform %>)</option><% }) %>
-          </select>
-          <span style="font-size:0.68rem;color:#666;">Hold Ctrl / Cmd to select multiple.</span>
-        </div>
-        <div><label>Account Email</label><input type="email" name="email" placeholder="e.g. pshub.account1@gmail.com"></div>
-        <div><label>Trophy permanent price (₱)</label><input type="number" name="price_permanent_tr" value="5000" min="0"></div>
-        <div><label>Non-Trophy permanent price (₱)</label><input type="number" name="price_permanent_nt" value="4500" min="0"></div>
-        <div><label>Internal note</label><input type="text" name="note" placeholder="reminders, misc info..."></div>
-        <div style="grid-column:1/-1;"><label>Public bundle name (leave blank to hide from Buy page)</label><input type="text" name="public_name" placeholder="e.g. Sports Pack"></div>
-      </div>
-      <div class="slot-toggles">
-        <label><input type="checkbox" name="enable_trophy" checked> 🏆 Trophy slot</label>
-        <label><input type="checkbox" name="enable_non_trophy" checked> 🎮 Non-Trophy slot</label>
-        <label><input type="checkbox" name="enable_ps4_primary" checked> 🕹️ PS4 Primary slot</label>
-      </div>
-      <label style="display:flex;align-items:center;gap:6px;margin-top:0.5rem;cursor:pointer;">
-        <input type="checkbox" name="for_sale"> 🛒 List on the public Buy page
-      </label>
-      <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Create Account</button>
-    </form>
-    </div>
-  </div>
-
-  <!-- SEARCH -->
-  <div class="acc-search-wrap">
-    <input type="text" id="accSearch" class="acc-search" placeholder="🔍 Search games or accounts..." oninput="filterAccounts()">
-    <span id="accSearchCount" class="acc-search-count"></span>
-  </div>
-
-  <!-- ACCOUNTS TABLES (grouped by price category) -->
-  <% if (!accountsView.accounts.length) { %>
-    <div style="text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No accounts yet. Click “+ Add Account” above to create your first one.</div>
-  <% } %>
-  <% accountsView.groups.forEach(group => { %>
-  <div class="acc-group" data-group>
-    <div class="acc-group-title"><%= group.name %> <span class="acc-group-count">(<%= group.accounts.length %>)</span></div>
-    <div class="acc-table-scroll">
-      <table class="acc-table">
-        <thead>
-          <tr>
-            <th style="min-width:190px;">Account / Games</th>
-            <th>Permanent<br>(TR / NT)</th>
-            <th class="tr-col">🏆 Trophy</th>
-            <th class="nt-col">🎮 Non-Trophy</th>
-            <th class="ps4-col">🕹️ PS4 Primary</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-        <% group.accounts.forEach(acc => { %>
-        <tr data-searchable="<%= (acc.label + ' ' + (acc.email||'') + ' ' + (acc.games_text||'') + ' ' + acc.game_ids.map(id => gameTitleById(accGames, id)).join(' ')).toLowerCase() %>">
-          <td>
-            <div class="acc-name-row">
-              <% if (acc.game_ids && acc.game_ids.length) { %>
-                <div class="acc-covers">
-                  <% acc.game_ids.slice(0, 4).forEach(id => { const g = gameById(accGames, id); %>
-                    <% if (g && g.cover_image) { %>
-                      <img src="<%= g.cover_image %>" alt="<%= g.title %>" class="acc-cover-thumb" title="<%= g.title %>">
-                    <% } else { %>
-                      <div class="acc-cover-thumb acc-cover-placeholder" title="<%= g ? g.title : '' %>">🎮</div>
-                    <% } %>
-                  <% }) %>
-                </div>
-              <% } %>
-              <div>
-                <div class="acc-name"><%= acc.label %></div>
-                <% if (acc.email) { %><div class="acc-games" style="color:#888;">✉️ <%= acc.email %></div><% } %>
-                <% if (acc.games_text) { %><div class="acc-games"><%= acc.games_text %></div><% } %>
-                <% if (acc.game_ids && acc.game_ids.length) { %>
-                  <div class="acc-games" style="color:#5b8ac9;">🔗 <%= acc.game_ids.map(id => gameTitleById(accGames, id)).join(', ') %></div>
-                <% } %>
-                <% if (acc.note) { %><div class="acc-games" style="color:#666;">📝 <%= acc.note %></div><% } %>
-              </div>
-            </div>
-          </td>
-          <td class="acc-price">₱<%= acc.price_permanent_tr %><br>₱<%= acc.price_permanent_nt %></td>
-
-          <% ['trophy','non_trophy','ps4_primary'].forEach(type => {
-               const s = acc.slotView[type];
-               const stClass = !s.enabled ? 'st-disabled' : ('st-' + s.status);
-               const label = !s.enabled ? 'DISABLED' : STATUS_LABEL[s.status];
-          %>
-          <td class="slot-cell">
-            <% if (!s.enabled) { %>
-              <div class="slot-pill st-disabled">DISABLED</div>
-            <% } else { %>
-              <details class="slot-det">
-                <summary><div class="slot-pill <%= stClass %>"><%= label %></div></summary>
-                <form method="POST" action="/admin/accounts/<%= acc.id %>/slot/<%= type %>" class="slot-form">
-                  <select name="status" onchange="this.closest('form').querySelector('.renter-wrap').style.display = (this.value==='rented'||this.value==='buyed')?'block':'none'; this.closest('form').querySelector('.days-wrap').style.display = this.value==='rented'?'block':'none';">
-                    <% accountsView.STATUSES.forEach(st => { %>
-                      <option value="<%= st %>" <%= s.status===st?'selected':'' %>><%= STATUS_LABEL[st] %></option>
-                    <% }) %>
-                  </select>
-                  <div class="renter-wrap" style="display:<%= (s.status==='rented'||s.status==='buyed')?'block':'none' %>;">
-                    <select name="renter_id">
-                      <option value="">— Link customer (optional) —</option>
-                      <% customers.forEach(c => { %><option value="<%= c.id %>" <%= s.renter_id===c.id?'selected':'' %>><%= c.customer_name %></option><% }) %>
-                    </select>
-                  </div>
-                  <div class="days-wrap" style="display:<%= s.status==='rented'?'block':'none' %>;">
-                    <input type="number" name="days" min="1" placeholder="Days (e.g. 30)">
-                    <input type="date" name="end_date" value="<%= s.end || '' %>" title="Or set end date directly">
-                  </div>
-                  <button type="submit">Update slot</button>
-                </form>
-              </details>
-              <% if (s.status==='rented' && s.end) { %>
-                <div class="slot-exp <%= s.days_left!=null && s.days_left<0 ? 'expired' : (s.days_left!=null && s.days_left<=3 ? 'soon':'') %>">
-                  <%= s.end %><% if (s.days_left!=null) { %><br><%= s.days_left<0 ? 'ended — confirm' : s.days_left+'d left' %><% } %>
-                </div>
-                <% if (s.renter_name) { %><div class="slot-exp"><%= s.renter_name %></div><% } %>
-              <% } else if (s.status==='buyed' && s.renter_name) { %>
-                <div class="slot-exp"><%= s.renter_name %></div>
-              <% } %>
-            <% } %>
-          </td>
-          <% }) %>
-
-          <td>
-            <div class="acc-actions">
-              <details style="display:inline;">
-                <summary style="cursor:pointer;list-style:none;font-size:0.68rem;padding:4px 8px;border-radius:5px;border:1px solid #333;background:#1a1a22;color:#ccc;">Edit</summary>
-                <form method="POST" action="/admin/accounts/edit/<%= acc.id %>" class="acc-edit-form" style="position:absolute;z-index:10;width:320px;">
-                  <div class="acc-edit-grid" style="grid-template-columns:1fr;">
-                    <div><label>Label</label><input type="text" name="label" value="<%= acc.label %>"></div>
-                    <div><label>Email</label><input type="email" name="email" value="<%= acc.email %>" placeholder="e.g. pshub.account1@gmail.com"></div>
-                    <div><label>Games (text)</label><textarea name="games_text" rows="2"><%= acc.games_text %></textarea></div>
-                    <div><label>Linked games</label>
-                      <select name="game_ids" multiple size="4" style="height:auto;">
-                        <% accGames.forEach(g => { %><option value="<%= g.id %>" <%= acc.game_ids.includes(g.id)?'selected':'' %>><%= g.title %></option><% }) %>
-                      </select>
-                    </div>
-                    <div><label>TR price</label><input type="number" name="price_permanent_tr" value="<%= acc.price_permanent_tr %>"></div>
-                    <div><label>NT price</label><input type="number" name="price_permanent_nt" value="<%= acc.price_permanent_nt %>"></div>
-                    <div><label>Note</label><input type="text" name="note" value="<%= acc.note %>"></div>
-                    <div><label>Public bundle name</label><input type="text" name="public_name" value="<%= acc.public_name %>" placeholder="leave blank to hide"></div>
-                  </div>
-                  <div class="slot-toggles">
-                    <label><input type="checkbox" name="enable_trophy" <%= acc.slots.trophy.enabled?'checked':'' %>> 🏆</label>
-                    <label><input type="checkbox" name="enable_non_trophy" <%= acc.slots.non_trophy.enabled?'checked':'' %>> 🎮</label>
-                    <label><input type="checkbox" name="enable_ps4_primary" <%= acc.slots.ps4_primary.enabled?'checked':'' %>> 🕹️</label>
-                    <label><input type="checkbox" name="for_sale" <%= acc.for_sale?'checked':'' %>> 🛒 For sale</label>
-                  </div>
-                  <button type="submit" class="btn btn-primary" style="margin-top:0.5rem;">Save</button>
-                </form>
-              </details>
-              <form method="POST" action="/admin/accounts/delete/<%= acc.id %>" onsubmit="return confirm('Delete this account?');" style="display:inline;">
-                <button type="submit" class="del">Delete</button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        <% }) %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <% }) %>
-
-  <div id="accNoResults" style="display:none;text-align:center;color:#666;padding:2rem;background:#111119;border-radius:12px;">No games or accounts match your search.</div>
-
-  <script>
-  function filterAccounts() {
-    const q = document.getElementById('accSearch').value.trim().toLowerCase();
-    const groups = document.querySelectorAll('#tab-accounts [data-group]');
-    let totalVisible = 0;
-    groups.forEach(group => {
-      const rows = group.querySelectorAll('tr[data-searchable]');
-      let visibleInGroup = 0;
-      rows.forEach(row => {
-        const match = !q || row.dataset.searchable.includes(q);
-        row.style.display = match ? '' : 'none';
-        if (match) visibleInGroup++;
-      });
-      group.style.display = visibleInGroup > 0 ? '' : 'none';
-      totalVisible += visibleInGroup;
+<div class="tab-panel" id="tab-accounts">
+<%
+  // Admin → Accounts. Two views over the same data: Slots (one row per
+  // enabled slot, most urgent first) and Accounts (one row per account,
+  // grouped by price category). Filtering, the view toggle and both modals
+  // are in public/js/admin-accounts.js; styles are the acc-* block in
+  // public/css/style.css.
+  const ACC_TYPES = ['trophy', 'non_trophy', 'ps4_primary'];
+  const ACC_TYPE_LABEL = { trophy: '🏆 Trophy', non_trophy: '🎮 Non-Trophy', ps4_primary: '🕹️ PS4 Primary' };
+  const ACC_TYPE_ICON = { trophy: '🏆', non_trophy: '🎮', ps4_primary: '🕹️' };
+  const ACC_STATUS_OPTIONS = [['open', 'Open'], ['rented', 'Rented'], ['buyed', 'Bought'], ['maintenance', 'Maintenance'], ['na', 'Not available']];
+  const accGames = [...games].sort((a, b) => a.title.localeCompare(b.title));
+  const accGameById = {};
+  accGames.forEach(g => { accGameById[g.id] = g; });
+  const accById = {};
+  accountsView.accounts.forEach(a => { accById[a.id] = a; });
+  const accTitles = a => a.game_ids.map(id => (accGameById[id] ? accGameById[id].title : '')).filter(Boolean);
+  const accPillClass = s => 'st-' + (s.due || s.status);
+  const accShortDate = d => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '');
+  const accHaystack = (a, renters) => [a.label, a.email, a.games_text, accTitles(a).join(' '), renters].join(' ').toLowerCase();
+  const accData = { accounts: {} };
+  accountsView.accounts.forEach(a => {
+    const slots = {};
+    ACC_TYPES.forEach(t => {
+      const s = a.slotView[t];
+      slots[t] = { enabled: !!s.enabled, status: s.status, renter_id: s.renter_id || null, end: s.end || '' };
     });
-    document.getElementById('accSearchCount').textContent = q ? totalVisible + ' match' + (totalVisible !== 1 ? 'es' : '') : '';
-    document.getElementById('accNoResults').style.display = (q && totalVisible === 0) ? 'block' : 'none';
-  }
-  </script>
+    accData.accounts[a.id] = {
+      label: a.label, email: a.email || '', games_text: a.games_text || '', note: a.note || '',
+      game_ids: a.game_ids, price_permanent_tr: a.price_permanent_tr, price_permanent_nt: a.price_permanent_nt,
+      public_name: a.public_name || '', for_sale: !!a.for_sale, slots
+    };
+  });
+  const accStats = accountsView.stats;
+%>
+
+  <div class="acc-head">
+    <div>
+      <div class="acc-title">Accounts</div>
+      <div class="acc-sub">Each PSN account and its Trophy / Non-Trophy / PS4 Primary slots.</div>
+    </div>
+    <button type="button" class="btn btn-primary acc-add-btn" data-acc-add>+ Add Account</button>
   </div>
+
+  <div class="acc-stats">
+    <button type="button" class="acc-stat acc-stat-total" data-acc-stat="all"><span class="lbl">Total slots</span><span class="val"><%= accStats.total %></span></button>
+    <button type="button" class="acc-stat acc-stat-open" data-acc-stat="open"><span class="lbl">Open</span><span class="val"><%= accStats.open %></span></button>
+    <button type="button" class="acc-stat acc-stat-rented" data-acc-stat="rented"><span class="lbl">Rented</span><span class="val"><%= accStats.rented %></span></button>
+    <button type="button" class="acc-stat acc-stat-ending" data-acc-stat="ending"><span class="lbl">Ending ≤3 days</span><span class="val"><%= accStats.ending %></span></button>
+    <button type="button" class="acc-stat acc-stat-overdue" data-acc-stat="overdue"><span class="lbl">Overdue</span><span class="val"><%= accStats.overdue %></span></button>
+  </div>
+
+  <% if (!accountsView.accounts.length) { %>
+  <div class="acc-empty" id="accNone">No accounts yet — use <b>+ Add Account</b> to create your first one.</div>
+  <% } else { %>
+
+  <div class="acc-toolbar">
+    <div class="acc-views" role="group" aria-label="View">
+      <button type="button" data-acc-view="slots" class="on" aria-pressed="true">Slots</button>
+      <button type="button" data-acc-view="accounts" aria-pressed="false">Accounts</button>
+    </div>
+    <input type="search" id="accSearch" class="acc-search" placeholder="Search account, game, email or renter…" autocomplete="off">
+    <button type="button" id="accFilterBtn" class="acc-filter-btn">Filters<span id="accFilterBtnCount"></span></button>
+    <div class="acc-filters" id="accFilterPanel">
+      <select id="accStatus" data-ss-skip aria-label="Slot status">
+        <option value="all">All statuses</option>
+        <option value="open">Open</option>
+        <option value="rented">Rented</option>
+        <option value="ending">Ending ≤3 days</option>
+        <option value="overdue">Overdue</option>
+        <option value="buyed">Bought</option>
+        <option value="maintenance">Maintenance</option>
+        <option value="na">Not available</option>
+      </select>
+      <select id="accType" data-ss-skip aria-label="Slot type">
+        <option value="all">All types</option>
+        <option value="trophy">🏆 Trophy</option>
+        <option value="non_trophy">🎮 Non-Trophy</option>
+        <option value="ps4_primary">🕹️ PS4 Primary</option>
+      </select>
+      <div class="acc-game-filter">
+        <select id="accGame" aria-label="Game">
+          <option value="">All games</option>
+          <% accGames.forEach(g => { %><option value="<%= g.id %>"><%= g.title %></option><% }) %>
+        </select>
+      </div>
+      <a href="#" id="accClear" class="acc-clear" data-acc-clear hidden>✕ Clear</a>
+    </div>
+    <span id="accCount" class="acc-count"></span>
+  </div>
+
+  <div id="accSlotsView" class="acc-slots">
+    <div class="acc-shead" aria-hidden="true">
+      <span>Status</span><span>Type</span><span>Game</span><span>Account</span><span>Renter</span><span>Ends</span>
+    </div>
+    <% accountsView.slots.forEach(s => {
+         const a = accById[s.account_id];
+         const titles = accTitles(a);
+         const first = a.game_ids.length ? (accGameById[a.game_ids[0]] || null) : null;
+    %>
+    <div class="acc-srow" data-status="<%= s.status %>" data-due="<%= s.due %>" data-type="<%= s.type %>" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, s.renter_name) %>">
+      <button type="button" class="slot-pill <%= accPillClass(s) %>" data-acc-slot="<%= a.id %>:<%= s.type %>"><%= s.pill %></button>
+      <span class="acc-s-type"><%= ACC_TYPE_LABEL[s.type] %></span>
+      <span class="acc-s-game">
+        <% if (first && first.cover_image) { %><img src="<%= first.cover_image %>" alt="" class="acc-s-cover" loading="lazy"><% } else { %><span class="acc-s-cover acc-cover-placeholder">🎮</span><% } %>
+        <span class="acc-s-gtitle"><%= titles[0] || a.games_text || '—' %><% if (titles.length > 1) { %> <span class="acc-more">+<%= titles.length - 1 %></span><% } %></span>
+      </span>
+      <span class="acc-s-acc"><b><%= a.label %></b><% if (a.email) { %><span class="acc-s-email"><%= a.email %></span><% } %></span>
+      <span class="acc-s-renter"><%= s.renter_name || '—' %></span>
+      <span class="acc-s-date"><%= s.status === 'rented' && s.end ? accShortDate(s.end) : '—' %></span>
+    </div>
+    <% }) %>
+  </div>
+
+  <div id="accAccountsView" class="acc-accounts" hidden>
+    <% accountsView.groups.forEach(group => { %>
+    <div class="acc-group">
+      <div class="acc-group-title"><%= group.name %> <span class="acc-group-count">(<%= group.accounts.length %>)</span></div>
+      <% group.accounts.forEach(a => {
+           const titles = accTitles(a);
+           const renters = ACC_TYPES.map(t => a.slotView[t].renter_name || '').join(' ');
+           const gamesLine = titles.length
+             ? titles.slice(0, 2).join(', ') + (titles.length > 2 ? ' +' + (titles.length - 2) : '')
+             : (a.games_text || '');
+           const meta = [a.email ? '✉ ' + a.email : '', gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
+      %>
+      <div class="acc-arow" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, renters) %>">
+        <div class="acc-a-main">
+          <div class="acc-covers">
+            <% a.game_ids.slice(0, 4).forEach(id => { const g = accGameById[id]; %>
+              <% if (g && g.cover_image) { %><img src="<%= g.cover_image %>" alt="" class="acc-cover-thumb" loading="lazy" title="<%= g.title %>"><% } else { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
+            <% }) %>
+            <% if (!a.game_ids.length) { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
+          </div>
+          <div class="acc-a-text">
+            <div class="acc-name"><%= a.label %><% if (a.for_sale) { %> <span class="acc-sale" title="Listed on the Buy page">🛒</span><% } %></div>
+            <% if (meta.length) { %><div class="acc-meta"><%= meta.join(' · ') %></div><% } %>
+          </div>
+        </div>
+        <div class="acc-a-chips">
+          <% ACC_TYPES.forEach(t => { const s = a.slotView[t]; %>
+            <% if (s.enabled) { %>
+            <button type="button" class="acc-chip slot-pill <%= accPillClass(s) %>" data-type="<%= t %>" data-status="<%= s.status %>" data-due="<%= s.due %>" data-acc-slot="<%= a.id %>:<%= t %>" title="<%= ACC_TYPE_LABEL[t] %><%= s.renter_name ? ' — ' + s.renter_name : '' %>"><%= ACC_TYPE_ICON[t] %> <%= s.pill %></button>
+            <% } else { %>
+            <span class="acc-chip slot-pill st-disabled" data-type="<%= t %>" data-disabled="1" title="<%= ACC_TYPE_LABEL[t] %> — disabled"><%= ACC_TYPE_ICON[t] %> —</span>
+            <% } %>
+          <% }) %>
+        </div>
+        <div class="acc-a-price">₱<%= Number(a.price_permanent_tr || 0).toLocaleString('en-US') %> / ₱<%= Number(a.price_permanent_nt || 0).toLocaleString('en-US') %></div>
+        <div class="acc-a-actions">
+          <button type="button" class="acc-act" data-acc-edit="<%= a.id %>">Edit</button>
+          <form method="POST" action="/admin/accounts/delete/<%= a.id %>" onsubmit="return confirm('Delete this account?');">
+            <button type="submit" class="acc-act acc-act-del">Delete</button>
+          </form>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+    <% }) %>
+  </div>
+
+  <div class="acc-empty" id="accEmpty" hidden><span id="accEmptyMsg">Nothing matches these filters.</span> <a href="#" id="accEmptyClear" data-acc-clear>Clear filters</a></div>
+  <% } %>
+
+  <script type="application/json" id="accData"><%- JSON.stringify(accData).replace(/</g, '\\u003c') %></script>
+
+  <div class="qa-overlay" id="accModal">
+    <div class="qa-box" role="dialog" aria-modal="true" aria-labelledby="accModalTitle">
+      <div class="qa-head">
+        <span>🗂️</span>
+        <span class="qa-title" id="accModalTitle">Add Account</span>
+        <button type="button" class="qa-x" data-acc-close aria-label="Close">✕</button>
+      </div>
+      <form method="POST" action="/admin/accounts/add" id="accForm">
+        <div class="qa-body">
+          <div class="qa-l">Account label *</div>
+          <input class="qa-in" type="text" name="label" placeholder="e.g. PSHub Main Account" required>
+
+          <div class="qa-l">Linked catalogue games</div>
+          <div class="acc-gchips" id="accGameChips" hidden></div>
+          <input class="qa-in" type="search" id="accGameSearch" placeholder="Search games to link…" autocomplete="off">
+          <div class="acc-gpick">
+            <% accGames.forEach(g => { %>
+            <label class="acc-gpick-item"><input type="checkbox" name="game_ids" value="<%= g.id %>" data-title="<%= g.title %>"> <%= g.title %> <span class="acc-gpick-plat"><%= g.platform %></span></label>
+            <% }) %>
+          </div>
+          <div class="qa-hint">Linked games power the game-card availability and the Game filter.</div>
+
+          <div class="qa-l">Games in this account (free text, internal)</div>
+          <textarea class="qa-in" name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6…"></textarea>
+
+          <div class="acc-fields">
+            <label class="qa-sub">Account email<input class="qa-in" type="email" name="email" placeholder="e.g. pshub.account1@gmail.com"></label>
+            <label class="qa-sub">Internal note<input class="qa-in" type="text" name="note" placeholder="reminders, misc info…"></label>
+            <label class="qa-sub">Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_tr" min="0"></label>
+            <label class="qa-sub">Non-Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_nt" min="0"></label>
+          </div>
+
+          <div class="qa-l">Slots on this account</div>
+          <div class="acc-toggles">
+            <label><input type="checkbox" name="enable_trophy"> 🏆 Trophy</label>
+            <label><input type="checkbox" name="enable_non_trophy"> 🎮 Non-Trophy</label>
+            <label><input type="checkbox" name="enable_ps4_primary"> 🕹️ PS4 Primary</label>
+          </div>
+
+          <div class="qa-l">Buy page</div>
+          <div class="acc-toggles">
+            <label><input type="checkbox" name="for_sale"> 🛒 List on the public Buy page</label>
+          </div>
+          <label class="qa-sub acc-public-name">Public bundle name (blank hides it from the Buy page)<input class="qa-in" type="text" name="public_name" placeholder="e.g. Sports Pack"></label>
+        </div>
+        <div class="qa-foot">
+          <span class="qa-grow"></span>
+          <button type="button" class="qa-btn qa-ghost" data-acc-close>Cancel</button>
+          <button type="submit" class="qa-btn qa-gold" id="accModalSubmit">Create account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="qa-overlay" id="accSlotModal">
+    <div class="qa-box acc-slot-box" role="dialog" aria-modal="true" aria-labelledby="accSlotTitle">
+      <div class="qa-head">
+        <span>🎛️</span>
+        <span class="qa-title" id="accSlotTitle">Slot</span>
+        <button type="button" class="qa-x" data-acc-close aria-label="Close">✕</button>
+      </div>
+      <form method="POST" action="/admin/accounts" id="accSlotForm">
+        <div class="qa-body">
+          <div class="qa-l">Status</div>
+          <select class="qa-in" name="status" data-ss-skip>
+            <% ACC_STATUS_OPTIONS.forEach(([value, label]) => { %><option value="<%= value %>"><%= label %></option><% }) %>
+          </select>
+
+          <div id="accSlotRenterWrap" hidden>
+            <div class="qa-l">Customer (optional)</div>
+            <select class="qa-in" name="renter_id">
+              <option value="">— No linked customer —</option>
+              <% customers.forEach(c => { %><option value="<%= c.id %>"><%= c.customer_name %></option><% }) %>
+            </select>
+          </div>
+
+          <div id="accSlotDatesWrap" hidden>
+            <div class="qa-l">Rental length</div>
+            <div class="qa-g2">
+              <label class="qa-sub">Days from today<input class="qa-in" type="number" name="days" min="1" placeholder="e.g. 30"></label>
+              <label class="qa-sub">…or end date<input class="qa-in" type="date" name="end_date"></label>
+            </div>
+            <div class="qa-hint">If both are filled, the end date wins.</div>
+          </div>
+        </div>
+        <div class="qa-foot">
+          <span class="qa-grow"></span>
+          <button type="button" class="qa-btn qa-ghost" data-acc-close>Cancel</button>
+          <button type="submit" class="qa-btn qa-gold">Update slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

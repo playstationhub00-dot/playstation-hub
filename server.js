@@ -20,6 +20,7 @@ const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
 const dashboard = require('./lib/dashboard');
+const accountsViewLib = require('./lib/accounts-view');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -744,13 +745,6 @@ function getMonthLogs() { return (db.get('month_logs').value() || []).map(normal
 function getMonthLog(key) {
   const m = db.get('month_logs').find({ key }).value();
   return m ? normalizeMonthLog(m) : m;
-}
-// Days until a slot's end date (null if no end date). Negative = expired.
-function slotDaysLeft(slot) {
-  if (!slot || !slot.end) return null;
-  const end = new Date(slot.end + 'T23:59:59');
-  if (isNaN(end)) return null;
-  return Math.ceil((end - new Date()) / 86400000);
 }
 // Aggregate availability of a game across every account that holds it (phase 2).
 function gameAccountSummary(gameId) {
@@ -5850,10 +5844,13 @@ function buildAccountsView() {
   const categoryById = {};
   categories.forEach(c => { categoryById[c.id] = c; });
 
+  // days_left, due state, urgency and pill text come from lib/accounts-view,
+  // counted in Manila calendar days so "ENDS TODAY" means today in the PH.
+  const today = orders.manilaDate();
   const accounts = getAccounts().map(a => {
     const slotView = {};
     ACCOUNT_SLOT_TYPES.forEach(t => {
-      slotView[t] = { ...a.slots[t], days_left: slotDaysLeft(a.slots[t]) };
+      slotView[t] = accountsViewLib.decorateSlot(a.slots[t], today);
     });
     // Category = the price category of the first linked game (if any)
     const linkedGame = a.game_ids && a.game_ids.length ? gamesById[a.game_ids[0]] : null;
@@ -5873,16 +5870,13 @@ function buildAccountsView() {
     accounts: groupsMap[name].sort((a, b) => a.label.localeCompare(b.label))
   }));
 
-  // Summary stats
-  const stats = { total: 0, open: 0, rented: 0, ending: 0 };
-  accounts.forEach(a => ACCOUNT_SLOT_TYPES.forEach(t => {
-    const s = a.slotView[t];
-    if (!s.enabled) return;
-    stats.total++;
-    if (s.status === 'open') stats.open++;
-    if (s.status === 'rented') { stats.rented++; if (s.days_left != null && s.days_left <= 3) stats.ending++; }
-  }));
-  return { accounts, groups, stats, STATUSES: ACCOUNT_STATUSES };
+  return {
+    accounts,
+    groups,
+    slots: accountsViewLib.flattenSlots(accounts),
+    stats: accountsViewLib.slotStats(accounts),
+    STATUSES: ACCOUNT_STATUSES
+  };
 }
 
 // Old bookmarks/links land on the merged Accounts tab instead of a page that
