@@ -90,9 +90,9 @@
               <span class="nb-s"><%= it.sub %></span>
             </span>
             <% if (it.expiresAt) { %>
-              <%# Deliberately NOT .oq-timer: order-queue.ejs runs its own sweep
-                  over that class, and two loops writing one element fight over
-                  the text and the expired styling. %>
+              <%# Deliberately NOT .oq-timer: public/js/admin-orders.js runs its
+                  own sweep over that class, and two loops writing one element
+                  fight over the text and the expired styling. %>
               <span class="nb-clock" data-expires="<%= it.expiresAt %>">--:--</span>
             <% } %>
           </button>
@@ -145,8 +145,8 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') nbClose(); });
 
-  // The sign-in countdowns. order-queue.ejs runs the same loop for its own
-  // rows, but it only exists inside the Orders tab — the bell is on every
+  // The sign-in countdowns. public/js/admin-orders.js runs the same loop over
+  // .oq-timer, but only views/admin.ejs loads it — the bell is on every admin
   // page, so it owns the timers it renders.
   function tick() {
     var now = Date.now();

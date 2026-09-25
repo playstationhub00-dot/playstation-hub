@@ -122,4 +122,22 @@ ok('anything that is not an object is an empty object', () => {
   assert.deepStrictEqual(plain(F.normalizeGroups(null)), {});
 });
 
+console.log('\nwiring');
+
+ok('admin.ejs loads admin-orders.js with a cache-busting ?v=', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'views', 'admin.ejs'), 'utf8');
+  assert.ok(/<script src="\/js\/admin-orders\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(src));
+});
+
+ok('the file still loads cleanly with no DOM (wiring skipped, rules still exposed)', () => {
+  const again = load();
+  assert.strictEqual(typeof again.rowMatches, 'function');
+});
+
+ok('the notification bell no longer points at the deleted order-queue.ejs', () => {
+  const bell = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'admin', 'notif-bell.ejs'), 'utf8');
+  assert.ok(!bell.includes('order-queue.ejs'));
+  assert.ok(bell.includes('public/js/admin-orders.js'));
+});
+
 console.log('\n' + passed + ' assertions passed\n');
