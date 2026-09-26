@@ -81,7 +81,7 @@ Showing 5 of 24 · Clear
   |---|---|
   | `added`, `updated`, `deleted` | `all` |
   | `upcoming_added`, `upcoming_updated`, `upcoming_deleted`, `release_failed`, `release_in_progress` | `soon` |
-  | any `request_*` | `requests` |
+  | any `request_*` or `voter_*` (the voter edits live on Requests too) | `requests` |
   | `cat_added`, `cat_updated`, `cat_deleted` | `categories` |
 
   `game_released` and `release_partial` already open the Orders tab and are not mapped.
