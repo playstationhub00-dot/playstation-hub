@@ -242,7 +242,9 @@ db.get('games').value().forEach(g => {
   if (g.price_10d === undefined) patch.price_10d = g.price_per_week || 149;
   if (g.price_15d === undefined) patch.price_15d = Math.round((g.price_per_week || 149) * 1.5);
   if (g.price_30d === undefined) patch.price_30d = Math.round((g.price_per_week || 149) * 2.5);
-  if (g.trophy_account === undefined) patch.trophy_account = false;
+  // Every game has both Trophy and Non-Trophy accounts. The switch that could
+  // turn Trophy off is gone, so games saved with it off are brought into line.
+  if (g.trophy_account !== true) patch.trophy_account = true;
   // Separate trophy/non-trophy prices
   if (g.nt_price_10d === undefined) patch.nt_price_10d = g.price_10d || g.price_per_week || 149;
   if (g.nt_price_15d === undefined) patch.nt_price_15d = g.price_15d || Math.round((g.price_per_week || 149) * 1.5);
@@ -4956,7 +4958,7 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
-    genre, description, release_date, trophy_account, trophy_slots,
+    genre, description, release_date, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     price_category_id, price_mode, cost, link_label, link_url,
     is_bundle, bundle_account_id } = req.body;
@@ -4988,8 +4990,9 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     link_label: (link_label || '').trim(),
     link_url: (link_url || '').trim(),
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
-    trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 1) : 0,
-    trophy_account: trophy_account === 'on',
+    trophy_slots: parseInt(trophy_slots) || 0,
+    // Every game has both Trophy and Non-Trophy accounts.
+    trophy_account: true,
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
     buy_nt_price: parseInt(buy_nt_price) || 0,
     buy_tr_price: parseInt(buy_tr_price) || 0,
@@ -5036,7 +5039,7 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
-    genre, description, release_date, trophy_account, trophy_slots,
+    genre, description, release_date, trophy_slots,
     non_trophy_slots, ps4_primary_slots,
     remove_gallery, cover_focal_x, cover_focal_y,
     price_category_id, price_mode, cost, link_label, link_url,
@@ -5085,8 +5088,9 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     link_label: (link_label || '').trim(),
     link_url: (link_url || '').trim(),
     non_trophy_slots: parseInt(non_trophy_slots) || 0,
-    trophy_slots: trophy_account === 'on' ? (parseInt(trophy_slots) || 0) : 0,
-    trophy_account: trophy_account === 'on',
+    trophy_slots: parseInt(trophy_slots) || 0,
+    // Every game has both Trophy and Non-Trophy accounts.
+    trophy_account: true,
     ps4_primary_slots: parseInt(ps4_primary_slots) || 0,
     buy_nt_price: parseInt(buy_nt_price) || 0,
     buy_tr_price: parseInt(buy_tr_price) || 0,

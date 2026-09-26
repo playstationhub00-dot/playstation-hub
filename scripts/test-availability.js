@@ -136,4 +136,13 @@ ok('with no legacy context at all, the old always-sellable fallback still holds'
   assert.strictEqual(buyTypeSellable({}, 'trophy', undefined), true);
 });
 
+console.log('\nTrophy is always offered');
+
+ok('a game saved with the old Trophy switch off still offers Trophy, shown as full at 0 slots', () => {
+  const a = computeAvailability({ platform: 'PS5', trophy_account: false, trophy_slots: 0, non_trophy_slots: 2 }, null, {});
+  assert.strictEqual(a.hasTrophy, true);
+  assert.strictEqual(a.trAvail, false);
+  assert.strictEqual(a.trSlots, 0);
+});
+
 console.log('\n' + passed + ' assertions passed\n');
