@@ -4360,7 +4360,10 @@ app.get('/admin', requireAuth, async (req, res) => {
   // "Started but didn't pay" — every order stuck before payment is verified.
   // The form captures a Facebook name before payment, so each row is a named
   // lead the owner can message directly, not just a statistic.
-  const abandonedOrders = await orders.listByStates(['awaiting_payment', 'payment_rejected']);
+  // Unpaid Quick Adds are listed under Customers → Needs attention → Not paid
+  // yet instead; Follow-ups is for website visitors who never finished.
+  const abandonedOrders = (await orders.listByStates(['awaiting_payment', 'payment_rejected']))
+    .filter(o => !quickAddSettle.isOwnerRecordedUnpaid(o));
   // Which mode the gateway is in, and whether its webhook is actually working.
   // Both are read straight from live state rather than remembered anywhere, so
   // the badge cannot claim "test" while real money is moving.
@@ -4396,6 +4399,23 @@ app.get('/admin', requireAuth, async (req, res) => {
   // before initialization" from the temporal dead zone, which as an
   // unhandled rejection killed the process and took the whole site down.
   const waitlistOrders = queueRules.forAdminPanel(allOrders, new Date());
+  // Customers → Needs attention → Not paid yet: unpaid Quick Adds, oldest
+  // first, each with a copy-ready reminder linking to their own order page
+  // (where they can also pay). The link base matches the review asks.
+  const unpaidQuickAdds = allOrders
+    .filter(o => quickAddSettle.isOwnerRecordedUnpaid(o))
+    .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+  {
+    const tpls = getSiteSettings().message_templates || {};
+    const base = String(tpls.website_link || SITE_URL).replace(/\/+$/, '');
+    unpaidQuickAdds.forEach(o => {
+      o.reminder_msg = quickAddSettle.reminderMessage({
+        fbName: o.fb_name, owed: o.amount_due, gameTitle: o.game_title, ref: o.ref,
+        link: o.url_key ? base + '/order/' + o.ref + '?k=' + o.url_key : ''
+      });
+    });
+  }
+  const unpaidCustomerIds = unpaidQuickAdds.map(o => o.customer_id).filter(id => id != null);
   // "Money taken this month" for the dashboard's Right Now row — same
   // created_at-month attribution the orders ledger groups by, so the two
   // numbers can never disagree about which orders belong to the month.
@@ -4849,7 +4869,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     upcoming: gamesViewLib.upcomingRows(upcoming, upcomingReservedCount, todayManila),
     requests: gamesViewLib.requestSummary(gameRequestRows)
   };
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something

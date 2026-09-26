@@ -1,0 +1,52 @@
+<%#
+  Customers → Needs attention → Not paid yet: orders the owner added with
+  Quick Add as not paid. None of it counts in sales until the payment is
+  confirmed — by Confirm paid here, or by the customer paying from their own
+  order link — and then it counts from that day (lib/quick-add-settle.js).
+%>
+<%
+  const upRows = (typeof unpaidQuickAdds !== 'undefined' && unpaidQuickAdds) ? unpaidQuickAdds : [];
+  const upType = t => t === 'tr' ? 'Trophy' : t === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+  const upWhat = o => o.upcoming_game_id ? 'Reservation' : o.is_buy ? 'Purchase' : (o.days ? o.days + ' days' : 'Rental');
+  const upSince = iso => {
+    const d = new Date(iso || '');
+    return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' });
+  };
+  const upMethods = ((typeof settings !== 'undefined' && settings && settings.payment_methods) || []).filter(m => m && m.enabled);
+%>
+<% if (upRows.length) { %>
+<div class="rem-panel unlinked-panel" id="unpaidPanel">
+  <div class="rem-title">💸 Not paid yet (<%= upRows.length %>)</div>
+  <div class="unlinked-note">
+    Added with Quick Add as not paid. None of this counts in sales until the payment is confirmed — then it counts from that day.
+  </div>
+  <% upRows.forEach(o => { %>
+  <%# Wraps on a phone: the details keep a readable width and the actions
+      drop underneath instead of squeezing them into a sliver. %>
+  <div class="rem-row" style="flex-wrap:wrap;">
+    <div class="rem-info" style="flex:1 1 12rem;">
+      <span class="rem-name"><%= o.fb_name || 'Unnamed customer' %></span>
+      <span class="rem-badge rem-overdue"><%= o.ref %></span>
+      <% if (o.state === 'payment_rejected') { %><span class="rem-badge rem-today">payment rejected</span><% } %>
+      <div class="rem-meta"><%= o.game_title || '' %> · <%= upType(o.account_type) %> · <%= upWhat(o) %></div>
+      <div class="rem-meta">₱<%= (Number(o.amount_due) || 0).toLocaleString('en-US') %> owed<%= upSince(o.created_at) ? ' · since ' + upSince(o.created_at) : '' %></div>
+      <% if (o.state === 'verifying_payment') { %>
+      <div class="rem-meta">📎 Proof sent<% if (o.payment_proof) { %> — <a href="<%= o.payment_proof %>" target="_blank" rel="noopener" style="color:var(--ps-blue);">view receipt</a><% } %></div>
+      <% } %>
+    </div>
+    <div style="display:flex;gap:0.35rem;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-left:auto;">
+      <form method="POST" action="/admin/orders/<%= o.ref %>/confirm-paid" style="display:inline-flex;gap:0.35rem;align-items:center;margin:0;">
+        <select name="method" aria-label="How they paid" style="background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.3rem 0.4rem;font-size:0.75rem;">
+          <% upMethods.forEach(m => { %>
+          <option value="<%= m.key %>"><%= m.label %></option>
+          <% }) %>
+          <option value="manual">Other / cash</option>
+        </select>
+        <button type="submit" style="background:#16a34a;color:#fff;border:0;border-radius:8px;padding:0.45rem 0.75rem;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">Confirm paid</button>
+      </form>
+      <button type="button" class="rem-copy" data-msg="<%= o.reminder_msg || '' %>">📋 Copy reminder</button>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<% } %>
