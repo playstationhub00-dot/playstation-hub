@@ -24,6 +24,10 @@ const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
 const gamesViewLib = require('./lib/games-view');
 const quickAddSettle = require('./lib/quick-add-settle');
+const psplusFeed = require('./lib/psplus-feed');
+const psplusCatalog = require('./lib/psplus-catalog');
+const psplusCatalogView = require('./lib/psplus-catalog-view');
+const psplusCatalogStore = require('./lib/psplus-catalog-store');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -662,6 +666,12 @@ orders.init(_getMongoDb);
 // requests for the same title creating two rows.
 gameRequests.init(_getMongoDb);
 gameRequests.ensureIndexes().catch(e => console.error('[requests] ensureIndexes', e.message));
+
+// The PS Plus Deluxe game list (~500 games from PlayStation's game-finder
+// feed) has its own collection rather than living in the lowdb blob, which is
+// rewritten in full on every save. Pages read the in-memory copy load() fills.
+psplusCatalogStore.init(_getMongoDb);
+psplusCatalogStore.load().catch(e => console.error('[psplus-catalog] load', e.message));
 
 function normalizeCustomer(c) {
   if (!c) return c;
@@ -1416,6 +1426,125 @@ app.post('/admin/psplus/popular/delete/:id', requireAuth, (req, res) => {
 });
 
 // Update PS Plus global prices + slots
+// ── PS Plus Deluxe game list ──────────────────────────────────────────
+// The full Deluxe catalog from PlayStation's own game-finder feed
+// (lib/psplus-feed.js). Refresh only builds a preview; Apply writes it. See
+// docs/superpowers/specs/2026-09-27-psplus-catalog-design.md.
+
+// Refresh previews waiting for Apply, by random token. In memory on purpose:
+// this is a single-process app, and a preview older than 30 minutes — or lost
+// to a restart — must be refreshed again rather than applied stale.
+const catalogPreviews = new Map();
+const CATALOG_PREVIEW_MS = 30 * 60 * 1000;
+function getCatalogPreview(token) {
+  const now = Date.now();
+  for (const [t, p] of catalogPreviews) {
+    if (now - p.createdAt > CATALOG_PREVIEW_MS) catalogPreviews.delete(t);
+  }
+  return catalogPreviews.get(String(token || '')) || null;
+}
+
+const CATALOG_BACK = '/admin?tab=psplus&msg=';
+
+async function saveCatalogOwnerFields(res, key, patch) {
+  let saved = false;
+  try {
+    saved = await psplusCatalogStore.setOwnerFields(key, patch);
+  } catch (e) {
+    console.error('[psplus-catalog] save', key, e.message);
+  }
+  res.redirect(CATALOG_BACK + (saved ? 'catalog_saved' : 'catalog_error'));
+}
+
+app.post('/admin/psplus/catalog/refresh', requireAuth, asyncRoute(async (req, res) => {
+  const results = await psplusFeed.fetchAll();
+  if (!psplusCatalog.STORED_LISTS.some(l => results[l] && results[l].ok)) {
+    return res.redirect(CATALOG_BACK + 'catalog_unreachable');
+  }
+  const preview = psplusCatalog.buildPreview(psplusCatalogStore.all(), results);
+  const token = require('crypto').randomBytes(12).toString('hex');
+  getCatalogPreview(''); // drops expired previews before adding another
+  catalogPreviews.set(token, { createdAt: Date.now(), preview });
+  res.redirect('/admin?tab=psplus&catalog_preview=' + token);
+}));
+
+app.post('/admin/psplus/catalog/apply', requireAuth, asyncRoute(async (req, res) => {
+  const token = String(req.body.token || '');
+  const entry = getCatalogPreview(token);
+  if (!entry) return res.redirect(CATALOG_BACK + 'catalog_expired');
+  if (!entry.preview.applied.length) return res.redirect(CATALOG_BACK + 'catalog_nothing');
+  const nowIso = new Date().toISOString();
+  // Re-planned against what is stored at this moment, not when the preview
+  // was made, so an owner edit in between is never overwritten.
+  const plan = psplusCatalog.applyPlan(psplusCatalogStore.all(), entry.preview.incoming, entry.preview.applied, nowIso);
+  try {
+    await psplusCatalogStore.applyChanges({
+      upserts: plan.upserts, removals: plan.removals,
+      meta: { last_refreshed_at: nowIso, locale: psplusFeed.FEED_LOCALE }
+    });
+  } catch (e) {
+    console.error('[psplus-catalog] apply', e.message);
+    return res.redirect(CATALOG_BACK + 'catalog_error');
+  }
+  catalogPreviews.delete(token);
+  res.redirect(CATALOG_BACK + 'catalog_applied');
+}));
+
+app.post('/admin/psplus/catalog/cancel', requireAuth, asyncRoute(async (req, res) => {
+  catalogPreviews.delete(String(req.body.token || ''));
+  res.redirect('/admin?tab=psplus');
+}));
+
+app.post('/admin/psplus/catalog/add', requireAuth, upload.single('cover_image'), asyncRoute(async (req, res) => {
+  const cover = req.file ? await processUploadedImage(req.file) : '';
+  let game = null;
+  try {
+    game = await psplusCatalogStore.addManual({
+      name: req.body.name, list: req.body.list,
+      platforms: [].concat(req.body.platforms || []), cover_override: cover
+    });
+  } catch (e) {
+    console.error('[psplus-catalog] add', e.message);
+  }
+  res.redirect(CATALOG_BACK + (game ? 'catalog_saved' : 'catalog_error'));
+}));
+
+app.post('/admin/psplus/catalog/:key/visibility', requireAuth, asyncRoute(async (req, res) => {
+  const hidden = req.body.hidden === '1';
+  await saveCatalogOwnerFields(res, req.params.key, {
+    hidden, hidden_note: hidden ? String(req.body.note || '').trim().slice(0, 120) : ''
+  });
+}));
+
+// "auto" = link by title automatically; "none" = never link; or one of the
+// owner's own game ids.
+app.post('/admin/psplus/catalog/:key/rent-link', requireAuth, asyncRoute(async (req, res) => {
+  const choice = String(req.body.rent || '');
+  let patch = null;
+  if (choice === 'auto') patch = { rent_override: false, rent_game_id: null };
+  else if (choice === 'none') patch = { rent_override: true, rent_game_id: null };
+  else if (/^\d+$/.test(choice) && getGame(choice)) patch = { rent_override: true, rent_game_id: Number(choice) };
+  if (!patch) return res.redirect(CATALOG_BACK + 'catalog_error');
+  await saveCatalogOwnerFields(res, req.params.key, patch);
+}));
+
+app.post('/admin/psplus/catalog/:key/cover', requireAuth, upload.single('cover_image'), asyncRoute(async (req, res) => {
+  if (req.body.reset === '1') return saveCatalogOwnerFields(res, req.params.key, { cover_override: '' });
+  if (!req.file) return res.redirect(CATALOG_BACK + 'catalog_error');
+  const cover = await processUploadedImage(req.file);
+  await saveCatalogOwnerFields(res, req.params.key, { cover_override: cover });
+}));
+
+app.post('/admin/psplus/catalog/:key/remove', requireAuth, asyncRoute(async (req, res) => {
+  let removed = false;
+  try {
+    removed = await psplusCatalogStore.removeManual(req.params.key);
+  } catch (e) {
+    console.error('[psplus-catalog] remove', e.message);
+  }
+  res.redirect(CATALOG_BACK + (removed ? 'catalog_saved' : 'catalog_error'));
+}));
+
 app.post('/admin/psplus/prices', requireAuth, (req, res) => {
   const { nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d, nt_slots, tr_slots, ps4_slots } = req.body;
   db.set('psplus_slots', {
@@ -4258,6 +4387,20 @@ app.get('/admin', requireAuth, async (req, res) => {
   const upcoming = [...getUpcoming()].sort((a, b) => b.id - a.id);
   const psplus = [...getPsplus()].sort((a, b) => b.year - a.year || b.month - a.month);
   const psplusPopular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
+  // PS Plus tab → PS Plus Deluxe game list. ?catalog_preview=<token> shows
+  // that Refresh's preview until it is applied, cancelled or expires.
+  const catalogPreviewToken = String(req.query.catalog_preview || '');
+  const catalogPreview = catalogPreviewToken ? getCatalogPreview(catalogPreviewToken) : null;
+  const psplusCatalogAdmin = Object.assign(psplusCatalogView.buildAdminCatalog({
+    games: psplusCatalogStore.all(), siteGames: getGames(), entries: psplus,
+    meta: psplusCatalogStore.meta(), now: new Date()
+  }), {
+    preview: catalogPreview ? psplusCatalogView.previewView(catalogPreview.preview, psplusPopular.map(p => p.title), 12) : null,
+    previewToken: catalogPreview ? catalogPreviewToken : '',
+    previewExpired: !!catalogPreviewToken && !catalogPreview,
+    monthSuggestion: catalogPreview ? psplusCatalogView.monthSuggestion(catalogPreview.preview.monthlyNames, psplus, orders.manilaDate()) : null,
+    siteGames: getGames().map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title))
+  });
   const customers = [...getCustomers()].sort((a, b) => {
     const rank = c => c.status === 'renting' ? 0 : c.status === 'reservation' ? 1 : c.status === 'bought' ? 2 : 3; // done last
     if (rank(a) !== rank(b)) return rank(a) - rank(b);
@@ -4872,7 +5015,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     upcoming: gamesViewLib.upcomingRows(upcoming, upcomingReservedCount, todayManila),
     requests: gamesViewLib.requestSummary(gameRequestRows)
   };
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something

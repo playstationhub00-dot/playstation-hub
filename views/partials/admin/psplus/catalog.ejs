@@ -1,0 +1,367 @@
+<%#
+  Admin PS Plus tab → 🎮 PS Plus Deluxe game list. The full Deluxe catalog
+  from PlayStation's game-finder feed (lib/psplus-feed.js). "Refresh from
+  PlayStation" only builds a preview (+new / −leaving / updated, per-list
+  safety checks); nothing is saved until Apply. The owner's own choices —
+  hide, "Also for rent" link, own cover, games added by hand — survive every
+  refresh (lib/psplus-catalog.js applyPlan).
+
+  Locals: psplusCatalog, built by the /admin route from
+  lib/psplus-catalog-view.js buildAdminCatalog() plus { preview, previewToken,
+  previewExpired, monthSuggestion, siteGames }.
+%>
+<%
+  const pc = (typeof psplusCatalog !== 'undefined' && psplusCatalog) ? psplusCatalog : null;
+  const PPCA_TAG = { catalog: 'CATALOG', classics: 'CLASSIC', ubisoft: 'UBISOFT+' };
+  const ppcaWhen = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' });
+  const ppcaAgo = n => n === 0 ? 'today' : n === 1 ? '1 day ago' : n + ' days ago';
+%>
+<% if (pc) { %>
+<style>
+  .ppca { padding:0 !important; overflow:hidden; }
+  .ppca-head { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap; padding:1rem 1.15rem; border-left:3px solid #FFD700; background:#111; }
+  .ppca-head h2 { margin:0 !important; padding:0 !important; border:0 !important; font-size:1rem; }
+  .ppca-sub { font-size:0.78rem; color:#777; margin-top:0.2rem; }
+  .ppca-sub b { color:#ccc; }
+  .ppca-actions { display:flex; gap:0.5rem; flex-wrap:wrap; }
+  .ppca-body { padding:1rem 1.15rem; }
+  .ppca-btn { border-radius:8px; padding:0.5rem 0.9rem; font-weight:800; font-size:0.8rem; cursor:pointer; font-family:inherit; border:1px solid transparent; white-space:nowrap; }
+  .ppca-gold { background:#FFD700; color:#000; }
+  .ppca-green { background:#16a34a; color:#fff; }
+  .ppca-ghost { background:#161616; color:#ccc; border-color:#2e2e2e; }
+  .ppca-purple { background:#1a0f29; color:#e9d5ff; border-color:#6b21a8; }
+  .ppca-btn:disabled { opacity:0.6; cursor:wait; }
+  .ppca-stats { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.9rem; }
+  .ppca-stat { background:#141414; border:1px solid #242424; border-radius:10px; padding:0.45rem 0.75rem; min-width:88px; }
+  .ppca-stat b { display:block; font-size:1.05rem; color:#fff; }
+  .ppca-stat span { font-size:0.65rem; color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+  .ppca-stat.red { border-color:#3f1d1d; } .ppca-stat.red b { color:#f87171; }
+  .ppca-stat.green { border-color:#14532d; } .ppca-stat.green b { color:#4ade80; }
+  .ppca-preview { border:1px solid #2a2a2a; border-radius:12px; padding:0.9rem 1rem; margin-bottom:1rem; background:#0d0d0d; }
+  .ppca-preview-title { font-weight:800; margin-bottom:0.6rem; }
+  .ppca-preview-title span { font-weight:400; color:#777; font-size:0.8rem; }
+  .ppca-bad { background:#1f0808; border:1px solid #7f1d1d; color:#fca5a5; border-radius:10px; padding:0.55rem 0.7rem; font-size:0.8rem; margin-bottom:0.5rem; }
+  .ppca-warn { background:#1f1405; border:1px solid #713f12; color:#fcd34d; border-radius:10px; padding:0.55rem 0.7rem; font-size:0.8rem; margin-bottom:0.5rem; }
+  .ppca-pills { display:flex; gap:0.4rem; flex-wrap:wrap; margin:0.3rem 0 0.8rem; }
+  .ppca-pill { font-weight:800; font-size:0.75rem; border-radius:50px; padding:0.25rem 0.65rem; border:1px solid; }
+  .ppca-p-add { background:rgba(34,197,94,.12); color:#4ade80; border-color:rgba(34,197,94,.3); }
+  .ppca-p-rem { background:rgba(239,68,68,.12); color:#f87171; border-color:rgba(239,68,68,.3); }
+  .ppca-p-chg { background:rgba(96,165,250,.12); color:#93c5fd; border-color:rgba(96,165,250,.3); }
+  .ppca-p-same { background:#161616; color:#888; border-color:#262626; }
+  .ppca-cols { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:0.9rem; }
+  .ppca-cols h4 { margin:0 0 0.35rem; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:#888; }
+  .ppca-it { display:flex; align-items:center; gap:0.55rem; padding:0.3rem 0; border-top:1px solid #1a1a1a; }
+  .ppca-it:first-of-type { border-top:0; }
+  .ppca-it img, .ppca-ph { width:32px; height:32px; border-radius:6px; object-fit:cover; flex:none; background:#222; display:block; }
+  .ppca-n { font-weight:700; font-size:0.8rem; color:#eee; }
+  .ppca-m { font-size:0.7rem; color:#777; }
+  .ppca-none { font-size:0.8rem; color:#555; padding:0.3rem 0; }
+  .ppca-tag { font-size:0.55rem; font-weight:900; padding:1px 5px; border-radius:3px; margin-left:0.3rem; vertical-align:1px; }
+  .ppca-tag-catalog { background:#FFD700; color:#000; }
+  .ppca-tag-classics { background:#38bdf8; color:#00111a; }
+  .ppca-tag-ubisoft { background:#e2e8f0; color:#0f172a; }
+  .ppca-month { background:#140a20; border:1px solid #33204d; color:#e9d5ff; border-radius:10px; padding:0.6rem 0.75rem; display:flex; justify-content:space-between; align-items:center; gap:0.6rem; flex-wrap:wrap; font-size:0.8rem; margin-top:0.8rem; }
+  .ppca-foot { display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap; margin-top:0.8rem; }
+  .ppca-addbox { border:1px dashed #2e2e2e; border-radius:10px; padding:0.6rem 0.8rem; margin-bottom:0.9rem; }
+  .ppca-addbox summary { cursor:pointer; font-weight:700; font-size:0.85rem; color:#ccc; }
+  .ppca-addform { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.6rem; font-size:0.8rem; }
+  .ppca-addform input[type=text] { flex:1 1 220px; }
+  .ppca-note { font-size:0.72rem; color:#666; margin:0.5rem 0 0; }
+  .ppca-toolbar { display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem; }
+  .ppca-toolbar input[type=search] { flex:1 1 220px; background:#141414; border:1px solid #2a2a2a; color:#ddd; border-radius:8px; padding:0.45rem 0.7rem; font-size:0.8rem; }
+  .ppca-chips { display:flex; gap:0.3rem; flex-wrap:wrap; }
+  .ppca-chip { font-size:0.72rem; font-weight:700; padding:0.25rem 0.65rem; border-radius:50px; border:1px solid #2e2e2e; color:#999; background:none; cursor:pointer; font-family:inherit; }
+  .ppca-chip.on { background:#fff; color:#000; border-color:#fff; }
+  .ppca-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .ppca-table th { text-align:left; font-size:0.65rem; color:#666; text-transform:uppercase; letter-spacing:0.04em; padding:0.4rem; border-bottom:1px solid #1f1f1f; }
+  .ppca-table td { padding:0.4rem; border-bottom:1px solid #161616; vertical-align:middle; }
+  .ppca-table img { width:34px; height:34px; border-radius:6px; object-fit:cover; display:block; }
+  .ppca-table tr.ppca-off td { opacity:0.55; }
+  .ppca-sel { background:#141414; border:1px solid #2a2a2a; color:#bbb; border-radius:6px; padding:0.2rem 0.35rem; font-size:0.75rem; max-width:220px; }
+  .ppca-tog { width:34px; height:19px; border-radius:20px; background:#16a34a; border:0; position:relative; cursor:pointer; }
+  .ppca-tog::after { content:''; position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:50%; background:#fff; }
+  .ppca-tog.off { background:#333; }
+  .ppca-tog.off::after { right:auto; left:2px; }
+  .ppca-acts { white-space:nowrap; }
+  .ppca-link { background:none; border:0; color:#888; font-size:0.72rem; cursor:pointer; padding:0.1rem 0.3rem; font-family:inherit; text-decoration:underline; }
+  .ppca-danger { color:#f87171; }
+  .ppca-more { text-align:center; margin-top:0.6rem; }
+  .ppca-empty { text-align:center; color:#888; padding:1.5rem 1rem; font-size:0.85rem; }
+</style>
+
+<div class="table-card ppca" id="psplusCatalog" style="border-color:rgba(255,215,0,0.25);">
+  <div class="ppca-head">
+    <div>
+      <h2>🎮 PS Plus Deluxe game list</h2>
+      <div class="ppca-sub">From PlayStation (Indonesia) ·
+        <% if (pc.lastRefreshedAt) { %>last refreshed <b><%= ppcaWhen(pc.lastRefreshedAt) %></b> (<%= ppcaAgo(pc.daysAgo) %>)<% } else { %>never refreshed<% } %>
+      </div>
+    </div>
+    <div class="ppca-actions">
+      <button type="button" class="ppca-btn ppca-ghost" onclick="ppcaOpenAdd()">➕ Add a game by hand</button>
+      <form method="POST" action="/admin/psplus/catalog/refresh" style="margin:0;" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='⏳ Checking PlayStation…';">
+        <button type="submit" class="ppca-btn ppca-gold">🔄 Refresh from PlayStation</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="ppca-body">
+    <% if (pc.previewExpired) { %>
+    <div class="ppca-warn">⏳ That preview expired (they last 30 minutes) — press <b>Refresh from PlayStation</b> again.</div>
+    <% } %>
+
+    <% if (pc.preview) { const pv = pc.preview; %>
+    <div class="ppca-preview" id="ppcaPreview">
+      <div class="ppca-preview-title">🔄 Refresh preview <span>· checked PlayStation just now · nothing is saved until you press Apply</span></div>
+      <% pv.held.forEach(l => { %>
+      <div class="ppca-bad">⛔ <b><%= l.label %> <%= l.state === 'blocked' ? 'came back with 0 games' : "couldn't be read from PlayStation" %></b><%= l.stored ? ' (you have ' + l.stored + ')' : '' %>.<%= l.state === 'blocked' ? " This usually means PlayStation's site changed or was briefly down." : '' %> It was <b>not</b> applied — your <%= l.label %> list is unchanged.</div>
+      <% }) %>
+      <% pv.warned.forEach(l => { %>
+      <div class="ppca-warn">⚠ <b><%= l.label %> lost <%= Math.round((1 - l.incoming / l.stored) * 100) %>% of its games at once</b> (<%= l.stored %> → <%= l.incoming %>). That's unusual — look through "Leaving" before you apply.</div>
+      <% }) %>
+      <div class="ppca-pills">
+        <span class="ppca-pill ppca-p-add">+ <%= pv.addedCount %> new</span>
+        <span class="ppca-pill ppca-p-rem">− <%= pv.leavingCount %> leaving</span>
+        <span class="ppca-pill ppca-p-chg"><%= pv.updatedCount %> updated (cover or name)</span>
+        <span class="ppca-pill ppca-p-same"><%= pv.unchanged %> unchanged</span>
+      </div>
+      <div class="ppca-cols">
+        <div>
+          <h4>New in PS Plus</h4>
+          <% if (!pv.added.length) { %><div class="ppca-none">Nothing new.</div><% } %>
+          <% pv.added.forEach(g => { %>
+          <div class="ppca-it"><% if (g.img) { %><img src="<%= g.img %>" alt="" loading="lazy"><% } else { %><span class="ppca-ph"></span><% } %><div><div class="ppca-n"><%= g.n %> <span class="ppca-tag ppca-tag-<%= g.t %>"><%= PPCA_TAG[g.t] %></span></div><div class="ppca-m"><%= g.p.join(' · ') %></div></div></div>
+          <% }) %>
+          <% if (pv.addedMore) { %><div class="ppca-none">+ <%= pv.addedMore %> more…</div><% } %>
+        </div>
+        <div>
+          <h4>Leaving (no longer on PlayStation's list)</h4>
+          <% if (!pv.leaving.length) { %><div class="ppca-none">Nothing leaving.</div><% } %>
+          <% pv.leaving.forEach(g => { %>
+          <div class="ppca-it"><% if (g.img) { %><img src="<%= g.img %>" alt="" loading="lazy"><% } else { %><span class="ppca-ph"></span><% } %><div><div class="ppca-n"><%= g.n %> <span class="ppca-tag ppca-tag-<%= g.t %>"><%= PPCA_TAG[g.t] %></span></div><div class="ppca-m"><%= g.p.join(' · ') %><% if (g.most) { %> · <span style="color:#fbbf24;">⚠ it's in your Most Played list</span><% } %></div></div></div>
+          <% }) %>
+          <% if (pv.leavingMore) { %><div class="ppca-none">+ <%= pv.leavingMore %> more…</div><% } %>
+        </div>
+      </div>
+      <% if (pc.monthSuggestion) { const ms = pc.monthSuggestion; %>
+      <div class="ppca-month">
+        <div>📅 PlayStation's monthly games for <b><%= ms.monthName %> <%= ms.year %></b>: <%= ms.names.join(', ') %>. You don't have a <%= ms.monthName %> entry yet.</div>
+        <button type="button" class="ppca-btn ppca-purple" data-year="<%= ms.year %>" data-month="<%= ms.month %>" data-games="<%= ms.names.join('\n') %>" onclick="ppcaFillMonth(this)">Create <%= ms.monthName.slice(0, 3) %> <%= ms.year %> entry from these</button>
+      </div>
+      <% } %>
+      <div class="ppca-foot">
+        <form method="POST" action="/admin/psplus/catalog/cancel" style="margin:0;">
+          <input type="hidden" name="token" value="<%= pc.previewToken %>">
+          <button type="submit" class="ppca-btn ppca-ghost">Cancel</button>
+        </form>
+        <% if (pv.appliedCount > 0) { %>
+        <form method="POST" action="/admin/psplus/catalog/apply" style="margin:0;">
+          <input type="hidden" name="token" value="<%= pc.previewToken %>">
+          <button type="submit" class="ppca-btn ppca-green"><%= pv.held.length ? 'Apply the ' + pv.appliedCount + (pv.appliedCount === 1 ? ' list that looks' : ' lists that look') + ' OK' : 'Apply changes' %></button>
+        </form>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
+    <details class="ppca-addbox" id="ppcaAdd">
+      <summary>➕ Add a game by hand</summary>
+      <form method="POST" action="/admin/psplus/catalog/add" enctype="multipart/form-data" class="ppca-addform">
+        <input type="text" name="name" required maxlength="120" placeholder="Game title, as customers know it" aria-label="Game title">
+        <select name="list" aria-label="Which list">
+          <option value="catalog">Game Catalog</option>
+          <option value="classics">Classics</option>
+          <option value="ubisoft">Ubisoft+ Classics</option>
+        </select>
+        <label><input type="checkbox" name="platforms" value="PS5" checked> PS5</label>
+        <label><input type="checkbox" name="platforms" value="PS4" checked> PS4</label>
+        <label>Cover (optional) <input type="file" name="cover_image" accept="image/*"></label>
+        <button type="submit" class="ppca-btn ppca-gold">Add game</button>
+      </form>
+      <p class="ppca-note">For a game on your accounts that PlayStation's list doesn't show. Refreshes never remove it.</p>
+    </details>
+
+    <div class="ppca-stats">
+      <div class="ppca-stat"><b><%= pc.counts.catalog %></b><span>Game Catalog</span></div>
+      <div class="ppca-stat"><b><%= pc.counts.classics %></b><span>Classics</span></div>
+      <div class="ppca-stat"><b><%= pc.counts.ubisoft %></b><span>Ubisoft+</span></div>
+      <div class="ppca-stat"><b><%= pc.counts.monthly %></b><span>Monthly (yours)</span></div>
+      <div class="ppca-stat red"><b><%= pc.counts.hidden %></b><span>Hidden by you</span></div>
+      <div class="ppca-stat green"><b><%= pc.counts.rent %></b><span>Also for rent</span></div>
+      <div class="ppca-stat"><b><%= pc.counts.manual %></b><span>Added by hand</span></div>
+    </div>
+
+    <% if (!pc.rows.length) { %>
+    <div class="ppca-empty">No games yet. Press <b>🔄 Refresh from PlayStation</b> to load PlayStation's list — you'll see a preview before anything is saved.</div>
+    <% } else { %>
+    <div class="ppca-toolbar">
+      <input type="search" id="ppcaSearch" placeholder="🔍 Find a game in the list…" aria-label="Find a game">
+      <div class="ppca-chips" id="ppcaChips">
+        <button type="button" class="ppca-chip on" data-f="all">All</button>
+        <button type="button" class="ppca-chip" data-f="hidden">Hidden</button>
+        <button type="button" class="ppca-chip" data-f="rent">Also for rent</button>
+        <button type="button" class="ppca-chip" data-f="manual">Added by hand</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="ppca-table">
+        <thead><tr><th></th><th>Game</th><th>List</th><th>Also for rent (your game)</th><th>Shown</th><th></th></tr></thead>
+        <tbody id="ppcaRows"></tbody>
+      </table>
+    </div>
+    <div class="ppca-more"><button type="button" id="ppcaMore" class="ppca-btn ppca-ghost" hidden>Show more</button></div>
+    <% } %>
+  </div>
+
+  <%# One hidden form each for every row action — the rows are drawn in the
+      browser, 50 at a time, so ~500 games don't mean ~1,500 forms in the page. %>
+  <form method="POST" id="ppcaAction" style="display:none;">
+    <input type="hidden" name="hidden"><input type="hidden" name="note"><input type="hidden" name="rent"><input type="hidden" name="reset">
+  </form>
+  <form method="POST" id="ppcaCover" enctype="multipart/form-data" style="display:none;">
+    <input type="file" name="cover_image" accept="image/*" id="ppcaCoverFile">
+  </form>
+  <script type="application/json" id="ppcaData"><%- JSON.stringify({ rows: pc.rows, games: pc.siteGames || [] }).replace(/</g, '\\u003c') %></script>
+  <script>
+  function ppcaOpenAdd() {
+    var d = document.getElementById('ppcaAdd');
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  // Fills the existing "+ Add Monthly Games" form below; the owner still reviews and submits it.
+  function ppcaFillMonth(btn) {
+    var f = document.getElementById('psplusAddMonthForm');
+    if (!f) return;
+    f.elements.year.value = btn.dataset.year;
+    f.elements.month.value = btn.dataset.month;
+    f.elements.games_list.value = btn.dataset.games;
+    f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    f.elements.games_list.focus();
+  }
+  (function () {
+    var dataEl = document.getElementById('ppcaData');
+    var body = document.getElementById('ppcaRows');
+    if (!dataEl || !body) return;
+    var data = JSON.parse(dataEl.textContent || '{}');
+    var rows = data.rows || [], games = data.games || [];
+    var TAG = { catalog: 'CATALOG', classics: 'CLASSIC', ubisoft: 'UBISOFT+' };
+    var PAGE = 50, shown = PAGE, filter = 'all', q = '';
+    var more = document.getElementById('ppcaMore');
+    var action = document.getElementById('ppcaAction');
+    var coverForm = document.getElementById('ppcaCover');
+    var coverFile = document.getElementById('ppcaCoverFile');
+
+    function base(k) { return '/admin/psplus/catalog/' + encodeURIComponent(k); }
+    function post(url, fields) {
+      action.action = url;
+      ['hidden', 'note', 'rent', 'reset'].forEach(function (n) { action.elements[n].value = fields[n] != null ? fields[n] : ''; });
+      action.submit();
+    }
+    function el(tag, cls, text) {
+      var e = document.createElement(tag);
+      if (cls) e.className = cls;
+      if (text != null) e.textContent = text;
+      return e;
+    }
+    function norm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+    rows.forEach(function (r) { r._q = norm(r.n); });
+
+    function visible() {
+      return rows.filter(function (r) {
+        if (filter === 'hidden' && !r.h) return false;
+        if (filter === 'rent' && !r.rt) return false;
+        if (filter === 'manual' && !r.man) return false;
+        return !q || r._q.indexOf(q) >= 0;
+      });
+    }
+    function row(r) {
+      var tr = el('tr', r.h ? 'ppca-off' : '');
+      var c0 = el('td');
+      if (r.img) { var im = el('img'); im.src = r.img; im.alt = ''; im.loading = 'lazy'; c0.appendChild(im); } else c0.appendChild(el('span', 'ppca-ph'));
+      tr.appendChild(c0);
+      var c1 = el('td');
+      c1.appendChild(el('b', null, r.n));
+      var meta = r.p.join(' · ');
+      if (r.h) meta += r.hn ? ' · hidden: "' + r.hn + '"' : ' · hidden';
+      if (r.man) meta += ' · added by hand';
+      c1.appendChild(el('div', 'ppca-m', meta));
+      tr.appendChild(c1);
+      var c2 = el('td');
+      c2.appendChild(el('span', 'ppca-tag ppca-tag-' + r.t, TAG[r.t]));
+      tr.appendChild(c2);
+      var c3 = el('td');
+      var sel = el('select', 'ppca-sel');
+      sel.setAttribute('aria-label', 'Also for rent: ' + r.n);
+      var auto = el('option', null, 'Automatic' + (!r.ro ? (r.rt ? ' — ' + r.rt : ' — none found') : ''));
+      auto.value = 'auto';
+      sel.appendChild(auto);
+      var none = el('option', null, '— none —');
+      none.value = 'none';
+      sel.appendChild(none);
+      games.forEach(function (g) { var o = el('option', null, g.title); o.value = String(g.id); sel.appendChild(o); });
+      sel.value = !r.ro ? 'auto' : (r.rg == null ? 'none' : String(r.rg));
+      sel.addEventListener('change', function () { post(base(r.k) + '/rent-link', { rent: sel.value }); });
+      c3.appendChild(sel);
+      tr.appendChild(c3);
+      var c4 = el('td');
+      var tog = el('button', 'ppca-tog' + (r.h ? ' off' : ''));
+      tog.type = 'button';
+      tog.setAttribute('aria-pressed', String(!r.h));
+      tog.setAttribute('aria-label', (r.h ? 'Show ' : 'Hide ') + r.n);
+      tog.addEventListener('click', function () {
+        if (r.h) { post(base(r.k) + '/visibility', { hidden: '0' }); return; }
+        var note = window.prompt('Hide "' + r.n + '" from customers?\nOptional note for yourself (e.g. not on our region):', '');
+        if (note === null) return;
+        post(base(r.k) + '/visibility', { hidden: '1', note: note });
+      });
+      c4.appendChild(tog);
+      tr.appendChild(c4);
+      var c5 = el('td', 'ppca-acts');
+      var cv = el('button', 'ppca-link', 'Change cover');
+      cv.type = 'button';
+      cv.addEventListener('click', function () { coverForm.action = base(r.k) + '/cover'; coverFile.value = ''; coverFile.click(); });
+      c5.appendChild(cv);
+      if (r.co) {
+        var rs = el('button', 'ppca-link', r.man ? 'Remove cover' : "Use PlayStation's");
+        rs.type = 'button';
+        rs.addEventListener('click', function () { post(base(r.k) + '/cover', { reset: '1' }); });
+        c5.appendChild(rs);
+      }
+      if (r.man) {
+        var rm = el('button', 'ppca-link ppca-danger', 'Remove');
+        rm.type = 'button';
+        rm.addEventListener('click', function () { if (window.confirm('Remove "' + r.n + '" from the list?')) post(base(r.k) + '/remove', {}); });
+        c5.appendChild(rm);
+      }
+      tr.appendChild(c5);
+      return tr;
+    }
+    function render() {
+      var list = visible();
+      body.textContent = '';
+      var frag = document.createDocumentFragment();
+      list.slice(0, shown).forEach(function (r) { frag.appendChild(row(r)); });
+      body.appendChild(frag);
+      more.hidden = list.length <= shown;
+      more.textContent = 'Show more (' + (list.length - shown) + ' left)';
+    }
+    more.addEventListener('click', function () { shown += PAGE; render(); });
+    var search = document.getElementById('ppcaSearch'), timer = null;
+    search.addEventListener('input', function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { q = norm(search.value); shown = PAGE; render(); }, 120);
+    });
+    document.getElementById('ppcaChips').addEventListener('click', function (e) {
+      var b = e.target.closest('.ppca-chip');
+      if (!b) return;
+      filter = b.dataset.f;
+      shown = PAGE;
+      this.querySelectorAll('.ppca-chip').forEach(function (c) { c.classList.toggle('on', c === b); });
+      render();
+    });
+    coverFile.addEventListener('change', function () { if (coverFile.files.length) coverForm.submit(); });
+    render();
+  })();
+  </script>
+</div>
+<% } %>
