@@ -37,6 +37,10 @@ function fixture(over) {
       lo('PH-0103', 'verifying_return', { created_at: '2026-09-21T01:00:00Z', return_proof: '/uploads/p.png', fb_name: 'Cai Lim' })
     ],
     refundsOwed: [lo('PH-0090', 'closed', { deposit_due: 100, fb_name: 'Dee Santos', game_title: 'Hogwarts Legacy' })],
+    releasedOrders: [
+      lo('PH-0130', 'awaiting_qr', { released_at: '2026-09-25T02:00:00Z', fb_name: 'Ivy Lopez', game_title: 'Phantom Blade Zero', release_msg: '🎮 Phantom Blade Zero is out! Your reservation PH-0130 is ready.' }),
+      lo('PH-0131', 'awaiting_qr', { released_at: '2026-09-26T02:00:00Z', fb_name: 'Jon Reyes', game_title: 'Phantom Blade Zero', is_buy: true, days: null, release_msg: '🎮 Phantom Blade Zero is out! Your reservation PH-0131 is ready.' })
+    ],
     abandonedOrders: [
       lo('PH-0110', 'awaiting_payment', { created_at: '2026-09-20T00:00:00Z', fb_name: 'Eli Tan' }),
       lo('PH-0111', 'payment_rejected', { created_at: '2026-09-24T00:00:00Z', fb_name: 'Fay Ong', account_type: 'tr', days: 7, deposit_due: 100, psid: '456' })
@@ -119,10 +123,31 @@ ok('an empty group is not rendered at all', () => {
 });
 
 ok('everything empty: one quiet line and no groups', () => {
-  const empty = render({ orderQueue: [], refundsOwed: [], abandonedOrders: [], waitlistOrders: [], ledgerGroups: [] });
+  const empty = render({ orderQueue: [], refundsOwed: [], releasedOrders: [], abandonedOrders: [], waitlistOrders: [], ledgerGroups: [] });
   assert.ok(empty.includes('Nothing waiting on you right now.'));
   assert.ok(!empty.includes('data-oq-group='));
   assert.ok(empty.includes('No orders in this period.'));
+});
+
+ok('Just released lists moved reservations newest first, open, with a copy button', () => {
+  assert.ok(html.includes('data-oq-group="released" open>'));
+  const b = groupBlock(html, 'released');
+  assert.deepStrictEqual(refsIn(b), ['PH-0131', 'PH-0130']);
+  assert.ok(b.includes('class="oq-btn-ghost rem-copy" data-msg="🎮 Phantom Blade Zero is out! Your reservation PH-0131 is ready."'));
+  assert.ok(b.includes('Pre-order'));
+  assert.ok(b.includes('Reserve · Monthly'));
+});
+
+ok('Just released sits between Do now and Refunds owed', () => {
+  const now = html.indexOf('data-oq-group="now"');
+  const rel = html.indexOf('data-oq-group="released"');
+  const ref = html.indexOf('data-oq-group="refunds"');
+  assert.ok(now < rel && rel < ref);
+});
+
+ok('no Just released group when nothing was released', () => {
+  assert.ok(!render({ releasedOrders: [] }).includes('data-oq-group="released"'));
+  assert.ok(!render({ releasedOrders: undefined }).includes('data-oq-group="released"'));
 });
 
 console.log('\nactions and confirm prompts');

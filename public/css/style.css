@@ -3212,6 +3212,7 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .oq-group-now .oq-row { border-left:3px solid var(--ps-blue); }
 .oq-group-refunds .oq-row, .oq-group-followups .oq-row { border-left:3px solid #f59e0b; }
 .oq-group-waitlist .oq-row { border-left:3px solid #3a3a3a; }
+.oq-group-released .oq-row { border-left:3px solid #22c55e; }
 
 /* Rows, shared by all four groups. */
 .oq-row { display: flex; gap: 1rem; align-items: flex-start; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 0.5rem; }

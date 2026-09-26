@@ -7,7 +7,7 @@
 
   var CHIPS = ['all', 'out', 'paid', 'unpaid', 'cancelled'];
   var TYPES = ['all', 'rental', 'purchase', 'reservation'];
-  var GROUP_KEYS = ['now', 'refunds', 'followups', 'waitlist'];
+  var GROUP_KEYS = ['now', 'released', 'refunds', 'followups', 'waitlist'];
   var LEDGER_KEY = 'oqLedger';
   var GROUPS_KEY = 'oqGroups';
 

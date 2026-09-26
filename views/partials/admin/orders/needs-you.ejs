@@ -1,6 +1,7 @@
 <%#
-  Needs You: every row that wants a click from the owner, in four groups —
-  Do now, Refunds owed, Follow-ups (started but didn't pay) and Waitlist.
+  Needs You: every row that wants a click from the owner, in five groups —
+  Do now, Just released (reservations a release moved on to sign-in),
+  Refunds owed, Follow-ups (started but didn't pay) and Waitlist.
   Each row's content, forms, routes and confirm prompts are the ones its old
   standalone zone had; only the grouping and the button weight changed. Rare
   or destructive actions sit behind the ⋯ menu. public/js/admin-orders.js
@@ -29,6 +30,11 @@
     return new Date(a.created_at) - new Date(b.created_at);
   });
   const nyRefunds = refundsOwed || [];
+  // Moved on to sign-in by a release and still waiting for the customer's code.
+  // Newest release first. Not counted in the headline: after the owner sends
+  // the message, it is the customer's move.
+  const nyReleased = [...(typeof releasedOrders !== 'undefined' && releasedOrders ? releasedOrders : [])]
+    .sort((a, b) => String(b.released_at || '').localeCompare(String(a.released_at || '')));
   const nyFollowUps = [...(abandonedOrders || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   // Priority first, then free — the tier order queueRules.buildQueue numbers
   // them in, so this list can never show a priority customer beneath a free
@@ -62,7 +68,7 @@
 %>
 <div class="oq-zone oq-zone-act">Needs you <span class="oq-zone-n"><%= nyCount %></span></div>
 
-<% if (!nyDoNow.length && !nyRefunds.length && !nyFollowUps.length && !nyWaitlist.length) { %>
+<% if (!nyDoNow.length && !nyReleased.length && !nyRefunds.length && !nyFollowUps.length && !nyWaitlist.length) { %>
 <div class="oq-empty">Nothing waiting on you right now.</div>
 <% } %>
 
@@ -138,6 +144,31 @@
           </form>
         </div>
       </details>
+    </div>
+  </div>
+  <% }) %>
+</details>
+<% } %>
+
+<% if (nyReleased.length) { %>
+<details class="oq-group oq-group-released" data-oq-group="released" open>
+  <summary class="oq-group-h"><span class="oq-group-name">🚀 Just released</span><span class="oq-group-n"><%= nyReleased.length %></span><span class="oq-group-sub">waiting for their sign-in code</span></summary>
+  <% nyReleased.forEach(o => { %>
+  <div class="oq-row">
+    <div class="oq-main">
+      <div class="oq-top">
+        <span class="oq-ref"><%= o.ref %></span>
+        <span class="oq-ab-name"><%= o.fb_name %></span>
+        <span class="oq-ab-age" data-created="<%= o.released_at %>">--</span>
+      </div>
+      <div class="oq-meta">
+        <%= o.game_title %> · <%= nyType(o.account_type) %> · <%= o.is_buy ? 'Pre-order' : 'Reserve · ' + (o.days === 7 ? 'Weekly' : 'Monthly') %>
+      </div>
+    </div>
+    <div class="oq-actions">
+      <% if (o.release_msg) { %>
+      <button type="button" class="oq-btn-ghost rem-copy" data-msg="<%= o.release_msg %>" title="Copy the 'it's out' message for this customer">📋 Copy message</button>
+      <% } %>
     </div>
   </div>
   <% }) %>

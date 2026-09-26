@@ -207,6 +207,15 @@
               <td>
                 <strong><%= game.title %></strong>
                 <div style="font-size:0.72rem;margin-top:0.2rem;"><span style="background:linear-gradient(135deg,#4a0080,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;">COMING SOON</span></div>
+                <%
+                  // Paid reservations on this game, and whether its release date
+                  // has passed — the two things that matter on launch day.
+                  const csReserved = (typeof upcomingReservedCount !== 'undefined' && upcomingReservedCount[game.id]) || 0;
+                  const csToday = typeof todayManila !== 'undefined' ? todayManila : '';
+                  const csReady = !!(csToday && game.release_date && game.release_date !== 'TBA' && game.release_date <= csToday);
+                %>
+                <% if (csReserved) { %><div style="font-size:0.7rem;color:#c9a4ff;font-weight:700;margin-top:0.2rem;"><%= csReserved %> reserved</div><% } %>
+                <% if (csReady) { %><div style="font-size:0.7rem;color:#22c55e;font-weight:700;margin-top:0.15rem;">📅 Out since <%= new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %> — ready to release</div><% } %>
               </td>
               <td><span style="color:var(--ps-blue);font-weight:600;font-size:0.8rem;"><%= game.platform %></span></td>
               <td style="color:#aaa;font-size:0.85rem;"><%= game.release_date === 'TBA' ? 'TBA' : (game.release_date ? new Date(game.release_date+'T00:00:00').toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) : '—') %></td>
@@ -227,7 +236,7 @@
               </td>
               <td>
                 <div class="action-btns" style="flex-direction:column;align-items:flex-start;gap:0.4rem;">
-                  <form method="POST" action="/admin/upcoming/release/<%= game.id %>" style="display:inline" onsubmit="return confirm('Release \'<%= game.title.replace(/'/g, "\\'") %>\' to Available Games?')">
+                  <form method="POST" action="/admin/upcoming/release/<%= game.id %>" style="display:inline" onsubmit="return confirm('Release \'<%= game.title.replace(/'/g, "\\'") %>\' to Available Games?<%= csReserved ? ' ' + csReserved + ' paid reservation' + (csReserved === 1 ? '' : 's') + ' will move to sign-in.' : '' %>')">
                     <button type="submit" style="background:linear-gradient(135deg,#065f46,#22c55e);color:#fff;border:none;border-radius:20px;padding:0.3rem 0.8rem;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">🚀 Release</button>
                   </form>
                   <div style="display:flex;gap:0.4rem;">

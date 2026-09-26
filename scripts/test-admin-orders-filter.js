@@ -122,6 +122,10 @@ ok('anything that is not an object is an empty object', () => {
   assert.deepStrictEqual(plain(F.normalizeGroups(null)), {});
 });
 
+ok('remembers the Just released group too', () => {
+  assert.deepStrictEqual(plain(F.normalizeGroups({ released: false })), { released: false });
+});
+
 console.log('\nwiring');
 
 ok('admin.ejs loads admin-orders.js with a cache-busting ?v=', () => {

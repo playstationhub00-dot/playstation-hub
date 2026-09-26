@@ -19,7 +19,11 @@
                             : 'We\'ll message you the moment a slot opens up.' },
     awaiting_payment:  { title: 'Send your payment',       sub: 'Pay with ' + (payMethods.length ? payMethods.map(m => m.label).join(', ').replace(/, ([^,]*)$/, ' or $1') : 'any method below') + ', then tell us below.' },
     verifying_payment: { title: 'Checking your payment',   sub: 'We\'re confirming it now. This page updates when we\'re done.' },
-    awaiting_qr:       { title: 'Ready for sign-in',       sub: 'Bring up the sign-in screen on your console and send us the code.' },
+    // A reservation that just released lands here too, after waiting on a
+    // release date rather than a payment — so it says the game is out.
+    awaiting_qr:       order.released_at
+                         ? { title: 'It\'s out — time to sign in! 🎮', sub: order.game_title + ' has released. Send your sign-in code below and we\'ll set you up.' }
+                         : { title: 'Ready for sign-in',       sub: 'Bring up the sign-in screen on your console and send us the code.' },
     qr_pending:        { title: 'Signing you in',          sub: 'Keep that screen open on your console — we\'re signing you in now.' },
     active:            { title: 'You\'re all set',         sub: order.is_buy ? 'It\'s yours — enjoy!' : 'Enjoy the game. Return the account by your end date.' },
     awaiting_return:   { title: 'Time to return',          sub: 'Sign out and send us proof to finish up.' },
@@ -129,7 +133,7 @@
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
     <% } %>
     <% if (order.is_reservation && order.remaining_due > 0) { %>
-    <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %>.</div>
+    <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.released_at ? 'before we sign you in' : order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %>.</div>
     <% } %>
   </div>
 
