@@ -6,17 +6,6 @@
   <title>Add Game — <%= settings.title %></title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
-  <style>
-    .afg-sec { border:1px solid #222; border-radius:14px; overflow:hidden; margin-bottom:0.75rem; }
-    .afg-head { display:flex; align-items:center; justify-content:space-between; padding:0.85rem 1.25rem; cursor:pointer; user-select:none; background:#111; }
-    .afg-head:hover { background:#161616; }
-    .afg-title { font-weight:700; font-size:0.9rem; color:#fff; }
-    .afg-desc { font-size:0.72rem; color:#555; margin-top:0.1rem; }
-    .afg-arrow { color:#555; font-size:0.8rem; transition:transform 0.2s; }
-    .afg-body { display:none; padding:1.25rem; }
-    .afg-body.open { display:block; }
-    .afg-head.open .afg-arrow { transform:rotate(180deg); }
-  </style>
 </head>
 <body>
 
@@ -36,34 +25,36 @@
 
   <form method="POST" action="/admin/add" enctype="multipart/form-data">
 
-    <div class="afg-sec">
-      <div class="afg-head open" onclick="afgToggle(this)">
-        <div><div class="afg-title">🎮 Basics</div><div class="afg-desc">Title, platform, genre, description</div></div>
-        <span class="afg-arrow">▼</span>
-      </div>
-      <div class="afg-body open">
+    <details class="afg-sec" open>
+      <summary class="afg-head"><span class="afg-text"><span class="afg-title">📝 Basics</span><span class="afg-desc">Title, platform, genre, release date, description</span></span><span class="afg-arrow">▼</span></summary>
+      <div class="afg-body">
         <div class="form-grid">
           <div class="form-group full"><label>Game Title *</label><input type="text" name="title" placeholder="e.g. God of War Ragnarök" required></div>
           <div class="form-group">
             <label>Platform</label>
-            <select name="platform"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
+            <select name="platform" onchange="gfPlatformChanged(this.value)"><option value="PS5">PS5</option><option value="PS4">PS4</option><option value="PS4/PS5">PS4/PS5</option></select>
           </div>
           <div class="form-group"><label>Genre</label><input type="text" name="genre" placeholder="e.g. Action, RPG, Horror"></div>
           <div class="form-group"><label>📅 Release Date <span style="color:#555;font-size:0.7rem;">(when the game launched — powers "New Releases")</span></label><input type="date" name="release_date"></div>
-          <div class="form-group"><label>New Game Countdown (days) <span style="color:#555;font-size:0.7rem;">(blank = site default, 11)</span></label><input type="number" name="new_window_days" value="" min="1" placeholder="11"></div>
           <div class="form-group full"><label>Description (optional)</label><textarea name="description" placeholder="Short description of the game..."></textarea></div>
-          <div class="form-group"><label>🔗 Custom Link Label (optional)</label><input type="text" name="link_label" placeholder="e.g. Visit PS Plus website"></div>
-          <div class="form-group"><label>🔗 Custom Link URL (optional)</label><input type="url" name="link_url" placeholder="https://..."></div>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="afg-sec">
-      <div class="afg-head open" onclick="afgToggle(this)">
-        <div><div class="afg-title">💰 Pricing</div><div class="afg-desc">Rent tiers, buy prices, and what you paid</div></div>
-        <span class="afg-arrow">▼</span>
+    <details class="afg-sec" open>
+      <summary class="afg-head"><span class="afg-text"><span class="afg-title">🎮 Slots</span><span class="afg-desc">How many accounts you have for each type</span></span><span class="afg-arrow">▼</span></summary>
+      <div class="afg-body">
+        <div class="form-grid">
+          <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
+          <div class="form-group"><label>🏆 Trophy Slots</label><input type="number" name="trophy_slots" value="1" min="0"></div>
+          <div class="form-group" id="gf_ps4" style="display:none;"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_primary_slots" value="0" min="0"></div>
+        </div>
       </div>
-      <div class="afg-body open">
+    </details>
+
+    <details class="afg-sec" open>
+      <summary class="afg-head"><span class="afg-text"><span class="afg-title">💰 Prices</span><span class="afg-desc">Rent tiers and buy prices</span></span><span class="afg-arrow">▼</span></summary>
+      <div class="afg-body">
         <div class="form-grid">
           <div class="form-group full">
             <label>Pricing</label>
@@ -86,7 +77,7 @@
               </select>
             </div>
           </div>
-          <div id="add_custom_prices">
+          <div id="add_custom_prices" style="display:contents;">
             <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
             <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
             <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>
@@ -94,21 +85,17 @@
             <div class="form-group"><label>Weekly</label><input type="number" name="tr_price_7d" value="199" min="1"></div>
             <div class="form-group"><label>Monthly</label><input type="number" name="tr_price_30d" value="399" min="1"></div>
           </div>
-          <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
-            <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Access Prices (₱) <span style="font-weight:400;color:#555;font-size:0.78rem;text-transform:none;letter-spacing:0;">— leave 0 to hide Buy option</span></label>
+          <div class="form-group full" style="margin-bottom:0;">
+            <label style="color:#a855f7;">♾️ Buy Permanent Access Prices (₱) <span style="font-weight:400;color:#555;font-size:0.78rem;">— leave 0 to hide Buy option</span></label>
           </div>
           <div class="form-group"><label>🎮 Non-Trophy Buy Price</label><input type="number" name="buy_nt_price" value="0" min="0" placeholder="e.g. 999"></div>
           <div class="form-group"><label>🏆 Trophy Buy Price</label><input type="number" name="buy_tr_price" value="0" min="0" placeholder="e.g. 1199"></div>
-          <div class="form-group"><label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label><input type="number" name="cost" value="0" min="0" placeholder="e.g. 2500"></div>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="afg-sec">
-      <div class="afg-head" onclick="afgToggle(this)">
-        <div><div class="afg-title">🖼️ Media</div><div class="afg-desc">Cover image and gameplay gallery</div></div>
-        <span class="afg-arrow">▼</span>
-      </div>
+    <details class="afg-sec">
+      <summary class="afg-head"><span class="afg-text"><span class="afg-title">🖼️ Images</span><span class="afg-desc">Cover image and gameplay gallery</span></span><span class="afg-arrow">▼</span></summary>
       <div class="afg-body">
         <div class="form-grid">
           <div class="form-group"><label>Cover Image</label><input type="file" name="cover_image" accept="image/*" style="padding:0.5rem;"></div>
@@ -116,37 +103,11 @@
           <div class="form-group full" style="font-size:0.78rem;color:#666;">The cover's focal point is set later via Edit, once the image is visible.</div>
         </div>
       </div>
-    </div>
+    </details>
 
-    <div class="afg-sec">
-      <div class="afg-head" onclick="afgToggle(this)">
-        <div><div class="afg-title">📦 Stock &amp; slots</div><div class="afg-desc">How many accounts you have, and current renters</div></div>
-        <span class="afg-arrow">▼</span>
-      </div>
+    <details class="afg-sec" id="afg_extras"<%= presetBundle ? ' open' : '' %>>
+      <summary class="afg-head"><span class="afg-text"><span class="afg-title">🧩 Extras</span><span class="afg-desc">Bundle, new countdown, cost, custom link</span></span><span class="afg-arrow">▼</span></summary>
       <div class="afg-body">
-        <div class="form-grid">
-          <div class="form-group"><label>🎮 Non-Trophy Slots</label><input type="number" name="non_trophy_slots" value="1" min="0"></div>
-          <div class="form-group"><label>Available Slots <span style="color:#555;font-size:0.7rem;">(total)</span></label><input type="number" name="available_slots" value="1" min="0"></div>
-          <div class="form-group"><label>Current Renters</label><input type="number" name="renters" value="0" min="0"></div>
-          <div class="form-group"><label>🕹️ PS4 Primary Slots</label><input type="number" name="ps4_primary_slots" value="0" min="0"></div>
-          <div class="form-group" style="justify-content:center;">
-            <label>Trophy Account Available</label>
-            <label class="toggle-switch"><input type="checkbox" name="trophy_account" id="add_trophy_chk" onchange="document.getElementById('add_trophy_slots').style.display=this.checked?'block':'none'"><span class="toggle-slider"></span></label>
-          </div>
-          <div class="form-group" id="add_trophy_slots" style="display:none;">
-            <label>Trophy Account Slots <span style="color:#ffc400;font-size:0.72rem;">🏆 how many accounts</span></label>
-            <input type="number" name="trophy_slots" value="1" min="1" max="20">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="afg-sec">
-      <div class="afg-head<%= presetBundle ? ' open' : '' %>" onclick="afgToggle(this)">
-        <div><div class="afg-title">📦 Bundle</div><div class="afg-desc">Link this entry to a whole account</div></div>
-        <span class="afg-arrow">▼</span>
-      </div>
-      <div class="afg-body<%= presetBundle ? ' open' : '' %>">
         <div class="form-grid">
           <div class="form-group full">
             <label>
@@ -170,9 +131,13 @@
               <% } %>
             </div>
           </div>
+          <div class="form-group"><label>New Game Countdown (days) <span style="color:#555;font-size:0.7rem;">(blank = site default, 11)</span></label><input type="number" name="new_window_days" value="" min="1" placeholder="11"></div>
+          <div class="form-group"><label>Game Cost (₱) <span style="color:#555;font-size:0.72rem;">what you paid</span></label><input type="number" name="cost" value="0" min="0" placeholder="e.g. 2500"></div>
+          <div class="form-group"><label>🔗 Custom Link Label (optional)</label><input type="text" name="link_label" placeholder="e.g. Visit PS Plus website"></div>
+          <div class="form-group"><label>🔗 Custom Link URL (optional)</label><input type="url" name="link_url" placeholder="https://..."></div>
         </div>
       </div>
-    </div>
+    </details>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Add Game</button>
@@ -182,14 +147,14 @@
 </div>
 
 <script>
-function afgToggle(head) {
-  const body = head.nextElementSibling;
-  body.classList.toggle('open');
-  head.classList.toggle('open');
-}
 function toggleAddPriceMode(v) {
   document.getElementById('add_cat_section').style.display = v === 'category' ? 'block' : 'none';
   document.getElementById('add_custom_prices').style.display = v === 'category' ? 'none' : 'contents';
+}
+// PS4 Primary only applies to a game that runs on PS4 — the same rule the
+// customer site uses to decide whether to show it.
+function gfPlatformChanged(v) {
+  document.getElementById('gf_ps4').style.display = (v === 'PS4' || v === 'PS4/PS5') ? '' : 'none';
 }
 </script>
 

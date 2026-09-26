@@ -4964,7 +4964,7 @@ app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
 });
 
 app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
-  const { title, platform, available_slots, renters, new_window_days,
+  const { title, platform, new_window_days,
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
@@ -4987,8 +4987,11 @@ app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { na
     cover_focal_x,
     cover_focal_y,
     gallery,
-    available_slots: parseInt(available_slots) || 1,
-    renters: parseInt(renters) || 0,
+    // Not shown anywhere on the site; kept as the running total the order
+    // routes count down. Starts at every slot the game was added with.
+    available_slots: (parseInt(non_trophy_slots) || 0) + (parseInt(trophy_slots) || 0) + (parseInt(ps4_primary_slots) || 0),
+    // Counts itself up at every sign-in; 📦 Stock is the manual override.
+    renters: 0,
     new_window_days: parseInt(new_window_days) > 0 ? parseInt(new_window_days) : null,
     price_category_id: cat ? parseInt(price_category_id) : null,
     nt_price_7d: cat ? cat.nt_price_7d : (parseInt(nt_price_7d) || 149),
@@ -5045,7 +5048,7 @@ app.get('/admin/add/upcoming', requireAuth, (req, res) => {
 });
 
 app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {
-  const { title, platform, available_slots, renters, new_window_days,
+  const { title, platform, new_window_days,
     nt_price_7d, nt_price_30d,
     tr_price_7d, tr_price_30d,
     buy_nt_price, buy_tr_price,
@@ -5085,8 +5088,8 @@ app.post('/admin/edit/:id', upload.fields([{ name: 'cover_image', maxCount: 1 },
     title: title.trim(), platform, cover_image,
     cover_focal_x: cover_focal_x_final, cover_focal_y: cover_focal_y_final,
     gallery,
-    available_slots: parseInt(available_slots),
-    renters: parseInt(renters),
+    // The stored running total and renter count are left as they are: the
+    // form no longer has those fields (see POST /admin/add).
     new_window_days: parseInt(new_window_days) > 0 ? parseInt(new_window_days) : null,
     price_category_id: cat ? parseInt(price_category_id) : null,
     nt_price_7d: cat ? cat.nt_price_7d : parseInt(nt_price_7d),

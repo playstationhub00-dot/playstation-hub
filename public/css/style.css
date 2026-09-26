@@ -3545,6 +3545,19 @@ body.light-mode .gm-more-item:hover { background: #f2f4f7; color: #111; }
 body.light-mode .gm-more-danger { color: #dc2626; }
 body.light-mode .gm-earned { color: #15803d; }
 
+/* Add / Edit game form sections (views/add-game.ejs, views/edit.ejs). Each
+   section is a <details>, so it opens and closes without any script. */
+.afg-sec { border: 1px solid #222; border-radius: 14px; overflow: hidden; margin-bottom: 0.75rem; }
+.afg-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1.25rem; cursor: pointer; user-select: none; background: #111; list-style: none; }
+.afg-head::-webkit-details-marker { display: none; }
+.afg-head:hover { background: #161616; }
+.afg-text { min-width: 0; }
+.afg-title { display: block; font-weight: 700; font-size: 0.9rem; color: #fff; }
+.afg-desc { display: block; font-size: 0.72rem; color: #555; margin-top: 0.1rem; }
+.afg-arrow { color: #555; font-size: 0.8rem; transition: transform 0.2s; }
+.afg-sec[open] > .afg-head .afg-arrow { transform: rotate(180deg); }
+.afg-body { padding: 1.25rem; }
+
 .vf-section { margin: 0 0 2rem; }
 .vf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 @media (max-width: 820px) { .vf-grid { grid-template-columns: 1fr; } }
