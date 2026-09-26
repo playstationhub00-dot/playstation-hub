@@ -3403,6 +3403,148 @@ body.light-mode .oq-badge { background: #eee; color: #555; }
 body.light-mode .oq-empty { color: #888; }
 @media (max-width: 640px) { body.light-mode .oq-lr { background: #fff; border-color: #ddd; } }
 
+/* ── Admin → Games tab (views/partials/admin/games.ejs + games/*.ejs) ── */
+.gm-shell { min-width: 0; }
+.gm-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+.gm-subtabs { display: flex; gap: 0.35rem; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.gm-subtabs::-webkit-scrollbar { display: none; }
+.gm-subtab { background: transparent; border: 1px solid #262626; border-radius: 20px; padding: 0.42rem 0.9rem; font-size: 0.8rem; font-weight: 700; color: #8a8a8a; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.gm-subtab:hover { border-color: #3a3a3a; color: #ccc; }
+.gm-subtab-on { background: #fff; color: #000; border-color: #fff; }
+.gm-subtab-n { font-variant-numeric: tabular-nums; opacity: 0.6; font-weight: 600; }
+.gm-add { flex-shrink: 0; background: var(--ps-blue); color: #000; border: 0; border-radius: 50px; padding: 0.55rem 1.2rem; font-weight: 800; font-size: 0.85rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+.gm-toolbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.gm-search { flex: 1; min-width: 200px; max-width: 320px; background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #fff; padding: 0.45rem 0.8rem; font-size: 0.8rem; font-family: inherit; }
+.gm-search::placeholder { color: #4a4a4a; }
+.gm-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.gm-chip { background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.3rem 0.72rem; font-size: 0.74rem; font-weight: 700; color: #8a8a8a; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.gm-chip:hover { border-color: #3a3a3a; color: #bbb; }
+.gm-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
+.gm-chip-n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 0.2rem; }
+.gm-select { background: #141414; border: 1px solid #2a2a2a; border-radius: 8px; color: #ddd; padding: 0.4rem 0.65rem; font-size: 0.78rem; font-family: inherit; }
+.gm-showing { font-size: 0.76rem; color: #666; margin: 0 0 0.6rem; }
+.gm-showing a, .gm-empty a { color: var(--ps-blue); font-weight: 700; }
+
+/* Rows: All games (6 columns) and Coming soon (5), same card look. */
+.gm-grid { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.2fr) minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 1.2fr) auto; gap: 0.9rem; align-items: center; }
+.gm-grid-soon { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.5fr) auto; gap: 0.9rem; align-items: center; }
+.gm-head { font-size: 0.63rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: #5a5a5a; padding: 0 1rem 0.45rem; }
+.gm-list { display: flex; flex-direction: column; gap: 0.45rem; }
+.gm-row { position: relative; background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 0.7rem 1rem; }
+.gm-c-game { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.gm-cover { width: 40px; height: 54px; border-radius: 6px; object-fit: cover; flex-shrink: 0; background: #151515; }
+.gm-cover-ph { display: flex; align-items: center; justify-content: center; font-size: 1.1rem; border: 1px dashed #2e2e2e; box-sizing: border-box; }
+.gm-cover-soon { background: #1a0030; border-color: #3a1a5c; }
+.gm-name { min-width: 0; }
+.gm-title { font-weight: 800; color: #fff; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-sub { font-size: 0.74rem; color: #777; margin-top: 0.1rem; }
+.gm-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.3rem; }
+.gm-tag { font-size: 0.66rem; font-weight: 700; color: #22c55e; background: #0a2a0a; border: 1px solid #166534; border-radius: 20px; padding: 0.05rem 0.45rem; }
+.gm-tag-bundle { color: #d9a7f0; background: #2a0a3a; border-color: #5b2a7a; }
+.gm-soon-tag { color: #c9a4ff; font-weight: 700; }
+.gm-cs-reserved { font-size: 0.7rem; color: #c9a4ff; font-weight: 700; margin-top: 0.2rem; }
+.gm-cs-ready { font-size: 0.7rem; color: #22c55e; font-weight: 700; margin-top: 0.15rem; }
+.gm-c-slots, .gm-c-status { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
+.gm-slot { font-size: 0.72rem; font-weight: 800; font-variant-numeric: tabular-nums; color: #ccc; background: #161616; border: 1px solid #2a2a2a; border-radius: 6px; padding: 0.12rem 0.45rem; white-space: nowrap; }
+.gm-slot-tr { color: #ffc400; }
+.gm-slot-zero { color: #f87171; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }
+.gm-c-prices { font-size: 0.76rem; color: #aaa; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.gm-tr { color: #ffc400; }
+.gm-buy { color: #c084fc; }
+.gm-c-release { font-size: 0.8rem; color: #aaa; }
+.gm-st { font-size: 0.68rem; font-weight: 800; border-radius: 6px; padding: 0.12rem 0.45rem; white-space: nowrap; }
+.gm-st-new { color: #7dd3fc; background: rgba(0,112,209,0.14); }
+.gm-st-urgent { color: #fca5a5; background: rgba(239,68,68,0.14); }
+.gm-st-never { color: #fbbf24; background: rgba(245,158,11,0.12); }
+.gm-st-sold { color: #f87171; background: rgba(239,68,68,0.12); }
+.gm-st-stocked { color: #4ade80; background: rgba(34,197,94,0.12); }
+.gm-dash { color: #444; }
+.gm-c-money { font-size: 0.76rem; line-height: 1.55; font-variant-numeric: tabular-nums; }
+.gm-earned { color: #22c55e; font-weight: 800; }
+.gm-txns { color: #555; font-weight: 600; font-size: 0.68rem; }
+.gm-profit { color: var(--ps-blue); font-weight: 700; }
+.gm-loss { color: #ef4444; }
+.gm-c-actions { display: flex; align-items: center; gap: 0.4rem; justify-content: flex-end; }
+.gm-c-actions form { margin: 0; }
+.gm-btn { display: inline-flex; align-items: center; background: transparent; color: #ccc; border: 1px solid #2a2a2a; border-radius: 9px; padding: 0.45rem 0.75rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; }
+.gm-btn:hover { border-color: #444; color: #fff; }
+.gm-btn-release { background: linear-gradient(135deg, #065f46, #22c55e); color: #fff; border: 0; }
+.gm-btn-release:hover { color: #fff; filter: brightness(1.08); }
+
+/* ⋯ menu for Stock / Delete (All games) and Edit / Delete (Coming soon). */
+.gm-more { position: relative; }
+.gm-more-btn { list-style: none; cursor: pointer; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 1px solid #2a2a2a; border-radius: 9px; color: #888; font-weight: 900; font-size: 1rem; line-height: 1; box-sizing: border-box; }
+.gm-more-btn::-webkit-details-marker { display: none; }
+.gm-more-btn:hover, .gm-more[open] > .gm-more-btn { border-color: #444; color: #fff; }
+.gm-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 170px; background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 0.3rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 0.15rem; }
+.gm-more-menu form { margin: 0; }
+.gm-more-item { display: block; width: 100%; box-sizing: border-box; text-align: left; background: none; border: 0; border-radius: 7px; padding: 0.5rem 0.65rem; color: #ccc; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; }
+.gm-more-item:hover { background: #1e1e1e; color: #fff; }
+.gm-more-danger { color: #f87171; }
+.gm-more-danger:hover { background: rgba(239,68,68,0.12); color: #fca5a5; }
+
+.gm-empty { color: #555; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+.gm-newcat { background: #0a0a0a; border: 1px solid #1c1c1c; border-radius: 10px; }
+.gm-newcat-btn { list-style: none; cursor: pointer; padding: 0.8rem 1rem; font-weight: 800; font-size: 0.85rem; color: #22c55e; }
+.gm-newcat-btn::-webkit-details-marker { display: none; }
+/* [hidden] loses to any class that sets display, so filtered rows need this. */
+.gm-panel[hidden], .gm-row[hidden], .gm-list[hidden], .gm-head[hidden], .gm-showing[hidden], .gm-empty[hidden] { display: none !important; }
+
+@media (max-width: 640px) {
+  /* nowrap keeps this a single-line flex container, so the chip row is
+     stretched to the toolbar's width and scrolls inside it. With wrap, the
+     line would size to the unwrapped chips and widen the whole page. */
+  .gm-toolbar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+  .gm-search { max-width: none; width: 100%; box-sizing: border-box; }
+  .gm-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .gm-chips::-webkit-scrollbar { display: none; }
+  .gm-select { width: 100%; }
+  .gm-head { display: none; }
+  .gm-grid, .gm-grid-soon { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "game game" "slots slots" "status status" "prices money" "act act"; gap: 0.55rem 0.8rem; align-items: start; }
+  .gm-c-game { grid-area: game; }
+  .gm-c-slots { grid-area: slots; }
+  .gm-c-status, .gm-c-release { grid-area: status; }
+  .gm-c-prices { grid-area: prices; }
+  .gm-c-money { grid-area: money; text-align: right; }
+  .gm-c-actions { grid-area: act; justify-content: flex-start; }
+  .gm-title { white-space: normal; }
+  /* Anchored to the card, not the ⋯ button: the button can sit anywhere
+     along the row, so a menu anchored to it could run off-screen. */
+  .gm-more { position: static; }
+  .gm-more-menu { left: 0.8rem; right: 0.8rem; top: calc(100% - 0.4rem); min-width: 0; }
+}
+
+/* Games tab: light mode. */
+body.light-mode .gm-row,
+body.light-mode .gm-more-menu,
+body.light-mode .gm-newcat { background: #fff; border-color: #ddd; }
+body.light-mode .gm-title { color: #111; }
+body.light-mode .gm-sub,
+body.light-mode .gm-c-prices,
+body.light-mode .gm-c-release { color: #555; }
+body.light-mode .gm-head,
+body.light-mode .gm-showing,
+body.light-mode .gm-empty,
+body.light-mode .gm-txns { color: #777; }
+body.light-mode .gm-subtab,
+body.light-mode .gm-chip { border-color: #ccc; color: #555; }
+body.light-mode .gm-subtab-on { background: #111; color: #fff; border-color: #111; }
+body.light-mode .gm-chip-on { background: var(--ps-blue); color: #000; border-color: var(--ps-blue); }
+body.light-mode .gm-search,
+body.light-mode .gm-select { background: #f8f9fa; border-color: #ccc; color: #111; }
+body.light-mode .gm-slot { background: #f6f7f9; border-color: #ddd; color: #333; }
+body.light-mode .gm-slot-tr,
+body.light-mode .gm-tr { color: #b45309; }
+body.light-mode .gm-slot-zero { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+body.light-mode .gm-btn,
+body.light-mode .gm-more-btn { border-color: #ccc; color: #555; }
+body.light-mode .gm-btn-release { color: #fff; border: 0; }
+body.light-mode .gm-more-item { color: #333; }
+body.light-mode .gm-more-item:hover { background: #f2f4f7; color: #111; }
+body.light-mode .gm-more-danger { color: #dc2626; }
+body.light-mode .gm-earned { color: #15803d; }
+
 .vf-section { margin: 0 0 2rem; }
 .vf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
 @media (max-width: 820px) { .vf-grid { grid-template-columns: 1fr; } }

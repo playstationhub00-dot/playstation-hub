@@ -246,4 +246,22 @@ ok('the old inline filter script and jump links are gone from the Games tab', ()
   ['filterGamesPlatform', 'applyGameFilter', 'toggleGamesNewOnly', 'adm-jump'].forEach(s => assert.ok(!src.includes(s), s));
 });
 
+console.log('\nstyles');
+
+const CSS = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+
+ok('every gm- class the tab renders has a rule', () => {
+  const rendered = new Set([...html.matchAll(/class="([^"]*)"/g)]
+    .flatMap(m => m[1].split(/\s+/))
+    .filter(c => /^gm-/.test(c)));
+  const missing = [...rendered].filter(c => !CSS.includes('.' + c));
+  assert.deepStrictEqual(missing, []);
+});
+
+ok('style.css is still CRLF throughout', () => {
+  const lf = CSS.split('\n').length - 1;
+  const crlf = CSS.split('\r\n').length - 1;
+  assert.strictEqual(lf, crlf, 'every newline is CRLF');
+});
+
 console.log('\n' + passed + ' assertions passed\n');
