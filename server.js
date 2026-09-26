@@ -3708,6 +3708,42 @@ app.post('/admin/orders/:ref/cancel', requireAuth, asyncRoute(async (req, res) =
   res.redirect('/admin?tab=orders&msg=order_cancelled');
 }));
 
+// A game someone asked for over Messenger, never through the public request
+// form — logged retroactively as a fulfilled request, so it counts toward
+// "you asked, we stocked" and shows under Now available like any other
+// request the owner stocked. If the title already has a request on the
+// board (someone else asked here too), this adds the Messenger customer's
+// vote to it rather than creating a duplicate; setStatus below still runs
+// either way, so re-submitting the same title just links/relinks it.
+app.post('/admin/requests/add', requireAuth, async (req, res) => {
+  const title = (req.body.title || '').trim();
+  const fb_name = (req.body.fb_name || '').trim();
+  if (!title || !fb_name) return res.redirect('/admin?tab=games&msg=request_add_missing');
+  const gameId = parseInt(req.body.game_id);
+  const validGameId = Number.isFinite(gameId) ? gameId : null;
+
+  const created = await gameRequests.createRequest({ title, fb_name, session_id: null, cover_image: '' });
+  if (!created.ok && created.reason !== 'exists') return res.redirect('/admin?tab=games&msg=request_add_error');
+  const slug = created.ok ? created.doc.slug : created.slug;
+  if (!created.ok) {
+    await gameRequests.addVote(slug, { fb_name, session_id: null });
+  }
+  await gameRequests.setStatus(slug, 'stocked', { game_id: validGameId });
+
+  // Same auto-inherit as /admin/requests/:slug/stock: fill a still-empty
+  // cover from the linked catalogue row instead of asking for one twice.
+  if (validGameId) {
+    const existing = await gameRequests.getBySlug(slug);
+    if (existing && !existing.cover_image) {
+      const linkedGame = getGames().find(g => g.id === validGameId);
+      if (linkedGame && linkedGame.cover_image) {
+        await gameRequests.setCoverImage(slug, linkedGame.cover_image);
+      }
+    }
+  }
+  res.redirect('/admin?tab=games&msg=request_added');
+});
+
 app.post('/admin/requests/:slug/approve', requireAuth, async (req, res) => {
   await gameRequests.setStatus(req.params.slug, 'approved', {});
   res.redirect('/admin?tab=games&msg=request_approved');
