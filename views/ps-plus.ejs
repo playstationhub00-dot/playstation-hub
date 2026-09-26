@@ -6,6 +6,7 @@
   <title>PS Plus Deluxe — <%= settings.title %></title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/psplus-catalog.css?v=<%= assetV %>">
   <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body>
@@ -13,33 +14,36 @@
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'psplus' }) %>
 
-<!-- HERO BANNER -->
-<section class="psplus-hero">
-  <div class="psplus-hero-bg"></div>
-  <div class="psplus-hero-content">
-    <div class="psplus-logo-row">
-      <div class="psplus-ps-icon">
-        <svg viewBox="0 0 100 100" fill="none">
-          <path d="M50 15 L70 35 L50 35 Z" fill="#FFD700"/>
-          <path d="M50 15 L30 35 L50 35 Z" fill="#FFD700" opacity="0.6"/>
-          <path d="M35 40 L50 85 L65 40 Z" fill="#FFD700"/>
-        </svg>
-      </div>
-      <div>
-        <div class="psplus-eyebrow">Playstation Hub</div>
-        <h1 class="psplus-title">PS PLUS <span>DELUXE</span></h1>
-        <p class="psplus-subtitle">Monthly Games — Unlimited Access</p>
-      </div>
+<!-- HERO -->
+<%
+  const heroSlots = ((slots || {}).nt_slots || 0) + ((slots || {}).tr_slots || 0) + ((slots || {}).ps4_slots || 0);
+%>
+<section class="ppc-hero">
+  <div class="ppc-hero-inner">
+    <div>
+      <div class="ppc-eyebrow">PlayStation Hub</div>
+      <h1 class="ppc-title">PS PLUS <span>DELUXE</span></h1>
+      <p class="ppc-lead">One rental, every game below. Trophy or Non-Trophy, weekly or monthly.</p>
     </div>
-    <p class="psplus-desc">Access hundreds of games through our PS Plus Deluxe accounts. Enjoy monthly free games and a massive catalog — Trophy or Non-Trophy, your choice.</p>
-    <div class="psplus-hero-actions">
-      <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="btn btn-primary" style="background:#FFD700;color:#000;">📘 Message Us to Rent</a>
-      <a href="#pricing" class="btn btn-outline">View Pricing ↓</a>
-      <a href="https://www.playstation.com/en-id/ps-plus/games/?smcid=store%3Aen-us%3Apages-latest%3Aprimary%20nav%3Amsg-ps-plus%3Aall-games" target="_blank" rel="noopener" class="btn btn-outline">🎮 Browse All PS Plus Games</a>
+    <div class="ppc-hero-side">
+      <div class="ppc-stats">
+        <% if (catalog.counts.all) { %><div class="ppc-stat"><b><%= catalog.counts.all %></b><span>Games</span></div><% } %>
+        <% if (fromWeekly) { %><div class="ppc-stat"><b>₱<%= fromWeekly %></b><span>/ week</span></div><% } %>
+        <div class="ppc-stat <%= heroSlots > 0 ? 'ppc-stat-free' : 'ppc-stat-full' %>"><b>● <%= heroSlots %></b><span><%= heroSlots === 1 ? 'Slot free' : 'Slots free' %></span></div>
+      </div>
+      <a href="/ps-plus/rent" class="ppc-cta">Rent PS Plus Deluxe →</a>
     </div>
   </div>
 </section>
 
+<!-- TABS: All Games (default) · Monthly · Pricing & Rent. ?tab= picks one. -->
+<div class="ppc-tabs" role="tablist" aria-label="PS Plus Deluxe">
+  <button type="button" role="tab" class="ppc-tab<%= activeTab === 'games' ? ' on' : '' %>" data-tab="games" aria-controls="ppc-panel-games" aria-selected="<%= activeTab === 'games' %>">🎮 All Games<% if (catalog.counts.all) { %> <span class="ppc-tab-n"><%= catalog.counts.all %></span><% } %></button>
+  <button type="button" role="tab" class="ppc-tab<%= activeTab === 'monthly' ? ' on' : '' %>" data-tab="monthly" aria-controls="ppc-panel-monthly" aria-selected="<%= activeTab === 'monthly' %>">📅 Monthly</button>
+  <button type="button" role="tab" class="ppc-tab<%= activeTab === 'pricing' ? ' on' : '' %>" data-tab="pricing" aria-controls="ppc-panel-pricing" aria-selected="<%= activeTab === 'pricing' %>">💰 Pricing &amp; Rent</button>
+</div>
+
+<div class="ppc-panel" data-panel="pricing" id="ppc-panel-pricing" role="tabpanel"<%= activeTab === 'pricing' ? '' : ' hidden' %>>
 <!-- PRICING TABLE -->
 <section id="pricing" class="psplus-pricing-section">
   <div class="psplus-pricing-inner">
@@ -118,16 +122,18 @@
       </div>
     </div>
     <div class="psplus-notes">
-      <span>📩 PM us for full list of games available</span>
       <span>🔒 ₱100 security deposit for Trophy account</span>
       <span>🔄 Unlimited game changes, subject to slot availability</span>
     </div>
+    <a href="/ps-plus/rent" class="ppc-cta ppc-cta-block">Rent PS Plus Deluxe →</a>
   </div>
 </section>
+</div>
 
-<!-- MOST PLAYED GAMES -->
+<div class="ppc-panel" data-panel="games" id="ppc-panel-games" role="tabpanel"<%= activeTab === 'games' ? '' : ' hidden' %>>
+<!-- MOST PLAYED GAMES — hidden by the grid script while searching or filtering -->
 <% if (popular.length > 0) { %>
-<section style="padding:3rem 2rem 2rem;max-width:1400px;margin:0 auto;">
+<section class="ppc-mostplayed" id="ppcMostPlayed">
   <h2 class="section-title" style="color:#fff;">
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">
       🔥 Most Played in PS Plus
@@ -142,6 +148,10 @@
 </section>
 <% } %>
 
+<%- include('partials/psplus-catalog-grid') %>
+</div>
+
+<div class="ppc-panel" data-panel="monthly" id="ppc-panel-monthly" role="tabpanel"<%= activeTab === 'monthly' ? '' : ' hidden' %>>
 <!-- MONTHLY GAMES BY YEAR -->
 <% if (years.length === 0) { %>
 <div style="text-align:center;padding:5rem 2rem;color:var(--text-secondary);">
@@ -202,6 +212,7 @@
   </div>
 </section>
 <% }) %>
+</div>
 
 <section style="padding:0 2rem 3rem;max-width:1400px;margin:0 auto;">
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
@@ -242,6 +253,28 @@
 </div>
 
 <script>
+// Tabs. The server already rendered the right panel open (?tab=, or Monthly
+// for a ?month= deep link), so this only handles clicks — and keeps ?tab= in
+// the address so a refresh or a shared link lands on the same tab.
+(function () {
+  var tabs = document.querySelectorAll('.ppc-tab');
+  var panels = document.querySelectorAll('.ppc-panel');
+  function show(name) {
+    panels.forEach(function (p) { p.hidden = p.dataset.panel !== name; });
+    tabs.forEach(function (t) {
+      var on = t.dataset.tab === name;
+      t.classList.toggle('on', on);
+      t.setAttribute('aria-selected', String(on));
+    });
+    var u = new URL(location.href);
+    u.searchParams.set('tab', name);
+    u.searchParams.delete('game');
+    u.searchParams.delete('month');
+    history.replaceState(null, '', u);
+  }
+  tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tab); }); });
+})();
+
 function openPsplusModal(dataStr) {
   const d = JSON.parse(dataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
   const modal = document.getElementById('psplusModal');

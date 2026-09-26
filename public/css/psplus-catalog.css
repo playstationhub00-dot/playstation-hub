@@ -1,0 +1,116 @@
+/* /ps-plus — hero, tabs and the All Games grid (views/partials/psplus-catalog-grid.ejs).
+   Its own file so the page can load it without touching the site-wide sheet. */
+
+.ppc-hero { background: radial-gradient(ellipse at 15% 0%, #3a2e00 0%, transparent 55%), #0a0a0a; border-bottom: 1px solid #1a1a1a; }
+.ppc-hero-inner { max-width: 1400px; margin: 0 auto; padding: 1.75rem 2rem 1.4rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 1.25rem; flex-wrap: wrap; }
+.ppc-eyebrow { font-size: 0.72rem; font-weight: 800; color: #a88d00; letter-spacing: 0.12em; text-transform: uppercase; }
+.ppc-title { margin: 0.15rem 0 0.3rem; font-size: 2rem; font-weight: 900; letter-spacing: 0.02em; color: #fff; }
+.ppc-title span { color: #FFD700; }
+.ppc-lead { margin: 0; color: #aaa; font-size: 0.92rem; }
+.ppc-hero-side { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
+.ppc-stats { display: flex; gap: 0.5rem; }
+.ppc-stat { background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 0.45rem 0.8rem; text-align: center; min-width: 70px; }
+.ppc-stat b { display: block; font-size: 1.1rem; color: #FFD700; }
+.ppc-stat span { font-size: 0.62rem; color: #888; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.ppc-stat-free { border-color: #1f5130; }
+.ppc-stat-free b { color: #22c55e; }
+.ppc-stat-full b { color: #ef4444; }
+.ppc-cta { background: #FFD700; color: #000; font-weight: 800; border-radius: 50px; padding: 0.75rem 1.3rem; font-size: 0.9rem; text-decoration: none; white-space: nowrap; }
+.ppc-cta:hover { filter: brightness(1.08); }
+.ppc-cta-block { display: inline-block; margin-top: 1.5rem; }
+
+.ppc-tabs { max-width: 1400px; margin: 0 auto; padding: 0.75rem 2rem 0; display: flex; gap: 0.35rem; border-bottom: 1px solid #1f1f1f; overflow-x: auto; scrollbar-width: none; }
+.ppc-tabs::-webkit-scrollbar { display: none; }
+.ppc-tab { background: none; border: 0; padding: 0.65rem 1.1rem; font-size: 0.9rem; font-weight: 700; color: #888; border-radius: 10px 10px 0 0; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.ppc-tab:hover { color: #ddd; }
+.ppc-tab.on { background: #FFD700; color: #000; }
+.ppc-tab-n { font-size: 0.72rem; opacity: 0.7; margin-left: 0.15rem; }
+.ppc-panel[hidden] { display: none; }
+
+.ppc-mostplayed { padding: 1.5rem 2rem 0.5rem; max-width: 1400px; margin: 0 auto; }
+.ppc-mostplayed[hidden] { display: none; }
+
+.ppc-games { max-width: 1400px; margin: 0 auto; padding: 1.25rem 2rem 3rem; }
+.ppc-toolbar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.ppc-search { flex: 1 1 260px; min-width: 0; background: #141414; border: 1px solid #2a2a2a; border-radius: 50px; padding: 0.7rem 1.1rem; font-size: 0.9rem; color: #eee; font-family: inherit; }
+.ppc-search:focus { outline: none; border-color: #FFD700; }
+.ppc-select { background: #141414; border: 1px solid #2a2a2a; border-radius: 50px; padding: 0.65rem 0.9rem; font-size: 0.82rem; color: #ccc; font-weight: 600; font-family: inherit; }
+.ppc-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.ppc-chip { font-size: 0.82rem; font-weight: 700; padding: 0.4rem 0.85rem; border-radius: 50px; border: 1px solid #2e2e2e; color: #aaa; background: none; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.ppc-chip i { font-style: normal; color: #666; font-weight: 600; margin-left: 0.15rem; }
+.ppc-chip.on { background: #fff; color: #000; border-color: #fff; }
+.ppc-chip.on i { color: #555; }
+.ppc-heading { font-size: 1rem; font-weight: 800; margin: 0.25rem 0 0.8rem; color: #fff; }
+.ppc-heading small { color: #666; font-weight: 600; font-size: 0.8rem; }
+.ppc-empty { color: #888; text-align: center; padding: 2rem 1rem; }
+.ppc-empty a { color: #FFD700; }
+.ppc-soon { text-align: center; color: #ddd; font-weight: 700; padding: 3rem 1rem; }
+.ppc-soon span { display: block; color: #777; font-weight: 400; font-size: 0.88rem; margin-top: 0.4rem; }
+
+.ppc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+.ppc-card { position: relative; aspect-ratio: 1 / 1; border-radius: 12px; overflow: hidden; background: #161616; border: 0; padding: 0; cursor: pointer; text-align: left; color: #fff; font-family: inherit; }
+.ppc-card:focus-visible { outline: 2px solid #FFD700; outline-offset: 2px; }
+.ppc-card:hover .ppc-cover { transform: scale(1.04); }
+.ppc-cover { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s ease; }
+.ppc-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.35) 42%, transparent 62%); }
+.ppc-card-noimg { background: linear-gradient(160deg, #1e2a44, #0d1220); }
+.ppc-card-tile { background: radial-gradient(circle at 30% 15%, #3b1a5c, #130a1f 75%); border: 1px solid #33204d; }
+.ppc-tags { position: absolute; top: 7px; left: 7px; right: 7px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.ppc-tag { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.03em; padding: 2px 6px; border-radius: 4px; }
+.ppc-tag-catalog { background: #FFD700; color: #000; }
+.ppc-tag-classics { background: #38bdf8; color: #00111a; }
+.ppc-tag-ubisoft { background: #e2e8f0; color: #0f172a; }
+.ppc-tag-monthly { background: #a855f7; color: #fff; }
+.ppc-body { position: absolute; left: 9px; right: 9px; bottom: 8px; }
+.ppc-rentbadge { display: inline-block; font-size: 0.56rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: #22c55e; color: #00150a; margin-bottom: 4px; }
+.ppc-plat { font-size: 0.64rem; color: #bbb; font-weight: 700; letter-spacing: 0.02em; }
+.ppc-name { font-size: 0.82rem; font-weight: 800; line-height: 1.2; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ppc-tile-name { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem 0.9rem 0.9rem; font-weight: 900; font-size: 0.92rem; color: #ead9ff; line-height: 1.2; }
+
+.ppc-sheet-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.ppc-sheet-overlay[hidden] { display: none; }
+.ppc-sheet { background: #141414; border: 1px solid #2a2a2a; border-radius: 18px; width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.ppc-sheet-cover { position: relative; height: 200px; background: #0a0a0a; }
+.ppc-sheet-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ppc-sheet-cover-tile { background: radial-gradient(circle at 30% 15%, #3b1a5c, #130a1f 75%); }
+.ppc-sheet-x { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.95rem; cursor: pointer; }
+.ppc-sheet-body { padding: 1rem 1.25rem 1.35rem; }
+.ppc-sheet-body h3 { margin: 0; font-size: 1.2rem; font-weight: 900; color: #fff; }
+.ppc-sheet-sub { font-size: 0.82rem; color: #999; margin: 0.2rem 0 0.7rem; }
+.ppc-sheet-ok { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #FFD700; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 50px; padding: 0.25rem 0.7rem; }
+.ppc-sheet-rent { display: block; text-align: center; background: #FFD700; color: #000; font-weight: 900; border-radius: 50px; padding: 0.8rem; font-size: 0.92rem; margin-top: 0.9rem; text-decoration: none; }
+.ppc-sheet-alt { display: block; margin-top: 0.65rem; font-size: 0.82rem; background: #0f1f14; border: 1px solid #14532d; color: #86efac; border-radius: 10px; padding: 0.6rem 0.8rem; text-decoration: none; }
+.ppc-sheet-alt[hidden], .ppc-sheet-store[hidden] { display: none; }
+.ppc-sheet-store { display: block; text-align: center; margin-top: 0.75rem; font-size: 0.75rem; color: #777; }
+
+@media (max-width: 600px) {
+  .ppc-hero-inner { padding: 1.1rem 1rem 1rem; }
+  .ppc-title { font-size: 1.5rem; }
+  .ppc-lead { font-size: 0.82rem; }
+  .ppc-hero-side { width: 100%; justify-content: space-between; }
+  .ppc-stat { padding: 0.35rem 0.55rem; min-width: 0; }
+  .ppc-stat b { font-size: 0.95rem; }
+  .ppc-cta { padding: 0.6rem 1rem; font-size: 0.82rem; }
+  .ppc-tabs { padding: 0.5rem 0.75rem 0; gap: 0.2rem; }
+  .ppc-tab { padding: 0.55rem 0.65rem; font-size: 0.8rem; }
+  .ppc-tab-n { display: none; }
+  .ppc-mostplayed { padding: 1rem 1rem 0.25rem; }
+  .ppc-games { padding: 1rem 1rem 2.5rem; }
+  .ppc-toolbar { flex-wrap: nowrap; }
+  .ppc-search { flex: 1 1 auto; padding: 0.6rem 0.9rem; font-size: 0.85rem; }
+  .ppc-select { padding: 0.55rem 0.5rem; font-size: 0.72rem; max-width: 96px; }
+  .ppc-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .ppc-chips::-webkit-scrollbar { display: none; }
+  .ppc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem; }
+  .ppc-card { border-radius: 9px; }
+  .ppc-tags { top: 4px; left: 4px; right: 4px; gap: 2px; }
+  .ppc-tag { font-size: 0.5rem; padding: 1px 4px; }
+  .ppc-body { left: 6px; right: 6px; bottom: 5px; }
+  .ppc-rentbadge { font-size: 0.48rem; padding: 1px 4px; margin-bottom: 2px; }
+  .ppc-plat { font-size: 0.55rem; }
+  .ppc-name { font-size: 0.68rem; }
+  .ppc-tile-name { font-size: 0.72rem; padding: 1.6rem 0.4rem 0.5rem; }
+  .ppc-sheet-overlay { align-items: flex-end; padding: 0; }
+  .ppc-sheet { max-width: none; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .ppc-sheet-cover { height: 170px; }
+}

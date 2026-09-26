@@ -1291,8 +1291,17 @@ app.get('/ps-plus', (req, res) => {
     ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
     : getPsplusSlots();
   const psplusSlug = psplusGame ? gameSlug(psplusGame.title) : null;
+  // All Games tab: every PS Plus Deluxe game with the owner's monthly games
+  // folded in (lib/psplus-catalog-view.js). Opens on that tab unless ?tab=
+  // says otherwise, or a ?month= deep link needs the Monthly tab.
+  const catalog = psplusCatalogView.buildPublicCatalog({
+    games: psplusCatalogStore.all(), siteGames: getGames(), entries, slugFor: gameSlug
+  });
+  const activeTab = ['games', 'monthly', 'pricing'].includes(req.query.tab) ? req.query.tab : (req.query.month ? 'monthly' : 'games');
+  const weeklyPrices = [(getPsplusPrices() || {}).nt_price_7d, (getPsplusPrices() || {}).tr_price_7d].map(Number).filter(n => n > 0);
+  const fromWeekly = weeklyPrices.length ? Math.min(...weeklyPrices) : 0;
   // PS Plus has one real catalog entry behind it, so a review naming it floats.
-  res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
+  res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, catalog, activeTab, fromWeekly, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
     reviewBlockLocals(psplusGame ? psplusGame.title : '')));
 });
 

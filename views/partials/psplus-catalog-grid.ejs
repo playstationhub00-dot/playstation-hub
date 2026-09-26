@@ -1,0 +1,217 @@
+<%#
+  /ps-plus → All Games tab: every game in PS Plus Deluxe (Game Catalog,
+  Classics, Ubisoft+ Classics) plus the owner's monthly games, from
+  lib/psplus-catalog-view.js buildPublicCatalog(). The list travels as JSON
+  and the script below draws it 48 cards at a time as the customer scrolls;
+  search, filters and sort run on that list in the browser. Tapping a card
+  opens the quick-view sheet. ?game=<key> opens a game's sheet on load (site
+  search links here).
+
+  Locals: catalog { items, counts }, fromWeekly.
+%>
+<section class="ppc-games" id="ppcGames">
+<% if (!catalog.counts.all) { %>
+  <div class="ppc-soon">🎮 The full game list is coming soon.<span>Meanwhile, see this month's games in the Monthly tab, or message us to ask about a game.</span></div>
+<% } else { %>
+  <div class="ppc-toolbar">
+    <input type="search" id="ppcSearch" class="ppc-search" placeholder="Search <%= catalog.counts.all %> games — e.g. God of War" aria-label="Search PS Plus Deluxe games" autocomplete="off">
+    <select id="ppcSort" class="ppc-select" aria-label="Sort games">
+      <option value="az">Sort: A–Z</option>
+      <option value="new">Newest added</option>
+      <option value="release">Release date</option>
+    </select>
+    <select id="ppcPlat" class="ppc-select" aria-label="Platform">
+      <option value="">PS5 · PS4</option>
+      <option value="PS5">PS5 only</option>
+      <option value="PS4">PS4 only</option>
+    </select>
+  </div>
+  <div class="ppc-chips" id="ppcChips" role="group" aria-label="Filter games">
+    <% [['all', 'All', catalog.counts.all], ['catalog', 'Game Catalog', catalog.counts.catalog], ['classics', 'Classics', catalog.counts.classics],
+        ['ubisoft', 'Ubisoft+', catalog.counts.ubisoft], ['monthly', 'Monthly', catalog.counts.monthly], ['rent', '🟢 Also for rent', catalog.counts.rent]]
+        .filter(c => c[0] === 'all' || c[2] > 0).forEach(c => { %>
+    <button type="button" class="ppc-chip<%= c[0] === 'all' ? ' on' : '' %>" data-f="<%= c[0] %>" aria-pressed="<%= c[0] === 'all' %>"><%= c[1] %> <i><%= c[2] %></i></button>
+    <% }) %>
+  </div>
+  <h2 class="ppc-heading" id="ppcHeading">🎮 All <%= catalog.counts.all %> games <small>· A–Z</small></h2>
+  <div class="ppc-grid" id="ppcGrid"></div>
+  <div id="ppcSentinel" aria-hidden="true"></div>
+  <p class="ppc-empty" id="ppcEmpty" hidden>No games match that. Try another name, or <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener">ask us</a>.</p>
+<% } %>
+</section>
+
+<div class="ppc-sheet-overlay" id="ppcSheet" hidden>
+  <div class="ppc-sheet" role="dialog" aria-modal="true" aria-labelledby="ppcSheetTitle">
+    <div class="ppc-sheet-cover" id="ppcSheetCover">
+      <img id="ppcSheetImg" alt="">
+      <button type="button" class="ppc-sheet-x" id="ppcSheetClose" aria-label="Close">✕</button>
+    </div>
+    <div class="ppc-sheet-body">
+      <h3 id="ppcSheetTitle"></h3>
+      <div class="ppc-sheet-sub" id="ppcSheetSub"></div>
+      <span class="ppc-sheet-ok" id="ppcSheetOk"></span>
+      <a class="ppc-sheet-rent" href="/ps-plus/rent">Rent PS Plus Deluxe<%= fromWeekly ? ' · from ₱' + fromWeekly + '/week' : '' %></a>
+      <a class="ppc-sheet-alt" id="ppcSheetAlt" hidden></a>
+      <a class="ppc-sheet-store" id="ppcSheetStore" target="_blank" rel="noopener" hidden>View on PlayStation Store ↗</a>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="ppcData"><%- JSON.stringify(catalog.items).replace(/</g, '\\u003c') %></script>
+<script>
+(function () {
+  var dataEl = document.getElementById('ppcData');
+  var grid = document.getElementById('ppcGrid');
+  var ALL = JSON.parse((dataEl && dataEl.textContent) || '[]');
+  var TAGS = { catalog: 'CATALOG', classics: 'CLASSIC', ubisoft: 'UBISOFT+' };
+  var LISTS = { catalog: 'Game Catalog', classics: 'Classics', ubisoft: 'Ubisoft+ Classics' };
+  var SORTS = { az: 'A–Z', 'new': 'newest added', release: 'by release date' };
+  var BATCH = 48;
+  var state = { q: '', f: 'all', sort: 'az', plat: '' };
+  var view = [], shown = 0, lastFocus = null;
+  var byKey = {};
+
+  function norm(s) { return String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function cover(g, w) { return g.c || (g.i ? g.i + '?w=' + w : ''); }
+  ALL.forEach(function (g) { g._q = norm(g.n); byKey[g.k] = g; });
+
+  // ── Sheet ───────────────────────────────────────────────────────────
+  var sheet = document.getElementById('ppcSheet');
+  function openSheet(g) {
+    lastFocus = document.activeElement;
+    var img = document.getElementById('ppcSheetImg');
+    var coverBox = document.getElementById('ppcSheetCover');
+    var src = cover(g, 600);
+    coverBox.classList.toggle('ppc-sheet-cover-tile', !src);
+    if (src) { img.src = src; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
+    document.getElementById('ppcSheetTitle').textContent = g.n;
+    document.getElementById('ppcSheetSub').textContent = [g.p.join(' · '), g.g].filter(Boolean).join(' · ') || 'PS Plus Deluxe';
+    var where = g.tile ? 'Monthly game · ' + g.m : LISTS[g.t] + (g.m ? ' · Monthly ' + g.m : '');
+    document.getElementById('ppcSheetOk').textContent = '✓ Included in PS Plus Deluxe · ' + where;
+    var alt = document.getElementById('ppcSheetAlt');
+    if (g.rent) { alt.href = g.rent.u; alt.textContent = '🎮 We also rent this game on its own → see price'; alt.hidden = false; } else alt.hidden = true;
+    var store = document.getElementById('ppcSheetStore');
+    if (g.s) { store.href = g.s; store.hidden = false; } else store.hidden = true;
+    sheet.hidden = false;
+    document.body.style.overflow = 'hidden';
+    document.getElementById('ppcSheetClose').focus();
+  }
+  function closeSheet() {
+    sheet.hidden = true;
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  document.getElementById('ppcSheetClose').addEventListener('click', closeSheet);
+  sheet.addEventListener('click', function (e) { if (e.target === sheet) closeSheet(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !sheet.hidden) closeSheet(); });
+
+  var deep = new URLSearchParams(location.search).get('game');
+  if (deep && byKey[deep]) openSheet(byKey[deep]);
+
+  if (!grid) return;
+
+  // ── Grid ────────────────────────────────────────────────────────────
+  function card(g) {
+    var b = el('button', 'ppc-card' + (g.tile ? ' ppc-card-tile' : ''));
+    b.type = 'button';
+    b.dataset.k = g.k;
+    b.setAttribute('aria-label', g.n);
+    var src = cover(g, 240);
+    if (src) {
+      var img = el('img', 'ppc-cover');
+      img.src = src; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+      img.addEventListener('error', function () { img.remove(); b.classList.add('ppc-card-noimg'); });
+      b.appendChild(img);
+      b.appendChild(el('div', 'ppc-scrim'));
+    } else if (!g.tile) {
+      b.classList.add('ppc-card-noimg');
+    }
+    var tags = el('div', 'ppc-tags');
+    if (!g.tile) tags.appendChild(el('span', 'ppc-tag ppc-tag-' + g.t, TAGS[g.t]));
+    if (g.m) tags.appendChild(el('span', 'ppc-tag ppc-tag-monthly', 'MONTHLY · ' + g.m));
+    b.appendChild(tags);
+    if (g.tile) {
+      b.appendChild(el('div', 'ppc-tile-name', g.n));
+      return b;
+    }
+    var body = el('div', 'ppc-body');
+    if (g.rent) body.appendChild(el('span', 'ppc-rentbadge', 'ALSO FOR RENT'));
+    if (g.p.length) body.appendChild(el('div', 'ppc-plat', g.p.join(' · ')));
+    body.appendChild(el('div', 'ppc-name', g.n));
+    b.appendChild(body);
+    return b;
+  }
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('.ppc-card');
+    if (b && byKey[b.dataset.k]) openSheet(byKey[b.dataset.k]);
+  });
+
+  function matches(g) {
+    if (state.f === 'rent' && !g.rent) return false;
+    if (state.f === 'monthly' && !g.m) return false;
+    if (LISTS[state.f] && g.l.indexOf(state.f) < 0) return false;
+    if (state.plat && g.p.indexOf(state.plat) < 0) return false;
+    return !state.q || g._q.indexOf(state.q) >= 0;
+  }
+  function sorter(a, b) {
+    var byName = a.n.localeCompare(b.n, 'en', { sensitivity: 'base' });
+    if (state.sort === 'new') return (b.f || '').localeCompare(a.f || '') || byName;
+    if (state.sort === 'release') return (b.r || '').localeCompare(a.r || '') || byName;
+    return byName;
+  }
+  function more() {
+    var frag = document.createDocumentFragment();
+    view.slice(shown, shown + BATCH).forEach(function (g) { frag.appendChild(card(g)); });
+    grid.appendChild(frag);
+    shown = Math.min(view.length, shown + BATCH);
+  }
+  var heading = document.getElementById('ppcHeading');
+  var empty = document.getElementById('ppcEmpty');
+  var mostPlayed = document.getElementById('ppcMostPlayed');
+  function apply() {
+    view = ALL.filter(matches).sort(sorter);
+    grid.textContent = '';
+    shown = 0;
+    more();
+    var filtered = state.q || state.f !== 'all' || state.plat;
+    heading.textContent = '';
+    heading.appendChild(document.createTextNode(filtered ? '🎮 ' + view.length + ' of ' + ALL.length + ' games ' : '🎮 All ' + ALL.length + ' games '));
+    heading.appendChild(el('small', null, '· ' + SORTS[state.sort]));
+    empty.hidden = view.length > 0;
+    if (mostPlayed) mostPlayed.hidden = !!(filtered || state.sort !== 'az');
+  }
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting && shown < view.length) more();
+    }, { rootMargin: '800px 0px' }).observe(document.getElementById('ppcSentinel'));
+  } else {
+    BATCH = 100000;
+  }
+
+  var search = document.getElementById('ppcSearch'), timer = null;
+  search.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(function () { state.q = norm(search.value); apply(); }, 120);
+  });
+  document.getElementById('ppcSort').addEventListener('change', function () { state.sort = this.value; apply(); });
+  document.getElementById('ppcPlat').addEventListener('change', function () { state.plat = this.value; apply(); });
+  document.getElementById('ppcChips').addEventListener('click', function (e) {
+    var c = e.target.closest('.ppc-chip');
+    if (!c) return;
+    state.f = c.dataset.f;
+    this.querySelectorAll('.ppc-chip').forEach(function (x) {
+      x.classList.toggle('on', x === c);
+      x.setAttribute('aria-pressed', String(x === c));
+    });
+    apply();
+  });
+  apply();
+})();
+</script>
