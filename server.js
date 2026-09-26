@@ -23,6 +23,7 @@ const dashboard = require('./lib/dashboard');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
 const gamesViewLib = require('./lib/games-view');
+const quickAddSettle = require('./lib/quick-add-settle');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -2902,6 +2903,51 @@ app.post('/admin/orders/:ref/payment-link', requireAuth, asyncRoute(async (req, 
   res.json({ ok: true, url: result.url });
 }));
 
+// Settles an unpaid Quick Add however its money arrived — the owner's Confirm
+// paid, the customer's QR Ph checkout, an uploaded proof the owner approved,
+// or the old Mark paid. The order moves to where it would have been had it
+// been paid at Quick Add, and ONLY if that move happened is the payment
+// recorded on the customer row, dated today — so a double-click or a payment
+// racing the owner's click can never count the money twice.
+async function settleQuickAddPayment(order, { method, channel, extraPatch }) {
+  const customer = order.customer_id ? getCustomer(order.customer_id) : null;
+  const target = quickAddSettle.settleTarget(order, customer);
+  const nowIso = new Date().toISOString();
+  // A reservation whose game was released before it was paid: released_at
+  // lists it with the other released reservations waiting for a sign-in code,
+  // and lets sign-in turn its reservation row into the live rental.
+  const released = target === 'awaiting_qr' && customer && customer.status === 'reservation';
+  const ok = await orders.settleOwnerRecorded(order.ref, target, Object.assign({
+    paid_at: nowIso,
+    payment_channel: channel,
+    payment_method: method
+  }, released ? { released_at: nowIso } : {}, extraPatch || {}));
+  if (!ok) return { ok: false, target };
+  if (!customer) {
+    console.error('[quick-add settle]', order.ref, 'settled, but customer', order.customer_id, 'is gone — payment not recorded');
+    return { ok: true, target };
+  }
+  const line = quickAddSettle.settlementPayment(order, customer, orders.manilaDate());
+  if (line) {
+    db.get('customers').find({ id: customer.id })
+      .assign({ payments: (customer.payments || []).concat([line]) }).write();
+  }
+  return { ok: true, target };
+}
+
+// "Confirm paid" on a row of Customers → Needs attention → Not paid yet.
+app.post('/admin/orders/:ref/confirm-paid', requireAuth, asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || !quickAddSettle.isOwnerRecordedUnpaid(order)) {
+    return res.redirect('/admin?tab=customers&msg=payment_confirm_stale');
+  }
+  const allowed = (getSiteSettings().payment_methods || [])
+    .filter(m => m && m.enabled).map(m => m.key).concat(['manual']);
+  const method = allowed.includes(req.body.method) ? req.body.method : 'manual';
+  const r = await settleQuickAddPayment(order, { method, channel: 'manual' });
+  res.redirect('/admin?tab=customers&msg=' + (r.ok ? 'payment_confirmed' : 'payment_confirm_stale'));
+}));
+
 // Admin "Create order" for a customer who never touches the site — the owner
 // sends their own GCash/Maya QR over Messenger, gets paid there directly, and
 // records the order here afterwards. Priced with the exact same functions the
@@ -3069,11 +3115,14 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   // for a sign-in code: every paid Quick Add used to land at awaiting_qr, so
   // the order page showed the sign-in guide and hid the review box, which is
   // gated on the customer actually having played.
-  const initialState = !paid ? 'awaiting_payment'
-    : upcomingGame ? 'reserved'
+  // Where the order belongs once paid. An unpaid one is born awaiting payment
+  // and keeps this as settle_state, so whichever way the money arrives later
+  // (lib/quick-add-settle.js) it lands exactly where a paid one would have.
+  const settleState = upcomingGame ? 'reserved'
     : status === 'done' ? 'closed'
     : b.signed_in === 'no' ? 'awaiting_qr'
     : 'active';
+  const initialState = paid ? settleState : 'awaiting_payment';
 
   try {
     const order = await orders.create(Object.assign({
@@ -3084,7 +3133,7 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
       state: initialState
     }, paid ? {
       payment_channel: 'manual', payment_method: method, paid_at: new Date().toISOString()
-    } : {}, mode === 'buy' ? { is_buy: true } : {},
+    } : { settle_state: settleState }, mode === 'buy' ? { is_buy: true } : {},
     // The same fields POST /order/reserve writes for a permanent pre-order,
     // so an owner-entered one is indistinguishable from a customer-entered
     // one downstream. remaining_due is 0 because a permanent pre-order is
@@ -3292,7 +3341,14 @@ app.post('/webhooks/paymongo', asyncRoute(async (req, res) => {
       paid_at: new Date().toISOString(),
       overpaid_by_centavos: decision.overBy || 0
     };
-    if (order.is_reservation) {
+    if (quickAddSettle.isOwnerRecordedUnpaid(order)) {
+      // An unpaid Quick Add the customer paid from their own link: settle it
+      // where a paid one would have been and record the money.
+      await settleQuickAddPayment(order, {
+        method: 'gateway', channel: 'paymongo',
+        extraPatch: { paid_amount_centavos: decision.paid, overpaid_by_centavos: decision.overBy || 0 }
+      });
+    } else if (order.is_reservation) {
       await orders.transition(order.ref, 'verifying_payment', {});
       await orders.transition(order.ref, 'reserved', settlePatch);
     } else {
@@ -3390,6 +3446,15 @@ const ORDER_ADVANCE = {
 app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order) return res.redirect('/admin?tab=orders');
+  // An approved proof on an unpaid Quick Add: settle it where a paid one would
+  // have been, and record the money — see settleQuickAddPayment.
+  if (order.state === 'verifying_payment' && quickAddSettle.isOwnerRecordedUnpaid(order)) {
+    const r = await settleQuickAddPayment(order, {
+      method: order.payment_method || 'manual',
+      channel: order.payment_channel || 'proof'
+    });
+    return res.redirect('/admin?tab=orders&msg=' + (r.ok ? 'order_advanced' : 'order_stale'));
+  }
   let to = ORDER_ADVANCE[order.state];
   if (order.is_reservation && order.state === 'verifying_payment') to = 'reserved';
   if (!to) return res.redirect('/admin?tab=orders&msg=order_bad_state');
@@ -3614,6 +3679,10 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, asyncRoute(async (req, res
   if (!order) return res.redirect('/admin?tab=orders');
   if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
     return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  }
+  if (quickAddSettle.isOwnerRecordedUnpaid(order)) {
+    const r = await settleQuickAddPayment(order, { method: order.payment_method || 'manual', channel: 'manual' });
+    return res.redirect('/admin?tab=orders&msg=' + (r.ok ? 'order_marked_paid' : 'order_stale'));
   }
   // Reservation orders (Coming Soon downpayments) have no console to sign
   // into yet, so a Messenger-confirmed payment must settle into 'reserved',
