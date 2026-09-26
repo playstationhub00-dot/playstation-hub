@@ -3272,14 +3272,32 @@ app.post('/webhooks/paymongo', asyncRoute(async (req, res) => {
     if (!claimed) return res.status(200).send('duplicate');
     // awaiting_payment → awaiting_qr is the existing "payment confirmed outside
     // the normal verify step" path, which is exactly what a gateway settlement
-    // is — the owner has nothing left to check.
-    await orders.transition(order.ref, 'awaiting_qr', {
+    // is — the owner has nothing left to check. A reservation (Fall in Line
+    // priority, or a Coming Soon downpayment) has no console to sign into yet,
+    // so it settles into 'reserved' instead — the same distinction every other
+    // payment-confirmation path (advance, mark-paid, priority-paid) already
+    // makes. Without this branch a paid reservation silently dropped out of
+    // the waitlist: 'awaiting_qr' is not a state lib/queue.js counts as
+    // "in line", so the customer's priority payment showed as if they were
+    // not in the queue at all.
+    //
+    // 'reserved' is only reachable from 'verifying_payment', not directly from
+    // 'awaiting_payment', so a reservation hops through the same intermediate
+    // state mark-paid already uses — the state history reads identically
+    // whether the money arrived on the gateway or was confirmed by hand.
+    const settlePatch = {
       payment_channel: 'paymongo',
       payment_method: 'gateway',
       paid_amount_centavos: decision.paid,
       paid_at: new Date().toISOString(),
       overpaid_by_centavos: decision.overBy || 0
-    });
+    };
+    if (order.is_reservation) {
+      await orders.transition(order.ref, 'verifying_payment', {});
+      await orders.transition(order.ref, 'reserved', settlePatch);
+    } else {
+      await orders.transition(order.ref, 'awaiting_qr', settlePatch);
+    }
     // Informational: the order already advanced on its own, so this exists only
     // so the owner sees the money land. Fired after the transition, so it can
     // never be the reason a settled payment fails to apply.
