@@ -32,8 +32,10 @@ const GAMES = [
   { id: 1, title: 'Tekken 8', platform: 'PS5', genre: 'Fighting', created_at: daysAgo(200), is_bundle: true,
     non_trophy_slots: 0, trophy_slots: 0, renters: 8, nt_price_7d: 99, nt_price_30d: 249, tr_price_7d: 149, tr_price_30d: 299 }
 ];
+// Money is what was received — each row's payments — not its price.
 const CUSTOMERS = [
-  { game_id: 2, price: 349 }, { game_id: '2', price: 349 }, { game_id: 1, price: 249 }, { game_id: 'upcoming_15', price: 449 }
+  { game_id: 2, payments: [{ amount: 349 }] }, { game_id: '2', payments: [{ amount: 349 }] },
+  { game_id: 1, payments: [{ amount: 249 }] }, { game_id: 'upcoming_15', payments: [{ amount: 449 }] }
 ];
 const UPCOMING = [
   { id: 15, title: 'Phantom Blade Zero', platform: 'PS5', release_date: '2026-09-09', non_trophy_slots: 2, trophy_slots: 1,

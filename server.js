@@ -4213,14 +4213,17 @@ app.get('/admin/app', requireAuth, (req, res) => {
     return diff >= 0 && diff <= 3;
   });
 
-  const totalRevenue = customers.reduce((s, c) => s + (c.price || 0), 0);
-  const thisMonth = now.getMonth(), thisYear = now.getFullYear();
-  const monthRevenue = customers.filter(c => {
-    const ds = c.start_date || c.created_at;
-    if (!ds) return false;
-    const d = new Date(c.start_date ? c.start_date + 'T00:00:00' : c.created_at);
-    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-  }).reduce((s, c) => s + (c.price || 0), 0);
+  // Money actually received: recorded payments, not prices — an unpaid Quick
+  // Add has a price but no payment until it is confirmed. The month is the
+  // payment's own date (Manila), the same attribution the main dashboard's
+  // money charts use.
+  const monthKey = orders.manilaDate().slice(0, 7);
+  let totalRevenue = 0, monthRevenue = 0;
+  customers.forEach(c => (c.payments || []).forEach(p => {
+    const amt = Number(p && p.amount) || 0;
+    totalRevenue += amt;
+    if (String((p && p.date) || '').slice(0, 7) === monthKey) monthRevenue += amt;
+  }));
 
   const todayVisitors = (db.get('visitors').value() || []).filter(v => v.date === todayStr).length;
 

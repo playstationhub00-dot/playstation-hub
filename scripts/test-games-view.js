@@ -85,20 +85,30 @@ ok('PS4 slots do not keep a PS5-only game off Sold out, and the PS4 chip is hidd
 
 console.log('\nmoney');
 
-ok('earnings add up every customer record for the game, string or numeric id', () => {
+ok('earnings add up the payments on every customer record for the game, string or numeric id', () => {
   const r = one(GAME({ id: 5, cost: 1000 }), [
-    { game_id: 5, price: 349 }, { game_id: '5', price: 199 }, { game_id: 6, price: 999 }
+    { game_id: 5, payments: [{ amount: 349 }] }, { game_id: '5', payments: [{ amount: 199 }] }, { game_id: 6, payments: [{ amount: 999 }] }
   ]);
   assert.deepStrictEqual(r.money, { earned: 548, txns: 2, cost: 1000, profit: -452 });
 });
 
 ok('Coming Soon and PS Plus records never count toward a game', () => {
-  const r = one(GAME({ id: 5 }), [{ game_id: 'upcoming_5', price: 449 }, { game_id: 'psplus', price: 299 }, { game_id: null, price: 50 }]);
+  const r = one(GAME({ id: 5 }), [
+    { game_id: 'upcoming_5', payments: [{ amount: 449 }] }, { game_id: 'psplus', payments: [{ amount: 299 }] }, { game_id: null, payments: [{ amount: 50 }] }
+  ]);
   assert.deepStrictEqual([r.money.earned, r.money.txns], [0, 0]);
 });
 
 ok('no cost counts as 0', () => {
-  assert.strictEqual(one(GAME({ id: 5 }), [{ game_id: 5, price: 349 }]).money.profit, 349);
+  assert.strictEqual(one(GAME({ id: 5 }), [{ game_id: 5, payments: [{ amount: 349 }] }]).money.profit, 349);
+});
+
+ok('an unpaid row — a price but no payment yet — earns nothing', () => {
+  const r = one(GAME({ id: 5 }), [
+    { game_id: 5, price: 349, payments: [] },
+    { game_id: 5, price: 199, payments: [{ amount: 199 }] }
+  ]);
+  assert.deepStrictEqual([r.money.earned, r.money.txns], [199, 1]);
 });
 
 console.log('\nrow shape');
