@@ -288,3 +288,26 @@ Plain `node scripts/test-*.js` with `assert`, as this project already does:
   - `?game=` deep links;
   - phone width at 375 px with no horizontal overflow;
   - the admin preview states.
+
+## Refinements made while planning
+
+Settled in `docs/superpowers/plans/2026-09-27-psplus-catalog.md`, after running every code block against a copy of the repo.
+
+- **The pure rules are two files.**
+  - `lib/psplus-catalog.js` holds the refresh rules: names, merge, safety, diff, Apply.
+  - `lib/psplus-catalog-view.js` holds the display rules: tags, "Also for rent", Monthly tags, the customer and admin shapes, the preview view and the month suggestion.
+- **`parseFeed` keeps PlayStation's raw name** (`name_raw`). The cleaned `name` is added when the lists are merged.
+- **`displayName` handles more of the real feed's noise:**
+  - `[PS4 & PS5]`;
+  - "PS5 & PS4" in either order;
+  - full-width `＆`;
+  - "– PlayStation Hits" with a dash;
+  - ": Standard Edition";
+  - " full game";
+  - trademark marks glued between words ("Far Cry®3" → "Far Cry 3").
+- **A list read with 0 games is always `blocked`,** including on the very first refresh.
+- **A sixth toast, `catalog_nothing`:** "⛔ Nothing to apply — every list was held back." It is used if Apply is pressed when every list was held back. The preview shows no Apply button in that case.
+- **The customer page styles live in their own `public/css/psplus-catalog.css`,** so the site-wide `style.css` is untouched.
+- **Site search shows catalog games with "Included in PS Plus Deluxe"** as their meta line, under the existing PS PLUS badge.
+- **The route test boots the server on a throwaway `DATA_DIR` with `MONGODB_URI` blank,** so it never touches `games.json` or a database.
+- **The real count is 515 unique PlayStation games,** before hidden games and the owner's monthly tiles are applied. The earlier "519" also counted PlayStation's own monthly list, which is not stored.
