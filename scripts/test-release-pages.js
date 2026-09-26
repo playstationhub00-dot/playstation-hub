@@ -8,6 +8,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const gamesViewLib = require('../lib/games-view');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -21,17 +22,26 @@ function renderGames(over) {
     { id: 16, title: "Tom's Game", platform: 'PS5', release_date: '2026-12-01', non_trophy_slots: 1, trophy_slots: 1, nt_price_7d: 199, nt_price_30d: 449 },
     { id: 17, title: 'Mystery Title', platform: 'PS5', release_date: 'TBA', non_trophy_slots: 0, trophy_slots: 0 }
   ];
+  // The rows come from lib/games-view.js, exactly as the admin route builds them.
   const locals = Object.assign({
-    games: [], customers: [], upcoming, gameRequestRows: [], priceCategories: [],
-    upcomingReservedCount: { '15': 3, '16': 1 }, todayManila: '2026-09-26'
+    gamesView: {
+      rows: [],
+      counts: gamesViewLib.chipCounts([]),
+      upcoming: gamesViewLib.upcomingRows(upcoming, { '15': 3, '16': 1 }, '2026-09-26'),
+      requests: gamesViewLib.requestSummary([])
+    },
+    games: [], gameRequestRows: [], priceCategories: [], msg: null
   }, over || {});
   return ejs.render(fs.readFileSync(GAMES, 'utf8'), locals, { filename: GAMES });
 }
+// One Coming soon row: from the row element holding this title to the next
+// row or the next sub-tab panel.
 function row(html, title) {
-  const i = html.indexOf('<strong>' + title);
+  const i = html.indexOf('class="gm-title">' + title + '<');
   assert.ok(i >= 0, 'row for ' + title);
-  const end = html.indexOf('</tr>', i);
-  return html.slice(i, end);
+  const start = html.lastIndexOf('class="gm-row', i);
+  const ends = ['class="gm-row', 'data-gm-panel="'].map(m => html.indexOf(m, i)).filter(n => n > 0);
+  return html.slice(start, ends.length ? Math.min(...ends) : undefined);
 }
 
 const html = renderGames();

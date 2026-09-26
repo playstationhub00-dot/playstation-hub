@@ -1,0 +1,93 @@
+<%#
+  All games: one row per game. The row data comes from lib/games-view.js
+  (gamesView.rows); public/js/admin-games.js filters and sorts these rows by
+  their data-* attributes and remembers the choice.
+%>
+<%
+  const gmRows = gamesView.rows;
+  const gmCounts = gamesView.counts;
+  const gmPeso = v => v ? '₱' + Number(v).toLocaleString() : '₱—';
+  const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['never', '💤 Never rented'], ['bundle', '📦 Bundles']];
+%>
+<div class="gm-toolbar">
+  <input type="search" id="gmSearch" class="gm-search" placeholder="Search title, genre or category…" maxlength="100" autocomplete="off">
+  <div class="gm-chips">
+    <% gmChips.forEach(([key, label]) => { %>
+    <button type="button" class="gm-chip<%= key === 'all' ? ' gm-chip-on' : '' %>" data-gm-chip="<%= key %>"><%= label %> <span class="gm-chip-n"><%= gmCounts[key] %></span></button>
+    <% }) %>
+  </div>
+  <select id="gmPlatform" class="gm-select" aria-label="Platform">
+    <option value="all">All platforms</option>
+    <option value="PS5">PS5</option>
+    <option value="PS4">PS4</option>
+    <option value="PS4/PS5">PS4/PS5</option>
+  </select>
+  <select id="gmSort" class="gm-select" aria-label="Sort">
+    <option value="newest">Newest</option>
+    <option value="az">A–Z</option>
+    <option value="earned">Most earned</option>
+    <option value="slots">Fewest slots left</option>
+  </select>
+</div>
+<div class="gm-showing" id="gmShowing" hidden>Showing <span id="gmShown"><%= gmRows.length %></span> of <%= gmRows.length %> · <a href="#" data-gm-clear>Clear</a></div>
+
+<% if (!gmRows.length) { %>
+<div class="gm-empty">No games yet. Use + Add New to add one.</div>
+<% } else { %>
+<div class="gm-head gm-grid" id="gmHead" aria-hidden="true"><span>Game</span><span>Slots left</span><span>Prices (wk / mo)</span><span>Status</span><span>Money</span><span></span></div>
+<div class="gm-list" id="gmList">
+  <% gmRows.forEach(r => { %>
+  <div class="gm-row gm-grid" data-gm-game data-id="<%= r.id %>" data-chips="<%= r.chips.join(' ') %>" data-platform="<%= r.platform %>" data-s="<%= r.search %>" data-title="<%= r.title %>" data-earned="<%= r.money.earned %>" data-slots="<%= r.slots.total %>">
+    <div class="gm-c-game">
+      <% if (r.cover) { %><img src="<%= r.cover %>" class="gm-cover" alt="" loading="lazy"><% } else { %><div class="gm-cover gm-cover-ph">🎮</div><% } %>
+      <div class="gm-name">
+        <div class="gm-title"><%= r.title %></div>
+        <div class="gm-sub"><%= r.platform %><%= r.genre ? ' · ' + r.genre : '' %></div>
+        <% if (r.categoryName || r.isBundle) { %>
+        <div class="gm-tags">
+          <% if (r.categoryName) { %><span class="gm-tag">🏷️ <%= r.categoryName %></span><% } %>
+          <% if (r.isBundle) { %><span class="gm-tag gm-tag-bundle">📦 Bundle</span><% } %>
+        </div>
+        <% } %>
+      </div>
+    </div>
+    <div class="gm-c-slots">
+      <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">NT <%= r.slots.nt %></span>
+      <span class="gm-slot gm-slot-tr<%= r.slots.tr ? '' : ' gm-slot-zero' %>">TR <%= r.slots.tr %></span>
+      <% if (r.slots.showPs4) { %><span class="gm-slot<%= r.slots.ps4 ? '' : ' gm-slot-zero' %>">PS4 <%= r.slots.ps4 %></span><% } %>
+    </div>
+    <div class="gm-c-prices">
+      <div>NT <%= gmPeso(r.prices.nt7) %> / <%= gmPeso(r.prices.nt30) %></div>
+      <div class="gm-tr">TR <%= gmPeso(r.prices.tr7) %> / <%= gmPeso(r.prices.tr30) %></div>
+      <% if (r.prices.buyNt > 0 || r.prices.buyTr > 0) { %><div class="gm-buy">Buy <%= [r.prices.buyNt > 0 ? 'NT ' + gmPeso(r.prices.buyNt) : '', r.prices.buyTr > 0 ? 'TR ' + gmPeso(r.prices.buyTr) : ''].filter(Boolean).join(' · ') %></div><% } %>
+    </div>
+    <div class="gm-c-status">
+      <% if (r.status.isNew) { %><span class="gm-st gm-st-new<%= r.status.daysLeft <= 3 ? ' gm-st-urgent' : '' %>">NEW · <%= r.status.daysLeft %>d left</span><% } %>
+      <% if (r.status.neverRented) { %><span class="gm-st gm-st-never">Never rented</span><% } %>
+      <% if (r.status.soldOut) { %><span class="gm-st gm-st-sold">Sold out</span><% } %>
+      <% if (r.status.stocked) { %><span class="gm-st gm-st-stocked">Stocked</span><% } %>
+      <% if (!r.status.isNew && !r.status.neverRented && !r.status.soldOut && !r.status.stocked) { %><span class="gm-dash">—</span><% } %>
+    </div>
+    <div class="gm-c-money">
+      <div class="gm-earned">₱<%= r.money.earned.toLocaleString() %> earned <span class="gm-txns"><%= r.money.txns %> txn<%= r.money.txns === 1 ? '' : 's' %></span></div>
+      <% if (r.money.profit >= 0) { %><div class="gm-profit">+₱<%= r.money.profit.toLocaleString() %> profit</div><% } else { %><div class="gm-profit gm-loss">₱<%= Math.abs(r.money.profit).toLocaleString() %> at a loss</div><% } %>
+    </div>
+    <div class="gm-c-actions">
+      <a href="/admin/edit/<%= r.id %>" class="gm-btn">✏️ Edit</a>
+      <details class="gm-more">
+        <summary class="gm-more-btn" title="More actions" aria-label="More actions">⋯</summary>
+        <div class="gm-more-menu">
+          <form method="POST" action="/admin/games/<%= r.id %>/stocked">
+            <button type="submit" class="gm-more-item"><%= r.status.stocked ? '📦 Clear stocked' : '📦 Mark as stocked' %></button>
+          </form>
+          <form method="POST" action="/admin/delete/<%= r.id %>" onsubmit="return confirm('Delete <%= r.title.replace(/'/g, "\\'") %>?')">
+            <button type="submit" class="gm-more-item gm-more-danger">🗑 Delete</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+  <% }) %>
+</div>
+<div class="gm-empty" id="gmNoMatch" hidden>No games match these filters. <a href="#" data-gm-clear>Clear</a></div>
+<% } %>
