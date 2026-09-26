@@ -4125,12 +4125,21 @@ app.get('/api/search-index', async (req, res) => {
   // Warfare III") aren't their own catalog entries — they only exist as lines in that
   // month's card, opened via a modal rather than a page. Deep-link to the month page
   // with ?month=<id> so ps-plus.ejs can auto-open the right card on load.
+  // Every visible PS Plus Deluxe game, labelled as included, opening its
+  // quick-view sheet on /ps-plus. A monthly line that is also a catalog game
+  // is left to this richer entry.
+  const psplusCatalogEntries = psplusCatalogStore.all().filter(g => !g.hidden).map(g => ({
+    t: g.name || g.name_raw, p: 'Included in PS Plus Deluxe', u: '/ps-plus?game=' + encodeURIComponent(g.key),
+    y: 'psplus', img: psplusCatalogView.coverUrl(g, 120)
+  }));
+  const catalogKeys = new Set(psplusCatalogEntries.map(x => psplusCatalog.matchKey(x.t)));
   const seenTitles = new Set(psplus.map(x => x.t.toLowerCase()));
   const psplusMonthly = [];
   getPsplus().forEach(entry => {
     (entry.games_list || '').split('\n').map(g => g.trim()).filter(Boolean).forEach(title => {
       const key = title.toLowerCase();
       if (seenTitles.has(key)) return;
+      if (catalogKeys.has(psplusCatalog.matchKey(title))) return;
       seenTitles.add(key);
       psplusMonthly.push({
         t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: entry.cover_image || ''
@@ -4154,7 +4163,7 @@ app.get('/api/search-index', async (req, res) => {
     console.error('[search-index] requests lookup failed', e.message);
   }
 
-  res.json([...available, ...soon, ...psplus, ...psplusMonthly, ...requested]);
+  res.json([...available, ...soon, ...psplus, ...psplusCatalogEntries, ...psplusMonthly, ...requested]);
 });
 
 app.get('/game/:slug', async (req, res) => {
