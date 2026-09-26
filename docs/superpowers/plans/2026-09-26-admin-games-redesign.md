@@ -296,7 +296,7 @@ Expected:
 - `test-trophy-always.js` ends `4 assertions passed`.
 - `node --check` prints nothing.
 - `server.js` is still `UTF-8 (with BOM)` and CRLF; `lib/availability.js` is still CRLF.
-- The diff stat shows roughly 10 changed lines in `server.js` and 4 in `lib/availability.js`, not hundreds.
+- The diff stat shows about 11 insertions and 7 deletions in `server.js`, and 4 changed lines in `lib/availability.js`, not hundreds.
 
 - [ ] **Step 6: Commit**
 
@@ -1444,7 +1444,7 @@ Its six assertions are unchanged.
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `node scripts/test-games-template.js`
-Expected: FAIL — `gamesView is not defined` (the old template doesn't read it) or the first sub-tab assertion.
+Expected: FAIL — a `ReferenceError` for `gamesView` (the old template doesn't read it) or the first sub-tab assertion.
 
 Run: `node scripts/test-release-pages.js`
 Expected: FAIL on `row for Phantom Blade Zero`.
@@ -2814,7 +2814,7 @@ Expected:
 - `node --check` prints nothing.
 - `test-order-routes-error-handling.js` ends `1 assertion passed`.
 - Line endings are kept: `server.js` BOM + CRLF, `edit.ejs` BOM + CRLF, `add-game.ejs` LF, `style.css` CRLF.
-- `server.js` shows about 8 insertions and 6 deletions.
+- `server.js` shows about 9 insertions and 6 deletions.
 
 - [ ] **Step 8: Commit**
 
@@ -2984,7 +2984,7 @@ Start with `localStorage.clear()` and a reload.
    - Basics, Slots and Prices are open; Images and Extras are closed.
    - PS4 Primary is hidden until Platform is PS4 or PS4/PS5.
    - Clicking a section header opens and closes it.
-3. No console errors on either page.
+3. No console errors on either page, other than two expected 404s for `/logo.svg` (the fixture server has no route for it).
 
 - [ ] **Step 4: Clean up**
 
