@@ -80,6 +80,10 @@ Website checkout orders never have a customer record before they are paid; the r
 | `reservation` | `reserved` |
 | anything else | `active` |
 
+**Released before it was paid.** When a Coming Soon game is released, `lib/release.js` turns its unpaid reservations into ordinary orders and clears `upcoming_game_id`.
+- A `reserved` target on an order with no `upcoming_game_id` therefore becomes `awaiting_qr`. Once paid, it waits for its sign-in code like every other released reservation.
+- When the customer row is still `status: 'reservation'`, the settle also sets `released_at`. That lists the order with the other released reservations, and lets sign-in turn the reservation row into the rental (the existing `order.customer_id && order.released_at` branch of advance).
+
 **`settlementPayment(order, customer, today)` returns the payment line to record:**
 - **Amount:** the customer's `price` minus whatever payments that row already has, floored at 0. With no customer row, it is `order.amount_due`. The deposit is not sales, the same as a paid Quick Add today.
 - **Date:** `today` (Manila date, `orders.manilaDate()`).
@@ -94,7 +98,7 @@ Website checkout orders never have a customer record before they are paid; the r
 
 **`settleQuickAddPayment(order, { method, channel, extraPatch })` is one helper in `server.js`, used by every path:**
 1. It works out the target with `settleTarget`.
-2. It calls `orders.settleOwnerRecorded(order.ref, target, { paid_at: <now ISO>, payment_channel: channel, payment_method: method, ...extraPatch })`.
+2. It calls `orders.settleOwnerRecorded(order.ref, target, { paid_at: <now ISO>, payment_channel: channel, payment_method: method, [released_at], ...extraPatch })`. `released_at` is set only for a reservation released before it was paid (above).
 3. **Only if that returned `true`**, it pushes the `settlementPayment` line onto the customer row, so a double-click or a race never records a second payment.
 4. It returns `{ ok, target }`.
 
@@ -183,7 +187,7 @@ The price cell adds `<span class="rem-badge rem-overdue">unpaid</span>` for a cu
 
 - **`scripts/test-quick-add-settle.js` (new).** The pure rules:
   - `isOwnerRecordedUnpaid`: a web Follow-up is excluded; a legacy Quick Add caught through `customer_id` is included; paid states are excluded.
-  - `settleTarget`: the saved target wins; each customer-status fallback.
+  - `settleTarget`: the saved target wins; each customer-status fallback; a reservation released before it was paid settles to `awaiting_qr`.
   - `settlementPayment`: amount = price − existing payments; the three kinds; `null` at 0.
   - `reminderMessage`: with and without a link.
 - **`scripts/test-orders-settle.js` (new).** `settleOwnerRecorded` against a fake database that honours the filter:
