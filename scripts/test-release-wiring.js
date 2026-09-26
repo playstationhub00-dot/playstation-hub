@@ -43,6 +43,28 @@ ok('the release route hands lowdb and the order store to releaseUpcoming', () =>
   assert.ok(r.includes("db.get('upcoming').remove("));
 });
 
+ok('the release route reuses an existing released game on retry instead of always minting a new id', () => {
+  const r = block("app.post('/admin/upcoming/release/:id'");
+  assert.ok(r.includes('releaseLib.findReleasedGame(getGames(), upcoming.id)'), 'looks up an existing released game first');
+  assert.ok(/newGameId:\s*existingGame\s*\?\s*existingGame\.id\s*:\s*newId\(\)/.test(r), 'reuses its id when present');
+  assert.ok(r.includes('existingGame,'), 'passes it through to releaseUpcoming');
+});
+
+ok('the release route guards against concurrent/duplicate release requests for the same id', () => {
+  assert.ok(/const releasesInProgress = new Set\(\);/.test(SRC), 'module-level guard declared');
+  const r = block("app.post('/admin/upcoming/release/:id'");
+  // The check-and-set must happen synchronously, before the first await, so
+  // a double-click arriving while the first request is mid-flight cannot
+  // slip past it.
+  const checkIdx = r.indexOf('releasesInProgress.has(');
+  const setIdx = r.indexOf('releasesInProgress.add(');
+  const firstAwait = r.indexOf('await ');
+  assert.ok(checkIdx >= 0 && setIdx > checkIdx, 'checks then sets the guard');
+  assert.ok(setIdx < firstAwait || firstAwait < 0, 'guard is set before any await');
+  assert.ok(r.includes("msg=release_in_progress"), 'redirects with a message when already in flight');
+  assert.ok(/try\s*\{[\s\S]*\}\s*finally\s*\{\s*releasesInProgress\.delete\(/.test(r), 'always releases the guard in a finally block');
+});
+
 ok('signing in a released reservation updates its existing customer record', () => {
   const a = block("app.post('/admin/orders/:ref/advance'");
   assert.ok(a.includes('if (to === \'active\' && order.customer_id && order.released_at)'));

@@ -208,7 +208,10 @@ function fakeStores(orderList, opts) {
     const r = await rel.releaseUpcoming({ upcoming: UPCOMING, newGameId: 77, now: new Date(NOW), orderStore: s.orderStore, gameStore: s.gameStore });
     assert.deepStrictEqual(r.failed, ['PH-0001', 'PH-0008']);
     assert.deepStrictEqual(r.converted, ['PH-0002', 'PH-0003', 'PH-0004']);
-    assert.ok(s.log.includes('remove:15'));
+    // A partial release keeps the Coming Soon record so a retry can find
+    // the failed orders again — see the "partial release does NOT remove"
+    // test below.
+    assert.ok(!s.log.includes('remove:15'));
   });
 
   await ok('a game nobody reserved still releases cleanly', async () => {
@@ -216,6 +219,40 @@ function fakeStores(orderList, opts) {
     const r = await rel.releaseUpcoming({ upcoming: UPCOMING, newGameId: 77, now: new Date(NOW), orderStore: s.orderStore, gameStore: s.gameStore });
     assert.deepStrictEqual([r.moved, r.converted, r.failed], [[], [], []]);
     assert.deepStrictEqual(s.log.slice(1), ['addGame:77', 'repoint:15->77', 'remove:15']);
+  });
+
+  await ok('a partial release does NOT remove the Coming Soon record', async () => {
+    const s = fakeStores(ORDERS, { failTransition: ['PH-0001'] });
+    const r = await rel.releaseUpcoming({ upcoming: UPCOMING, newGameId: 77, now: new Date(NOW), orderStore: s.orderStore, gameStore: s.gameStore });
+    assert.deepStrictEqual(r.failed, ['PH-0001']);
+    assert.ok(!s.log.includes('remove:15'), 'remove:15 must not run when something failed');
+  });
+
+  await ok('retrying a partial release reuses the existing released game instead of adding a duplicate', async () => {
+    // First attempt: PH-0001 fails to move, so the Coming Soon record stays.
+    const s1 = fakeStores(ORDERS, { failTransition: ['PH-0001'] });
+    const first = await rel.releaseUpcoming({ upcoming: UPCOMING, newGameId: 77, now: new Date(NOW), orderStore: s1.orderStore, gameStore: s1.gameStore });
+    assert.deepStrictEqual(first.failed, ['PH-0001']);
+
+    // Second attempt: the route would find the already-released game (id 77)
+    // via findReleasedGame and pass it in as existingGame — this time
+    // everything moves, so the Coming Soon record is finally removed.
+    const s2 = fakeStores(ORDERS);
+    const second = await rel.releaseUpcoming({
+      upcoming: UPCOMING, newGameId: 77, existingGame: first.game,
+      now: new Date(NOW), orderStore: s2.orderStore, gameStore: s2.gameStore
+    });
+    assert.ok(!s2.log.some(l => l.startsWith('addGame:')), 'must not call addGame again on retry');
+    assert.strictEqual(second.game, first.game, 'reuses the same game record');
+    assert.deepStrictEqual(second.failed, []);
+    assert.ok(s2.log.includes('remove:15'), 'a fully successful retry removes the Coming Soon record');
+  });
+
+  await ok('a fully successful release still removes the Coming Soon record (regression)', async () => {
+    const s = fakeStores(ORDERS);
+    const r = await rel.releaseUpcoming({ upcoming: UPCOMING, newGameId: 77, now: new Date(NOW), orderStore: s.orderStore, gameStore: s.gameStore });
+    assert.deepStrictEqual(r.failed, []);
+    assert.ok(s.log.includes('remove:15'));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

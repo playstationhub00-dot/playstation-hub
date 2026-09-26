@@ -37,6 +37,12 @@ const mongoConnection = require('./lib/mongo-connection');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Guards against a double-click or retry on /admin/upcoming/release/:id
+// starting a second release for the same Coming Soon id while the first is
+// still awaiting Mongo work. Single-process lowdb+Express app, so an
+// in-memory Set is enough — checked and set synchronously, before any await.
+const releasesInProgress = new Set();
+
 // One connection for the whole app — orders, game requests, and admin
 // sessions all read through this. See lib/mongo-connection.js for why it
 // connects once instead of pinging before every call.
@@ -4873,32 +4879,49 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
 // unpaid ones become ordinary orders, and the customer records follow — see
 // lib/release.js. The Coming Soon record is removed last.
 app.post('/admin/upcoming/release/:id', requireAuth, asyncRoute(async (req, res) => {
-  const upcoming = getUpcomingGame(req.params.id);
-  if (!upcoming) return res.redirect('/admin?tab=games');
-  // Orders live in MongoDB. Without it the reservations cannot be moved, and
-  // deleting the Coming Soon record would strand them — so refuse before
-  // writing anything.
-  if (!(await _getMongoDb())) return res.redirect('/admin?tab=games&msg=release_failed');
-  const result = await releaseLib.releaseUpcoming({
-    upcoming,
-    newGameId: newId(),
-    now: new Date(),
-    orderStore: orders,
-    gameStore: {
-      addGame: game => db.get('games').push(game).write(),
-      repointUpcomingCustomers: (upcomingId, gameId) => {
-        const key = 'upcoming_' + upcomingId;
-        const rows = db.get('customers').filter(c => String(c.game_id) === key).value();
-        rows.forEach(c => db.get('customers').find({ id: c.id }).assign({ game_id: gameId }).write());
-        return rows.length;
-      },
-      removeUpcoming: id => db.get('upcoming').remove({ id: parseInt(id) }).write()
-    }
-  });
-  if (result.failed.length) {
-    console.error('[release] could not move', result.failed.join(', '), 'while releasing', upcoming.title);
+  const upcomingId = req.params.id;
+  // Check-and-set synchronously, before any await, so a double-click or
+  // retry that arrives while the first request is still mid-flight can't
+  // slip past this check and start a second release for the same id.
+  if (releasesInProgress.has(upcomingId)) {
+    return res.redirect('/admin?tab=games&msg=release_in_progress');
   }
-  res.redirect('/admin?tab=orders&msg=' + (result.failed.length ? 'release_partial' : 'game_released'));
+  releasesInProgress.add(upcomingId);
+  try {
+    const upcoming = getUpcomingGame(upcomingId);
+    if (!upcoming) return res.redirect('/admin?tab=games');
+    // Orders live in MongoDB. Without it the reservations cannot be moved, and
+    // deleting the Coming Soon record would strand them — so refuse before
+    // writing anything.
+    if (!(await _getMongoDb())) return res.redirect('/admin?tab=games&msg=release_failed');
+    // A previous attempt may have already released this game and left it
+    // in place because some orders failed to move — reuse that game rather
+    // than minting a duplicate.
+    const existingGame = releaseLib.findReleasedGame(getGames(), upcoming.id);
+    const result = await releaseLib.releaseUpcoming({
+      upcoming,
+      newGameId: existingGame ? existingGame.id : newId(),
+      existingGame,
+      now: new Date(),
+      orderStore: orders,
+      gameStore: {
+        addGame: game => db.get('games').push(game).write(),
+        repointUpcomingCustomers: (upcomingId, gameId) => {
+          const key = 'upcoming_' + upcomingId;
+          const rows = db.get('customers').filter(c => String(c.game_id) === key).value();
+          rows.forEach(c => db.get('customers').find({ id: c.id }).assign({ game_id: gameId }).write());
+          return rows.length;
+        },
+        removeUpcoming: id => db.get('upcoming').remove({ id: parseInt(id) }).write()
+      }
+    });
+    if (result.failed.length) {
+      console.error('[release] could not move', result.failed.join(', '), 'while releasing', upcoming.title);
+    }
+    res.redirect('/admin?tab=orders&msg=' + (result.failed.length ? 'release_partial' : 'game_released'));
+  } finally {
+    releasesInProgress.delete(upcomingId);
+  }
 }));
 
 app.post('/admin/announcement', requireAuth, (req, res) => {
