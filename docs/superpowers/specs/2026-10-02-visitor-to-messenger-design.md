@@ -213,8 +213,8 @@ preview.
 
 **Mobile sticky bar** (`#gdStickyBar`, ≤ 820px): left side keeps the existing kicker/amount
 ("From ₱<price>", or the selected total once chosen); the right button is the same Messenger
-action ("💬 Message us about this game" / "💬 Ask us about this game"), same href, same
-tracking. It no longer drives the website-order button.
+action, short enough for the bar ("💬 Message us" / "💬 Ask us"); tapping it taps the big button, so
+the href and the tracking are the same. It no longer drives the website-order button.
 
 **No-slot options** (`reserveSection`, queue line, priority reserve) stay unchanged.
 
