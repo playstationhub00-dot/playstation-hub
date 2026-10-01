@@ -75,8 +75,8 @@
 .ppc-sheet-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
 .ppc-sheet-overlay[hidden] { display: none; }
 .ppc-sheet { position: relative; background: #141414; border: 1px solid #2a2a2a; border-radius: 18px; width: 100%; max-width: 760px; max-height: 92vh; overflow-y: auto; box-shadow: 0 24px 70px rgba(0,0,0,0.65); }
-.ppc-sheet-cover { position: relative; background: #050505; display: flex; align-items: center; justify-content: center; max-height: 65vh; }
-.ppc-sheet-cover img { width: 100%; max-height: 65vh; object-fit: contain; object-position: center; display: block; }
+.ppc-sheet-cover { position: relative; background: #050505; display: flex; align-items: center; justify-content: center; max-height: 65vh; padding: 1.25rem 1.5rem 0.75rem; }
+.ppc-sheet-cover img { width: 100%; max-height: 60vh; object-fit: contain; object-position: center; display: block; border: 1px solid rgba(255,215,0,0.6); border-radius: 4px; }
 .ppc-sheet-cover-tile { aspect-ratio: 16 / 9; background: radial-gradient(circle at 30% 15%, #3b1a5c, #130a1f 75%); }
 .ppc-sheet-x { position: absolute; top: 0.75rem; right: 0.9rem; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); color: #fff; font-size: 1rem; cursor: pointer; }
 .ppc-sheet-body { padding: 1.25rem 1.5rem 1.6rem; }
