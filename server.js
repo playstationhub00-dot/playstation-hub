@@ -28,6 +28,8 @@ const psplusFeed = require('./lib/psplus-feed');
 const psplusCatalog = require('./lib/psplus-catalog');
 const psplusCatalogView = require('./lib/psplus-catalog-view');
 const psplusCatalogStore = require('./lib/psplus-catalog-store');
+const psplusTitleSearch = require('./lib/psplus-title-search');
+const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -673,6 +675,12 @@ gameRequests.ensureIndexes().catch(e => console.error('[requests] ensureIndexes'
 psplusCatalogStore.init(_getMongoDb);
 psplusCatalogStore.load().catch(e => console.error('[psplus-catalog] load', e.message));
 
+// Real PlayStation covers for the owner's monthly picks that aren't already
+// one of our stored PS Plus games — its own small collection, resolved by
+// title on demand from the admin PS Plus tab, never on every page render.
+psplusMonthlyCoversStore.init(_getMongoDb);
+psplusMonthlyCoversStore.load().catch(e => console.error('[psplus-monthly-covers] load', e.message));
+
 function normalizeCustomer(c) {
   if (!c) return c;
   c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
@@ -1295,7 +1303,7 @@ app.get('/ps-plus', (req, res) => {
   // folded in (lib/psplus-catalog-view.js). Opens on that tab unless ?tab=
   // says otherwise, or a ?month= deep link needs the Monthly tab.
   const catalog = psplusCatalogView.buildPublicCatalog({
-    games: psplusCatalogStore.all(), siteGames: getGames(), entries, slugFor: gameSlug
+    games: psplusCatalogStore.all(), siteGames: getGames(), entries, slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
   });
   const activeTab = ['games', 'monthly', 'pricing'].includes(req.query.tab) ? req.query.tab : (req.query.month ? 'monthly' : 'games');
   const weeklyPrices = [(getPsplusPrices() || {}).nt_price_7d, (getPsplusPrices() || {}).tr_price_7d].map(Number).filter(n => n > 0);
@@ -1552,6 +1560,30 @@ app.post('/admin/psplus/catalog/:key/remove', requireAuth, asyncRoute(async (req
     console.error('[psplus-catalog] remove', e.message);
   }
   res.redirect(CATALOG_BACK + (removed ? 'catalog_saved' : 'catalog_error'));
+}));
+
+// A monthly pick that matches none of our stored PS Plus games (e.g. this
+// month's PlayStation-only picks) has no cover of its own — this looks each
+// one up by title on PlayStation's real site search and saves whatever it
+// finds, so the All Games tile shows the game's real cover from then on.
+// Titles already resolved (found or not) are skipped, so pressing this
+// again after adding a new month only looks up what's new.
+app.post('/admin/psplus/monthly-covers/fetch', requireAuth, asyncRoute(async (req, res) => {
+  const titles = psplusCatalogView.monthlyTileTitles(getPsplus(), psplusCatalogStore.all().filter(g => !g.hidden));
+  const toFetch = titles.filter(t => !psplusMonthlyCoversStore.get(t.key));
+  let found = 0;
+  for (const t of toFetch) {
+    const r = await psplusTitleSearch.searchCover(t.name);
+    try {
+      await psplusMonthlyCoversStore.set(t.key, {
+        title: t.name, image_url: r.ok ? r.image_url : '', store_url: r.ok ? r.store_url : '', resolved_at: new Date().toISOString()
+      });
+      if (r.ok && r.image_url) found += 1;
+    } catch (e) {
+      console.error('[psplus-monthly-covers] save', t.name, e.message);
+    }
+  }
+  res.redirect('/admin?tab=psplus&msg=' + (toFetch.length ? 'monthly_covers_fetched' : 'monthly_covers_nothing'));
 }));
 
 app.post('/admin/psplus/prices', requireAuth, (req, res) => {
@@ -4417,7 +4449,11 @@ app.get('/admin', requireAuth, async (req, res) => {
     previewToken: catalogPreview ? catalogPreviewToken : '',
     previewExpired: !!catalogPreviewToken && !catalogPreview,
     monthSuggestion: catalogPreview ? psplusCatalogView.monthSuggestion(catalogPreview.preview.monthlyNames, psplus, orders.manilaDate()) : null,
-    siteGames: getGames().map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title))
+    siteGames: getGames().map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title)),
+    // How many of this month's monthly-only tiles have never had a cover
+    // lookup tried — what the "Fetch monthly covers" button offers to do.
+    monthlyCoversUnresolved: psplusCatalogView.monthlyTileTitles(psplus, psplusCatalogStore.all().filter(g => !g.hidden))
+      .filter(t => !psplusMonthlyCoversStore.get(t.key)).length
   });
   const customers = [...getCustomers()].sort((a, b) => {
     const rank = c => c.status === 'renting' ? 0 : c.status === 'reservation' ? 1 : c.status === 'bought' ? 2 : 3; // done last

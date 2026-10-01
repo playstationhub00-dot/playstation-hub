@@ -98,6 +98,12 @@
       </div>
     </div>
     <div class="ppca-actions">
+      <% const mcu = typeof monthlyCoversUnresolved !== 'undefined' ? monthlyCoversUnresolved : 0; %>
+      <% if (mcu > 0) { %>
+      <form method="POST" action="/admin/psplus/monthly-covers/fetch" style="margin:0;" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='⏳ Looking up covers…';">
+        <button type="submit" class="ppca-btn ppca-ghost">🖼️ Fetch monthly covers (<%= mcu %>)</button>
+      </form>
+      <% } %>
       <button type="button" class="ppca-btn ppca-ghost" onclick="ppcaOpenAdd()">➕ Add a game by hand</button>
       <form method="POST" action="/admin/psplus/catalog/refresh" style="margin:0;" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='⏳ Checking PlayStation…';">
         <button type="submit" class="ppca-btn ppca-gold">🔄 Refresh from PlayStation</button>

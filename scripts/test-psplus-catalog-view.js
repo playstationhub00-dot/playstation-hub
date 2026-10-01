@@ -79,6 +79,11 @@ ok('any other line becomes a tile, once', () => {
   assert.ok(r.tiles.every(t => /^mo:\d+:\d+$/.test(t.key)));
 });
 
+ok('monthlyTileTitles() lists the same tiles by their lookup key', () => {
+  const r = view.monthlyTileTitles(ENTRIES, [game(8, 'God of War Ragnarök', ['catalog'])]);
+  assert.deepStrictEqual(r, [{ key: 'wobbly life', name: 'Wobbly Life' }, { key: 'stray', name: 'Stray' }]);
+});
+
 console.log('\nbuildPublicCatalog()');
 
 const GAMES = [
@@ -111,6 +116,15 @@ ok('each item carries what the card and the sheet show', () => {
   assert.strictEqual(c.items.find(i => i.k === 'm:1').s, '', 'a hand-added game has no PlayStation store link');
   const tile = c.items.find(i => i.n === 'Stray');
   assert.deepStrictEqual([tile.tile, tile.t, tile.m, tile.i, tile.rent], [true, 'monthly', 'AUG 2026', '', null]);
+});
+
+ok('a monthly tile with a resolved cover renders like a real card, not a text tile', () => {
+  const covers = new Map([['stray', { image_url: 'https://image.api.playstation.com/stray.png', store_url: 'https://www.playstation.com/en-us/games/stray/' }]]);
+  const c = view.buildPublicCatalog({ games: GAMES, siteGames: SITE, entries: ENTRIES, slugFor, monthlyCovers: covers });
+  const stray = c.items.find(i => i.n === 'Stray');
+  assert.deepStrictEqual([stray.tile, stray.i, stray.s, stray.m], [false, 'https://image.api.playstation.com/stray.png', 'https://www.playstation.com/en-us/games/stray/', 'AUG 2026']);
+  const wobbly = c.items.find(i => i.n === 'Wobbly Life');
+  assert.deepStrictEqual([wobbly.tile, wobbly.i], [true, ''], 'a title with no resolved cover stays a plain tile');
 });
 
 ok('a hidden game is nowhere on the customer page', () => {

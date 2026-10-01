@@ -143,6 +143,12 @@ ok('/ps-plus builds the catalog and picks the tab', () => {
   assert.ok(route.includes('psplusCatalogView.buildPublicCatalog({'));
   assert.ok(route.includes("(req.query.month ? 'monthly' : 'games')"));
   assert.ok(route.includes('slots, catalog, activeTab, fromWeekly,'));
+  assert.ok(route.includes('monthlyCovers: psplusMonthlyCoversStore.all()'));
+});
+
+ok('a resolved monthly cover never hits the undefined-list-label bug (g.t is "monthly", not in LISTS)', () => {
+  const grid = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'psplus-catalog-grid.ejs'), 'utf8');
+  assert.ok(grid.includes("var where = LISTS[g.t] ? LISTS[g.t] + (g.m ? ' · Monthly ' + g.m : '') : 'Monthly game · ' + g.m;"));
 });
 
 console.log('\n' + passed + ' assertions passed\n');

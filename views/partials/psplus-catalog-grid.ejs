@@ -92,7 +92,7 @@
     if (src) { img.src = src; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
     document.getElementById('ppcSheetTitle').textContent = g.n;
     document.getElementById('ppcSheetSub').textContent = [g.p.join(' · '), g.g].filter(Boolean).join(' · ') || 'PS Plus Deluxe';
-    var where = g.tile ? 'Monthly game · ' + g.m : LISTS[g.t] + (g.m ? ' · Monthly ' + g.m : '');
+    var where = LISTS[g.t] ? LISTS[g.t] + (g.m ? ' · Monthly ' + g.m : '') : 'Monthly game · ' + g.m;
     document.getElementById('ppcSheetOk').textContent = '✓ Included in PS Plus Deluxe · ' + where;
     var alt = document.getElementById('ppcSheetAlt');
     if (g.rent) { alt.href = g.rent.u; alt.textContent = '🎮 We also rent this game on its own → see price'; alt.hidden = false; } else alt.hidden = true;
@@ -133,7 +133,7 @@
       b.classList.add('ppc-card-noimg');
     }
     var tags = el('div', 'ppc-tags');
-    if (!g.tile) tags.appendChild(el('span', 'ppc-tag ppc-tag-' + g.t, TAGS[g.t]));
+    if (TAGS[g.t]) tags.appendChild(el('span', 'ppc-tag ppc-tag-' + g.t, TAGS[g.t]));
     if (g.m) tags.appendChild(el('span', 'ppc-tag ppc-tag-monthly', 'MONTHLY · ' + g.m));
     b.appendChild(tags);
     if (g.tile) {
