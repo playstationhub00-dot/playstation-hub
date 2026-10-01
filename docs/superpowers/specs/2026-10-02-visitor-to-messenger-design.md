@@ -198,8 +198,8 @@ optional):
 A read-only "YOUR MESSAGE WILL SAY" preview under the button mirrors this text and updates
 as they pick.
 
-**Account type and duration** pickers keep working and are labelled "optional" for the
-Messenger path.
+**Account type and duration** pickers keep working unchanged; nothing requires them for the
+Messenger path, and the preview shows what each pick adds to the message.
 
 **Website order becomes secondary.** The name field, "To send now" summary box and gold
 pay button move into a collapsed block opened by an outlined button "Or order here on the
