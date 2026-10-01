@@ -87,7 +87,7 @@
     lastFocus = document.activeElement;
     var img = document.getElementById('ppcSheetImg');
     var coverBox = document.getElementById('ppcSheetCover');
-    var src = cover(g, 600);
+    var src = cover(g, 1200);
     coverBox.classList.toggle('ppc-sheet-cover-tile', !src);
     if (src) { img.src = src; img.hidden = false; } else { img.removeAttribute('src'); img.hidden = true; }
     document.getElementById('ppcSheetTitle').textContent = g.n;

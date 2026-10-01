@@ -67,21 +67,26 @@
 .ppc-name { font-size: 0.82rem; font-weight: 800; line-height: 1.2; margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ppc-tile-name { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 2rem 0.9rem 0.9rem; font-weight: 900; font-size: 0.92rem; color: #ead9ff; line-height: 1.2; }
 
-.ppc-sheet-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+/* The quick-view "sheet": a floating card over the page (not edge-to-edge),
+   but big, and the cover shows the whole picture at its real aspect ratio
+   (object-fit: contain, letterboxed on a dark backdrop) rather than a
+   cropped fill — so the full picture is what's on screen, just inside a
+   sheet rather than stretched to the screen's own edges. */
+.ppc-sheet-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
 .ppc-sheet-overlay[hidden] { display: none; }
-.ppc-sheet { background: #141414; border: 1px solid #2a2a2a; border-radius: 18px; width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-.ppc-sheet-cover { position: relative; height: 200px; background: #0a0a0a; }
-.ppc-sheet-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.ppc-sheet-cover-tile { background: radial-gradient(circle at 30% 15%, #3b1a5c, #130a1f 75%); }
-.ppc-sheet-x { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.95rem; cursor: pointer; }
-.ppc-sheet-body { padding: 1rem 1.25rem 1.35rem; }
-.ppc-sheet-body h3 { margin: 0; font-size: 1.2rem; font-weight: 900; color: #fff; }
-.ppc-sheet-sub { font-size: 0.82rem; color: #999; margin: 0.2rem 0 0.7rem; }
-.ppc-sheet-ok { display: inline-block; font-size: 0.75rem; font-weight: 800; color: #FFD700; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 50px; padding: 0.25rem 0.7rem; }
-.ppc-sheet-rent { display: block; text-align: center; background: #FFD700; color: #000; font-weight: 900; border-radius: 50px; padding: 0.8rem; font-size: 0.92rem; margin-top: 0.9rem; text-decoration: none; }
-.ppc-sheet-alt { display: block; margin-top: 0.65rem; font-size: 0.82rem; background: #0f1f14; border: 1px solid #14532d; color: #86efac; border-radius: 10px; padding: 0.6rem 0.8rem; text-decoration: none; }
+.ppc-sheet { position: relative; background: #141414; border: 1px solid #2a2a2a; border-radius: 18px; width: 100%; max-width: 760px; max-height: 92vh; overflow-y: auto; box-shadow: 0 24px 70px rgba(0,0,0,0.65); }
+.ppc-sheet-cover { position: relative; background: #050505; display: flex; align-items: center; justify-content: center; max-height: 65vh; }
+.ppc-sheet-cover img { width: 100%; max-height: 65vh; object-fit: contain; object-position: center; display: block; }
+.ppc-sheet-cover-tile { aspect-ratio: 16 / 9; background: radial-gradient(circle at 30% 15%, #3b1a5c, #130a1f 75%); }
+.ppc-sheet-x { position: absolute; top: 0.75rem; right: 0.9rem; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(6px); color: #fff; font-size: 1rem; cursor: pointer; }
+.ppc-sheet-body { padding: 1.25rem 1.5rem 1.6rem; }
+.ppc-sheet-body h3 { margin: 0; font-size: 1.35rem; font-weight: 900; color: #fff; }
+.ppc-sheet-sub { font-size: 0.85rem; color: #999; margin: 0.25rem 0 0.8rem; }
+.ppc-sheet-ok { display: inline-block; font-size: 0.78rem; font-weight: 800; color: #FFD700; background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3); border-radius: 50px; padding: 0.3rem 0.8rem; }
+.ppc-sheet-rent { display: block; text-align: center; background: #FFD700; color: #000; font-weight: 900; border-radius: 50px; padding: 0.9rem; font-size: 0.96rem; margin-top: 1rem; text-decoration: none; }
+.ppc-sheet-alt { display: block; margin-top: 0.7rem; font-size: 0.85rem; background: #0f1f14; border: 1px solid #14532d; color: #86efac; border-radius: 10px; padding: 0.65rem 0.85rem; text-decoration: none; }
 .ppc-sheet-alt[hidden], .ppc-sheet-store[hidden] { display: none; }
-.ppc-sheet-store { display: block; text-align: center; margin-top: 0.75rem; font-size: 0.75rem; color: #777; }
+.ppc-sheet-store { display: block; text-align: center; margin-top: 0.8rem; font-size: 0.78rem; color: #777; }
 
 @media (max-width: 600px) {
   .ppc-hero-inner { padding: 1.1rem 1rem 1rem; }
@@ -111,6 +116,7 @@
   .ppc-name { font-size: 0.68rem; }
   .ppc-tile-name { font-size: 0.72rem; padding: 1.6rem 0.4rem 0.5rem; }
   .ppc-sheet-overlay { align-items: flex-end; padding: 0; }
-  .ppc-sheet { max-width: none; border-radius: 18px 18px 0 0; border-bottom: 0; }
-  .ppc-sheet-cover { height: 170px; }
+  .ppc-sheet { max-width: none; max-height: 92vh; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .ppc-sheet-cover { max-height: 45vh; }
+  .ppc-sheet-cover img { max-height: 45vh; }
 }
