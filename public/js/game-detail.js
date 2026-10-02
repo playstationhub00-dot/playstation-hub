@@ -382,24 +382,31 @@ function syncStickyBar() {
     return;
   }
 
-  // The bar's button is the same Messenger action as the big button on the
-  // page, so it is never "waiting" — only the figure on its left changes.
+  // The bar's button mirrors the page's main action: Messenger when the game
+  // can be rented, the "get in line" card when it's fully booked. It is never
+  // "waiting" — only the figure on its left changes.
   bEl.classList.remove('gd-cta-wait');
-  bEl.textContent = isBookedNow() ? '💬 Ask us' : '💬 Message us';
-  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
-  if (selectedType && !hasSlot) {
-    // The button opens Messenger, so no price figure here: just say why.
-    kEl.textContent = 'No slot right now';
+  if (isBookedNow()) {
+    bEl.textContent = 'Get in line';
+    kEl.textContent = 'Fully booked';
     aEl.textContent = '';
   } else if (!selectedType || !selectedDays) {
+    bEl.textContent = '💬 Message us';
     const amtEl = document.getElementById('phAmount');
     kEl.textContent = 'From';
     aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
   } else {
+    bEl.textContent = '💬 Message us';
     const rt = computeRentTotal(selectedType, selectedDays);
     kEl.textContent = 'Your total';
     aEl.textContent = '₱' + rt.total;
   }
+}
+
+// The "get in line" card that is showing: the per-type one (#lineCard) when
+// the picked type is full, the all-types one (#lineCardAll) when every type is.
+function visibleLineSuffix() {
+  return ALL_UNAVAIL ? 'All' : '';
 }
 
 function handleStickyBarClick() {
@@ -411,7 +418,15 @@ function handleStickyBarClick() {
     document.getElementById('buyCtaBtn')?.click();
     return;
   }
-  // Rent mode: the bar's button is the Messenger button.
+  // Rent mode, fully booked: take them to the line card, name box ready.
+  if (isBookedNow()) {
+    const sfx = visibleLineSuffix();
+    document.getElementById('lineCard' + sfx)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const name = document.getElementById('resFbName' + sfx);
+    if (name) { try { name.focus({ preventScroll: true }); } catch (err) { name.focus(); } }
+    return;
+  }
+  // Rent mode, rentable: the bar's button is the Messenger button.
   document.getElementById('ctaMsgPrimary')?.click();
 }
 
@@ -437,14 +452,21 @@ function updateReserveLinks() {
   if (msgSub) msgSub.textContent = booked ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there';
   const msgPreview = document.getElementById('ctaMsgPreview');
   if (msgPreview) msgPreview.textContent = msgText;
-  // Both no-slot instances' Messenger fallback links always say PRIORITY
-  // RESERVE — that link is the "message us instead of the form" escape
-  // hatch, not tied to whichever option card happens to be selected right
-  // now (Fall in Line's own path is the form itself, distinguished by the
-  // hidden `kind` field, not a separate link).
-  ['reserveLink', 'reserveLinkAll'].forEach(id => {
-    const rLink = document.getElementById(id);
-    if (rLink) rLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to PRIORITY RESERVE a slot ⭐','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine,'Note: I am paying the ₱100 priority reservation fee.'].filter(Boolean).join('\n'));
+  // Fully booked: the "get in line" card is the main action, so the big
+  // Messenger button steps aside and the card's small "Have a question?" link
+  // carries the same message instead.
+  const msgWrap = document.getElementById('ctaMsgWrap');
+  if (msgWrap) msgWrap.hidden = booked;
+  const typeName = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 primary' : selectedType === 'nt' ? 'Non-trophy' : '';
+  const nextDays = selectedType && typeof NEXT_DAYS !== 'undefined' ? NEXT_DAYS[selectedType] : null;
+  const soonText = typeName && nextDays > 0
+    ? ' · ' + typeName + ' frees up in about ' + nextDays + ' day' + (nextDays === 1 ? '' : 's')
+    : '';
+  ['', 'All'].forEach(sfx => {
+    const ask = document.getElementById('lineAsk' + sfx);
+    if (ask) ask.href = PHMessengerText.messengerHref(msgText);
+    const soon = document.getElementById('lineSoon' + sfx);
+    if (soon) soon.textContent = soonText;
   });
 }
 

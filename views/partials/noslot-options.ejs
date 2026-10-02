@@ -3,7 +3,43 @@
      records a real order in the 'waitlisted' state instead of only opening
      Messenger). `suffix` lets this partial render twice on one page without
      id collisions — pass '' for the primary no-slot block and a second
-     string (e.g. 'All') for the all-types-unavailable block. -->
+     string (e.g. 'All') for the all-types-unavailable block.
+
+     `variant: 'card'` (game page) is the same form laid out as one "get in
+     line" card: Free first and selected, Priority as the paid upgrade, the
+     queue positions written into each choice (filled by partials/queue-line
+     .ejs, included with hideStrip), and Messenger as a small question link.
+     Anything else (the PS Plus rent page) keeps the layout below unchanged. -->
+<% const nsCard = typeof variant !== 'undefined' && variant === 'card'; %>
+<% if (nsCard) { %>
+<div class="gd-noslot-options gd-line-card" id="lineCard<%= suffix %>">
+  <div class="gd-line-booked"><b>Fully booked</b><span id="lineSoon<%= suffix %>"></span></div>
+  <div class="gd-line-head">
+    <span id="lineHead<%= suffix %>">Get in line</span>
+    <button type="button" class="gd-line-view" id="lineView<%= suffix %>" hidden onclick="qlOpen('<%= suffix %>')">View list</button>
+  </div>
+  <div class="gd-noslot-opt-grid gd-line-choices" role="radiogroup" aria-label="How to get in line">
+    <button type="button" role="radio" aria-checked="true" class="gd-noslot-opt gd-line-opt gd-type-selected" id="noslotOptQueue<%= suffix %>" onclick="setNoslotKind(this, 'queue')">
+      <span class="gd-line-opt-top"><span class="gd-line-dot" aria-hidden="true"></span><b>Free</b> · wait your turn</span>
+      <span class="gd-line-opt-sub">You'd be <b id="lineFreePos<%= suffix %>">#1</b>. We message you when it's yours.</span>
+    </button>
+    <button type="button" role="radio" aria-checked="false" class="gd-noslot-opt gd-line-opt" id="noslotOptPriority<%= suffix %>" onclick="setNoslotKind(this, '')">
+      <span class="gd-line-opt-top"><span class="gd-line-dot" aria-hidden="true"></span><b>Priority</b> · ₱100</span>
+      <span class="gd-line-opt-sub">Go first (<b id="linePriPos<%= suffix %>">#1</b>). Taken off your rent.</span>
+    </button>
+  </div>
+  <form method="POST" action="/order/reserve" id="reserveForm<%= suffix %>" onsubmit="return handleReserveFormSubmit(event, '<%= resValMsgId %>')">
+    <input type="hidden" name="game_id" value="<%= game_id %>">
+    <input type="hidden" name="account_type" id="resType<%= suffix %>" value="">
+    <input type="hidden" name="days" id="resDays<%= suffix %>" value="">
+    <input type="hidden" name="kind" id="resKind<%= suffix %>" value="queue">
+    <input type="text" name="fb_name" id="resFbName<%= suffix %>" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+    <button type="submit" class="gd-noslot-submit" id="noslotSubmit<%= suffix %>" data-text-queue="Join the line — free" data-text-priority="Reserve priority — ₱100">Join the line — free</button>
+  </form>
+  <a id="lineAsk<%= suffix %>" class="gd-line-ask" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" data-track-source="game">💬 Have a question? <u>Message us</u></a>
+  <div id="<%= resValMsgId %>" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+</div>
+<% } else { %>
 <div class="gd-noslot-options">
   <div class="gd-noslot-opt-grid">
     <button type="button" class="gd-type-pill gd-noslot-opt gd-type-selected" id="noslotOptPriority<%= suffix %>" onclick="setNoslotKind(this, '')">
@@ -33,6 +69,7 @@
   </a>
   <div id="<%= resValMsgId %>" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
 </div>
+<% } %>
 
 <script>
 // Toggles which option is selected: swaps the hidden `kind` field between ''
@@ -43,19 +80,25 @@
 function setNoslotKind(btn, kind) {
   const grid = btn.closest('.gd-noslot-opt-grid');
   if (!grid) return;
-  grid.querySelectorAll('.gd-noslot-opt').forEach(b => b.classList.remove('gd-type-selected'));
+  grid.querySelectorAll('.gd-noslot-opt').forEach(b => {
+    b.classList.remove('gd-type-selected');
+    if (b.hasAttribute('aria-checked')) b.setAttribute('aria-checked', 'false');
+  });
   btn.classList.add('gd-type-selected');
+  if (btn.hasAttribute('aria-checked')) btn.setAttribute('aria-checked', 'true');
   const wrap = btn.closest('.gd-noslot-options');
   const kindField = wrap.querySelector('input[id^="resKind"]');
   const note = wrap.querySelector('[id^="noslotOptNote"]');
   const submitBtn = wrap.querySelector('[id^="noslotSubmit"]');
   if (kindField) kindField.value = kind;
+  // The card layout carries its own button wording; the classic layout keeps its old text.
+  const ds = (submitBtn && submitBtn.dataset) || {};
   if (kind === 'queue') {
     if (note) note.textContent = 'Free to join. We\'ll message you the moment a slot opens up.';
-    if (submitBtn) submitBtn.textContent = 'Join Waitlist — Free →';
+    if (submitBtn) submitBtn.textContent = ds.textQueue || 'Join Waitlist — Free →';
   } else {
     if (note) note.textContent = 'Deducted from your total rent once a slot opens. We\'ll message you when it\'s your turn.';
-    if (submitBtn) submitBtn.textContent = 'Reserve Now — ₱100 →';
+    if (submitBtn) submitBtn.textContent = ds.textPriority || 'Reserve Now — ₱100 →';
   }
   // The rent page's fixed bottom bar mirrors this choice (₱100 vs Free), so it
   // has to be told when the choice changes. Guarded because the PS Plus page

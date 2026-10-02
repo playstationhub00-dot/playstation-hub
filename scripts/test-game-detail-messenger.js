@@ -52,11 +52,13 @@ function loadPage({ allUnavail, avail }) {
     style: {}, dataset: { defaultAmount: '399', defaultBuyAmount: '0' },
     classList: { add() {}, remove() {}, toggle() {} },
     setAttribute(k, v) { this.attrs = Object.assign(this.attrs || {}, { [k]: v }); },
-    scrollIntoView() {},
+    scrollIntoView() { clicks.push('scroll:' + id); },
+    focus() { clicks.push('focus:' + id); },
     click() { clicks.push(id); }
   });
-  ['ctaMsgPrimary', 'ctaMsgMain', 'ctaMsgSub', 'ctaMsgPreview', 'gdOrderBlock', 'orderToggle', 'gdSbKicker', 'gdSbAmount', 'gdSbBtn',
-    'ctaBtn', 'ctaSub', 'reserveSection', 'gdOrderForm', 'totalBox', 'orderType', 'orderDays', 'phAmount'].forEach(mk);
+  ['ctaMsgPrimary', 'ctaMsgMain', 'ctaMsgSub', 'ctaMsgPreview', 'ctaMsgWrap', 'gdOrderBlock', 'orderToggle', 'gdSbKicker', 'gdSbAmount', 'gdSbBtn',
+    'ctaBtn', 'ctaSub', 'reserveSection', 'gdOrderForm', 'totalBox', 'orderType', 'orderDays', 'phAmount',
+    'lineCard', 'lineCardAll', 'lineAsk', 'lineAskAll', 'lineSoon', 'lineSoonAll', 'resFbName', 'resFbNameAll'].forEach(mk);
   const ctx = {
     console, window: { addEventListener() {}, location: { search: '' } },
     document: { getElementById: id => els[id] || null, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} },
@@ -64,6 +66,7 @@ function loadPage({ allUnavail, avail }) {
     BUY_PRICES: { nt: 0, tr: 0 },
     PROMO: { enabled: true, discounts: { 7: 0, 30: 10 }, deposit: 100 },
     AVAIL: avail, ALL_UNAVAIL: allUnavail, gameTitle: 'Zzyzx Open Game', gdSlideCount: 0, RENTAL_DURATIONS: [7, 30],
+    NEXT_DAYS: { tr: 23, nt: 1, ps4: null },
     PHMessengerText: require('../public/js/messenger-text.js')
   };
   vm.createContext(ctx);
@@ -105,14 +108,32 @@ async function main() {
   });
 
   console.log('\nrendered page, fully booked game');
-  await okAsync('says Ask us, has no website-order toggle or block, keeps the queue options', async () => {
+  await okAsync('one "get in line" card is the main action; the big Messenger button starts hidden', async () => {
     const r = await get('/game/zzyzx-booked-game');
     assert.strictEqual(r.status, 200);
-    assert.ok(r.body.includes('💬 Ask us about this game'));
-    assert.ok(/We(&#39;|')ll tell you when it frees up/.test(r.body), 'EJS escapes the apostrophe');
+    assert.ok(/<div id="ctaMsgWrap" hidden>/.test(r.body), 'big Messenger button hidden');
     assert.ok(!r.body.includes('id="orderToggle"') && !r.body.includes('id="gdOrderBlock"'));
-    assert.ok(r.body.includes('id="reserveSectionAll"'));
-    assert.ok(/id="gdSbBtn"[^>]*>💬 Ask us<\/button>/.test(r.body));
+    assert.ok(r.body.includes('id="reserveSectionAll"') && r.body.includes('id="lineCardAll"'));
+    assert.ok(r.body.includes('Fully booked') && r.body.includes('id="lineHeadAll"'));
+    assert.ok(/id="noslotOptQueueAll"[^>]*>/.test(r.body) && /aria-checked="true" class="gd-noslot-opt gd-line-opt gd-type-selected" id="noslotOptQueueAll"/.test(r.body), 'Free is picked first');
+    assert.ok(/name="kind" id="resKindAll" value="queue"/.test(r.body));
+    assert.ok(r.body.includes('Join the line — free') && r.body.includes('data-text-priority="Reserve priority — ₱100"'));
+    assert.ok(/id="lineAskAll"[^>]*data-track-source="game"/.test(r.body) && r.body.includes('Have a question?'));
+  });
+  await okAsync('the old duplicates are gone: second banner, "Choose your option", Facebook fallback link, "Paying puts you first"', async () => {
+    const r = await get('/game/zzyzx-booked-game');
+    assert.ok(!r.body.includes('No Slots Available Right Now'));
+    assert.ok(!r.body.includes('CHOOSE YOUR OPTION'));
+    assert.ok(!r.body.includes('or message us on Facebook instead'));
+    assert.ok(!r.body.includes('id="reserveLinkAll"'));
+    assert.ok(/var HIDE_STRIP = true;/.test(r.body), 'the separate queue strip stays hidden; the card shows the count');
+  });
+  await okAsync('the PS Plus rent page shares these partials and keeps its classic layout', async () => {
+    const r = await get('/ps-plus/rent');
+    assert.strictEqual(r.status, 200);
+    assert.ok(!r.body.includes('gd-line-card'));
+    assert.ok(r.body.includes('or message us on Facebook instead') && r.body.includes('Reserve Now'));
+    assert.ok(/var HIDE_STRIP = false;/.test(r.body));
   });
 
   console.log('\ngame-detail.js, open game');
@@ -135,6 +156,23 @@ async function main() {
     p.run("selectedType = 'tr'; updateReserveLinks()");
     assert.ok(p.els.ctaMsgPreview.textContent.startsWith("Hi! I'm interested in Zzyzx Open Game"));
     assert.strictEqual(p.els.ctaMsgMain.textContent, '💬 Ask us about this game');
+  });
+  await okAsync('a full type hides the big button; the card link carries the message and the frees-up line', async () => {
+    const p = loadPage({ allUnavail: false, avail: { nt: true, tr: false, ps4: false } });
+    p.run("selectedType = 'tr'; updateReserveLinks()");
+    assert.strictEqual(p.els.ctaMsgWrap.hidden, true);
+    assert.strictEqual(p.els.lineAsk.href, p.els.ctaMsgPrimary.href);
+    assert.ok(p.els.lineAsk.href.includes(encodeURIComponent('fully booked')));
+    assert.strictEqual(p.els.lineSoon.textContent, ' · Trophy frees up in about 23 days');
+    p.run("selectedType = 'nt'; updateReserveLinks()");
+    assert.strictEqual(p.els.ctaMsgWrap.hidden, false, 'a type with a slot brings the big button back');
+  });
+  await okAsync('frees-up line: singular day, and nothing when unknown', async () => {
+    const p = loadPage({ allUnavail: true, avail: { nt: false, tr: false, ps4: false } });
+    p.run("selectedType = 'nt'; updateReserveLinks()");
+    assert.strictEqual(p.els.lineSoonAll.textContent, ' · Non-trophy frees up in about 1 day');
+    p.run("selectedType = 'ps4'; updateReserveLinks()");
+    assert.strictEqual(p.els.lineSoonAll.textContent, '');
   });
   await okAsync('the website-order toggle opens and closes the block', async () => {
     const p = loadPage({ allUnavail: false, avail: { nt: true, tr: true, ps4: false } });
@@ -166,11 +204,21 @@ async function main() {
   });
 
   console.log('\ngame-detail.js, fully booked game');
-  await okAsync('every type full: Ask us wording from the start', async () => {
+  await okAsync('every type full: the bar says Get in line and takes you to the card with the name box ready', async () => {
     const p = loadPage({ allUnavail: true, avail: { nt: false, tr: false, ps4: false } });
     p.run('updateReserveLinks(); syncStickyBar()');
     assert.ok(p.els.ctaMsgPreview.textContent.includes('fully booked'));
-    assert.strictEqual(p.els.gdSbBtn.textContent, '💬 Ask us');
+    assert.strictEqual(p.els.gdSbBtn.textContent, 'Get in line');
+    assert.strictEqual(p.els.gdSbKicker.textContent, 'Fully booked');
+    assert.strictEqual(p.els.gdSbAmount.textContent, '');
+    p.run('handleStickyBarClick()');
+    assert.deepStrictEqual(p.clicks, ['scroll:lineCardAll', 'focus:resFbNameAll'], 'no Messenger click');
+  });
+  await okAsync('picked type full (others free): the bar goes to the per-type card', async () => {
+    const p = loadPage({ allUnavail: false, avail: { nt: true, tr: false, ps4: false } });
+    p.run("selectedType = 'tr'; syncStickyBar(); handleStickyBarClick()");
+    assert.strictEqual(p.els.gdSbBtn.textContent, 'Get in line');
+    assert.deepStrictEqual(p.clicks, ['scroll:lineCard', 'focus:resFbName']);
   });
 
   console.log('\n' + passed + ' assertions passed\n');

@@ -46,6 +46,10 @@
   var DATA = <%- JSON.stringify(queues || { nt: [], tr: [], ps4: [] }).replace(/</g, '\\u003c') %>;
   var SELF_REF = <%- JSON.stringify(selfRef || null).replace(/</g, '\\u003c') %>;
   var SELF_SESSION = <%- JSON.stringify(selfSession || null).replace(/</g, '\\u003c') %>;
+  // The game page's "get in line" card (noslot-options variant 'card') shows
+  // the count and positions itself, so it asks for the strip to stay hidden;
+  // the list popout still opens from the card's "View list".
+  var HIDE_STRIP = <%- JSON.stringify(typeof hideStrip !== 'undefined' && !!hideStrip) %>;
   var LABELS = { nt: 'Non-trophy', tr: 'Trophy', ps4: 'PS4 primary' };
 
   window.qlState = window.qlState || {};
@@ -74,14 +78,34 @@
     if (!st) return;
     if (type) st.type = type;
     var rows = (DATA && DATA[st.type]) || [];
-    var strip = document.getElementById('qlStrip' + suffix);
-    if (!strip) return;
-    if (!rows.length) { strip.style.display = 'none'; return; }
-    strip.style.display = 'flex';
-
-    var label = (LABELS[st.type] || '').toLowerCase();
     var mine = null;
     for (var i = 0; i < rows.length; i++) { if (isSelf(rows[i])) { mine = rows[i]; break; } }
+    var pri = 0;
+    for (var p = 0; p < rows.length; p++) { if (rows[p].tier === 'priority') pri++; }
+
+    // The "get in line" card's own text, when that card is on the page.
+    // Priority holders are served first, so paying puts you after them only.
+    var lineHead = document.getElementById('lineHead' + suffix);
+    if (lineHead) {
+      lineHead.textContent = mine
+        ? "You're #" + mine.position + ' in line'
+        : rows.length === 0 ? 'Be first in line'
+        : 'Get in line — ' + rows.length + (rows.length === 1 ? ' person is' : ' people are') + ' waiting';
+    }
+    var lineView = document.getElementById('lineView' + suffix);
+    if (lineView) lineView.hidden = rows.length === 0;
+    var freePos = document.getElementById('lineFreePos' + suffix);
+    if (freePos) freePos.textContent = '#' + (rows.length + 1);
+    var priPos = document.getElementById('linePriPos' + suffix);
+    if (priPos) priPos.textContent = '#' + (pri + 1);
+
+    var strip = document.getElementById('qlStrip' + suffix);
+    if (!strip) return;
+    if (!rows.length || HIDE_STRIP) { strip.style.display = 'none'; }
+    else { strip.style.display = 'flex'; }
+    if (!rows.length) return;
+
+    var label = (LABELS[st.type] || '').toLowerCase();
 
     document.getElementById('qlCount' + suffix).textContent =
       rows.length + (rows.length === 1 ? ' in line for ' : ' in line for ') + label;
@@ -89,8 +113,6 @@
       ? "You're #" + mine.position
       : "Join now and you'll be #" + (rows.length + 1);
 
-    var pri = 0;
-    for (var p = 0; p < rows.length; p++) { if (rows[p].tier === 'priority') pri++; }
     var free = rows.length - pri;
     var tiersEl = document.getElementById('qlTiers' + suffix);
     if (tiersEl) {

@@ -932,6 +932,25 @@ nav {
 .gd-noslot-submit { display: block; width: 100%; margin: 0 auto; background: linear-gradient(135deg,#6d28d9,#a855f7); color: #fff; font-weight: 800; padding: 0.7rem 1.1rem; border-radius: 50px; border: none; font-size: 0.85rem; cursor: pointer; }
 .gd-noslot-msgr { display: block; text-align: center; margin-top: 0.6rem; font-size: 0.75rem; color: #888; text-decoration: underline; }
 .gd-noslot-msgr:hover { color: #aaa; }
+/* Game page, fully booked: one "get in line" card (noslot-options variant 'card'). */
+.gd-line-card { margin-top: 0.75rem; }
+.gd-line-booked { font-size: 0.8rem; color: #f59e0b; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius: 8px; padding: 0.45rem 0.65rem; margin-bottom: 0.75rem; }
+.gd-line-booked b { color: #fbbf24; }
+.gd-line-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.55rem; }
+.gd-line-view { background: none; border: 0; padding: 0; color: #60a5fa; font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.gd-line-view[hidden] { display: none; }
+.gd-noslot-opt-grid.gd-line-choices { flex-direction: column; }
+.gd-noslot-opt.gd-line-opt { flex: none; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 0.15rem; width: 100%; padding: 0.6rem 0.75rem; background: #111; border: 1px solid #2a2a2a; border-radius: 10px; color: #ddd; font: inherit; cursor: pointer; }
+.gd-noslot-opt.gd-line-opt.gd-type-selected { border-color: #a855f7; background: rgba(168,85,247,0.12); }
+.gd-line-opt-top { display: flex; align-items: center; gap: 0.45rem; font-size: 0.88rem; color: #fff; }
+.gd-line-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #555; flex: none; box-sizing: border-box; }
+.gd-line-opt.gd-type-selected .gd-line-dot { border-color: #a855f7; background: #a855f7; box-shadow: inset 0 0 0 2px #1c0d33; }
+.gd-line-opt-sub { font-size: 0.76rem; color: #999; padding-left: 1.45rem; }
+.gd-line-opt-sub b { color: #fff; }
+.gd-line-card form { margin-top: 0.75rem; }
+.gd-line-ask { display: block; text-align: center; margin-top: 0.7rem; font-size: 0.8rem; color: #9ca3af; text-decoration: none; }
+.gd-line-ask u { color: #93c5fd; }
+#ctaMsgWrap[hidden] { display: none; }
 
 .gd-setup-toggle {
   display: flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;
