@@ -870,6 +870,10 @@ nav {
 .gdh-hero { margin-left: -1.25rem; margin-right: -1.25rem; }
 .gdh-hero .usd-hero-in { padding: 1.5rem 1.25rem 1.25rem; }
 .gdh-hero .usd-hero-foot { margin: 0.4rem -1.25rem -1.25rem; padding: 0.65rem 1.25rem; }
+/* The banner grows with its content (tagline and rating under the title push it taller than the old fixed height, which clipped the badge row at the top). */
+.usd-hero.gdh-hero { height: auto; min-height: 210px; }
+.usd-hero.gdh-hero .usd-hero-in { height: auto; min-height: 210px; }
+@media (max-width: 600px) { .usd-hero.gdh-hero, .usd-hero.gdh-hero .usd-hero-in { min-height: 205px; } }
 .gdh-bar-text { font-size: 0.8rem; color: #bbb; min-width: 0; flex: 1; }
 .gdh-bar-urgent { color: #ef4444; font-weight: 700; }
 /* Status pill variants of .usd-badge — the reservation page only ever needs the
