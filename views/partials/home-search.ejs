@@ -1,0 +1,30 @@
+<%#
+  Homepage "What game are you looking for?" strip, above the hero. Visitors
+  mostly arrive with a game in mind; this answers "do you have it, and is it
+  free?" before they have to scroll. Results come from /api/search-index (the
+  same list the nav search uses) and are drawn by public/js/home-search.js.
+  Chips are the first four covered games of `featured`, the list behind the
+  Most Popular slider.
+
+  Locals: featured
+%>
+<% const hsChips = (featured || []).filter(g => g.cover_image).slice(0, 4); %>
+<section class="hs" id="homeSearch" aria-label="Find a game">
+  <h2 class="hs-title">What game are you looking for?</h2>
+  <p class="hs-sub">See right away if it's free.</p>
+  <div class="hs-box">
+    <input type="search" id="hsInput" class="hs-input" placeholder="Type a game, e.g. God of War" aria-label="Search games" autocomplete="off" enterkeyhint="search">
+    <div class="hs-results" id="hsResults" hidden></div>
+  </div>
+  <% if (hsChips.length) { %>
+  <div class="hs-chips-label">🔥 Popular right now</div>
+  <div class="hs-chips">
+    <% hsChips.forEach(g => { %>
+    <a class="hs-chip" href="/game/<%= g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>"><img src="<%= g.cover_image %>" alt="" loading="lazy" decoding="async"><span><%= g.title %></span></a>
+    <% }) %>
+  </div>
+  <% } %>
+</section>
+<div class="hs-dim" id="hsDim" hidden></div>
+<script src="/js/home-search-core.js?v=<%= assetV %>"></script>
+<script src="/js/home-search.js?v=<%= assetV %>" defer></script>
