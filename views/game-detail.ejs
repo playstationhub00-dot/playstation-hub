@@ -29,7 +29,11 @@
   const trNotStocked = neverRented && !hasTrophyAcc;
   const ntNotStocked = neverRented && !hasNtAcc;
   const ps4NotStocked = neverRented && !hasPs4Acc;
-  const anyNotStocked = trNotStocked || ntNotStocked || ps4NotStocked;
+  // The "Be the first to rent this" banner is for a game with nothing stocked at all.
+  // One type being unstocked (e.g. no Trophy account yet) is already said by that type's
+  // own "Set up on order" label, and must not make a stocked game look brand new.
+  // A game with any open slot (even a legacy, unlinked one) is stocked too.
+  const noneStocked = neverRented && !hasTrophyAcc && !hasNtAcc && (!showPs4 || !hasPs4Acc) && totalSlots === 0;
   // Buy is gated on slot state, not just on a price being set: an account already
   // sold (or taken offline) must stop being offered, the same way it already stops
   // being rentable. Each tier is judged against its own slot type. A linked
@@ -202,7 +206,7 @@
       <div id="rentPanel">
 
         <!-- SELECT RENTAL TYPE -->
-        <% if (anyNotStocked) { %>
+        <% if (noneStocked) { %>
         <!-- NOT-YET-STOCKED banner -->
         <div class="gd-notstocked-banner">
           <span class="gd-notstocked-icon">⚡</span>
