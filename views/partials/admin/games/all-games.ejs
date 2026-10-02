@@ -29,6 +29,26 @@
     <option value="slots">Fewest slots left</option>
   </select>
 </div>
+<%
+  const psnRun = typeof psnLastRun !== 'undefined' ? psnLastRun : null;
+%>
+<form method="POST" action="/admin/games/psn/refresh" class="gm-psn"
+      onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Updating… this can take a minute';">
+  <button type="submit" style="padding:0.5rem 0.9rem;border-radius:8px;border:1px solid #333;background:#161616;color:#fff;font-weight:700;cursor:pointer;">🎮 Update all from PlayStation</button>
+  <label style="font-size:0.78rem;color:#888;"><input type="checkbox" name="force" value="1"> Also re-fetch games updated in the last 7 days</label>
+  <% if (psnRun) { %>
+  <span style="font-size:0.78rem;color:#888;">Last run <%= psnRun.at.slice(0, 16).replace('T', ' ') %> UTC · updated <strong style="color:#4ade80;"><%= psnRun.updated %></strong>
+    <% if (psnRun.nomatch.length) { %> · no match <strong style="color:#fbbf24;"><%= psnRun.nomatch.length %></strong><% } %>
+    <% if (psnRun.failed.length) { %> · failed <strong style="color:#f87171;"><%= psnRun.failed.length %></strong><% } %>
+    <% if (psnRun.remaining) { %> · <%= psnRun.remaining %> still to do — press again<% } %></span>
+  <% if (psnRun.nomatch.length || psnRun.failed.length) { %>
+  <details style="flex-basis:100%;font-size:0.78rem;color:#888;"><summary>Which games?</summary>
+    <% if (psnRun.nomatch.length) { %><div>No match (open the game and paste its PS Store link): <%= psnRun.nomatch.join(', ') %></div><% } %>
+    <% if (psnRun.failed.length) { %><div>Could not reach PlayStation: <%= psnRun.failed.join(', ') %></div><% } %>
+  </details>
+  <% } %>
+  <% } %>
+</form>
 <div class="gm-showing" id="gmShowing" hidden>Showing <span id="gmShown"><%= gmRows.length %></span> of <%= gmRows.length %> · <a href="#" data-gm-clear>Clear</a></div>
 
 <% if (!gmRows.length) { %>

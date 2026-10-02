@@ -3607,6 +3607,8 @@ body.light-mode .gm-earned { color: #15803d; }
 .vf-ask-no { background: rgba(239,68,68,0.15); color: #f87171; }
 .vf-ask-n { color: #22c55e; font-weight: 800; font-size: 0.85rem; min-width: 1.5rem; text-align: right; flex: none; }
 .vf-ask-other { color: #666; font-size: 0.74rem; padding-top: 0.5rem; border-top: 1px solid #161616; margin-top: 0.25rem; }
+/* Games tab: "Update all from PlayStation" row */
+.gm-psn { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin: 0.75rem 0; }
 
 .gd-notstocked-banner {
   display: flex; align-items: flex-start; gap: 0.75rem;

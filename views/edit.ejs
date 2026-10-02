@@ -22,6 +22,15 @@
   <h1>Edit Game</h1>
 
   <%- include('partials/upload-error-banner', { msg, nothingSavedNote: 'None of the changes below were saved — please fix the picture and re-enter the rest.' }) %>
+  <%
+    const psnMsgs = {
+      psn_updated: '✅ Updated from PlayStation.', psn_saved: '✅ Saved.', psn_removed: '🗑 PlayStation info removed.',
+      psn_nomatch: '⚠️ PlayStation has no game with that name. Paste its PS Store link below and press Update again.',
+      psn_failed: '⚠️ Could not read PlayStation just now — nothing was changed. Try again in a minute.',
+      psn_badlink: '⚠️ That is not a PlayStation Store link. Use one like https://store.playstation.com/en-us/concept/10015533'
+    };
+  %>
+  <% if (msg && psnMsgs[msg]) { %><div style="margin:0 0 1rem;padding:0.7rem 0.9rem;border-radius:10px;background:#16202f;border:1px solid #2d4a73;color:#cfe0f5;font-size:0.9rem;"><%= psnMsgs[msg] %></div><% } %>
 
   <%
     const isCategory = !!game.price_category_id;
@@ -258,6 +267,36 @@
     <div class="form-actions">
       <button type="submit" class="btn btn-primary">Save Changes</button>
       <a href="/admin" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+
+  <!-- PlayStation info: filled from PlayStation Store, never replaces what you typed above. -->
+  <form method="POST" action="/admin/games/<%= game.id %>/psn" style="margin-top:2rem;padding:1.25rem;border:1px solid #222;border-radius:14px;background:#0f0f0f;">
+    <h2 style="margin:0 0 0.4rem;font-size:1.05rem;">🎮 PlayStation info</h2>
+    <p style="margin:0 0 1rem;font-size:0.82rem;color:#888;">
+      Trailer, screenshots, overview, rating and details come from PlayStation Store. Anything you typed above (description, genre, release date, gallery) is shown instead.
+    </p>
+    <% if (game.psn) { %>
+    <p style="margin:0 0 1rem;font-size:0.85rem;color:#ccc;">
+      Matched: <a href="<%= game.psn.store_url %>" target="_blank" rel="noopener" style="color:#3b9be8;"><%= game.psn.matched_title || game.title %></a>
+      (<%= game.psn.source === 'manual' ? 'from your link' : 'found by name' %>) · fetched <%= String(game.psn.fetched_at || '').slice(0, 16).replace('T', ' ') %> UTC
+      · <%= (game.psn.videos || []).length %> trailer<%= (game.psn.videos || []).length === 1 ? '' : 's' %>, <%= (game.psn.screenshots || []).length %> screenshots
+    </p>
+    <% } else { %>
+    <p style="margin:0 0 1rem;font-size:0.85rem;color:#888;">Not fetched yet.</p>
+    <% } %>
+    <div class="form-group">
+      <label>PS Store link <span style="color:#555;font-size:0.75rem;">(only if the automatic match is wrong)</span></label>
+      <input type="text" name="psn_link" value="<%= game.psn_link || '' %>" placeholder="https://store.playstation.com/en-us/concept/10015533" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Size (GB) <span style="color:#555;font-size:0.75rem;">(PlayStation does not publish it — type it in; shown on the game page when filled)</span></label>
+      <input type="number" name="size_gb" value="<%= game.size_gb || '' %>" min="0" max="500" step="0.1" placeholder="e.g. 54.3">
+    </div>
+    <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+      <button type="submit" name="action" value="update" style="padding:0.6rem 1rem;border-radius:8px;border:0;background:#f0a500;color:#000;font-weight:800;cursor:pointer;">Update from PlayStation</button>
+      <button type="submit" name="action" value="save" style="padding:0.6rem 1rem;border-radius:8px;border:1px solid #333;background:#161616;color:#fff;font-weight:700;cursor:pointer;">Save link &amp; size only</button>
+      <% if (game.psn) { %><button type="submit" name="action" value="remove" onclick="return confirm('Remove the stored PlayStation info for this game?')" style="padding:0.6rem 1rem;border-radius:8px;border:1px solid #4a1d1d;background:#1f1010;color:#f87171;font-weight:700;cursor:pointer;">Remove PlayStation info</button><% } %>
     </div>
   </form>
 </div>

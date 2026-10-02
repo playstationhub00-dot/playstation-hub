@@ -1602,6 +1602,62 @@ app.post('/admin/psplus/catalog/:key/remove', requireAuth, asyncRoute(async (req
 // finds, so the All Games tile shows the game's real cover from then on.
 // Titles already resolved (found or not) are skipped, so pressing this
 // again after adding a new month only looks up what's new.
+// ── PlayStation game info (lib/psn-game.js) ─────────────────────────────────
+// "Update all" walks the games one at a time with a short pause (PlayStation is
+// not ours to hammer), skips games fetched in the last 7 days unless forced, and
+// stops at 60 per click. A failed fetch never touches stored data. The public
+// pages never call PlayStation — they read what is stored here.
+const PSN_REFRESH_CAP = 60;
+const PSN_FRESH_MS = 7 * 24 * 60 * 60 * 1000;
+const PSN_PAUSE_MS = process.env.PSN_PAUSE_MS != null ? Number(process.env.PSN_PAUSE_MS) : 300;
+const psnSleep = ms => new Promise(r => setTimeout(r, ms));
+
+app.post('/admin/games/psn/refresh', requireAuth, asyncRoute(async (req, res) => {
+  const force = (req.body && req.body.force === '1') || req.query.force === '1';
+  const due = getGames().filter(g => force || !g.psn || !g.psn.fetched_at || Date.now() - Date.parse(g.psn.fetched_at) > PSN_FRESH_MS);
+  const batch = due.slice(0, PSN_REFRESH_CAP);
+  const run = { at: new Date().toISOString(), updated: 0, nomatch: [], failed: [], remaining: due.length - batch.length };
+  for (let i = 0; i < batch.length; i++) {
+    const g = batch[i];
+    const r = await psnGame.fetchGameInfo(g);
+    if (r.ok) {
+      db.get('games').find({ id: g.id }).assign({ psn: r.psn }).write();
+      run.updated++;
+    } else if (r.reason === 'no_match') {
+      run.nomatch.push(g.title);
+    } else {
+      run.failed.push(g.title);
+    }
+    if (i < batch.length - 1 && PSN_PAUSE_MS > 0) await psnSleep(PSN_PAUSE_MS);
+  }
+  if (batch.length) db.set('psn_last_run', run).write();
+  res.redirect('/admin?tab=games&msg=' + (batch.length ? 'psn_refreshed' : 'psn_nothing'));
+}));
+
+// One game's PlayStation section on its edit page: save the pasted store link
+// and the typed size, update from PlayStation, or remove the stored info.
+app.post('/admin/games/:id/psn', requireAuth, asyncRoute(async (req, res) => {
+  const game = getGame(req.params.id);
+  if (!game) return res.redirect('/admin');
+  const body = req.body || {};
+  const back = '/admin/edit/' + game.id + '?msg=';
+  const rawLink = String(body.psn_link || '').trim();
+  const link = psnGame.cleanLink(rawLink);
+  if (rawLink && !link) return res.redirect(back + 'psn_badlink');
+  const size = Number(body.size_gb);
+  const patch = { psn_link: link, size_gb: size > 0 && size <= 500 ? Math.round(size * 10) / 10 : null };
+  if (body.action === 'remove') patch.psn = null;
+  db.get('games').find({ id: game.id }).assign(patch).write();
+  if (body.action === 'remove') return res.redirect(back + 'psn_removed');
+  if (body.action !== 'update') return res.redirect(back + 'psn_saved');
+  const r = await psnGame.fetchGameInfo(Object.assign({}, game, patch));
+  if (r.ok) {
+    db.get('games').find({ id: game.id }).assign({ psn: r.psn }).write();
+    return res.redirect(back + 'psn_updated');
+  }
+  res.redirect(back + (r.reason === 'no_match' ? 'psn_nomatch' : 'psn_failed'));
+}));
+
 app.post('/admin/psplus/monthly-covers/fetch', requireAuth, asyncRoute(async (req, res) => {
   const titles = psplusCatalogView.monthlyTileTitles(getPsplus(), psplusCatalogStore.all().filter(g => !g.hidden));
   const toFetch = titles.filter(t => !psplusMonthlyCoversStore.get(t.key));
@@ -5123,6 +5179,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     upcoming: gamesViewLib.upcomingRows(upcoming, upcomingReservedCount, todayManila),
     requests: gamesViewLib.requestSummary(gameRequestRows)
   };
+  res.locals.psnLastRun = db.get('psn_last_run').value() || null;
   res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
