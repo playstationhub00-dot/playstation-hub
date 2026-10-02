@@ -1596,12 +1596,6 @@ app.post('/admin/psplus/catalog/:key/remove', requireAuth, asyncRoute(async (req
   res.redirect(CATALOG_BACK + (removed ? 'catalog_saved' : 'catalog_error'));
 }));
 
-// A monthly pick that matches none of our stored PS Plus games (e.g. this
-// month's PlayStation-only picks) has no cover of its own — this looks each
-// one up by title on PlayStation's real site search and saves whatever it
-// finds, so the All Games tile shows the game's real cover from then on.
-// Titles already resolved (found or not) are skipped, so pressing this
-// again after adding a new month only looks up what's new.
 // ── PlayStation game info (lib/psn-game.js) ─────────────────────────────────
 // "Update all" walks the games one at a time with a short pause (PlayStation is
 // not ours to hammer), skips games fetched in the last 7 days unless forced, and
@@ -1611,27 +1605,48 @@ const PSN_REFRESH_CAP = 60;
 const PSN_FRESH_MS = 7 * 24 * 60 * 60 * 1000;
 const PSN_PAUSE_MS = process.env.PSN_PAUSE_MS != null ? Number(process.env.PSN_PAUSE_MS) : 300;
 const psnSleep = ms => new Promise(r => setTimeout(r, ms));
+// A press stops starting new games after this long (proxies cut requests off
+// near a minute or two); the rest are reported as "remaining" for the next press.
+const PSN_REFRESH_BUDGET_MS = process.env.PSN_REFRESH_BUDGET_MS != null ? Number(process.env.PSN_REFRESH_BUDGET_MS) : 90000;
+let psnRefreshRunning = false;
 
 app.post('/admin/games/psn/refresh', requireAuth, asyncRoute(async (req, res) => {
-  const force = (req.body && req.body.force === '1') || req.query.force === '1';
-  const due = getGames().filter(g => force || !g.psn || !g.psn.fetched_at || Date.now() - Date.parse(g.psn.fetched_at) > PSN_FRESH_MS);
-  const batch = due.slice(0, PSN_REFRESH_CAP);
-  const run = { at: new Date().toISOString(), updated: 0, nomatch: [], failed: [], remaining: due.length - batch.length };
-  for (let i = 0; i < batch.length; i++) {
-    const g = batch[i];
-    const r = await psnGame.fetchGameInfo(g);
-    if (r.ok) {
-      db.get('games').find({ id: g.id }).assign({ psn: r.psn }).write();
-      run.updated++;
-    } else if (r.reason === 'no_match') {
-      run.nomatch.push(g.title);
-    } else {
-      run.failed.push(g.title);
+  if (psnRefreshRunning) return res.redirect('/admin?tab=games&msg=psn_busy');
+  psnRefreshRunning = true;
+  try {
+    const force = (req.body && req.body.force === '1') || req.query.force === '1';
+    // A fetched_at that does not parse (NaN) counts as due.
+    const due = getGames().filter(g => force || !g.psn || !g.psn.fetched_at || !(Date.now() - Date.parse(g.psn.fetched_at) <= PSN_FRESH_MS));
+    const batch = due.slice(0, PSN_REFRESH_CAP);
+    const run = { at: new Date().toISOString(), updated: 0, nomatch: [], failed: [], remaining: due.length };
+    const started = Date.now();
+    let processed = 0;
+    for (let i = 0; i < batch.length; i++) {
+      if (i > 0 && Date.now() - started >= PSN_REFRESH_BUDGET_MS) break;
+      const g = batch[i];
+      processed++;
+      try {
+        const r = await psnGame.fetchGameInfo(g);
+        if (r.ok) {
+          db.get('games').find({ id: g.id }).assign({ psn: r.psn }).write();
+          run.updated++;
+        } else if (r.reason === 'no_match') {
+          run.nomatch.push(g.title);
+        } else {
+          run.failed.push(g.title);
+        }
+      } catch (e) {
+        console.error('[psn] refresh', g.title, e.message);
+        run.failed.push(g.title);
+      }
+      if (i < batch.length - 1 && PSN_PAUSE_MS > 0) await psnSleep(PSN_PAUSE_MS);
     }
-    if (i < batch.length - 1 && PSN_PAUSE_MS > 0) await psnSleep(PSN_PAUSE_MS);
+    run.remaining = due.length - processed;
+    if (batch.length) db.set('psn_last_run', run).write();
+    res.redirect('/admin?tab=games&msg=' + (batch.length ? 'psn_refreshed' : 'psn_nothing'));
+  } finally {
+    psnRefreshRunning = false;
   }
-  if (batch.length) db.set('psn_last_run', run).write();
-  res.redirect('/admin?tab=games&msg=' + (batch.length ? 'psn_refreshed' : 'psn_nothing'));
 }));
 
 // One game's PlayStation section on its edit page: save the pasted store link
@@ -1658,6 +1673,12 @@ app.post('/admin/games/:id/psn', requireAuth, asyncRoute(async (req, res) => {
   res.redirect(back + (r.reason === 'no_match' ? 'psn_nomatch' : 'psn_failed'));
 }));
 
+// A monthly pick that matches none of our stored PS Plus games (e.g. this
+// month's PlayStation-only picks) has no cover of its own — this looks each
+// one up by title on PlayStation's real site search and saves whatever it
+// finds, so the All Games tile shows the game's real cover from then on.
+// Titles already resolved (found or not) are skipped, so pressing this
+// again after adding a new month only looks up what's new.
 app.post('/admin/psplus/monthly-covers/fetch', requireAuth, asyncRoute(async (req, res) => {
   const titles = psplusCatalogView.monthlyTileTitles(getPsplus(), psplusCatalogStore.all().filter(g => !g.hidden));
   const toFetch = titles.filter(t => !psplusMonthlyCoversStore.get(t.key));

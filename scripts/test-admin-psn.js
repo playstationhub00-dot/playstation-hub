@@ -22,7 +22,8 @@ const games = [
   g(2, 'Zzyzx Known Stale', { psn: { description: 'old', fetched_at: OLD } }),
   g(3, 'Zzyzx Known Fresh', { psn: { description: 'keep me', fetched_at: FRESH } }),
   g(4, 'Zzyzx Nomatch'),
-  g(5, 'Zzyzx Broken')
+  g(5, 'Zzyzx Broken'),
+  g(6, 'Zzyzx Garbage Date', { psn: { description: 'junk', fetched_at: 'garbage' } })
 ];
 // 65 more, already fetched today: skipped by a normal run, counted by a forced
 // one (which is how the 60-per-press cap is exercised).
@@ -32,6 +33,7 @@ process.env.PORT = String(PORT);
 process.env.DATA_DIR = DATA_DIR;
 process.env.MONGODB_URI = '';
 process.env.PSN_PAUSE_MS = '0';
+process.env.PSN_REFRESH_BUDGET_MS = '400';
 function cleanup() { try { fs.rmSync(DATA_DIR, { recursive: true, force: true }); } catch (e) { /* best effort */ } }
 
 const readDb = () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'games.json'), 'utf8'));
@@ -68,7 +70,10 @@ async function main() {
   // Stub PlayStation: known titles succeed, "Nomatch" has no game unless a store link is pasted, "Broken" fails.
   const psnGame = require('../lib/psn-game');
   const fetched = [];
+  const knob = { delay: 0, throwTitle: '' };
   psnGame.fetchGameInfo = async game => {
+    if (knob.delay) await new Promise(r => setTimeout(r, knob.delay));
+    if (knob.throwTitle && game.title.includes(knob.throwTitle)) throw new Error('unexpected');
     fetched.push({ id: game.id, link: game.psn_link || '' });
     if (!game.psn_link && /Nomatch/.test(game.title)) return { ok: false, reason: 'no_match' };
     if (/Broken/.test(game.title)) return { ok: false, reason: 'network' };
@@ -110,7 +115,7 @@ async function main() {
     const r = await post('/admin/games/psn/refresh');
     assert.strictEqual(r.status, 302);
     assert.ok(r.headers.location.includes('msg=psn_refreshed'));
-    assert.deepStrictEqual(fetched.map(f => f.id).sort((a, b) => a - b), [1, 2, 4, 5]);
+    assert.deepStrictEqual(fetched.map(f => f.id).sort((a, b) => a - b), [1, 2, 4, 5, 6]);
     assert.strictEqual(gameById(1).psn.description, 'fresh for Zzyzx Known One');
     assert.strictEqual(gameById(2).psn.description, 'fresh for Zzyzx Known Stale');
     assert.strictEqual(gameById(3).psn.description, 'keep me', 'fresh game untouched');
@@ -119,7 +124,7 @@ async function main() {
     assert.strictEqual(gameById(4).psn, undefined);
     assert.strictEqual(gameById(5).psn, undefined);
     const run = readDb().psn_last_run;
-    assert.strictEqual(run.updated, 2);
+    assert.strictEqual(run.updated, 3);
     assert.deepStrictEqual(run.nomatch, ['Zzyzx Nomatch']);
     assert.deepStrictEqual(run.failed, ['Zzyzx Broken']);
     assert.strictEqual(run.remaining, 0);
@@ -128,7 +133,7 @@ async function main() {
     const r = await call('GET', '/admin', { headers: { Cookie: cookie } });
     assert.strictEqual(r.status, 200);
     assert.ok(r.body.includes('Update all from PlayStation'));
-    assert.ok(/updated <strong[^>]*>2<\/strong>/.test(r.body));
+    assert.ok(/updated <strong[^>]*>3<\/strong>/.test(r.body));
     assert.ok(r.body.includes('Zzyzx Nomatch') && r.body.includes('Zzyzx Broken'));
   });
   await okAsync('pressing it again straight away only retries games that have no data', async () => {
@@ -141,7 +146,35 @@ async function main() {
     await post('/admin/games/psn/refresh', { force: '1' });
     assert.strictEqual(fetched.length, 60);
     assert.deepStrictEqual(fetched.slice(0, 5).map(f => f.id), [1, 2, 3, 4, 5], 'in catalogue order');
-    assert.strictEqual(readDb().psn_last_run.remaining, 10);
+    assert.strictEqual(readDb().psn_last_run.remaining, 11);
+  });
+  await okAsync('a game whose fetched_at does not parse is treated as due', async () => {
+    assert.strictEqual(gameById(6).psn.description, 'fresh for Zzyzx Garbage Date');
+  });
+  await okAsync('an unexpected exception counts as failed, the loop continues and the run is still recorded', async () => {
+    fetched.length = 0;
+    knob.throwTitle = 'Known One';
+    await post('/admin/games/psn/refresh', { force: '1' });
+    knob.throwTitle = '';
+    const run = readDb().psn_last_run;
+    assert.ok(run.failed.includes('Zzyzx Known One'));
+    assert.ok(run.updated > 1, 'later games still processed');
+  });
+  await okAsync('stops at the time budget, reports the rest as remaining; a second press meanwhile is told it is busy', async () => {
+    knob.delay = 150;
+    const first = post('/admin/games/psn/refresh', { force: '1' });
+    await new Promise(r => setTimeout(r, 100));
+    const second = await post('/admin/games/psn/refresh', { force: '1' });
+    assert.ok(second.headers.location.includes('msg=psn_busy'));
+    const r1 = await first;
+    knob.delay = 0;
+    assert.ok(r1.headers.location.includes('msg=psn_refreshed'));
+    const run = readDb().psn_last_run;
+    const processed = run.updated + run.nomatch.length + run.failed.length;
+    assert.ok(processed >= 1 && processed < 10, 'stopped early: ' + processed);
+    assert.strictEqual(run.remaining, 71 - processed);
+    const after = await post('/admin/games/psn/refresh', { force: '1' });
+    assert.ok(after.headers.location.includes('msg=psn_refreshed'), 'flag cleared afterwards');
   });
 
   console.log('\nGame edit page');

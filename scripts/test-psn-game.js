@@ -116,6 +116,12 @@ async function main() {
     const f = stubFetch({ hits: [{ productName: 'College Football 26', conceptId: '5' }] });
     assert.deepStrictEqual(await psn.fetchGameInfo({ title: 'Madden NFL 26' }, { fetchImpl: f }), { ok: false, reason: 'no_match' });
   });
+  await ok('an exact title match beats a longer title that merely contains it', async () => {
+    const f = stubFetch({ hits: [{ productName: "Marvel's Spider-Man 2", conceptId: '22' }, { productName: "Marvel's Spider-Man", conceptId: '11' }] });
+    assert.deepStrictEqual(await psn.searchConcept("Marvel's Spider-Man", { fetchImpl: f }), { ok: true, concept_id: '11' });
+    const g = stubFetch({ hits: [{ productName: "Marvel's Spider-Man 2", conceptId: '22' }] });
+    assert.deepStrictEqual(await psn.searchConcept("Marvel's Spider-Man", { fetchImpl: g }), { ok: true, concept_id: '22' }, 'still falls back to contains');
+  });
   await ok('an edition title falls back to the base name', async () => {
     let n = 0;
     const f = async (url, init) => {
