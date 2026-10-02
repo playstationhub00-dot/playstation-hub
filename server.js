@@ -30,6 +30,8 @@ const psplusCatalogView = require('./lib/psplus-catalog-view');
 const psplusCatalogStore = require('./lib/psplus-catalog-store');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
+const visitorFilter = require('./lib/visitor-filter');
+const tracking = require('./lib/tracking');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -191,6 +193,9 @@ db.defaults({
   customers: [],
   nextCustomerId: 1,
   visitors: [],
+  visitor_skips: {},
+  message_taps: [],
+  search_misses: [],
   messenger_contacts: [],
   notification_optins: [],
   bot_training: [],
@@ -523,17 +528,43 @@ app.use(session({
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
 const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
+
+// Appends a row to a lowdb array and trims it to its newest `cap` rows —
+// lowdb rewrites the whole file per write, so every growing log needs a ceiling.
+function pushCapped(key, row, cap) {
+  db.get(key).push(row).write();
+  const all = db.get(key).value();
+  if (all.length > cap) db.set(key, all.slice(all.length - cap)).write();
+}
+
+// One more robot / webhook hit that was deliberately not counted as a visitor.
+function countSkippedVisit() {
+  const day = new Date().toISOString().slice(0, 10);
+  const skips = db.get('visitor_skips').value() || {};
+  db.set(['visitor_skips', day], (skips[day] || 0) + 1).write();
+}
+
 app.use((req, res, next) => {
   const reqPath = req.path;
   // Only track public pages, not admin/assets/uploads
   if (reqPath.startsWith('/admin') || reqPath.startsWith('/uploads') || reqPath.startsWith('/css') || reqPath.startsWith('/js') || reqPath.includes('.')) return next();
-  const pageLabel = PAGE_LABELS[reqPath] || reqPath;
-  const ip = require('crypto').createHash('sha256').update(clientIp(req)).digest('hex');
+  // Robots, link-preview fetchers and system traffic (webhooks, /api/*) are not
+  // visitors: no row and no session cookie, so each hit can no longer open a
+  // phantom session. Robots and webhooks are tallied so the dashboard can say
+  // how many it ignored; /api/* is just the site talking to itself.
+  const cls = visitorFilter.classifyRequest({ method: req.method, path: reqPath, userAgent: req.get('user-agent') });
+  if (cls === 'bot' || (cls === 'system' && visitorFilter.isWebhookPath(reqPath))) countSkippedVisit();
+  if (cls === 'bot' || cls === 'system') return next();
   const sid = sessionId(req, res);
   // Later route handlers in this same request (e.g. POST /order/create in
   // Task 2) read this instead of calling sessionId() a second time, so
   // there's exactly one place per request that decides "who is this."
   req.sessionId = sid;
+  // A form post is a human action, not a page view: it keeps the session but
+  // adds no visit row.
+  if (cls === 'action') return next();
+  const pageLabel = PAGE_LABELS[reqPath] || reqPath;
+  const ip = require('crypto').createHash('sha256').update(clientIp(req)).digest('hex');
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
   db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid }).write();
@@ -4122,6 +4153,55 @@ app.post('/admin/orders/:ref/delete', requireAuth, async (req, res) => {
 
 // Lightweight public index for the nav search box — small enough (~50 games) to ship
 // whole and filter client-side, so results appear with no per-keystroke round-trip.
+// ── Tracking beacons ─────────────────────────────────────────────────────────
+// Sent by the public pages (see partials/nav.ejs and public/js/home-search.js).
+// They never issue a cookie, ignore robots and visitors with no session yet,
+// and always answer 204 so tracking can never affect a page.
+function trackingSession(req) {
+  if (visitorFilter.isBotUserAgent(req.get('user-agent'))) return null;
+  return getCookie(req, SESSION_COOKIE) || null;
+}
+
+// A tap on any Message Us / m.me link.
+app.post('/api/track/message', express.json({ limit: '2kb' }), (req, res) => {
+  try {
+    const sid = trackingSession(req);
+    const body = req.body || {};
+    const page = tracking.cleanPage(body.page);
+    if (sid && page) {
+      const slug = tracking.gameSlugFromPage(page);
+      const game = slug && getGames().some(g => gameSlug(g.title) === slug) ? slug : null;
+      const source = tracking.cleanSource(body.source);
+      const nowMs = Date.now();
+      if (!tracking.recentDuplicate(db.get('message_taps').value(), { session_id: sid, game, source }, nowMs, 60000)) {
+        const iso = new Date(nowMs).toISOString();
+        pushCapped('message_taps', { date: iso.slice(0, 10), time: iso, session_id: sid, page, game, source }, 50000);
+      }
+    }
+  } catch (e) {
+    console.error('[track] message failed', e.message);
+  }
+  res.status(204).end();
+});
+
+// A homepage search that found nothing.
+app.post('/api/track/search-miss', express.json({ limit: '2kb' }), (req, res) => {
+  try {
+    const sid = trackingSession(req);
+    const q = tracking.cleanQuery((req.body || {}).q);
+    if (sid && q) {
+      const nowMs = Date.now();
+      if (!tracking.recentDuplicate(db.get('search_misses').value(), { session_id: sid, q }, nowMs, 24 * 60 * 60 * 1000)) {
+        const iso = new Date(nowMs).toISOString();
+        pushCapped('search_misses', { date: iso.slice(0, 10), time: iso, session_id: sid, q }, 20000);
+      }
+    }
+  } catch (e) {
+    console.error('[track] search-miss failed', e.message);
+  }
+  res.status(204).end();
+});
+
 app.get('/api/search-index', async (req, res) => {
   const accountSummaryMap = buildAccountSummaryMap();
   const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {
