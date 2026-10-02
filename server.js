@@ -4168,7 +4168,7 @@ function trackingSession(req) {
 // A tap on any Message Us / m.me link.
 app.post('/api/track/message', (req, res) => {
   try {
-    if (rateLimited('track_message', clientIp(req), 30, 10 * 60 * 1000)) return res.status(204).end();
+    if (rateLimited('track_message', clientIp(req), 300, 10 * 60 * 1000)) return res.status(204).end();
     const sid = trackingSession(req);
     const body = req.body || {};
     const page = tracking.cleanPage(body.page);
@@ -4191,7 +4191,7 @@ app.post('/api/track/message', (req, res) => {
 // A homepage search that found nothing.
 app.post('/api/track/search-miss', (req, res) => {
   try {
-    if (rateLimited('track_search_miss', clientIp(req), 30, 10 * 60 * 1000)) return res.status(204).end();
+    if (rateLimited('track_search_miss', clientIp(req), 300, 10 * 60 * 1000)) return res.status(204).end();
     const sid = trackingSession(req);
     const q = tracking.cleanQuery((req.body || {}).q);
     if (sid && q) {
