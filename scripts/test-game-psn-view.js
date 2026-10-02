@@ -44,6 +44,11 @@ ok('with no screenshots the poster falls back to the cover; with no media nothin
   assert.strictEqual(none.hideGallery, false);
 });
 
+ok('only one trailer is used, even when more were stored earlier', () => {
+  const r = v.buildGamePsnView({ psn: Object.assign({}, PSN, { videos: ['https://vulcan.dl.playstation.net/t1.mp4', 'https://vulcan.dl.playstation.net/t2.mp4', 'https://vulcan.dl.playstation.net/t3.mp4'] }) });
+  assert.strictEqual(r.media.filter(m => m.type === 'video').length, 1);
+});
+
 console.log('\nowner wins');
 ok("the owner's description, genre and release date beat PlayStation's", () => {
   const r = v.buildGamePsnView({ platform: 'PS5', description: 'Mine only.', genre: 'RPG / Co-op', release_date: '2025-12-01', psn: PSN });

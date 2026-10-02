@@ -71,18 +71,15 @@ async function main() {
       'https://image.api.playstation.com/vulcan/ap/rnd/1/shot1.jpg',
       'https://image.api.playstation.com/vulcan/ap/rnd/1/shot2.jpg'
     ]);
-    assert.deepStrictEqual(p.videos, [
-      'https://vulcan.dl.playstation.net/img/rnd/1/trailer1.mp4',
-      'https://vulcan.dl.playstation.net/img/rnd/1/trailer2.mp4'
-    ]);
+    assert.deepStrictEqual(p.videos, ['https://vulcan.dl.playstation.net/img/rnd/1/trailer1.mp4']);
   });
-  await ok('media is capped at 12 screenshots and 3 videos', async () => {
+  await ok('media is capped at 12 screenshots and 1 trailer', async () => {
     let many = '';
     for (let i = 0; i < 20; i++) many += '{"__typename":"Media","role":"SCREENSHOT","type":"IMAGE","url":"https://image.api.playstation.com/s' + i + '.jpg"},';
     for (let i = 0; i < 6; i++) many += '{"__typename":"Media","role":"PREVIEW","type":"VIDEO","url":"https://vulcan.dl.playstation.net/v' + i + '.mp4"},';
     const r = psn.parseConceptPage(many);
     assert.strictEqual(r.screenshots.length, 12);
-    assert.strictEqual(r.videos.length, 3);
+    assert.strictEqual(r.videos.length, 1);
   });
   await ok('a page with nothing usable is null, not an empty record', async () => {
     assert.strictEqual(psn.parseConceptPage('<html>Just a moment...</html>'), null);

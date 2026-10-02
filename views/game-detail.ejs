@@ -143,6 +143,7 @@
       <% } else if (noSlot) { %>
         <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
       <% } %>
+      <%- include('partials/game-psn-about', { psnView: gdPsn }) %>
       <!-- Description sits below the poster, matching the reservation page —
            this is also what lets the booking card start flush with the
            poster's top edge instead of being pushed down by copy text. -->
@@ -565,8 +566,6 @@
   </div>
 
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
-
-  <%- include('partials/game-psn-about', { psnView: gdPsn }) %>
 
   <% if (gdhGallery.length && !gdPsn.hideGallery) { %>
   <!-- Gameplay gallery: reuses .rsv-gallery-section wholesale (wrapper, label,
