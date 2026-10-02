@@ -21,7 +21,7 @@
     <button type="button" class="navicon-btn" id="navSearchToggle" aria-label="Search" aria-expanded="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="width:18px;height:18px;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
     </button>
-    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
+    <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta" data-track-source="nav">Message Us</a>
   </div>
 
   <div class="navsearch" id="navSearch">
@@ -45,12 +45,12 @@
   <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus</a>
   <a href="/requests" class="<%= navActive === 'requests' ? 'active' : '' %>">Requests</a>
   <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
-  <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta">Message Us</a>
+  <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta" data-track-source="nav">Message Us</a>
 </div>
 
 <!-- Mobile-only: the nav's own Message Us button scrolls out of reach on a long page —
      this stays pinned in thumb range regardless of scroll position. -->
-<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="mobile-fab" aria-label="Message us on Messenger">
+<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="mobile-fab" data-track-source="fab" aria-label="Message us on Messenger">
   💬 <span>Message Us</span>
 </a>
 
@@ -168,7 +168,7 @@
         '<div class="navsearch-empty-sub">Not in our library yet — request it and we\'ll stock the most-wanted titles first.</div>' +
         '<div class="navsearch-empty-acts">' +
         '<a href="/requests?title=' + encodeURIComponent(term.trim()) + '" class="navsearch-empty-btn">Request this game</a>' +
-        '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn2">Message Us</a>' +
+        '<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="navsearch-empty-btn2" data-track-source="search-empty">Message Us</a>' +
         '<a href="/browse" class="navsearch-empty-btn2">Browse All Games</a>' +
         '</div></div>';
     } else if (matches.length > now.length + psplus.length + soon.length + requested.length) {
@@ -225,3 +225,4 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileSearch(); });
 })();
 </script>
+<script src="/js/message-taps.js?v=<%= assetV %>" defer></script>
