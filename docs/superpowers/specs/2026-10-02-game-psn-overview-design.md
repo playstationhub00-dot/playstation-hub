@@ -144,10 +144,10 @@ New `lib/psn-game.js` (never throws; every failure is `{ ok: false, reason }`):
 - **Game info table:** Release date, Genre, Publisher, Size (shown only when `size_gb` is
   set, as "NN GB"), Platform, Voice, Age rating — each row omitted when unknown.
 - Missing data is simply omitted: a game PlayStation does not know renders as today.
-- Desktop keeps the two-column layout: media, About and Game info in the left column; the
-  rent box on the right.
-- Structured data: the game page's existing description meta/`og:description` use the
-  resolved description (truncated to 160 characters).
+- Layout: the media block takes the poster's place in the left column; the rent box stays
+  where it is. **About this game** and **Game info** form a full-width block below the rent
+  box (so on phones the rent box stays right under the trailer). With PlayStation data the
+  description moves from under the poster into About.
 
 ## Error handling
 
