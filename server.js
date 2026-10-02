@@ -32,6 +32,7 @@ const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
 const tracking = require('./lib/tracking');
+const visitorFunnel = require('./lib/visitor-funnel');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -4202,11 +4203,18 @@ app.post('/api/track/search-miss', express.json({ limit: '2kb' }), (req, res) =>
   res.status(204).end();
 });
 
+// Open slots across a game's account types. `g` must already be run through
+// resolveGamePrices and resolveSlotDays. Used by the search index and the admin
+// dashboard's "Most asked-about games".
+function slotsFreeFor(g, accountSummaryMap) {
+  const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
+  return avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
+}
+
 app.get('/api/search-index', async (req, res) => {
   const accountSummaryMap = buildAccountSummaryMap();
   const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {
-    const avail = computeAvailability(g, accountSummaryMap[g.id], { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
-    const slots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
+    const slots = slotsFreeFor(g, accountSummaryMap);
     const prices = [g.nt_price_7d, g.nt_price_30d, g.tr_price_7d, g.tr_price_30d].filter(p => p > 0);
     const buyPrices = [g.buy_nt_price, g.buy_tr_price].filter(p => p > 0);
     // A bundle account carries the titles it contains as hidden search keywords, so
@@ -4814,16 +4822,8 @@ app.get('/admin', requireAuth, async (req, res) => {
   };
 
   // ── Visitors tab: session summaries + windowed metrics ────────────────────
-  // One pass collapses raw pageview rows into a single record per session, and
-  // every time window is then derived from that compact array. Re-walking the
-  // raw rows once per window would mean nineteen passes over a collection that
-  // grows without bound; this is one pass regardless of how many windows exist.
-  const sessionedVisits = visitors.filter(v => v.session_id);
-  const rowsBySession = {};
-  sessionedVisits.forEach(v => {
-    (rowsBySession[v.session_id] = rowsBySession[v.session_id] || []).push(v);
-  });
-
+  // The arithmetic lives in lib/visitor-funnel.js so it can be asserted without
+  // a database; this route gathers the inputs and cuts the five windows.
   const sessionedOrders = allOrders.filter(o => o.session_id);
   const orderedSessionIds = new Set(sessionedOrders.map(o => o.session_id));
   const paidSessionIds = new Set(
@@ -4831,60 +4831,23 @@ app.get('/admin', requireAuth, async (req, res) => {
       .filter(o => !orders.PAID_EXCLUDED_STATES.includes(o.state))
       .map(o => o.session_id)
   );
+  const messageTaps = db.get('message_taps').value() || [];
+  const searchMisses = db.get('search_misses').value() || [];
+  const visitorSkips = db.get('visitor_skips').value() || {};
+  const sessionSummaries = visitorFunnel.buildSessionSummaries({ visitors, taps: messageTaps, orderedSessionIds, paidSessionIds });
 
-  const sessionSummaries = Object.keys(rowsBySession).map(sid => {
-    const rows = rowsBySession[sid];
-    const ordered = orderedSessionIds.has(sid);
-    return {
-      // A session belongs to the day it STARTED. Counting it on every day it
-      // was active would double-count sessions across days and make "Landed"
-      // meaningless as a total.
-      startDate: rows[0].date,
-      browsed: rows.some(v => v.path === '/browse'),
-      // "OR ordered" is load-bearing, not redundant: an order can only be
-      // placed from a game page, so in practice every ordering session also
-      // has a /game/ row — but if that row were ever missing (a tracking gap,
-      // a middleware exclusion change), a plain check would let "Started
-      // order" exceed "Viewed a game" and reintroduce a >100% percentage.
-      // Folding the order in makes the nesting structural, not incidental.
-      viewedGame: rows.some(v => v.path.startsWith('/game/')) || ordered,
-      ordered,
-      paid: paidSessionIds.has(sid),
-      // No tab-close event exists, so the last row recorded for a session is
-      // the closest available proxy for "the last thing they looked at".
-      exitPath: rows[rows.length - 1].path,
-      rows
-    };
-  });
-
-  // Builds every metric for one set of sessions. Called once per window.
-  function visWindowMetrics(sessions) {
-    const landed = sessions.length;
-    const viewedGame = sessions.filter(s => s.viewedGame).length;
-    const started = sessions.filter(s => s.ordered).length;
-    const paid = sessions.filter(s => s.paid).length;
-    const browsedCount = sessions.filter(s => s.browsed).length;
-
-    const pct = (n, prev) => (prev > 0 ? Math.round((n / prev) * 100) : null);
-    const funnel = [
-      { label: 'Landed', count: landed, pctOfPrev: null },
-      { label: 'Viewed a game', count: viewedGame, pctOfPrev: pct(viewedGame, landed) },
-      { label: 'Started order', count: started, pctOfPrev: pct(started, viewedGame) },
-      { label: 'Paid', count: paid, pctOfPrev: pct(paid, started) }
-    ];
-
-    const exitCounts = {};
-    sessions.forEach(s => { exitCounts[s.exitPath] = (exitCounts[s.exitPath] || 0) + 1; });
-    const exitPages = Object.entries(exitCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([path, count]) => ({ path, count }));
-
-    return {
-      funnel,
-      exitPages,
-      browsed: { count: browsedCount, total: landed, pct: pct(browsedCount, landed) }
-    };
+  // Live cover and free-slot count for each game people tapped Message Us
+  // from, looked up once per game per page load.
+  const askedAccountMap = buildAccountSummaryMap();
+  const askedCache = {};
+  function resolveAskedGame(slug) {
+    if (!(slug in askedCache)) {
+      const g = getGames().find(x => gameSlug(x.title) === slug);
+      askedCache[slug] = g
+        ? { title: g.title, cover: g.cover_image || '', slots: slotsFreeFor(resolveSlotDays(resolveGamePrices(g)), askedAccountMap) }
+        : null;
+    }
+    return askedCache[slug];
   }
 
   // Most Visited Pages counts PAGE VIEWS, not sessions — it answers "which
@@ -4895,10 +4858,11 @@ app.get('/admin', requireAuth, async (req, res) => {
   //      KPI card (both count every row whose date is today), and
   //   2) rows with no session_id (e.g. everything recorded before session
   //      tracking launched) aren't silently dropped from "All-time".
+  // System paths (/api/*, webhooks) are never a page someone looked at.
   function topPagesForWindow(dateFilter) {
     const pageCounts = {};
     (visitors || []).forEach(v => {
-      if (!dateFilter(v.date)) return;
+      if (!dateFilter(v.date) || visitorFilter.isSystemPath(v.path)) return;
       const key = v.page || v.path;
       pageCounts[key] = (pageCounts[key] || 0) + 1;
     });
@@ -4910,12 +4874,16 @@ app.get('/admin', requireAuth, async (req, res) => {
   const winMonth = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const winYear  = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
 
+  const visWindow = inWindow => ({
+    ...visitorFunnel.buildWindow({ summaries: sessionSummaries, taps: messageTaps, misses: searchMisses, skips: visitorSkips, inWindow, resolveGame: resolveAskedGame }),
+    topPages: topPagesForWindow(inWindow)
+  });
   const VIS_WINDOWS = {
-    today: { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === winToday)), topPages: topPagesForWindow(d => d === winToday) },
-    week:  { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winWeek)),  topPages: topPagesForWindow(d => d >= winWeek) },
-    month: { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winMonth)), topPages: topPagesForWindow(d => d >= winMonth) },
-    year:  { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate >= winYear)),  topPages: topPagesForWindow(d => d >= winYear) },
-    all:   { ...visWindowMetrics(sessionSummaries), topPages: topPagesForWindow(() => true) },
+    today: visWindow(d => d === winToday),
+    week:  visWindow(d => d >= winWeek),
+    month: visWindow(d => d >= winMonth),
+    year:  visWindow(d => d >= winYear),
+    all:   visWindow(() => true),
     byDate: {}
   };
 
@@ -4924,7 +4892,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   // vLast14 chart renders.
   for (let i = 13; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    VIS_WINDOWS.byDate[d] = { ...visWindowMetrics(sessionSummaries.filter(s => s.startDate === d)), topPages: topPagesForWindow(vd => vd === d) };
+    VIS_WINDOWS.byDate[d] = visWindow(vd => vd === d);
   }
 
   const accountsView = buildAccountsView();

@@ -3584,6 +3584,15 @@ body.light-mode .gm-earned { color: #15803d; }
 .vf-browsed { font-size: 0.78rem; color: #888; padding: 0.5rem 0.7rem; background: #111; border: 1px solid #1e1e1e; border-radius: 8px; margin-bottom: 0.9rem; }
 .vf-browsed strong { color: #ddd; font-weight: 700; }
 .vf-browsed .vf-browsed-pct { color: #a78bfa; font-weight: 700; }
+.vf-ask-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; border-top: 1px solid #161616; }
+.vf-ask-row:first-child { border-top: 0; }
+.vf-ask-img { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: #1a1a1a; flex: none; }
+.vf-ask-title { flex: 1; min-width: 0; color: #eee; font-size: 0.82rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vf-ask-badge { font-size: 0.66rem; font-weight: 800; border-radius: 4px; padding: 0.1rem 0.4rem; flex: none; }
+.vf-ask-ok { background: rgba(34,197,94,0.15); color: #4ade80; }
+.vf-ask-no { background: rgba(239,68,68,0.15); color: #f87171; }
+.vf-ask-n { color: #22c55e; font-weight: 800; font-size: 0.85rem; min-width: 1.5rem; text-align: right; flex: none; }
+.vf-ask-other { color: #666; font-size: 0.74rem; padding-top: 0.5rem; border-top: 1px solid #161616; margin-top: 0.25rem; }
 
 .gd-notstocked-banner {
   display: flex; align-items: flex-start; gap: 0.75rem;
