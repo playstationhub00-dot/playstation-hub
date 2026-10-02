@@ -4160,12 +4160,15 @@ app.post('/admin/orders/:ref/delete', requireAuth, async (req, res) => {
 // and always answer 204 so tracking can never affect a page.
 function trackingSession(req) {
   if (visitorFilter.isBotUserAgent(req.get('user-agent'))) return null;
-  return getCookie(req, SESSION_COOKIE) || null;
+  const sid = getCookie(req, SESSION_COOKIE);
+  // Only ids in the exact format sessionId() issues (32 hex chars) count.
+  return sid && /^[a-f0-9]{32}$/.test(sid) ? sid : null;
 }
 
 // A tap on any Message Us / m.me link.
-app.post('/api/track/message', express.json({ limit: '2kb' }), (req, res) => {
+app.post('/api/track/message', (req, res) => {
   try {
+    if (rateLimited('track_message', clientIp(req), 30, 10 * 60 * 1000)) return res.status(204).end();
     const sid = trackingSession(req);
     const body = req.body || {};
     const page = tracking.cleanPage(body.page);
@@ -4186,8 +4189,9 @@ app.post('/api/track/message', express.json({ limit: '2kb' }), (req, res) => {
 });
 
 // A homepage search that found nothing.
-app.post('/api/track/search-miss', express.json({ limit: '2kb' }), (req, res) => {
+app.post('/api/track/search-miss', (req, res) => {
   try {
+    if (rateLimited('track_search_miss', clientIp(req), 30, 10 * 60 * 1000)) return res.status(204).end();
     const sid = trackingSession(req);
     const q = tracking.cleanQuery((req.body || {}).q);
     if (sid && q) {

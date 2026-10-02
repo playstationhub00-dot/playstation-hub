@@ -68,7 +68,7 @@
     clearTimeout(missTimer);
     if (q.length < 3 || q === lastMiss) return;
     missTimer = setTimeout(function () {
-      if (input.value.trim() !== q) return;
+      if (!core.sameQuery(input.value, q)) return;
       lastMiss = q;
       var body = JSON.stringify({ q: q });
       try {

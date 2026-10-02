@@ -71,4 +71,11 @@ ok('request and Messenger links carry what was typed', () => {
   assert.strictEqual(c.messengerHref('Elden Ring'), 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('Hi! Do you have Elden Ring? 🎮'));
 });
 
+console.log('\nsameQuery');
+ok('a capitalised/punctuated input matches its normalized query', () => {
+  assert.strictEqual(c.sameQuery('Spider-Man', c.norm('Spider-Man')), true);
+  assert.strictEqual(c.sameQuery('  Spider-Man! ', 'spider man'), true);
+  assert.strictEqual(c.sameQuery('Spider-Man 2', 'spider man'), false);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

@@ -24,6 +24,7 @@ function cleanup() { try { fs.rmSync(DATA_DIR, { recursive: true, force: true })
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 const FB_BOT = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
 
+const SID_A = 'a'.repeat(32);
 let passed = 0;
 async function okAsync(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc); }
 
@@ -44,7 +45,7 @@ function call(method, p, { headers = {}, body = null } = {}) {
 const readDb = () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'games.json'), 'utf8'));
 const setCookie = r => (r.headers['set-cookie'] || []).join(';');
 const beacon = (o, extra) => ({
-  headers: Object.assign({ 'Content-Type': 'application/json', 'User-Agent': IPHONE, Cookie: 'ph_sid=sess-aaa' }, extra || {}),
+  headers: Object.assign({ 'Content-Type': 'application/json', 'User-Agent': IPHONE, Cookie: 'ph_sid=' + SID_A }, extra || {}),
   body: JSON.stringify(o)
 });
 
@@ -118,7 +119,7 @@ async function main() {
     const taps = readDb().message_taps;
     assert.strictEqual(taps.length, 1);
     assert.deepStrictEqual(Object.assign({}, taps[0], { date: 0, time: 0 }),
-      { date: 0, time: 0, session_id: 'sess-aaa', page: '/game/zzyzx-test-quest', game: 'zzyzx-test-quest', source: 'game' });
+      { date: 0, time: 0, session_id: SID_A, page: '/game/zzyzx-test-quest', game: 'zzyzx-test-quest', source: 'game' });
   });
 
   await okAsync('the same tap again within 60 seconds is dropped', async () => {
@@ -145,7 +146,7 @@ async function main() {
   });
 
   await okAsync('robots and visitors with no session cookie are ignored (still 204)', async () => {
-    const a = await call('POST', '/api/track/message', beacon({ page: '/', source: 'nav' }, { 'User-Agent': FB_BOT, Cookie: 'ph_sid=sess-bot' }));
+    const a = await call('POST', '/api/track/message', beacon({ page: '/', source: 'nav' }, { 'User-Agent': FB_BOT, Cookie: 'ph_sid=' + 'b'.repeat(32) }));
     const nocookie = beacon({ page: '/', source: 'hero' });
     delete nocookie.headers.Cookie;
     const b = await call('POST', '/api/track/message', nocookie);
@@ -164,7 +165,7 @@ async function main() {
     const rows = readDb().search_misses;
     assert.strictEqual(rows.length, 1);
     assert.strictEqual(rows[0].q, 'elden ring');
-    assert.strictEqual(rows[0].session_id, 'sess-aaa');
+    assert.strictEqual(rows[0].session_id, SID_A);
   });
 
   await okAsync('robots and cookie-less visitors are ignored', async () => {

@@ -388,13 +388,9 @@ function syncStickyBar() {
   bEl.textContent = isBookedNow() ? '💬 Ask us' : '💬 Message us';
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
-    // The figure quotes what getting in line costs — not the rent price, which
-    // is the one thing you cannot do for this type. Priority is a flat ₱100;
-    // Fall in Line is free.
-    const kindEl = document.querySelector('.gd-noslot-options input[id^="resKind"]');
-    const isQueue = !!kindEl && kindEl.value === 'queue';
+    // The button opens Messenger, so no price figure here: just say why.
     kEl.textContent = 'No slot right now';
-    aEl.textContent = isQueue ? 'Free' : '₱100';
+    aEl.textContent = '';
   } else if (!selectedType || !selectedDays) {
     const amtEl = document.getElementById('phAmount');
     kEl.textContent = 'From';

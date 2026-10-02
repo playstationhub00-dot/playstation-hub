@@ -52,7 +52,10 @@
     return 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('Hi! Do you have ' + String(q || '').trim() + '? 🎮');
   }
 
-  var api = { norm: norm, search: search, statusOf: statusOf, requestHref: requestHref, messengerHref: messengerHref };
+  // True while the box still holds the query a pending missed-search beacon was scheduled for.
+  function sameQuery(inputValue, q) { return norm(inputValue) === q; }
+
+  var api = { norm: norm, sameQuery: sameQuery, search: search, statusOf: statusOf, requestHref: requestHref, messengerHref: messengerHref };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.HomeSearchCore = api;
 })(typeof window !== 'undefined' ? window : this);
