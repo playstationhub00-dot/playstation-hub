@@ -352,6 +352,26 @@
         </div>
         <% } %>
 
+        <!-- PRIMARY: Messenger. It always opens, whatever has (or has not) been
+             picked; a picked type and duration just fill in the message. -->
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">
+          <span class="gd-msg-main" id="ctaMsgMain"><%= allUnavail ? '💬 Ask us about this game' : '💬 Message us about this game' %></span>
+          <span class="gd-msg-sub" id="ctaMsgSub"><%= allUnavail ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there' %></span>
+        </a>
+        <div class="gd-msg-preview">
+          <div class="gd-msg-preview-label">YOUR MESSAGE WILL SAY</div>
+          <div class="gd-msg-preview-text" id="ctaMsgPreview"></div>
+        </div>
+        <% if (!allUnavail) { %>
+        <!-- SECONDARY: order on the website. Tapping opens the price summary,
+             name field and pay button below. -->
+        <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
+          Or order here on the website
+          <small>Pay by GCash / Maya / card</small>
+        </button>
+        <div id="gdOrderBlock"<%= order_error === '1' ? '' : ' hidden' %>>
+        <% } %>
+
         <!-- TOTAL BREAKDOWN -->
         <div class="gd-total-box" id="totalBox">
           <div class="gd-total-label">ORDER SUMMARY</div>
@@ -365,8 +385,8 @@
         </div>
 
         <% if (!allUnavail) { %>
-        <!-- Primary: order on the site. Runs the name field and the price
-             button as one action — no separate "or" section. -->
+        <!-- Website order: the name field and the price button run as one
+             action. Lives inside #gdOrderBlock, opened by #orderToggle. -->
         <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm">
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="orderType" value="">
@@ -375,10 +395,7 @@
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
           <div class="gd-order-sub" id="ctaSub" style="display:none;">Pay via GCash or Maya · no account needed</div>
         </form>
-
-        <!-- Secondary: Messenger, always one tap away -->
-        <a href="#" class="gd-cta-link" id="ctaMsgLink" onclick="return handleMessageUs(event)">or message us on Facebook instead</a>
-        <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>Game name · Days · Trophy or Non-Trophy</strong></div>
+        </div><!-- /gdOrderBlock -->
 
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
         <% if (order_error === '1') { %>
@@ -579,7 +596,7 @@
       <div class="gd-sb-kicker" id="gdSbKicker">From</div>
       <div class="gd-sb-amount" id="gdSbAmount">₱<%= gdFromPrice %></div>
     </div>
-    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()">Pick a type</button>
+    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? '💬 Ask us' : '💬 Message us' %></button>
   </div>
 </div>
 
@@ -607,6 +624,7 @@ const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
 const gameTitle = '<%= game.title.replace(/'/g, "\'") %>';
 const gdSlideCount = <%= gdhGallery.length %>;
 </script>
+<script src="/js/messenger-text.js?v=<%= assetV %>"></script>
 <script src="/js/game-detail.js?v=<%= assetV %>"></script>
 </body>
 </html>

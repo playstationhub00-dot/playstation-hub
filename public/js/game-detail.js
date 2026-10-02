@@ -258,13 +258,31 @@ function updatePriceHeaderFromSelection(base, discount) {
   setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
 }
 
-// CTA label tracks how much is left to pick. Never disabled — an incomplete
-// click scrolls to and shakes the first missing step (see handleMessageUs).
+// Booked = nothing can be rented right now for what they are looking at: every
+// type is full, or the type they picked is. The Messenger message then asks
+// about the next slot instead of requesting a rental.
+function isBookedNow() {
+  return ALL_UNAVAIL || (!!selectedType && AVAIL[selectedType] === false);
+}
+
+// Opens / closes the website-order block (price summary, name field, pay
+// button). Messenger is the main way to rent; this is the second option.
+function toggleOrderBlock(forceOpen) {
+  const block = document.getElementById('gdOrderBlock');
+  const btn = document.getElementById('orderToggle');
+  if (!block) return;
+  const open = typeof forceOpen === 'boolean' ? forceOpen : block.hidden;
+  block.hidden = !open;
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+  if (open) block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// The website-order block's button label tracks how much is left to pick.
+// Never disabled — an incomplete click scrolls to and shakes the first missing
+// step. (The Messenger button above it has no such gate; see updateReserveLinks.)
 function updateCtaState() {
   const ctaBtn = document.getElementById('ctaBtn');
   const ctaSub = document.getElementById('ctaSub');
-  const ctaHint = document.getElementById('ctaHint');
-  const ctaMsgLink = document.getElementById('ctaMsgLink');
   const reserveSection = document.getElementById('reserveSection');
   // The rent form and the price summary both belong to a booking that cannot
   // happen when the selected type has no slot. Hiding the whole form (not
@@ -272,6 +290,7 @@ function updateCtaState() {
   // used to sit above the no-slot banner with nothing to submit it.
   const orderForm = document.getElementById('gdOrderForm');
   const totalBox = document.getElementById('totalBox');
+  const orderToggle = document.getElementById('orderToggle');
   // Every type full: #gdOrderForm and #ctaBtn were never rendered, so the
   // logic below (which reads them) doesn't apply — only #totalBox needs
   // hiding here, matching the per-type no-slot case above it.
@@ -302,19 +321,19 @@ function updateCtaState() {
   if (selectedType && !hasSlot) {
     ctaBtn.style.display = 'none';
     if (ctaSub) ctaSub.style.display = 'none';
-    if (ctaHint) ctaHint.style.display = 'none';
-    if (ctaMsgLink) ctaMsgLink.style.display = 'none';
     // Quoting "To send now ₱349" for a type that cannot be booked reads as a
-    // price for something unavailable, so the summary goes with the form.
+    // price for something unavailable, so the summary goes with the form — and
+    // so does the toggle that would open them.
     if (orderForm) orderForm.style.display = 'none';
     if (totalBox) totalBox.style.display = 'none';
+    if (orderToggle) orderToggle.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
     return;
   }
   ctaBtn.style.display = '';
-  if (ctaMsgLink) ctaMsgLink.style.display = '';
   if (orderForm) orderForm.style.display = '';
   if (totalBox) totalBox.style.display = '';
+  if (orderToggle) orderToggle.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
 
   if (!selectedType) {
@@ -322,20 +341,17 @@ function updateCtaState() {
     ctaBtn.classList.add('gd-cta-wait');
     ctaBtn.disabled = true;
     if (ctaSub) ctaSub.style.display = 'none';
-    if (ctaHint) ctaHint.style.display = 'none';
   } else if (!selectedDays) {
     ctaBtn.textContent = 'Pick a duration';
     ctaBtn.classList.add('gd-cta-wait');
     ctaBtn.disabled = true;
     if (ctaSub) ctaSub.style.display = 'none';
-    if (ctaHint) ctaHint.style.display = 'none';
   } else {
     const rt = computeRentTotal(selectedType, selectedDays);
     ctaBtn.textContent = '🎮 Rent now — ₱' + rt.total;
     ctaBtn.classList.remove('gd-cta-wait');
     ctaBtn.disabled = false;
     if (ctaSub) ctaSub.style.display = '';
-    if (ctaHint) ctaHint.style.display = '';
   }
 }
 
@@ -366,38 +382,27 @@ function syncStickyBar() {
     return;
   }
 
+  // The bar's button is the same Messenger action as the big button on the
+  // page, so it is never "waiting" — only the figure on its left changes.
+  bEl.classList.remove('gd-cta-wait');
+  bEl.textContent = isBookedNow() ? '💬 Ask us' : '💬 Message us';
   const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
   if (selectedType && !hasSlot) {
-    // The bar has to quote what its button actually leads to — the cost of
-    // getting in line — not the rent price, which is the one thing you cannot
-    // do for this type. It used to read the game's cheapest rent figure, so a
-    // "Reserve a slot" button sat under a number matching neither option
-    // below it (Priority is a flat ₱100; Fall in Line is free).
+    // The figure quotes what getting in line costs — not the rent price, which
+    // is the one thing you cannot do for this type. Priority is a flat ₱100;
+    // Fall in Line is free.
     const kindEl = document.querySelector('.gd-noslot-options input[id^="resKind"]');
     const isQueue = !!kindEl && kindEl.value === 'queue';
     kEl.textContent = 'No slot right now';
     aEl.textContent = isQueue ? 'Free' : '₱100';
-    bEl.textContent = isQueue ? 'Join waitlist' : 'Reserve a slot';
-    bEl.classList.remove('gd-cta-wait');
-    return;
-  }
-  if (!selectedType) {
+  } else if (!selectedType || !selectedDays) {
     const amtEl = document.getElementById('phAmount');
     kEl.textContent = 'From';
     aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
-    bEl.textContent = 'Pick a type';
-    bEl.classList.add('gd-cta-wait');
-  } else if (!selectedDays) {
-    kEl.textContent = 'Pick a duration';
-    aEl.textContent = '';
-    bEl.textContent = 'Pick a duration';
-    bEl.classList.add('gd-cta-wait');
   } else {
     const rt = computeRentTotal(selectedType, selectedDays);
-    kEl.textContent = 'To send now';
+    kEl.textContent = 'Your total';
     aEl.textContent = '₱' + rt.total;
-    bEl.textContent = 'Rent now';
-    bEl.classList.remove('gd-cta-wait');
   }
 }
 
@@ -410,29 +415,8 @@ function handleStickyBarClick() {
     document.getElementById('buyCtaBtn')?.click();
     return;
   }
-  const hasSlot = selectedType ? AVAIL[selectedType] !== false : true;
-  if (selectedType && !hasSlot) {
-    (document.getElementById('reserveSection') || document.getElementById('reserveSectionAll'))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-  if (!selectedType) {
-    const el = document.getElementById('typeOptions');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el?.classList.add('gd-dur-grid-shake');
-    setTimeout(() => el?.classList.remove('gd-dur-grid-shake'), 600);
-    return;
-  } else if (!selectedDays) {
-    document.getElementById('durationGrid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    highlightDurationGrid();
-    return;
-  }
-  const nameField = document.getElementById('orderFbName');
-  if (nameField) {
-    document.getElementById('gdOrderForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    nameField.focus();
-  } else {
-    document.getElementById('ctaBtn')?.click();
-  }
+  // Rent mode: the bar's button is the Messenger button.
+  document.getElementById('ctaMsgPrimary')?.click();
 }
 
 function updateReserveLinks() {
@@ -445,10 +429,18 @@ function updateReserveLinks() {
     if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
     if (rt.deposit  > 0) totalLine += ' + ₱' + rt.deposit + ' refundable deposit';
   }
-  const ctaMsgLink = document.getElementById('ctaMsgLink');
-  if (ctaMsgLink) {
-    ctaMsgLink.href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(['Hi! I want to RENT a game 🎮','Game: '+gameTitle,typeLabel?'Account Type: '+typeLabel:'',daysLabel?'Duration: '+daysLabel:'',totalLine].filter(Boolean).join('\n'));
-  }
+  // The big Messenger button, its preview and its wording. Type and duration
+  // are optional: whatever is picked is added to the message.
+  const booked = isBookedNow();
+  const msgText = PHMessengerText.buildMessage({ title: gameTitle, typeLabel, daysLabel, totalLine, booked });
+  const msgLink = document.getElementById('ctaMsgPrimary');
+  if (msgLink) msgLink.href = PHMessengerText.messengerHref(msgText);
+  const msgMain = document.getElementById('ctaMsgMain');
+  if (msgMain) msgMain.textContent = booked ? '💬 Ask us about this game' : '💬 Message us about this game';
+  const msgSub = document.getElementById('ctaMsgSub');
+  if (msgSub) msgSub.textContent = booked ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there';
+  const msgPreview = document.getElementById('ctaMsgPreview');
+  if (msgPreview) msgPreview.textContent = msgText;
   // Both no-slot instances' Messenger fallback links always say PRIORITY
   // RESERVE — that link is the "message us instead of the form" escape
   // hatch, not tied to whichever option card happens to be selected right
@@ -487,14 +479,6 @@ function handleReserveClick(e, type, valMsgId) {
     highlightDurationGrid();
     return false;
   }
-  return true;
-}
-
-function handleMessageUs(e) {
-  if (!selectedType && !selectedDays) { e.preventDefault(); showValidation('Please select an account type and rental duration first.'); highlightDurationGrid(); return false; }
-  if (!selectedDays) { e.preventDefault(); showValidation('Please select a rental duration (Weekly or Monthly) to continue.'); highlightDurationGrid(); return false; }
-  const el = document.getElementById('ctaValidationMsg');
-  if (el) el.style.display = 'none';
   return true;
 }
 
