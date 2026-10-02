@@ -33,6 +33,8 @@ const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
 const tracking = require('./lib/tracking');
 const visitorFunnel = require('./lib/visitor-funnel');
+const gamePsnView = require('./lib/game-psn-view');
+const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
@@ -4310,7 +4312,7 @@ app.get('/game/:slug', async (req, res) => {
   // One shared pool, sorted so any review naming this game surfaces first. The
   // aggregate counts the whole pool on purpose — it describes the business, so
   // the same figure is true on every game page.
-  res.render('game-detail', Object.assign({ game: resolved, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null },
+  res.render('game-detail', Object.assign({ game: resolved, psnView: gamePsnView.buildGamePsnView(resolved), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null },
     reviewBlockLocals(game.title)));
 });
 

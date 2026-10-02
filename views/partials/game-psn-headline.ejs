@@ -1,0 +1,10 @@
+<%#
+  Tagline and PlayStation Store rating under a game's title. Renders nothing
+  when PlayStation gave neither. Locals: psnView (lib/game-psn-view.js)
+%>
+<% if (psnView.tagline || psnView.rating) { %>
+<div class="gpa-headline">
+  <% if (psnView.tagline) { %><div class="gpa-tagline"><%= psnView.tagline %></div><% } %>
+  <% if (psnView.rating) { %><div class="gpa-rating"><b><%= psnView.rating.text %></b> on PlayStation Store<% if (psnView.rating.count !== '0') { %> · <%= psnView.rating.count %> ratings<% } %></div><% } %>
+</div>
+<% } %>

@@ -1,0 +1,22 @@
+<%#
+  "About this game" and "Game info" blocks, full width below the rent box
+  (lib/game-psn-view.js). Renders nothing for a game with no PlayStation data.
+  Locals: psnView
+%>
+<% if (psnView.hasPsn && (psnView.about || psnView.info.length)) { %>
+<section class="gpa" id="gpAbout">
+  <% if (psnView.about) { %>
+  <h2 class="gpa-h">About this game</h2>
+  <div class="gpa-text<%= psnView.readMore ? ' gpa-clamp' : '' %>" id="gpaText">
+    <% psnView.aboutParas.forEach(p => { %><p><%= p %></p><% }) %>
+  </div>
+  <% if (psnView.readMore) { %><button type="button" class="gpa-more" id="gpaMore" aria-expanded="false">Read more</button><% } %>
+  <% } %>
+  <% if (psnView.info.length) { %>
+  <h2 class="gpa-h">Game info</h2>
+  <table class="gpa-info">
+    <% psnView.info.forEach(r => { %><tr><td><%= r.label %></td><td><%= r.value %></td></tr><% }) %>
+  </table>
+  <% } %>
+</section>
+<% } %>

@@ -6,6 +6,7 @@
   <title><%= game.title %> — Playstation Hub</title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
   <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body class="gd-page-booking-v2">
@@ -16,6 +17,7 @@
   // ── Availability: from linked accounts (phase 2) or legacy per-game counts, per slot type ──
   const sum = typeof accountSummary !== 'undefined' ? accountSummary : null;
   const availability = computeAvailability(game, sum);
+  const gdPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, info: [], genre: game.genre || '' };
   const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc, totalSlots } = availability;
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
@@ -106,9 +108,10 @@
       <div class="usd-badge-row">
         <span class="usd-badge <%= gdhStatus.cls %>"><%= gdhStatus.label %></span>
         <span class="usd-plat-chip"><%= game.platform %></span>
-        <% if (game.genre) { game.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
+        <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
+      <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>
         <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand">
@@ -122,7 +125,9 @@
          moved to a full-width section below .gd-layout — see gdhGallery. -->
     <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
     <div class="gd-cover-col">
-      <% if (game.cover_image) { %>
+      <% if (gdPsn.media.length) { %>
+        <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
+      <% } else if (game.cover_image) { %>
         <% const gdhFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
         <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" style="<%= gdhFocal %>">
       <% } else { %>
@@ -141,7 +146,7 @@
       <!-- Description sits below the poster, matching the reservation page —
            this is also what lets the booking card start flush with the
            poster's top edge instead of being pushed down by copy text. -->
-      <% if (game.description) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
+      <% if (game.description && !gdPsn.hasPsn) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
       <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-top:0.5rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
     </div>
 
@@ -561,7 +566,9 @@
 
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 
-  <% if (gdhGallery.length) { %>
+  <%- include('partials/game-psn-about', { psnView: gdPsn }) %>
+
+  <% if (gdhGallery.length && !gdPsn.hideGallery) { %>
   <!-- Gameplay gallery: reuses .rsv-gallery-section wholesale (wrapper, label,
        and the scoped centered-thumbs rule) from the reservation page — no new
        CSS. Still driven by the existing gdGo/gdMove/autoplay below, which are
@@ -628,6 +635,7 @@ const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
 const gameTitle = '<%= game.title.replace(/'/g, "\'") %>';
 const gdSlideCount = <%= gdhGallery.length %>;
 </script>
+<% if (gdPsn.media.length || gdPsn.about) { %><script src="/js/game-media.js?v=<%= assetV %>" defer></script><% } %>
 <script src="/js/messenger-text.js?v=<%= assetV %>"></script>
 <script src="/js/game-detail.js?v=<%= assetV %>"></script>
 </body>
