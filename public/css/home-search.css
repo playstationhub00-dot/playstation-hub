@@ -43,3 +43,8 @@ body.light-mode .hs-row { color: #111; border-top-color: #eee; }
 body.light-mode .hs-row:hover, body.light-mode .hs-row:focus-visible { background: #f3f4f6; }
 body.light-mode .hs-chip { background: #fff; border-color: #ddd; color: #333; }
 body.light-mode .hs-empty-t { color: #555; }
+
+/* One search at a time: the menu's 🔍 icon hides while the big search is on
+   screen (public/js/home-search.js). It keeps its space so nothing shifts. */
+#navSearchToggle { transition: opacity 0.15s; }
+#navSearchToggle.hs-nav-hidden { visibility: hidden; opacity: 0; pointer-events: none; }
