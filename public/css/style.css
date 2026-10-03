@@ -2021,6 +2021,13 @@ nav {
 .cust-swap-ok { color: #4ade80; font-size: 0.9rem; font-weight: 700; }
 .cust-swap-sub { color: #888; font-size: 0.75rem; font-weight: 500; margin-top: 0.2rem; }
 .cust-swap-note { color: #f59e0b; font-size: 0.75rem; margin-top: 0.5rem; }
+/* Swap charge: off by default, the owner switches it on (views/edit-customer.ejs). */
+.cust-swap-charge-btn { margin-top: 0.6rem; padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid #3a3a3a; background: #161616; color: #fff; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.cust-swap-charge-btn:hover { border-color: #fbbf24; }
+.cust-swap-charge-btn.on { border-color: #4a1d1d; color: #f87171; }
+/* Customers tab: take back an extra a past swap charged. */
+.swap-waive-btn { margin-left: 0.35rem; padding: 0.05rem 0.45rem; border-radius: 6px; border: 1px solid #3a2a10; background: transparent; color: #fbbf24; font-size: 0.65rem; font-weight: 700; cursor: pointer; }
+.swap-waive-btn:hover { background: rgba(251,191,36,0.1); }
 
 /* SEARCHABLE SELECT — replaces plain <select> with a filterable combobox in the admin panel */
 .ss-wrap { position: relative; }

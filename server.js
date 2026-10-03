@@ -34,6 +34,7 @@ const visitorFilter = require('./lib/visitor-filter');
 const tracking = require('./lib/tracking');
 const visitorFunnel = require('./lib/visitor-funnel');
 const gamePsnView = require('./lib/game-psn-view');
+const swapCharge = require('./lib/swap-charge');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -6087,9 +6088,10 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const finalGameId = isUpcomingNew ? String(game_id) : (parseInt(game_id) || existing.game_id);
 
   // ── Game swap pricing: if the game changed (catalog → catalog, not a reservation),
-  // price the new game at the submitted duration/type with the active promo applied,
-  // and never let the recorded price drop below what was already paid — downgrades
-  // aren't refunded, they just carry the original total forward.
+  // price the new game at the submitted duration/type with the active promo applied.
+  // A pricier game costs extra ONLY when the owner switched "Charge ₱X more" on
+  // (swap_charge=1, lib/swap-charge.js); otherwise the price stays what was paid.
+  // Downgrades are never refunded — they carry the original total forward.
   let finalPrice = price !== undefined && price !== '' ? (parseInt(price) || 0) : existing.price;
   const gameChanged = !wasUpcoming && !isUpcomingNew && newGame && newGame.id !== existing.game_id;
   if (gameChanged) {
@@ -6102,15 +6104,16 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
     });
     if (ref) {
       const pricePaid = existing.price || 0;
-      const topUp = Math.max(0, ref.price - pricePaid);
-      finalPrice = Math.max(finalPrice, pricePaid);
+      const swap = swapCharge.swapPrice({ pricePaid, refPrice: ref.price, submittedPrice: finalPrice, charge: req.body.swap_charge === '1' });
+      const topUp = swap.topUp;
+      finalPrice = swap.finalPrice;
       const swapEntry = {
         at: new Date().toISOString(),
         from_game_id: existing.game_id, from_game_title: existing.game_title,
         to_game_id: newGame.id, to_game_title: newGame.title,
         days: actualDays, account_type: account_type || existing.account_type || 'nt',
         price_before: pricePaid, new_game_price: ref.price, price_after: finalPrice,
-        top_up: topUp, ps4_fallback: ref.ps4Fallback
+        top_up: topUp, top_up_waived: swap.waived, ps4_fallback: ref.ps4Fallback
       };
       db.get('customers').find({ id: parseInt(req.params.id) })
         .assign({ swap_history: [...(existing.swap_history || []), swapEntry] }).write();
@@ -6408,6 +6411,24 @@ app.post('/admin/customers/delete/:id', requireAuth, async (req, res) => {
   }
   res.redirect('/admin?tab=customers&msg=customer_deleted');
 });
+
+// Takes back the extra a game swap charged (Customers tab, "Remove ₱X" beside
+// "Swapped from … (+₱X)"): drops the payment that swap recorded and lowers the
+// price, so the dashboard's money stops counting it. The linked order's total
+// follows, like any customer edit.
+app.post('/admin/customers/:id/swap-waive', requireAuth, asyncRoute(async (req, res) => {
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  const patch = swapCharge.waiveLastTopUp(existing);
+  if (!patch) return res.redirect('/admin?tab=customers&msg=swap_waive_none');
+  db.get('customers').find({ id: existing.id })
+    .assign({ price: patch.price, payments: patch.payments, swap_history: patch.swap_history }).write();
+  if (existing.order_ref) {
+    await orders.syncFromCustomer(existing.order_ref, { amount_due: patch.price })
+      .catch(e => console.error('[swap waive -> order sync]', existing.order_ref, e.message));
+  }
+  res.redirect('/admin?tab=customers&msg=swap_waived');
+}));
 
 // ── Accounts Dashboard ────────────────────────────────────────────────────────
 // Shared by the Accounts tab (rendered inline in /admin) and anyone hitting the

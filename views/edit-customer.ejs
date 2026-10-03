@@ -64,6 +64,7 @@
               <div class="cust-swap-row"><span>To</span><strong id="cust_swap_to"></strong></div>
             </div>
             <div id="cust_swap_result"></div>
+            <input type="hidden" name="swap_charge" id="cust_swap_charge" value="0">
           </div>
         </div>
 
@@ -161,7 +162,8 @@ const CUST_ORIGINAL_GAME_ID = <%- JSON.stringify(String(customer.game_id)) %>;
 const CUST_ORIGINAL_PRICE = <%= customer.price || 0 %>;
 const CUST_PROMO = {
   enabled: <%- settings.promo && settings.promo.enabled ? 'true' : 'false' %>,
-  discounts: { 10: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[10]) || 0 %>, 15: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[15]) || 0 %>, 30: <%= (settings.promo && settings.promo.discounts && settings.promo.discounts[30]) || 0 %> },
+  // One entry per rental duration the shop sells (RENTAL_DURATIONS: weekly and monthly).
+  discounts: <%- JSON.stringify(Object.fromEntries((typeof RENTAL_DURATIONS !== 'undefined' ? RENTAL_DURATIONS : [{ days: 7 }, { days: 30 }]).map(d => [d.days, (settings.promo && settings.promo.discounts && settings.promo.discounts[d.days]) || 0]))) %>,
   buyEnabled: <%- settings.promo && settings.promo.buy_promo_enabled ? 'true' : 'false' %>,
   buyPct: <%= (settings.promo && settings.promo.buy_promo_pct) || 0 %>
 };
@@ -208,16 +210,32 @@ function updateCustPrice() {
 }
 
 // If the selected game differs from the customer's original game, price the new
-// game at the current duration/type (promo-adjusted) and show what the customer
-// owes on top of what they already paid — never less than what they paid, no
-// refunds on a downgrade. Mirrors computeSwapReferencePrice() in server.js.
+// game at the current duration/type (promo-adjusted). A pricier game costs extra
+// ONLY when the owner switches "Charge ₱X more" on — off by default; the server
+// applies the same rule (lib/swap-charge.js). Never a refund on a downgrade.
+// Mirrors computeSwapReferencePrice() in server.js.
+let custSwapCharge = false;
+let custSwapTarget = null;
+let custSwapPriced = false; // the price field holds a swap price this script set
+function toggleCustSwapCharge() {
+  custSwapCharge = !custSwapCharge;
+  renderCustSwapPanel();
+}
 function renderCustSwapPanel() {
   const panel = document.getElementById('cust_swap_panel');
   const gameSel = document.getElementById('cust_game');
   const selectedId = gameSel.value;
+  const priceInput = document.getElementById('cust_price');
+  const chargeInput = document.getElementById('cust_swap_charge');
+  // A different target game starts again with no charge.
+  if (selectedId !== custSwapTarget) { custSwapCharge = false; custSwapTarget = selectedId; }
+  chargeInput.value = '0';
+  priceInput.readOnly = false;
 
   if (!selectedId || selectedId.startsWith('upcoming_') || CUST_ORIGINAL_GAME_ID.startsWith('upcoming_') || selectedId === CUST_ORIGINAL_GAME_ID) {
     panel.hidden = true;
+    // Back to the original game: undo the swap price this script had put in.
+    if (custSwapPriced) { priceInput.value = CUST_ORIGINAL_PRICE; custSwapPriced = false; }
     return;
   }
 
@@ -239,7 +257,7 @@ function renderCustSwapPanel() {
   if (isBought) {
     const raw = parseFloat(opt.dataset[usingType === 'tr' ? 'buytr' : 'buynt']) || 0;
     if (raw > 0) refPrice = (CUST_PROMO.buyEnabled && CUST_PROMO.buyPct > 0) ? Math.round(raw * (1 - CUST_PROMO.buyPct / 100)) : raw;
-  } else if (days === '10' || days === '15' || days === '30') {
+  } else if (Object.prototype.hasOwnProperty.call(CUST_PROMO.discounts, days)) {
     const raw = parseFloat(opt.dataset[usingType + days]) || 0;
     if (raw > 0) {
       const pct = CUST_PROMO.enabled ? (CUST_PROMO.discounts[days] || 0) : 0;
@@ -248,7 +266,6 @@ function renderCustSwapPanel() {
   }
 
   const resultEl = document.getElementById('cust_swap_result');
-  const priceInput = document.getElementById('cust_price');
 
   if (refPrice == null) {
     resultEl.innerHTML = '<div class="cust-swap-note">⚠️ Custom duration or no price set for this type — enter the new total manually.</div>';
@@ -256,14 +273,26 @@ function renderCustSwapPanel() {
     return;
   }
 
+  // The price is decided here (and again on the server), so it isn't typed.
+  priceInput.readOnly = true;
+  custSwapPriced = true;
   const topUp = Math.max(0, refPrice - CUST_ORIGINAL_PRICE);
-  const newTotal = Math.max(refPrice, CUST_ORIGINAL_PRICE);
-  let html = topUp > 0
-    ? '<div class="cust-swap-topup">➕ Customer pays <strong>₱' + topUp + '</strong> more<div class="cust-swap-sub">New total on record: ₱' + newTotal + '</div></div>'
-    : '<div class="cust-swap-ok">✅ No additional payment — no refund on downgrades<div class="cust-swap-sub">Total stays ₱' + newTotal + '</div></div>';
+  let html;
+  if (topUp > 0 && custSwapCharge) {
+    html = '<div class="cust-swap-topup">➕ Customer pays <strong>₱' + topUp + '</strong> more<div class="cust-swap-sub">New total on record: ₱' + (CUST_ORIGINAL_PRICE + topUp) + '</div></div>'
+      + '<button type="button" class="cust-swap-charge-btn on" onclick="toggleCustSwapCharge()">Don\'t charge extra</button>';
+    priceInput.value = CUST_ORIGINAL_PRICE + topUp;
+    chargeInput.value = '1';
+  } else if (topUp > 0) {
+    html = '<div class="cust-swap-ok">✅ No extra charge<div class="cust-swap-sub">The new game costs ₱' + topUp + ' more — the total stays ₱' + CUST_ORIGINAL_PRICE + '</div></div>'
+      + '<button type="button" class="cust-swap-charge-btn" onclick="toggleCustSwapCharge()">Charge ₱' + topUp + ' more</button>';
+    priceInput.value = CUST_ORIGINAL_PRICE;
+  } else {
+    html = '<div class="cust-swap-ok">✅ No additional payment — no refund on downgrades<div class="cust-swap-sub">Total stays ₱' + CUST_ORIGINAL_PRICE + '</div></div>';
+    priceInput.value = CUST_ORIGINAL_PRICE;
+  }
   if (ps4Fallback) html += '<div class="cust-swap-note">🕹️ PS4 Primary has no separate price — using Non-Trophy pricing.</div>';
   resultEl.innerHTML = html;
-  priceInput.value = newTotal;
   panel.hidden = false;
 }
 function updateCustEndDate() {

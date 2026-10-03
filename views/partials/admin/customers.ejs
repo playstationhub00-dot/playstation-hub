@@ -292,7 +292,11 @@
                 <% } %>
                 <% if (c.swap_history && c.swap_history.length) { const lastSwap = c.swap_history[c.swap_history.length - 1]; %>
                 <div style="margin-top:0.2rem;font-size:0.68rem;color:#888;" title="Swapped from <%= lastSwap.from_game_title %> to <%= lastSwap.to_game_title %> on <%= new Date(lastSwap.at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) %>">
-                  🔄 Swapped from <%= lastSwap.from_game_title %><% if (lastSwap.top_up > 0) { %> <span style="color:#fbbf24;font-weight:700;">(+₱<%= lastSwap.top_up %>)</span><% } %>
+                  🔄 Swapped from <%= lastSwap.from_game_title %><% if (lastSwap.top_up > 0) { %> <span style="color:#fbbf24;font-weight:700;">(+₱<%= lastSwap.top_up %>)</span>
+                  <form method="POST" action="/admin/customers/<%= c.id %>/swap-waive" class="swap-waive-form" style="display:inline;"
+                        onsubmit="return confirm('Remove the ₱<%= lastSwap.top_up %> swap charge? The price goes back to ₱<%= Math.max(0, (c.price || 0) - lastSwap.top_up) %> and it stops counting as money collected.')">
+                    <button type="submit" class="swap-waive-btn" title="Take back the extra this swap charged">Remove ₱<%= lastSwap.top_up %></button>
+                  </form><% } %>
                 </div>
                 <% } %>
               </td>
