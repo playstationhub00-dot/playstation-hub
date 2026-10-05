@@ -96,8 +96,8 @@ async function main() {
 
   console.log('\naccess');
   await okAsync('both routes need the admin login', async () => {
-    const a = await call('POST', '/admin/games/psn/refresh', { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '' });
-    const b = await call('POST', '/admin/games/1/psn', { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: form({ action: 'update' }) });
+    const a = await call('POST', '/admin/games/psn/refresh', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/html' }, body: '' });
+    const b = await call('POST', '/admin/games/1/psn', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/html' }, body: form({ action: 'update' }) });
     assert.strictEqual(a.status, 302);
     assert.ok(a.headers.location.includes('/admin/login'));
     assert.strictEqual(b.status, 302);

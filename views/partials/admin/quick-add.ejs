@@ -511,7 +511,17 @@
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(new FormData(el('qaForm')))
     })
-      .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+      // Read as text first: an answer that isn't JSON (a login page, a proxy's
+      // error page while the site restarts) must get its own explanation, not
+      // the "couldn't reach the site" one below.
+      .then(function (r) {
+        return r.text().then(function (text) {
+          try { return { ok: r.ok, body: JSON.parse(text) }; }
+          catch (e) {
+            return { ok: false, body: { message: 'The site gave an unexpected answer — you may have been logged out. Reload the page (log in if asked), check Orders to see whether it was saved, then try again.' } };
+          }
+        });
+      })
       .then(function (res) {
         btn.disabled = false;
         btn.textContent = original;
@@ -538,7 +548,7 @@
       .catch(function () {
         btn.disabled = false;
         btn.textContent = original;
-        err.textContent = '⚠ Something went wrong — try again.';
+        err.textContent = '⚠ Couldn\'t reach the site — check your connection, then check Orders to see whether it was saved before trying again.';
         err.hidden = false;
       });
   };

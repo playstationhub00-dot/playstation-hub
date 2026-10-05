@@ -208,7 +208,8 @@ async function main() {
   });
   await okAsync('an unknown customer or a logged-out request is refused', async () => {
     assert.ok((await post('/admin/customers/999/swap-waive')).headers.location.endsWith('msg=error'));
-    const anon = await call('POST', '/admin/customers/12/swap-waive', { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '' });
+    // A browser form post (Accept: text/html) — what the Remove button sends.
+    const anon = await call('POST', '/admin/customers/12/swap-waive', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/html' }, body: '' });
     assert.ok(anon.headers.location.includes('/admin/login'));
     assert.strictEqual(cust(12).price, 629);
   });

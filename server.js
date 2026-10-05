@@ -593,6 +593,18 @@ app.use((req, res, next) => {
 // Auth middleware — protects all /admin routes
 function requireAuth(req, res, next) {
   if (req.session && req.session.isAdmin) return next();
+  // A button that talks to the server in the background (Quick Add, and every
+  // other fetch() in the admin) can't follow a redirect to the login page — it
+  // got the page's HTML instead of an answer and showed "Something went wrong".
+  // Those requests are told plainly. Page loads and ordinary form posts (which
+  // ask for text/html) still go to the login page.
+  const accept = String(req.get('accept') || '');
+  if (req.method !== 'GET' && !accept.includes('text/html')) {
+    return res.status(401).json({
+      ok: false, reason: 'logged_out',
+      message: 'You were logged out — log in again in a new tab, then press the button again. Nothing was saved.'
+    });
+  }
   res.redirect('/admin/login');
 }
 
