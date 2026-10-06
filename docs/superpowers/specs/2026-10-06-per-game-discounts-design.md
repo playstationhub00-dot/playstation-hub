@@ -1,6 +1,6 @@
 # Per-game discounts — Design
 
-Date: 2026-10-06 · Status: draft for owner review
+Date: 2026-10-06 · Status: approved by owner
 
 ## Problem
 
@@ -84,9 +84,8 @@ Views (all already have the game in scope):
   Weekly and Monthly %).
 - `views/browse.ejs` and `views/index.ejs` category "price starts at" figures, the homepage
   hero card and the spotlight card.
-- The homepage rent modal (opened from a game card) — the card passes the game's effective
-  Weekly and Monthly % alongside its prices, so the modal quotes the same number as the
-  game page.
+- (The homepage rent modal, `openRentModal`, has no callers today — nothing opens it — so it
+  is left unchanged.)
 - `views/edit-customer.ejs` swap box — each game option carries its effective Weekly and
   Monthly %, so the box shows the same number the server records.
 
@@ -109,15 +108,19 @@ Admin → Settings → Promo & pricing, below the existing rent-promo form, as i
 - "Save game discounts" → `POST /admin/promo/game-discounts` (requireAuth). Fields
   `d7_<gameId>` and `d30_<gameId>`; each goes through `cleanInput`; an all-empty game has
   its `discounts` removed. Redirects back with toast "✅ Game discounts saved".
-- The admin Games list shows a small tag on games with their own %, e.g. "🏷️ 20% monthly".
+- The admin Games list shows a small tag on games with their own %, e.g. "% 20% monthly"
+  or "% no discount weekly · 15% monthly" (🏷️ is already the category tag).
 
 ## Homepage — "🔥 Special deals" row
 
 - Shown only when at least one game has `specialDeal(game, promo)`; hidden otherwise.
-- Placed after the "New releases" row (before "Most Popular").
-- Uses the standard game card. On top of the card a ribbon reads "20% OFF · Monthly"
-  (from `specialDeal`), and the card's price line shows that duration's discounted price
-  ("Monthly ₱639", crossed-out base beside it).
+- Placed after the "New releases" row, before "Coming soon". Phones lay the homepage out
+  by CSS `order`, so the row gets `order: 17` (New releases is 15, Coming soon 20) —
+  without it the row would jump above the hero.
+- Uses the standard game card. **Every** game card with a deal (browse, homepage sliders,
+  this row) carries a line "🔥 20% OFF · Monthly" (from `specialDeal`); in this row the
+  card's price line also shows that duration's discounted price ("Monthly ₱639",
+  crossed-out base beside it).
 - Up to 12 games, biggest % first, then title.
 
 ## Error handling
@@ -136,17 +139,19 @@ project's `games.json`, the database or the real admin.
 - `scripts/test-game-discount.js` — `discountPct` (own %, empty, 0, site promo on/off,
   duration without a site %), `hasOwnDiscount`, `specialDeal` (beats / ties / never beats,
   Monthly wins ties), `cleanInput`.
-- `scripts/test-game-discount-pricing.js` — boots a throwaway instance with one game at
-  20% Monthly and one on the site promo: the game page's `PROMO.discounts`, card prices,
-  `computeRentPricing` through Quick Add (promo and full price), swap reference, extend
-  tier, meta-feed sale price and poster "from" price all use 20% for the first game and
-  10% for the second; with the site promo off, the first stays 20% and the second goes to
-  full price.
+- `scripts/test-game-discount-pricing.js` — boots a throwaway instance with games at own
+  20% Monthly, on the site promo (10% Monthly), own 50% Weekly and own 0% Monthly: the game
+  page's `PROMO.discounts` and "% OFF" tags, browse card prices and deal lines, the
+  homepage deals row (order, deal prices, phone `order: 17`), meta-feed sale prices, Quick
+  Add prices (promo and full price — this is `promotedTier`, which website orders and the
+  Extend preview/save share), poster "from" prices and the swap box's per-game %. Every
+  server-side rental figure goes through the same `rentDiscountPct`; the plan's grep step
+  confirms no game-priced call still uses the site-promo-only lookup.
 - `scripts/test-game-discount-admin.js` — the table renders every game with its values,
-  the save route stores/clears/clamps values, needs the admin login, and the Games list tag
-  appears.
-- Homepage: the deals row appears only when a game beats the site promo, with the right
-  ribbon and price, and is absent otherwise.
+  the save route stores/clears/clamps values, needs the admin login, the Games list tag
+  appears, the homepage deals row disappears once no game beats the site promo, and after
+  the site promo is switched off a game's own % still applies (and becomes a deal) while
+  games without one go to full price.
 - Existing pricing tests stay green (`test-rent-pricing.js`, `test-buy-pricing.js`,
   `test-order-reserve-promo.js`, game page and Quick Add tests); the full suite stays green
   except the known `scripts/test-requests-page.js`.
