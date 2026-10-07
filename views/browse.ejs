@@ -96,7 +96,7 @@
         let min = null;
         gamesArr.forEach(g => {
           RENTAL_DURATIONS.forEach(({ days: d }) => {
-            const pct = getPromoDiscountPct(promo, d);
+            const pct = gameDiscountPct(g, d, promo);
             ['nt_price_', 'tr_price_'].forEach(prefix => {
               const base = g[prefix + d + 'd'];
               if (base > 0) {

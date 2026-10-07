@@ -115,7 +115,7 @@
     const sum = accountSummaryMap[g.id] || null;
     const avail = computeAvailability(g, sum, { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const openSlots = avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
-    const pct = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
+    const pct = gameDiscountPct(g, RENTAL_DURATIONS[0].days, promo);
     const base = g.nt_price_7d || g.tr_price_7d || 0;
     const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
     const typeLabel = (avail.hasTrophy && avail.trSlots > 0) ? 'Trophy' : (avail.ntSlots > 0 ? 'Non-Trophy' : (avail.showPs4 && avail.ps4Slots > 0 ? 'PS4 Primary' : 'Trophy'));
@@ -333,6 +333,21 @@
 </div>
 <% } %>
 
+<!-- SPECIAL DEALS — games whose own discount beats the site promo
+     (Admin → Promo & pricing → Game discounts). Hidden when there are none. -->
+<% if (typeof specialDeals !== 'undefined' && specialDeals.length) { %>
+<div class="section" id="specialDealsSection">
+  <h2 class="section-title">🔥 Special deals</h2>
+  <div class="upcoming-slider-wrap">
+    <button class="slider-arrow slider-arrow-left" onclick="slideSection('dealsSlider',-1)" aria-label="Previous">&#8249;</button>
+    <div class="upcoming-slider" id="dealsSlider">
+      <% specialDeals.forEach(game => { %><div class="slider-card-wrap" style="min-width:200px;max-width:200px;flex-shrink:0;scroll-snap-align:start;"><%- include('partials/game-card', { game, showPriceStart: true, dealPrice: true }) %></div><% }) %>
+    </div>
+    <button class="slider-arrow slider-arrow-right" onclick="slideSection('dealsSlider',1)" aria-label="Next">&#8250;</button>
+  </div>
+</div>
+<% } %>
+
 <!-- UPCOMING GAMES (COMING SOON) -->
 <%# Six on the homepage, looping. The rest are a click away behind View All,
     and a row long enough to need scrolling stops reading as a highlight reel. %>
@@ -346,7 +361,7 @@
     let min = null;
     catGames.forEach(g => {
       RENTAL_DURATIONS.forEach(({ days: d }) => {
-        const pct = getPromoDiscountPct(promo, d);
+        const pct = gameDiscountPct(g, d, promo);
         ['nt_price_', 'tr_price_'].forEach(prefix => {
           const base = g[prefix + d + 'd'];
           if (base > 0) {
@@ -403,7 +418,7 @@
   const spotSum = accountSummaryMap[spotGame.id] || null;
   const spotAvail = computeAvailability(spotGame, spotSum, { nt: spotGame.nt_days_left, tr: spotGame.tr_days_left, ps4: spotGame.ps4_days_left });
   const spotOpenSlots = spotAvail.ntSlots + spotAvail.trSlots + (spotAvail.showPs4 ? spotAvail.ps4Slots : 0);
-  const spotPct = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
+  const spotPct = gameDiscountPct(spotGame, RENTAL_DURATIONS[0].days, promo);
   const spotBase = spotGame.nt_price_7d || spotGame.tr_price_7d || 0;
   const spotFinal = spotPct > 0 ? spotBase - Math.round(spotBase * spotPct / 100) : spotBase;
   const spotSlug = spotGame.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

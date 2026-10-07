@@ -22,7 +22,13 @@
   // Promo discount per duration — same math as the game-detail order summary, so the
   // card shows the actual final price next to the crossed-out base price, not just a badge.
   const gcPromo = typeof promo !== 'undefined' ? promo : null;
-  const gcPromoPct = (d) => (typeof getPromoDiscountPct === 'function') ? getPromoDiscountPct(gcPromo, d) : 0;
+  // The game's own discount if it has one, else the site promo's (lib/game-discount.js).
+  const gcPromoPct = (d) => (typeof gameDiscountPct === 'function') ? gameDiscountPct(game, d, gcPromo)
+    : ((typeof getPromoDiscountPct === 'function') ? getPromoDiscountPct(gcPromo, d) : 0);
+  // A discount bigger than the site promo gets its own line on the card; the
+  // homepage "Special deals" row (gcShowDealPrice) also prices the card at it.
+  const gcDeal = (typeof gameSpecialDeal === 'function') ? gameSpecialDeal(game, gcPromo) : null;
+  const gcShowDealPrice = typeof dealPrice !== 'undefined' && dealPrice && gcDeal;
   const gcFinal = (base, d) => { const pct = gcPromoPct(d); return pct > 0 ? base - Math.round(base * pct / 100) : base; };
   // Lowest final (promo-applied) price across every duration/type this game offers,
   // plus that same entry's pre-promo base price (for the crossed-out "was" price) —
@@ -111,10 +117,16 @@
       <div class="gc2-price-col">
         <% if (gcBundle && gcStartPrice) { %>
         <div class="gc2-price"><%= gcBundle.count %> games from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
+        <% } else if (gcShowDealPrice) { %>
+        <% const gcDealBase = Math.min(...[game['nt_price_' + gcDeal.days + 'd'], hasTrophy ? game['tr_price_' + gcDeal.days + 'd'] : 0].filter(p => p > 0)); %>
+        <div class="gc2-price"><%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %> <b>₱<%= gcFinal(gcDealBase, gcDeal.days) %></b><s class="gc2-price-was">₱<%= gcDealBase %></s></div>
         <% } else if (gcStartPrice) { %>
         <div class="gc2-price">from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
         <% } else { %>
         <div class="gc2-price">See pricing</div>
+        <% } %>
+        <% if (gcDeal) { %>
+        <div class="gc2-deal">🔥 <%= gcDeal.pct %>% OFF · <%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %></div>
         <% } %>
         <% if (!gcBundle && gcBuyFrom) { %>
         <div class="gc2-buy-price">Buy ₱<%= gcBuyFrom %></div>

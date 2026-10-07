@@ -1578,6 +1578,7 @@ nav {
      already-ordered neighbours, matching the desktop DOM sequence. */
   .home-page .acct-section { order: 12; }
   .home-page #newReleasesSection { order: 15; }
+  .home-page #specialDealsSection { order: 17; }
   /* Coming Soon sits between the two game rows, matching desktop. They share
      three titles, and back to back that reads as the page repeating itself.
      Mobile order is set here rather than by DOM position, so swapping the
@@ -2838,6 +2839,8 @@ footer {
 .gc2-price-col { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .gc2-price { font-size: 0.72rem; color: rgba(255,255,255,0.75); }
 .gc2-price b { color: #fff; font-size: 0.92rem; font-weight: 800; }
+/* A game's own discount beating the site promo (lib/game-discount.js specialDeal). */
+.gc2-deal { font-size: 0.66rem; font-weight: 800; color: #4ade80; }
 .gc2-price-was { margin-left: 0.3rem; font-size: 0.66rem; color: rgba(255,255,255,0.4); }
 .gc2-buy-price { font-size: 0.64rem; color: #a78bfa; font-weight: 600; }
 /* Sits where the price goes on a normal card. These titles aren't rented

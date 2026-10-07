@@ -35,6 +35,7 @@ const tracking = require('./lib/tracking');
 const visitorFunnel = require('./lib/visitor-funnel');
 const gamePsnView = require('./lib/game-psn-view');
 const swapCharge = require('./lib/swap-charge');
+const gameDiscount = require('./lib/game-discount');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -393,6 +394,10 @@ app.locals.computeAvailability = computeAvailability;
 app.locals.buyTypeSellable = buyTypeSellable;
 // Expose promo discount lookup so game cards can show the final discounted price, not just the badge
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
+// A specific game's rent discount (its own % if set, else the site promo) — see
+// lib/game-discount.js. Every view that prices a game's rental uses this.
+app.locals.gameDiscountPct = (game, days, promo) => gameDiscount.discountPct(game, days, promo);
+app.locals.gameSpecialDeal = (game, promo) => gameDiscount.specialDeal(game, promo);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
 
@@ -1142,9 +1147,18 @@ function promotedTier(resolved, priceType, promo) {
   const tier = {};
   rentPricing.STANDARD_DAYS.forEach(d => {
     tier[d] = rentPricing.discounted(resolved[priceType + '_price_' + d + 'd'] || 0,
-                                     getPromoDiscountPct(promo, d));
+                                     rentDiscountPct(resolved, d, promo));
   });
   return tier;
+}
+
+// The % off one game's rental: its own discount if it has one, else the site
+// promo (lib/game-discount.js). A promo object carrying no_discounts — Quick
+// Add's "Full price" — means none at all, the game's own included, because a
+// game's own % deliberately ignores promo.enabled.
+function rentDiscountPct(game, days, promo) {
+  if (promo && promo.no_discounts) return 0;
+  return gameDiscount.discountPct(game, days, promo);
 }
 
 // The Extend modal's { p7, p30 } price preview for one customer, through the
@@ -1216,7 +1230,7 @@ function computeSwapReferencePrice(game, { days, accountType, isBought, promo })
   const resolved = resolveGamePrices(game);
   const base = resolved[usingType + '_price_' + d + 'd'];
   if (!base) return null;
-  const pct = getPromoDiscountPct(promo, d);
+  const pct = rentDiscountPct(resolved, d, promo);
   const price = pct > 0 ? base - Math.round(base * pct / 100) : base;
   return { price, ps4Fallback };
 }
@@ -1859,7 +1873,14 @@ app.get('/', (req, res) => {
   const upcomingForLoop = padForLoop(upcoming, 6);
   // The homepage renders the same review strip partial as every other public
   // page, so it takes the same locals from the same helper.
-  res.render('index', Object.assign({ featured, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
+  // Games whose own discount beats the site promo, biggest first (lib/game-discount.js).
+  const specialDeals = all
+    .map(g => ({ g, deal: gameDiscount.specialDeal(g, s.promo) }))
+    .filter(x => x.deal)
+    .sort((a, b) => b.deal.pct - a.deal.pct || a.g.title.localeCompare(b.g.title))
+    .slice(0, 12)
+    .map(x => x.g);
+  res.render('index', Object.assign({ featured, specialDeals, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
     reviewBlockLocals('')));
 });
 
@@ -2265,7 +2286,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
 
     // Rentals — one row per duration per account type.
     RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => {
-      const pct = getPromoDiscountPct(promo, d);
+      const pct = rentDiscountPct(g, d, promo);
       const cut = v => pct > 0 ? v - Math.round(v * pct / 100) : v;
       const nt = g[`nt_price_${d}d`];
       if (nt > 0) push(`nt-${d}d`, `${durLabel} (Non-Trophy)`, nt, cut(nt), avail.ntSlots > 0, durLabel, 'Non-Trophy');
@@ -2318,7 +2339,7 @@ app.post('/order/create', async (req, res) => {
   const base = resolved[priceType + '_price_' + d + 'd'] || 0;
   if (!base) return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
 
-  const pct = getPromoDiscountPct(promo, d);
+  const pct = rentDiscountPct(game, d, promo);
   const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
   const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
 
@@ -2595,7 +2616,7 @@ app.post('/order/reserve', async (req, res) => {
       const priceType = type === 'ps4' ? 'nt' : type;
       const base = resolved[priceType + '_price_' + d + 'd'] || 0;
       if (!base) return res.redirect(errRedirect);
-      const pct = getPromoDiscountPct(promo, d);
+      const pct = rentDiscountPct(game, d, promo);
       const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
       const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
       remainingDue = rentAfterPromo + gameDeposit;
@@ -2621,7 +2642,7 @@ app.post('/order/reserve', async (req, res) => {
     const priceType = type === 'ps4' ? 'nt' : type;
     const base = resolved[priceType + '_price_' + d + 'd'] || 0;
     if (!base) return res.redirect(errRedirect);
-    const pct = getPromoDiscountPct(promo, d);
+    const pct = rentDiscountPct(game, d, promo);
     const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
     const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
     // Flat ₱100 priority fee, matching the site's existing reservation copy —
@@ -2832,7 +2853,7 @@ function priorityUpgradePatch(order) {
     ? (getPsplusPrices()[priceType + '_price_' + order.days + 'd'] || 0)
     : (resolveGamePrices(game)[priceType + '_price_' + order.days + 'd'] || 0);
   if (!base) return null;
-  const pct = getPromoDiscountPct(promo, order.days);
+  const pct = isPsplus ? getPromoDiscountPct(promo, order.days) : rentDiscountPct(game, order.days, promo);
   const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
   const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
   return {
@@ -3343,7 +3364,7 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   const useFullPrice = b.pricing_mode === 'full';
   const livePromo = getSiteSettings().promo || {};
   const promoForPricing = useFullPrice
-    ? Object.assign({}, livePromo, { enabled: false, buy_promo_enabled: false })
+    ? Object.assign({}, livePromo, { enabled: false, buy_promo_enabled: false, no_discounts: true })
     : livePromo;
   // A reservation is half of list price plus the deposit, quoted off the
   // upcoming record with no promo applied — lib/reservations owns that rule and
@@ -5072,7 +5093,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   // one, off the same helpers with the discount flags switched off rather
   // than the promo object dropped — dropping it would also lose the Trophy
   // deposit, which isn't a discount and applies either way.
-  const qaNoPromo = Object.assign({}, qaPromo, { enabled: false, buy_promo_enabled: false });
+  const qaNoPromo = Object.assign({}, qaPromo, { enabled: false, buy_promo_enabled: false, no_discounts: true });
   const qaGames = games.map(g => {
     // resolveGamePrices FIRST, exactly as computeRentPricing does on the save
     // path. A game priced through a price category carries no tier fields of
@@ -6556,13 +6577,14 @@ function gamesByPriceCategory(excludeIds) {
 // ── Poster Generator (admin) ──────────────────────────────────────────────────
 // Turns a flat game list into the {density, pages, count, missingCovers} shape a
 // poster group needs — shared by the price-category groups and the New Arrivals group.
-function buildPosterGroup(name, games, discount10) {
+function buildPosterGroup(name, games, promo) {
   const density = games.length <= 4 ? 'large' : 'compact';
   const perPage = density === 'large' ? 4 : 12;
   const gamesWithFromPrice = games.map(game => {
     const prices = [game.nt_price_7d, game.tr_price_7d].filter(p => p > 0);
     const rawFrom = prices.length ? Math.min(...prices) : null;
-    const fromPrice = rawFrom != null && discount10 > 0 ? Math.round(rawFrom * (1 - discount10 / 100)) : rawFrom;
+    const weeklyPct = rentDiscountPct(game, RENTAL_DURATIONS[0].days, promo);
+    const fromPrice = rawFrom != null && weeklyPct > 0 ? Math.round(rawFrom * (1 - weeklyPct / 100)) : rawFrom;
     return { ...game, fromPrice };
   });
   const pages = [];
@@ -6593,8 +6615,8 @@ function buildPostersView(opts) {
         o.accountSummaryMap || buildAccountSummaryMap())
     : new Set();
   // Weekly is always the cheapest tier, so it's what "From ₱X" shows —
-  // apply that duration's promo discount (if any) so the poster stays accurate.
-  const discount10 = getPromoDiscountPct(promo, RENTAL_DURATIONS[0].days);
+  // buildPosterGroup applies each game's own Weekly discount (or the site
+  // promo's) so the poster stays accurate.
   // Games added this month get pulled into their own "New Arrivals" poster instead of
   // sitting mixed into their price-category poster — same "added this month" rule as
   // the site-wide NEW badge, so the two stay consistent.
@@ -6606,8 +6628,8 @@ function buildPostersView(opts) {
   // Both sets are skipped by the category grouping: New Arrivals because those
   // games have their own poster, full ones because they were filtered out.
   const groups = gamesByPriceCategory(new Set([...newArrivalIds, ...fullIds]));
-  const posterGroups = groups.map(g => buildPosterGroup(g.name, g.games, discount10));
-  if (newArrivalGames.length) posterGroups.unshift(buildPosterGroup('🆕 New Arrivals', newArrivalGames, discount10));
+  const posterGroups = groups.map(g => buildPosterGroup(g.name, g.games, promo));
+  if (newArrivalGames.length) posterGroups.unshift(buildPosterGroup('🆕 New Arrivals', newArrivalGames, promo));
   // Which durations currently have an active discount, for the poster's promo banner
   const activePromos = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0).map(d => ({ days: d, pct: getPromoDiscountPct(promo, d) })) : [];
   return { posterGroups, activePromos, hideFull: !!o.hideFull, hiddenFullCount: fullIds.size };

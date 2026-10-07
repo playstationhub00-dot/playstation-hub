@@ -40,6 +40,7 @@
                 data-nt7="<%= g.nt_price_7d %>" data-nt30="<%= g.nt_price_30d %>"
                 data-tr7="<%= g.tr_price_7d %>" data-tr30="<%= g.tr_price_30d %>"
                 data-buynt="<%= g.buy_nt_price || 0 %>" data-buytr="<%= g.buy_tr_price || 0 %>"
+                <% if (typeof gameDiscountPct === 'function') { %>data-pct7="<%= gameDiscountPct(g, 7, settings.promo) %>" data-pct30="<%= gameDiscountPct(g, 30, settings.promo) %>"<% } %>
                 <%= g.id === customer.game_id ? 'selected' : '' %>>
                 <%= g.title %> (<%= g.platform %>)
               </option>
@@ -260,7 +261,10 @@ function renderCustSwapPanel() {
   } else if (Object.prototype.hasOwnProperty.call(CUST_PROMO.discounts, days)) {
     const raw = parseFloat(opt.dataset[usingType + days]) || 0;
     if (raw > 0) {
-      const pct = CUST_PROMO.enabled ? (CUST_PROMO.discounts[days] || 0) : 0;
+      // The game's own discount (data-pct7 / data-pct30) when the page carries it,
+      // else the site promo — the same number the server records.
+      const own = opt.dataset['pct' + days];
+      const pct = own !== undefined && own !== '' ? (Number(own) || 0) : (CUST_PROMO.enabled ? (CUST_PROMO.discounts[days] || 0) : 0);
       refPrice = pct > 0 ? raw - Math.round(raw * pct / 100) : raw;
     }
   }
