@@ -63,9 +63,10 @@
       <div class="gm-name">
         <div class="gm-title"><%= r.title %></div>
         <div class="gm-sub"><%= r.platform %><%= r.genre ? ' · ' + r.genre : '' %></div>
-        <% if (r.categoryName || r.isBundle) { %>
+        <% if (r.categoryName || r.isBundle || r.discountTag) { %>
         <div class="gm-tags">
           <% if (r.categoryName) { %><span class="gm-tag">🏷️ <%= r.categoryName %></span><% } %>
+          <% if (r.discountTag) { %><span class="gm-tag gm-tag-discount">% <%= r.discountTag %></span><% } %>
           <% if (r.isBundle) { %><span class="gm-tag gm-tag-bundle">📦 Bundle</span><% } %>
         </div>
         <% } %>

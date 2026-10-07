@@ -3,6 +3,7 @@
     <div class="adm-jump">
       <a href="#sec-site">Site</a>
       <a href="#sec-promo">Promo & pricing</a>
+      <a href="#sec-game-discounts">Game discounts</a>
       <a href="#sec-payments">Payment methods</a>
       <a href="#sec-alerts">Phone alerts</a>
       <a href="#sec-images">Images</a>
@@ -222,6 +223,85 @@
     </div><!-- /promo inner -->
       </div><!-- /accordion-body -->
     </div><!-- /accordion promo -->
+
+    <!-- GAME DISCOUNTS — each game's own Weekly / Monthly % (lib/game-discount.js) -->
+    <%
+      const gdtRows = typeof gameDiscountRows !== 'undefined' ? gameDiscountRows : [];
+      const gdtPromo = settings.promo || {};
+      const gdtSite = d => (gdtPromo.enabled && gdtPromo.discounts) ? (Number(gdtPromo.discounts[d]) || 0) : 0;
+    %>
+    <div class="adm-card" id="sec-game-discounts">
+      <div class="adm-card-head" style="border-left:3px solid #22c55e;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(34,197,94,0.15);">🏷️</div>
+          <div>
+            <div class="sa-title">Game discounts</div>
+            <div class="sa-desc">Give some games their own Weekly or Monthly %</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <p class="gdt-note">Site promo: Weekly <%= gdtSite(7) %>% · Monthly <%= gdtSite(30) %>% (<%= gdtPromo.enabled ? 'on' : 'off' %>).
+          Empty box = site promo · 0 = no discount. A game's own % replaces the site promo and keeps working when the site promo is off.</p>
+        <div class="gdt-tools">
+          <input type="search" id="gdtSearch" placeholder="Search games…" autocomplete="off">
+          <label><input type="checkbox" id="gdtOwn"> Only games with their own %</label>
+        </div>
+        <form method="POST" action="/admin/promo/game-discounts">
+          <div class="gdt-wrap">
+          <table class="gdt">
+            <thead><tr><th>Game</th><th>Weekly %</th><th>Monthly %</th><th>Customer pays (monthly)</th></tr></thead>
+            <tbody>
+            <% gdtRows.forEach(r => { %>
+              <tr data-title="<%= r.title.toLowerCase() %>" data-own="<%= r.own ? '1' : '0' %>">
+                <td><%= r.title %></td>
+                <td><input type="number" name="d7_<%= r.id %>" value="<%= r.d7 %>" min="0" max="100" placeholder="—" class="gdt-in" aria-label="<%= r.title %> weekly %"></td>
+                <td><input type="number" name="d30_<%= r.id %>" value="<%= r.d30 %>" min="0" max="100" placeholder="—" class="gdt-in gdt-in30" data-base="<%= r.base30 %>" data-site="<%= gdtSite(30) %>" aria-label="<%= r.title %> monthly %"></td>
+                <td class="gdt-pay"></td>
+              </tr>
+            <% }) %>
+            </tbody>
+          </table>
+          </div>
+          <div class="form-actions" style="margin-top:0.75rem;">
+            <button type="submit" class="btn btn-primary" style="background:#22c55e;color:#000;">Save game discounts</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script>
+    (function () {
+      var search = document.getElementById('gdtSearch');
+      var ownOnly = document.getElementById('gdtOwn');
+      if (!search || !ownOnly) return;
+      var rows = Array.prototype.slice.call(document.querySelectorAll('.gdt tbody tr'));
+      // What a customer pays for the monthly Non-Trophy rental: the box's % if
+      // filled, else the site promo's — the same rounding the site uses.
+      function price(row) {
+        var box = row.querySelector('.gdt-in30');
+        var base = Number(box.getAttribute('data-base')) || 0;
+        var raw = box.value.trim();
+        var pct = raw === '' ? Number(box.getAttribute('data-site')) || 0 : Math.min(100, Math.max(0, Math.round(Number(raw) || 0)));
+        row.querySelector('.gdt-pay').textContent = base ? '₱' + (pct > 0 ? base - Math.round(base * pct / 100) : base) + (pct > 0 ? ' (' + pct + '% off)' : '') : '—';
+      }
+      function hasOwn(row) {
+        return Array.prototype.some.call(row.querySelectorAll('.gdt-in'), function (i) { return i.value.trim() !== ''; });
+      }
+      function filter() {
+        var q = search.value.trim().toLowerCase();
+        rows.forEach(function (row) {
+          var show = (!q || row.getAttribute('data-title').indexOf(q) >= 0) && (!ownOnly.checked || hasOwn(row));
+          row.hidden = !show;
+        });
+      }
+      rows.forEach(function (row) {
+        price(row);
+        Array.prototype.forEach.call(row.querySelectorAll('.gdt-in'), function (i) { i.addEventListener('input', function () { price(row); }); });
+      });
+      search.addEventListener('input', filter);
+      ownOnly.addEventListener('change', filter);
+    })();
+    </script>
 
 
 

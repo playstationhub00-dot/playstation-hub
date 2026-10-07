@@ -5235,6 +5235,16 @@ app.get('/admin', requireAuth, async (req, res) => {
     requests: gamesViewLib.requestSummary(gameRequestRows)
   };
   res.locals.psnLastRun = db.get('psn_last_run').value() || null;
+  // Settings → Game discounts table: every game with its own Weekly/Monthly %
+  // ('' = follows the site promo) and the monthly base price the preview uses.
+  res.locals.gameDiscountRows = getGames().map(resolveGamePrices).map(g => ({
+    id: g.id,
+    title: g.title,
+    d7: gameDiscount.ownPct(g, 7) === null ? '' : gameDiscount.ownPct(g, 7),
+    d30: gameDiscount.ownPct(g, 30) === null ? '' : gameDiscount.ownPct(g, 30),
+    own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
+    base30: g.nt_price_30d || g.tr_price_30d || 0
+  })).sort((a, b) => a.title.localeCompare(b.title));
   res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
@@ -6443,6 +6453,25 @@ app.post('/admin/customers/delete/:id', requireAuth, async (req, res) => {
     await orders.deleteOrder(existing.order_ref).catch(() => {});
   }
   res.redirect('/admin?tab=customers&msg=customer_deleted');
+});
+
+// Settings → Game discounts: each game's own Weekly / Monthly % (lib/game-discount.js).
+// An empty box means "follow the site promo"; a game with both boxes empty has
+// its discounts cleared. Games not on the submitted form are left alone. One
+// write for the whole table rather than one per game.
+app.post('/admin/promo/game-discounts', requireAuth, (req, res) => {
+  const b = req.body || {};
+  let changed = 0;
+  (db.get('games').value() || []).forEach(g => {
+    const k7 = 'd7_' + g.id, k30 = 'd30_' + g.id;
+    if (!(k7 in b) && !(k30 in b)) return;
+    const d7 = gameDiscount.cleanInput(b[k7]);
+    const d30 = gameDiscount.cleanInput(b[k30]);
+    const next = (d7 === null && d30 === null) ? null : { 7: d7, 30: d30 };
+    if (JSON.stringify(next) !== JSON.stringify(g.discounts || null)) { g.discounts = next; changed++; }
+  });
+  if (changed) db.write();
+  res.redirect('/admin?tab=settings&msg=game_discounts_saved');
 });
 
 // Takes back the extra a game swap charged (Customers tab, "Remove ₱X" beside
