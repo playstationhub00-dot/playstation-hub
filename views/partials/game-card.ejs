@@ -27,7 +27,9 @@
     : ((typeof getPromoDiscountPct === 'function') ? getPromoDiscountPct(gcPromo, d) : 0);
   // A discount bigger than the site promo gets its own line on the card; the
   // homepage "Special deals" row (gcShowDealPrice) also prices the card at it.
-  const gcDeal = (typeof gameSpecialDeal === 'function') ? gameSpecialDeal(game, gcPromo) : null;
+  const gcDealRaw = (typeof gameSpecialDeal === 'function') ? gameSpecialDeal(game, gcPromo) : null;
+  // a deal on a duration with no usable price is not a real deal
+  const gcDeal = (gcDealRaw && (game['nt_price_' + gcDealRaw.days + 'd'] > 0 || (hasTrophy && game['tr_price_' + gcDealRaw.days + 'd'] > 0))) ? gcDealRaw : null;
   const gcShowDealPrice = typeof dealPrice !== 'undefined' && dealPrice && gcDeal;
   const gcFinal = (base, d) => { const pct = gcPromoPct(d); return pct > 0 ? base - Math.round(base * pct / 100) : base; };
   // Lowest final (promo-applied) price across every duration/type this game offers,

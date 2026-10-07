@@ -7,6 +7,7 @@
 //   Zzyzx Plain   no own % → site promo
 //   Zzyzx Weekly  own Weekly 50%
 //   Zzyzx Zero    own Monthly 0% → no discount
+//   Zzyzx Unpriced own Monthly 50% but no 30-day prices → no deal, no Infinity/NaN
 // The project's games.json, the database and the real admin are never touched.
 const assert = require('assert');
 const fs = require('fs');
@@ -29,7 +30,8 @@ fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
     game(1, 'Zzyzx Deal', { discounts: { 7: null, 30: 20 } }),
     game(2, 'Zzyzx Plain'),
     game(3, 'Zzyzx Weekly', { nt_price_7d: 400, nt_price_30d: 800, tr_price_7d: 450, discounts: { 7: 50, 30: null } }),
-    game(4, 'Zzyzx Zero', { discounts: { 7: null, 30: 0 } })
+    game(4, 'Zzyzx Zero', { discounts: { 7: null, 30: 0 } }),
+    game(5, 'Zzyzx Unpriced', { nt_price_30d: 0, tr_price_30d: 0, discounts: { 7: null, 30: 50 } })
   ],
   customers: [{
     id: 1, customer_name: 'Swap Tester', game_id: 2, game_title: 'Zzyzx Plain', days: 30, account_type: 'nt',
@@ -125,6 +127,11 @@ async function main() {
     assert.ok(!section.includes('/game/zzyzx-plain') && !section.includes('/game/zzyzx-zero'));
     assert.ok(cardFor(section, 'zzyzx-deal').includes('Monthly <b>₱639</b><s class="gc2-price-was">₱799</s>'));
     assert.ok(cardFor(section, 'zzyzx-weekly').includes('Weekly <b>₱200</b><s class="gc2-price-was">₱400</s>'));
+  });
+  await okAsync('a deal on an unpriced duration shows no Infinity/NaN and no deal line', async () => {
+    for (const body of [home.body, browse.body]) assert.ok(!/Infinity|NaN/.test(body));
+    assert.ok(cardFor(browse.body, 'zzyzx-unpriced').length > 0);
+    assert.ok(!cardFor(browse.body, 'zzyzx-unpriced').includes('gc2-deal'));
   });
   await okAsync('on phones the row sits after New Releases, not above the hero', async () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
