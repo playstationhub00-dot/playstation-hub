@@ -1,6 +1,6 @@
 # Browse redesign: combinable filters, tier pills, PS Plus in results — Design
 
-Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
+Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
 
 ## Problem
 
@@ -43,8 +43,8 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 - Homepage layout (its rows only gain the tier pill on their cards and the "Just added"
   wording).
 - The PS Plus page (`/ps-plus`) itself.
-- Merging similar genre names automatically ("RPG" vs "Role Playing Games"): both appear
-  as written until the owner renames the site game's genre.
+- Merging similar genre names automatically ("RPG" vs "Role Playing Games"): a PS Plus
+  game only matches a Genre chip whose name equals its PlayStation genre.
 
 ## Filters
 
@@ -60,7 +60,7 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 | | PS Plus Deluxe (gold) | never — it selects the PS Plus section (below) |
 | Console | PS4 | `platform` is `PS4` or `PS4/PS5` |
 | | PS5 | `platform` is `PS5` or `PS4/PS5` |
-| Genre | every distinct `genre` value in the library and the PS Plus list, A–Z | `genre` equals the chip |
+| Genre | every genre among the site's games, A–Z; a game's free-text `genre` is split on "," and "/" ("Action, RPG" → Action, RPG) | one of its genre parts equals the chip |
 | Price | Under ₱A · ₱A–(B−1) · ₱B+ | the card's "from ₱X" price falls in the band |
 
 - **"From" price** = exactly the number the card shows: the cheapest final price across
@@ -80,13 +80,17 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 
 ### Counts and 0-chips
 
-- Each chip shows how many site games would show if that chip were **toggled on** with
-  every other selection kept (for a chip already on: the current result count).
+- Each chip shows how many games the customer would see if that chip were **toggled
+  on** with every other selection kept (for a chip already on: the current result
+  count). That is the site games — or, when only PS Plus games would show ("PS Plus
+  Deluxe" the only Tier chip on), the PS Plus games.
 - A chip that is off and would give 0 is rendered dimmed/dashed, `aria-disabled`, and
   cannot be tapped. A chip that is on is always tappable (to turn it off).
 - Tier "PS Plus Deluxe" counts PS Plus games instead (see below).
-- Every chip is always rendered — nothing hides because of its count. (A chip group with
-  no possible values, e.g. no bundles exist at all, is still omitted.)
+- Every chip is always rendered — nothing hides because of its count under the current
+  filters. A chip is left out only when nothing in the whole library could ever match it
+  (no "Bundles" chip when there are no bundles at all, no "PS Plus Deluxe" chip when the
+  PS Plus list is empty); a group with no chips is left out.
 
 ### Bar under the chips
 
@@ -105,18 +109,20 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 - One pure module, `public/js/browse-filter-core.js` (UMD, same pattern as
   `home-search-core.js`), holds: URL ⇄ state parsing, matching, counting, price banding,
   sorting. `server.js` requires it for the first render; the page loads it for taps.
-- The server renders every site game card once, each carrying the facts the core needs as
-  `data-*` attributes (tier id, platform, genre, from-price, available-now, available-on-
-  PS4, just-added, can-buy, bundle, title, search text). Tapping a chip re-runs the core
-  in the browser, shows/hides and re-orders the existing cards, updates counts/0-states,
-  and `history.replaceState`s the URL. No network request.
-- URL params: `tier=2,3` · `console=ps4,ps5` · `genre=Action,Horror` (URL-encoded) ·
+- The server renders every site game card once (each wrapped in `.bf-item[data-id]`) and
+  embeds, as JSON, the facts the core needs for each game (tier id, PS4/PS5, genres,
+  from-price, available-now, available-on-PS4, just-added, can-buy, bundle, title, search
+  text, home section), the PS Plus list and the current state. Tapping a chip re-runs the
+  core in the browser, moves the existing cards between their home sections and the one
+  grid, updates counts/0-states, and `history.replaceState`s the URL. No network request.
+- URL params: `tier=2,3` · `console=ps4,ps5` · `genre=Action,Horror` (each name URL-encoded) ·
   `price=low,mid,high` · `avail=1` · `new=1` · `buy=1` · `bundle=1` · `search=…` ·
   `psplus=1` (the PS Plus Deluxe tier chip).
 - Old links keep working: `ps4=1` → console=ps4; `newOnly=1` → new=1; single
   `genre=Horror` already fits; `unit=ps4|ps5` and `platform=PS4` keep today's meaning.
-- Without JavaScript the server-rendered page is already correct for the URL; chips are
-  real links (built by the core) so it still works, just with reloads.
+- Without JavaScript the server-rendered site results are already correct for the URL;
+  chips are real links (built by the core) so it still works, just with reloads. The PS
+  Plus section needs the page script (it is drawn from the embedded list).
 
 ## Results layout
 
@@ -143,7 +149,8 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
   - Search: name contains the query (same normalisation as the site search).
   - Console: item `platforms` includes PS4 / PS5 (an item with no platform info matches
     neither chip when a Console chip is on).
-  - Genre: item genre (`prettyGenre`) equals a selected genre.
+  - Genre: item genre (`prettyGenre`, e.g. "Action", "Role Playing Games") equals a
+    selected genre chip.
   - Available now: the PS Plus Deluxe account has a free slot (the availability of the
     site's "PS Plus Deluxe" game entry, the one `/ps-plus` reads slots from); else none.
   - Just added: `first_seen_at` within the last 11 days.
@@ -156,8 +163,8 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
   bar reads "N PS Plus games". With PS Plus plus other Tier chips on, both the site grid
   (those tiers) and the PS Plus section show.
 - **Card:** cover (or a plain title tile), gold "PS Plus" pill, name, "via PS Plus ·
-  from ₱X". Links to `/ps-plus?game=<key>` (monthly-only tiles: `/ps-plus?month=<id>`),
-  the same links the homepage search uses.
+  from ₱X". Links to `/ps-plus?game=<key>` (the PS Plus page opens that game's sheet;
+  monthly-only tiles have keys there too). Drawn by `public/js/browse.js`.
 - **Many matches:** first 24 shown, then "Show all N" reveals the rest (client-side).
 - A game that is both a site game and a PS Plus game may appear in both places.
 - **PS Plus Deluxe tier chip count** = matching PS Plus items under the other filters.
@@ -169,7 +176,7 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 - `views/partials/game-card.ejs`: a pill above the title with the category name, in the
   category's pill colour. Not shown for games without a category, nor for bundles (which
   already say "Bundle · N games").
-- `views/game-detail.ejs`: the same pill next to the title.
+- `views/game-detail.ejs`: the same pill in the badge row just above the title.
 - Pill colours (fixed palette, readable on the dark card): blue, purple, coral, grey,
   teal, pink; PS Plus is gold and not selectable.
 
@@ -178,9 +185,10 @@ Date: 2026-10-09 · Status: approved by owner in chat, awaiting spec review
 Two new fields on the category add/edit forms (`views/partials/admin/games/categories.ejs`,
 `POST /admin/price-categories/add|edit/:id`):
 
-- **Pill colour** — select of the six colours. Missing value defaults by name: contains
-  "new" → blue, "deluxe" → purple, "special" → coral, "regular" → grey, otherwise grey.
-  Invalid input → keep the old value (edit) / default (add).
+- **Pill colour** — "Automatic (from the name)" or one of the six colours. Automatic
+  (stored as no colour) picks by name: contains "new" → blue, "deluxe" → purple,
+  "special" → coral, otherwise grey. Anything not one of the six → keep the old value
+  (edit) / automatic (add). The category row in admin previews its pill.
 - **Description** — one line, max 120 characters, trimmed; empty allowed.
 
 ### "What are tiers?"
@@ -204,11 +212,11 @@ is rejected with an error toast and nothing saved. Chips read "Under ₱A", "₱
 
 ## Error handling
 
-- Unknown or malformed URL params are ignored (an unknown tier id, genre or band selects
-  nothing).
+- Unknown or malformed URL params are ignored; a tier id or genre the page has no chip
+  for (a deleted category or a genre no game has any more) is dropped, so an old link
+  never hides every game.
 - A PS Plus catalogue that has not loaded (Mongo down) → the PS Plus section and chip are
   simply absent; the rest of Browse works.
-- A price category deleted while selected in a shared link → that id is ignored.
 
 ## Testing
 
