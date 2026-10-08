@@ -231,6 +231,7 @@ async function main() {
     assert.strictEqual((await call('/js/browse.js')).status, 200);
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
     assert.ok(css.includes('minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)'), 'at most 6 a row');
+    assert.ok(/\.bf-ps-all\[hidden\]\s*\{\s*display:\s*none/.test(css), 'hidden Show all button stays hidden');
   });
   await okAsync('the PS Plus page still shows its weekly price', async () => {
     const r = await call('/ps-plus');

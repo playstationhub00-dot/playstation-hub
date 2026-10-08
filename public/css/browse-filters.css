@@ -65,3 +65,4 @@ body.bf-lock { overflow: hidden; }
 @media (min-width: 601px) {
   .browse-page .games-grid { grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)); }
 }
+.bf-ps-all[hidden] { display: none; }
