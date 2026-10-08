@@ -1,6 +1,6 @@
 # Browse redesign: combinable filters, tier pills, PS Plus in results — Design
 
-Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
+Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run; filters moved into a floating panel (owner's follow-up the same day)
 
 ## Problem
 
@@ -19,23 +19,27 @@ Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
 
 ## Decisions made with the owner
 
-- **Combining:** different groups narrow (AND); two chips in one group widen (OR).
-  Every chip is a toggle.
+- **Combining:** different groups narrow (AND); two options in one group widen (OR).
 - **Groups:** Show · Tier · Console (PS4, PS5) · Genre (every genre) · Price (bands).
-- **0-result chips stay visible**, dimmed and dashed, and cannot be tapped.
+- **0-result options stay visible**, dimmed, and cannot be ticked.
 - **Price bands** come from two cut-offs the owner sets in admin (default 200 and 300).
 - **Layout (option A):** no filter on → today's sections (one per tier), max 6 cards per
   row; any filter on → one grid of every match, max 6 per row, sorted by tier (admin
   order) then A–Z.
-- **Show/Hide filters:** open on computers ("Hide filters" link), hidden behind a
-  "Filters · N on" button on phones.
-- **Instant filtering** (no reload) with the address bar kept in sync.
+- **Floating filter panel** (like a shopping app's "Filters" screen): opened from a
+  "Filters" button, full screen on phones, a centred pop-up on computers. Options are
+  tick-box rows with counts; each section has its own "Clear"; the panel has "Clear all".
+- **Applied on "Show N games":** ticks are a draft until the big bottom button is tapped;
+  the button counts live. Closing the panel any other way throws the draft away.
+- **Sticky filter bar** under the menu: the "Filters" button, one removable chip per
+  active filter (tap ✕ to drop it at once), "Clear all", and the result count.
+- **No reload** when filters change, with the address bar kept in sync.
 - **Tier pill** (coloured pill above the title) on every game card and on the game page.
-- **Tier descriptions** written by the owner in admin, shown under tier headings and in a
-  "What are tiers?" panel.
+- **Tier descriptions** written by the owner in admin, shown under tier headings and on
+  each tier's row in the filter panel (with its starting price).
 - **"New" badge and chip renamed "Just added".** "New" then means only the New Games tier.
 - **PS Plus Deluxe games** appear in their own section under the results whenever a
-  filter or search is on, plus a "PS Plus Deluxe" chip in the Tier group.
+  filter or search is on, plus a "PS Plus Deluxe" option in the Tier group.
 
 ## Out of scope
 
@@ -48,9 +52,12 @@ Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
 
 ## Filters
 
-### Groups and chips (in this order)
+In the rules below a "chip" is one filter option (a tick-box row in the panel); the
+removable chips in the filter bar are the options currently applied.
 
-| Group | Chips | Matches a site game when… |
+### Groups and options (in this order)
+
+| Group | Options | Matches a site game when… |
 |---|---|---|
 | Show | Available now | a slot is free (today's rule: with only the PS4 chip on, a PS4 slot must be free) |
 | | Just added | added within its New window (`new_window_days`, default 11 days) — today's `isAddedThisMonth` |
@@ -78,31 +85,56 @@ Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
 - Console + Available now: "with only the PS4 chip on" means PS4 is selected and PS5 is
   not; otherwise "available" means any slot type is free (today's rule).
 
-### Counts and 0-chips
+### Counts and 0-options
 
-- Each chip shows how many games the customer would see if that chip were **toggled
-  on** with every other selection kept (for a chip already on: the current result
-  count). That is the site games — or, when only PS Plus games would show ("PS Plus
-  Deluxe" the only Tier chip on), the PS Plus games.
-- A chip that is off and would give 0 is rendered dimmed/dashed, `aria-disabled`, and
-  cannot be tapped. A chip that is on is always tappable (to turn it off).
+- Each option shows how many games the customer would see if that option were **ticked**
+  in the panel's current draft, every other tick kept (for an option already ticked: the
+  draft's result count). That is the site games — or, when only PS Plus games would show
+  ("PS Plus Deluxe" the only Tier option ticked), the PS Plus games.
+- An option that is not ticked and would give 0 is dimmed and its tick box disabled. A
+  ticked option can always be unticked.
 - Tier "PS Plus Deluxe" counts PS Plus games instead (see below).
-- Every chip is always rendered — nothing hides because of its count under the current
-  filters. A chip is left out only when nothing in the whole library could ever match it
-  (no "Bundles" chip when there are no bundles at all, no "PS Plus Deluxe" chip when the
-  PS Plus list is empty); a group with no chips is left out.
+- Every option is always listed — nothing hides because of its count. An option is left
+  out only when nothing in the whole library could ever match it (no "Bundles" when there
+  are no bundles at all, no "PS Plus Deluxe" when the PS Plus list is empty); a section
+  with no options is left out.
 
-### Bar under the chips
+### The filter bar
 
-"N games found" · "Clear all" (shown when anything is on, keeps nothing) · on computers
-"Hide filters" / "Show filters" at the right.
+- Directly under the menu bar, above the games, and it stays there while scrolling
+  (`position: sticky` just below the 64px menu).
+- Contents: a "Filters" button ("Filters · N" when N options are on) that opens the
+  panel; one removable chip per applied option ("Deluxe ✕", "PS4 ✕", "Under ₱200 ✕", and a
+  search as `"elden" ✕`) — tapping one removes that filter at once, no panel; "Clear all"
+  when two or more filters are on; at the right "N games" ("N PS Plus games" when only
+  PS Plus games show).
 
-### Show / hide
+### The filter panel
 
-- Computers (≥ 768px): filters open; "Hide filters" collapses the chip groups to one line
-  "Filters · N on".
-- Phones (< 768px): start collapsed as a "Filters · N on" button; tapping opens the
-  groups in place. Opening/closing does not change the URL. The choice is not remembered.
+- **Phones (< 768px):** full screen, slides up. **Computers:** a centred pop-up up to
+  560px wide and 85% of the screen tall, the games dimmed behind it.
+- **Header:** ✕ (closes) · "Filters" · "Clear all" (unticks everything — still a draft).
+  **Footer:** the big "Show N games" button. Only the middle scrolls; the page behind does
+  not scroll while the panel is open.
+- **Sections** in order Show · Tier · Console · Genre · Price, each with its title and a
+  "Clear" link (shown when something in it is ticked). One row per option: name, count,
+  tick box. Tier rows also show the tier's coloured dot and a second line with its
+  description and "from ₱X" (the lowest card price among its games); the PS Plus Deluxe
+  row reads "Hundreds of games, one account · from ₱X/week". A section with more than 6
+  rows shows 6 then "Show all N" (ticked options always show).
+- **Draft until applied:** ticking only changes the panel — counts and the button update
+  live: "Show 10 games"; "Show 36 PS Plus games" when only PS Plus games would show; "No
+  games match" (not tappable) when nothing would. "Show N games" applies the draft (games
+  and URL update, panel closes). ✕, Escape or tapping outside (computers) closes and
+  throws the draft away. Opening again starts from the applied filters.
+- **Accessibility:** `role="dialog"`, `aria-modal="true"`, labelled "Filters"; focus moves
+  into the panel on open and back to the Filters button on close; tick boxes are real
+  checkboxes with labels.
+- **Without JavaScript** the panel is a plain GET form to `/browse` (checkbox names
+  `avail`, `new`, `buy`, `bundle`, `tier`, `psplus`, `console`, `genre`, `price`); the
+  Filters button is a link to `#bfPanel`, which CSS shows (`:target`), and its button
+  reloads the page with the result. Repeated params (`tier=2&tier=3`) read like
+  `tier=2,3`.
 
 ### Instant filtering and URLs
 
@@ -112,17 +144,18 @@ Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
 - The server renders every site game card once (each wrapped in `.bf-item[data-id]`) and
   embeds, as JSON, the facts the core needs for each game (tier id, PS4/PS5, genres,
   from-price, available-now, available-on-PS4, just-added, can-buy, bundle, title, search
-  text, home section), the PS Plus list and the current state. Tapping a chip re-runs the
-  core in the browser, moves the existing cards between their home sections and the one
-  grid, updates counts/0-states, and `history.replaceState`s the URL. No network request.
+  text, home section), the PS Plus list and the current state. The panel re-runs the core
+  on its draft for the live counts; applying (or removing a chip) re-runs it on the new
+  state, moves the existing cards between their home sections and the one grid, redraws
+  the bar, and `history.replaceState`s the URL. No network request.
 - URL params: `tier=2,3` · `console=ps4,ps5` · `genre=Action,Horror` (each name URL-encoded) ·
   `price=low,mid,high` · `avail=1` · `new=1` · `buy=1` · `bundle=1` · `search=…` ·
   `psplus=1` (the PS Plus Deluxe tier chip).
 - Old links keep working: `ps4=1` → console=ps4; `newOnly=1` → new=1; single
   `genre=Horror` already fits; `unit=ps4|ps5` and `platform=PS4` keep today's meaning.
-- Without JavaScript the server-rendered site results are already correct for the URL;
-  chips are real links (built by the core) so it still works, just with reloads. The PS
-  Plus section needs the page script (it is drawn from the embedded list).
+- Without JavaScript the server-rendered site results are already correct for the URL and
+  the panel works as a form (above), just with reloads. The PS Plus section needs the
+  page script (it is drawn from the embedded list).
 
 ## Results layout
 
@@ -156,18 +189,18 @@ Date: 2026-10-09 · Status: approved by owner; amended after the plan's dry run
   - Just added: `first_seen_at` within the last 11 days.
   - Can buy or Bundles on: section hidden (PS Plus games cannot be bought or bundled).
   - Price: every item uses the PS Plus "from ₱X" weekly price shown on `/ps-plus`.
-  - Tier: no Tier chip on → shown; PS Plus Deluxe chip on → shown; other Tier chips on
+  - Tier: no Tier option on → shown; PS Plus Deluxe on → shown; other Tier options on
     without PS Plus → hidden.
-- **PS Plus Deluxe as the only Tier chip:** site games are not shown at all — the site
-  grid, its "N games found" line and the "No games found" message are omitted, and the
-  bar reads "N PS Plus games". With PS Plus plus other Tier chips on, both the site grid
-  (those tiers) and the PS Plus section show.
+- **PS Plus Deluxe as the only Tier option:** site games are not shown at all — the site
+  grid and the "No games found" message are omitted, and the bar reads "N PS Plus
+  games". With PS Plus plus other Tier options on, both the site grid (those tiers) and
+  the PS Plus section show.
 - **Card:** cover (or a plain title tile), gold "PS Plus" pill, name, "via PS Plus ·
   from ₱X". Links to `/ps-plus?game=<key>` (the PS Plus page opens that game's sheet;
   monthly-only tiles have keys there too). Drawn by `public/js/browse.js`.
 - **Many matches:** first 24 shown, then "Show all N" reveals the rest (client-side).
 - A game that is both a site game and a PS Plus game may appear in both places.
-- **PS Plus Deluxe tier chip count** = matching PS Plus items under the other filters.
+- **PS Plus Deluxe tier option count** = matching PS Plus items under the other filters.
 
 ## Telling tiers apart
 
@@ -191,15 +224,15 @@ Two new fields on the category add/edit forms (`views/partials/admin/games/categ
   (edit) / automatic (add). The category row in admin previews its pill.
 - **Description** — one line, max 120 characters, trimmed; empty allowed.
 
-### "What are tiers?"
+### Tier descriptions
 
-A link at the end of the Tier chip row opens an in-page panel listing each tier (admin
-order) with its pill, description and "from ₱X" (lowest from-price of its games), plus a
-PS Plus Deluxe row ("from ₱X" weekly). Closes with ✕ or a tap outside.
+Shown under each tier's section heading on Browse (no filter on) and on each tier's row
+in the filter panel, with "from ₱X" (lowest card price among its games). There is no
+separate "What are tiers?" box.
 
 ### "Just added"
 
-The 11-day corner badge text (`gc2-badge-new`) and the Show chip become "Just added".
+The 11-day corner badge text (`gc2-badge-new`) and the Show option become "Just added".
 Its timing is unchanged.
 
 ## Admin: price bands
@@ -207,7 +240,7 @@ Its timing is unchanged.
 Settings gets a small "Browse price filter" card: two whole numbers A < B (defaults 200,
 300), saved to `site_settings.browse_price_bands = { low: A, high: B }` via
 `POST /admin/browse-price-bands` (requireAuth). Invalid input (non-numbers, A ≥ B, ≤ 0)
-is rejected with an error toast and nothing saved. Chips read "Under ₱A", "₱A–(B−1)",
+is rejected with an error toast and nothing saved. Options read "Under ₱A", "₱A–(B−1)",
 "₱B+".
 
 ## Error handling
@@ -215,8 +248,8 @@ is rejected with an error toast and nothing saved. Chips read "Under ₱A", "₱
 - Unknown or malformed URL params are ignored; a tier id or genre the page has no chip
   for (a deleted category or a genre no game has any more) is dropped, so an old link
   never hides every game.
-- A PS Plus catalogue that has not loaded (Mongo down) → the PS Plus section and chip are
-  simply absent; the rest of Browse works.
+- A PS Plus catalogue that has not loaded (Mongo down) → the PS Plus section and option
+  are simply absent; the rest of Browse works.
 
 ## Testing
 
@@ -230,13 +263,14 @@ database or the real admin.
   tier-chip combinations, Can buy/Bundles hide), "Show all" limit.
 - `scripts/test-browse-page.js` — boots a throwaway instance: unfiltered page keeps tier
   sections with descriptions; `?tier=…&console=ps4&genre=…` renders one grid in the right
-  order with correct counts and dimmed 0-chips; old `?ps4=1` / `?newOnly=1` links work;
-  data attributes present on cards; PS Plus section appears/hides per the rules (PS Plus
+  order; the bar's removable chips and count; the panel's sections, rows, counts, dimmed
+  0-options, tier rows with description and price, form names, "Show N games"; old
+  `?ps4=1` / `?newOnly=1` links and repeated params work; PS Plus section rules (PS Plus
   catalogue store stubbed with fixture items).
 - `scripts/test-tier-pill.js` — pills on browse cards, homepage cards and the game page;
-  none for uncategorised games and bundles; "Just added" wording.
-- `scripts/test-admin-tiers.js` — category pill colour/description save (defaults by
-  name, invalid input), price band save and rejection, login required.
+  none for uncategorised games and bundles; "Just added" wording; category pill colour /
+  description save (defaults by name, invalid input, login required).
+- `scripts/test-admin-price-bands.js` — price band save and rejection, login required.
 - Existing tests stay green except the known `scripts/test-requests-page.js`; any
   existing test that asserts the old single-link chips or the "New" badge text is updated
   to the new behaviour.
