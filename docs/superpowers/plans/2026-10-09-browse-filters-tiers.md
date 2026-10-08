@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Browse filters that combine (five groups, dimmed 0-chips, instant, shareable URLs), one 6-per-row results grid while filtering, a coloured tier pill on every game card and the game page, tier descriptions, an "Also in PS Plus Deluxe" section, and the Price-chip cut-offs in Settings.
+**Goal:** Browse filters in a floating panel (full screen on phones, centred pop-up on computers; tick-box rows, live counts, applied on "Show N games") with a sticky filter bar of removable chips, shareable URLs, one 6-per-row results grid while filtering, a coloured tier pill on every game card and the game page, tier descriptions, an "Also in PS Plus Deluxe" section, and the Price-chip cut-offs in Settings.
 
-**Architecture:** One pure UMD module, `public/js/browse-filter-core.js`, holds every filter rule; `server.js` uses it for the first render and `public/js/browse.js` uses it for taps, moving the server-rendered cards between their tier sections and one grid. `lib/tier-style.js` decides a tier's pill colour and description; `app.locals.gameTier` exposes it to the card and game page.
+**Architecture:** One pure UMD module, `public/js/browse-filter-core.js`, holds every filter rule; `server.js` uses it for the first render and `public/js/browse.js` uses it for the panel's draft counts and for applying, moving the server-rendered cards between their tier sections and one grid. The panel is a plain GET form, so it also works without the script. `lib/tier-style.js` decides a tier's pill colour and description; `app.locals.gameTier` exposes it to the card and game page.
 
 **Tech Stack:** Node, Express, EJS, lowdb v1 (`games.json`), plain browser JS (no build). Tests are plain `node scripts/test-*.js`.
 
@@ -16,10 +16,11 @@ Spec: `docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md`
 - Commit messages end with: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - **Line endings** (the provided edit scripts keep them; verify with `file`): `server.js` CRLF + UTF-8 BOM; `views/browse.ejs` CRLF + BOM; `views/partials/game-card.ejs`, `views/partials/admin/settings.ejs`, `public/css/style.css` CRLF; `views/game-detail.ejs`, `views/admin.ejs`, `views/partials/admin/games/categories.ejs` and every new file LF.
 - **Tests never touch real data:** boot tests use a temp `DATA_DIR`, `MONGODB_URI=''`, an in-memory session store, a made-up admin password and (Browse) a stubbed PS Plus list; nothing reaches the project's `games.json`, a database or the real admin.
-- Filters: different groups narrow (AND), chips in one group widen (OR); every chip is a toggle; a chip that would give 0 stays visible, dimmed, with no link.
+- Filters: different groups narrow (AND), options in one group widen (OR); an option that would give 0 stays listed, dimmed, its tick box disabled.
 - Groups in order: Show (Available now · Just added · Can buy · Bundles) · Tier (price categories in admin order, then "PS Plus Deluxe") · Console (PS4 · PS5) · Genre (every genre part among the site's games, A–Z) · Price (Under ₱A · ₱A–(B−1) · ₱B+, defaults A=200, B=300).
 - No filter: today's sections (Coming soon, Account Bundles, each tier, Other Games, PS Plus monthly). Any filter or search: one grid of matches, tier order then A–Z, max 6 per row (phones 2), then "Also in PS Plus Deluxe" (first 24, "Show all N").
-- Filters open on computers ("Hide filters"), folded behind "Filters · N on" on phones (< 768px).
+- Filter panel: full screen on phones (< 768px), a centred pop-up (≤ 560px wide, ≤ 85% tall) on computers; header ✕ · "Filters" · "Clear all"; sections with "Clear"; tick-box rows with counts (tier rows: dot + description · from ₱X); more than 6 rows → "Show all N"; ticks are a draft until "Show N games" (live: "Show N PS Plus games", "No games match" disabled); ✕ / Escape / outside tap discards.
+- Sticky filter bar under the 64px menu: "Filters · N" button, one removable chip per applied filter (search as `"text" ✕`), "Clear all" at 2+, and "N games" ("N PS Plus games").
 - The 11-day "New" corner badge reads "Just added"; "New" now means only the New Games tier.
 - Pill colours: blue, purple, coral, grey, teal, pink (+ gold for PS Plus, not selectable); automatic by name: "new" → blue, "deluxe" → purple, "special" → coral, else grey.
 - Unchanged: pricing, per-game discounts, the PS Plus page (only its weekly "from" price now comes from a shared helper), homepage layout.
@@ -32,10 +33,11 @@ Spec: `docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md`
 |---|---|
 | `public/js/browse-filter-core.js` (new) | URL ⇄ state, matching site and PS Plus games, chip counts/0-chips, price bands, grid order, `view()` |
 | `lib/tier-style.js` (new) | Pill colour (owner's pick or by name), description cleaning, a game's tier |
-| `public/js/browse.js` (new) | Taps: re-run the core, move cards, update chips, draw PS Plus cards, show/hide filters, "What are tiers?" |
-| `public/css/browse-filters.css` (new) | Chip wrap, 0-chips, bar, tiers panel, 6-per-row cap |
+| `public/js/browse.js` (new) | Filter panel (draft, live counts, apply), filter bar chips, moving cards, PS Plus cards |
+| `public/css/browse-filters.css` (new) | Sticky filter bar, floating panel (phone full screen / computer pop-up), 6-per-row cap |
+| `views/partials/browse-filter-option.ejs` (new) | One tick-box row of the panel |
 | `server.js` | `gameTier` locals; category pill colour/description save; price band setting; new `GET /browse` with `browseGameFacts` / `browsePsplusData` / `psplusFromWeekly` |
-| `views/browse.ejs` | Rewritten page: chip groups, bar, sections, grid, PS Plus section, embedded data |
+| `views/browse.ejs` | Rewritten page: filter bar, filter panel (form), sections, grid, PS Plus section, embedded data |
 | `views/partials/game-card.ejs`, `views/game-detail.ejs`, `public/css/style.css` | Tier pill, "Just added", pill colours |
 | `views/partials/admin/games/categories.ejs`, `views/partials/admin/settings.ejs`, `views/admin.ejs` | Pill colour + description fields; Browse price filter card; toasts |
 
@@ -47,7 +49,7 @@ Spec: `docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md`
 - Create: `public/js/browse-filter-core.js`, `scripts/test-browse-filter-core.js`
 
 **Interfaces:**
-- Produces (browser global `BrowseFilterCore`, Node `module.exports`): `PSPLUS_LIMIT` (24), `DEFAULT_BANDS` ({low:200, high:300}), `genreParts(genre) → string[]`, `genreList(facts) → string[]` (A–Z), `emptyState()`, `parseState(query) → state`, `cleanState(state, ctx) → state` (drops tier ids and genres with no chip), `toQuery(state) → string`, `href(state) → '/browse…'`, `selectedCount(state)`, `anyActive(state)`, `toggle(state, group, value) → state` (groups `show|tier|console|genre|price`; show values `avail|new|buy|bundle`; tier value `'psplus'` or a category id string), `isOn`, `parseBands(low, high) → {low, high} | null`, `normalizeBands(b)`, `bandOf(price, bands) → 'low'|'mid'|'high'|null`, `bandLabel(band, bands)`, `siteOn(state)`, `psplusOn(state)`, `matchSite`, `matchPsplus`, `results(facts, psItems, state, ctx) → { site, psplus }`, `chipGroups(...)`, `sortForGrid(facts, tiers)`, `view(facts, psItems, state, ctx) → { active, siteOn, psplusOn, site, grid: [ids], psplus, groups: [{ key, label, chips: [{ group, value, label, count, on, zero, href }] }], selected }`.
+- Produces (browser global `BrowseFilterCore`, Node `module.exports`): `PSPLUS_LIMIT` (24), `DEFAULT_BANDS` ({low:200, high:300}), `genreParts(genre) → string[]`, `genreList(facts) → string[]` (A–Z), `emptyState()`, `parseState(query) → state`, `clearGroup(state, group)`, `formField(group, value) → { name, value }`, `appliedChips(state, ctx) → [{ group, value, label, href }]` (search: group `'search'`), `countText(view)`, `applyLabel(view) → { text, disabled }`, `cleanState(state, ctx) → state` (drops tier ids and genres with no chip), `toQuery(state) → string`, `href(state) → '/browse…'`, `selectedCount(state)`, `anyActive(state)`, `toggle(state, group, value) → state` (groups `show|tier|console|genre|price`; show values `avail|new|buy|bundle`; tier value `'psplus'` or a category id string), `isOn`, `parseBands(low, high) → {low, high} | null`, `normalizeBands(b)`, `bandOf(price, bands) → 'low'|'mid'|'high'|null`, `bandLabel(band, bands)`, `siteOn(state)`, `psplusOn(state)`, `matchSite`, `matchPsplus`, `results(facts, psItems, state, ctx) → { site, psplus }`, `chipGroups(...)`, `sortForGrid(facts, tiers)`, `view(facts, psItems, state, ctx) → { active, siteOn, psplusOn, site, grid: [ids], psplus, groups: [{ key, label, chips: [{ group, value, label, count, on, zero, href }] }], selected }`.
 - State shape: `{ search, avail, isNew, buy, bundle, tiers: ['2'], psplus, consoles: ['ps4'], genres: ['Action'], prices: ['low'] }`.
 - Site fact shape: `{ id, title, text, tier ('2'|null), ps4, ps5, genres, from, avail, availPs4, isNew, buy, bundle, home ('bundles'|'cat-2'|'other') }`. PS Plus item: `{ k, n, c, ps4, ps5, g, j }`. ctx: `{ bands, tiers: [{ id, name }], genres, psplusFrom, psplusAvail, psplusAvailPs4 }`.
 
@@ -59,7 +61,8 @@ Create `scripts/test-browse-filter-core.js`:
 // Run: node scripts/test-browse-filter-core.js
 //
 // The Browse filter rules (public/js/browse-filter-core.js): URLs, matching,
-// counts, 0-chips, price bands, the one-grid order and the PS Plus section.
+// counts, 0-options, price bands, the one-grid order, the PS Plus section, and
+// what the filter bar and filter panel show.
 const assert = require('assert');
 const C = require('../public/js/browse-filter-core');
 
@@ -184,6 +187,42 @@ ok('chips only exist for things the library has', () => {
   assert.deepStrictEqual(v.groups.find(x => x.key === 'genre').chips.map(c => c.value), ['Action', 'Fighting', 'Horror', 'Platformer', 'RPG']);
 });
 
+console.log('\nfilter bar and panel');
+ok('the bar lists each applied filter with a link that removes just that one', () => {
+  const s = st({ tier: '2', psplus: '1', console: 'ps4', genre: 'Action', price: 'low', new: '1', search: 'ring' });
+  const chips = C.appliedChips(s, ctx);
+  assert.deepStrictEqual(chips.map(c => c.label), ['Just added', 'Deluxe', 'PS Plus Deluxe', 'PS4', 'Action', 'Under ₱200', '"ring"']);
+  assert.strictEqual(chips[1].href, '/browse?search=ring&new=1&psplus=1&console=ps4&genre=Action&price=low', 'drops Deluxe only');
+  assert.strictEqual(chips[6].href, '/browse?new=1&tier=2&psplus=1&console=ps4&genre=Action&price=low', 'drops the search');
+  assert.deepStrictEqual(C.appliedChips(C.emptyState(), ctx), []);
+});
+ok('a section\'s Clear empties that section only', () => {
+  const s = st({ avail: '1', buy: '1', tier: '2', psplus: '1', console: 'ps4', genre: 'Action', price: 'low' });
+  const t = C.clearGroup(s, 'tier');
+  assert.deepStrictEqual([t.tiers, t.psplus, t.consoles, t.avail], [[], false, ['ps4'], true]);
+  const sh = C.clearGroup(s, 'show');
+  assert.deepStrictEqual([sh.avail, sh.buy, sh.genres], [false, false, ['Action']]);
+});
+ok('tick boxes are plain form fields the server already reads', () => {
+  assert.deepStrictEqual(C.formField('show', 'new'), { name: 'new', value: '1' });
+  assert.deepStrictEqual(C.formField('tier', 'psplus'), { name: 'psplus', value: '1' });
+  assert.deepStrictEqual(C.formField('tier', 2), { name: 'tier', value: '2' });
+  assert.deepStrictEqual(C.formField('genre', 'Role Playing Games'), { name: 'genre', value: 'Role Playing Games' });
+  const s = st({ tier: ['2', '3'], console: ['ps4', 'ps5'], new: '1', psplus: '1' });
+  assert.deepStrictEqual([s.tiers, s.consoles, s.isNew, s.psplus], [['2', '3'], ['ps4', 'ps5'], true, true], 'tier=2&tier=3 reads like tier=2,3');
+});
+ok('the big button and the bar count say what will show', () => {
+  const v = s => C.view(games, psplus, st(s), ctx);
+  assert.deepStrictEqual(C.applyLabel(v({ tier: '2' })), { text: 'Show 2 games', disabled: false });
+  assert.deepStrictEqual(C.applyLabel(v({ tier: '3' })), { text: 'Show 1 game', disabled: false });
+  assert.deepStrictEqual(C.applyLabel(v({ psplus: '1' })), { text: 'Show 3 PS Plus games', disabled: false });
+  assert.deepStrictEqual(C.applyLabel(v({ search: 'returnal' })), { text: 'Show 1 PS Plus game', disabled: false }, 'only PS Plus has it');
+  assert.deepStrictEqual(C.applyLabel(v({ genre: 'Horror', console: 'ps4' })), { text: 'No games match', disabled: true });
+  assert.deepStrictEqual(C.applyLabel(v({})), { text: 'Show 6 games', disabled: false });
+  assert.strictEqual(C.countText(v({ tier: '2' })), '2 games');
+  assert.strictEqual(C.countText(v({ psplus: '1' })), '3 PS Plus games');
+});
+
 console.log('\nlayout');
 ok('no filter: everything, no grid; filter: one grid by tier order, then A–Z', () => {
   const none = C.view(games, psplus, C.emptyState(), ctx);
@@ -239,8 +278,8 @@ Create `public/js/browse-filter-core.js`:
 // games and PS Plus Deluxe games against the selected chips, counting what each
 // chip would give, and the order of the one-grid results. No DOM here — the
 // server uses it for the first render (server.js GET /browse) and
-// public/js/browse.js uses the same rules when a chip is tapped, so the two can
-// never disagree.
+// public/js/browse.js uses the same rules in the filter panel and the filter
+// bar, so the two can never disagree.
 //
 // A site game's facts (built by server.js browseGameFacts):
 //   { id, title, text (lowercased search text), tier ('3' | null), ps4, ps5,
@@ -375,7 +414,60 @@ Create `public/js/browse-filter-core.js`:
     else if (group === 'console') flip(n.consoles, value);
     else if (group === 'genre') flip(n.genres, value);
     else if (group === 'price') flip(n.prices, value);
+    else if (group === 'search') n.search = '';
     return n;
+  }
+
+  // A section's "Clear" in the filter panel.
+  function clearGroup(s, group) {
+    var n = clone(s);
+    if (group === 'show') { n.avail = false; n.isNew = false; n.buy = false; n.bundle = false; }
+    else if (group === 'tier') { n.tiers = []; n.psplus = false; }
+    else if (group === 'console') n.consoles = [];
+    else if (group === 'genre') n.genres = [];
+    else if (group === 'price') n.prices = [];
+    return n;
+  }
+
+  // The panel's tick box for an option, as a GET form field (the panel still
+  // works as a plain form without the page script).
+  function formField(group, value) {
+    value = String(value);
+    if (group === 'show') return { name: value, value: '1' };
+    if (group === 'tier' && value === 'psplus') return { name: 'psplus', value: '1' };
+    return { name: group, value: value };
+  }
+
+  // The filter bar's removable chips: one per applied option, then the search.
+  function appliedChips(s, ctx) {
+    var out = [];
+    var add = function (group, value, label) { out.push({ group: group, value: String(value), label: label, href: href(toggle(s, group, value)) }); };
+    SHOW.forEach(function (d) { if (s[SHOW_KEY[d[0]]]) add('show', d[0], d[1]); });
+    s.tiers.forEach(function (id) {
+      var t = (ctx.tiers || []).filter(function (x) { return String(x.id) === id; })[0];
+      add('tier', id, t ? t.name : id);
+    });
+    if (s.psplus) add('tier', 'psplus', 'PS Plus Deluxe');
+    CONSOLES.forEach(function (d) { if (s.consoles.indexOf(d[0]) >= 0) add('console', d[0], d[1]); });
+    s.genres.forEach(function (g) { add('genre', g, g); });
+    PRICES.forEach(function (p) { if (s.prices.indexOf(p) >= 0) add('price', p, bandLabel(p, ctx.bands)); });
+    if (s.search) add('search', '', '"' + s.search + '"');
+    return out;
+  }
+
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // The filter bar's count: site games, or PS Plus games when only those show.
+  function countText(v) {
+    return v.siteOn ? plural(v.site.length, 'game') : plural(v.psplus.length, 'PS Plus game');
+  }
+
+  // The panel's big button for a draft's view.
+  function applyLabel(v) {
+    if (v.siteOn && v.site.length) return { text: 'Show ' + plural(v.site.length, 'game'), disabled: false };
+    if (v.psplusOn && v.psplus.length) return { text: 'Show ' + plural(v.psplus.length, 'PS Plus game'), disabled: false };
+    if (!v.active) return { text: 'Show all games', disabled: false };
+    return { text: 'No games match', disabled: true };
   }
 
   function isOn(s, group, value) {
@@ -526,6 +618,7 @@ Create `public/js/browse-filter-core.js`:
     PSPLUS_LIMIT: PSPLUS_LIMIT, DEFAULT_BANDS: DEFAULT_BANDS,
     genreParts: genreParts, genreList: genreList, emptyState: emptyState, parseState: parseState, cleanState: cleanState,
     toQuery: toQuery, href: href, selectedCount: selectedCount, anyActive: anyActive, toggle: toggle, isOn: isOn,
+    clearGroup: clearGroup, formField: formField, appliedChips: appliedChips, countText: countText, applyLabel: applyLabel,
     parseBands: parseBands, normalizeBands: normalizeBands, bandOf: bandOf, bandLabel: bandLabel,
     siteOn: siteOn, psplusOn: psplusOn, matchSite: matchSite, matchPsplus: matchPsplus, results: results,
     chipGroups: chipGroups, sortForGrid: sortForGrid, view: view
@@ -537,7 +630,7 @@ Create `public/js/browse-filter-core.js`:
 
 - [ ] **Step 4: Run it and watch it pass**
 
-Run: `node scripts/test-browse-filter-core.js` → `16 assertions passed`.
+Run: `node scripts/test-browse-filter-core.js` → `20 assertions passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -1226,12 +1319,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 4: The Browse page
 
 **Files:**
-- Create: `public/js/browse.js`, `public/css/browse-filters.css`, `scripts/test-browse-page.js`
+- Create: `public/js/browse.js`, `public/css/browse-filters.css`, `views/partials/browse-filter-option.ejs`, `scripts/test-browse-page.js`
 - Modify (via the edit script): `server.js` (replaces `applyBrowseFilters` and `GET /browse`; `/ps-plus` uses the shared weekly price), `views/browse.ejs` (rewritten)
 
 **Interfaces:**
 - Consumes: Task 1's whole module (`browseCore`); Task 2's `tierStyle` and card pill; Task 3's `browseCore` require and `getBrowseBands()`. Existing server helpers: `computeAvailability`, `resolveBundleInfo`, `getPriceCategory`, `getPriceCategories`, `gameDiscount.applyPct/discountPct`, `isAddedThisMonth`, `psplusCatalogView.buildPublicCatalog`, `psplusCatalogStore.all()`, `psplusMonthlyCoversStore.all()`, `getPsplus()`, `getPsplusPrices()`, `getPsplusSlots()`, `gameSlug`.
-- Produces: `browseGameFacts(game, accountSummaryMap, promo)`, `psplusFromWeekly()`, `browsePsplusData(accountSummaryMap) → { items, from, avail, availPs4 }`; page element ids `browseFilters`, `bfGroups`, `bfTiers`, `bfTiersLink`, `bfTiersClose`, `resultsCount`, `bfClear`, `bfToggle`, `bfUpcoming`, `bfSections`, `bfResults`, `bfEmpty`, `bfGrid`, `bfPsplus`, `bfPsCount`, `bfPsGrid`, `bfPsAll`, `bfPsMonthly`, `browseData` (JSON); section ids `cat-section-<id>`, `cat-section-bundles`, `cat-section-uncategorized` (homepage tier cards link to these).
+- Produces: `browseGameFacts(game, accountSummaryMap, promo)`, `psplusFromWeekly()`, `browsePsplusData(accountSummaryMap) → { items, from, avail, availPs4 }`; page element ids `bfBar`, `bfOpen`, `bfOpenN`, `bfChips`, `resultsCount`, `bfPanel`, `bfBackdrop`, `bfForm`, `bfClose`, `bfClearAll`, `bfGo`, `bfUpcoming`, `bfSections`, `bfResults`, `bfEmpty`, `bfGrid`, `bfPsplus`, `bfPsCount`, `bfPsGrid`, `bfPsAll`, `bfPsMonthly`, `browseData` (JSON); section ids `cat-section-<id>`, `cat-section-bundles`, `cat-section-uncategorized` (homepage tier cards link to these).
 
 - [ ] **Step 1: Write the test**
 
@@ -1241,10 +1334,12 @@ Create `scripts/test-browse-page.js` (port 4616; stubs the PS Plus list):
 // Run: node scripts/test-browse-page.js
 //
 // The Browse page as the server renders it for a URL: tier sections with no
-// filter, one grid in tier order while filtering, chip counts and 0-chips, old
-// links, the price bands from Settings, "PS Plus Deluxe" alone, the facts and
-// PS Plus games handed to the page script, and "What are tiers?". The tap-time
-// rules are the same module (scripts/test-browse-filter-core.js). Boots a
+// filter, one grid in tier order while filtering, the sticky filter bar's
+// removable chips and count, the filter panel's sections, rows, counts and
+// 0-options (a plain GET form), old links, the price bands from Settings, "PS
+// Plus Deluxe" alone, and the facts and PS Plus games handed to the page script.
+// The draft/apply rules are the same module (scripts/test-browse-filter-core.js).
+// Boots a
 // throwaway instance (temp DATA_DIR, blank MONGODB_URI, in-memory sessions, a
 // stubbed PS Plus list); the project's games.json and the database are never
 // touched.
@@ -1307,12 +1402,15 @@ function between(html, startId, endId) {
 }
 const opening = (html, id) => { const i = html.indexOf('id="' + id + '"'); return html.slice(html.lastIndexOf('<', i), html.indexOf('>', i) + 1); };
 const cardIds = html => [...html.matchAll(/class="bf-item" data-id="(\d+)"/g)].map(m => Number(m[1]));
-function chipHtml(html, group, value) {
-  const m = new RegExp('<a class="chip bf-chip[^"]*" data-group="' + group + '" data-value="' + value + '"[^>]*>[\\s\\S]*?</a>').exec(html);
-  assert.ok(m, 'chip ' + group + '/' + value);
+// The filter panel's row for an option, and its count.
+function optHtml(html, group, value) {
+  const m = new RegExp('<label class="bf-opt[^"]*" data-group="' + group + '" data-value="' + value + '">[\\s\\S]*?</label>').exec(html);
+  assert.ok(m, 'option ' + group + '/' + value);
   return m[0];
 }
-const chipCount = (html, group, value) => Number(/<span class="bf-n">(\d+)<\/span>/.exec(chipHtml(html, group, value))[1]);
+const optCount = (html, group, value) => Number(/<span class="bf-n">(\d+)<\/span>/.exec(optHtml(html, group, value))[1]);
+const barChips = html => [...between(html, 'bfChips', 'resultsCount').matchAll(/<a class="bf-chip-x" data-group="(\w+)" data-value="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(m => ({ group: m[1], value: m[2], href: m[3], label: m[4] }));
+const countOf = html => /<span class="results-count" id="resultsCount">([^<]*)<\/span>/.exec(html)[1];
 function browseData(html) {
   const m = /<script type="application\/json" id="browseData">([\s\S]*?)<\/script>/.exec(html);
   assert.ok(m, 'embedded data');
@@ -1353,29 +1451,37 @@ async function main() {
     assert.deepStrictEqual(cardIds(sec), [1, 2, 3, 4, 5]);
     assert.ok(sec.includes('<p class="cat-desc">Big recent AAA games</p>'));
     assert.ok(!opening(all, 'bfSections').includes('hidden') && opening(all, 'bfResults').includes('hidden'));
-    assert.ok(all.includes('5 games found'));
-    assert.ok(opening(all, 'bfClear').includes('hidden'));
   });
-  await okAsync('every chip the library supports, with no Bundles chip when there are none', async () => {
-    const show = [...between(all, 'bfGroups', 'resultsCount').matchAll(/data-group="show" data-value="(\w+)"/g)].map(m => m[1]);
+  await okAsync('the filter bar: a Filters button, no chips yet, and the count', async () => {
+    assert.ok(opening(all, 'bfOpen').includes('href="#bfPanel"') && !opening(all, 'bfOpen').includes('bf-has'));
+    assert.deepStrictEqual(barChips(all), []);
+    assert.strictEqual(countOf(all), '5 games');
+    assert.ok(all.indexOf('id="bfBar"') < all.indexOf('id="bfSections"'), 'above the games');
+  });
+  await okAsync('the panel: a form with every option the library supports, no Bundles without bundles', async () => {
+    const panel = between(all, 'bfPanel', 'bfUpcoming');
+    assert.ok(opening(all, 'bfPanel').includes('role="dialog"') && opening(all, 'bfPanel').includes('aria-modal="true"'));
+    assert.ok(opening(all, 'bfForm').includes('method="get" action="/browse"'));
+    const show = [...panel.matchAll(/data-group="show" data-value="(\w+)"/g)].map(m => m[1]);
     assert.deepStrictEqual(show, ['avail', 'new', 'buy']);
-    ['1', '2', '3', 'psplus'].forEach(v => chipHtml(all, 'tier', v));
-    assert.ok(chipHtml(all, 'tier', '3').includes('<span class="tier-dot tier-pink"></span>Special'));
-    assert.ok(chipHtml(all, 'tier', 'psplus').includes('tier-gold'));
-    ['Action', 'Fighting', 'Horror', 'Platformer', 'RPG'].forEach(v => chipHtml(all, 'genre', v));
-    assert.strictEqual(chipCount(all, 'genre', 'Action'), 2, '"Action, RPG" counts as Action');
+    assert.deepStrictEqual([...panel.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['show', 'tier', 'console', 'genre', 'price']);
+    assert.ok(optHtml(all, 'show', 'new').includes('<input type="checkbox" name="new" value="1">'));
+    assert.ok(optHtml(all, 'tier', 'psplus').includes('name="psplus" value="1"'));
+    assert.ok(optHtml(all, 'genre', 'RPG').includes('name="genre" value="RPG"'));
+    assert.strictEqual(optCount(all, 'genre', 'Action'), 2, '"Action, RPG" counts as Action');
+    assert.ok(between(all, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 5 games</button>'));
   });
-  await okAsync('price chips use the cut-offs from Settings and the card price', async () => {
-    assert.ok(chipHtml(all, 'price', 'low').includes('Under ₱180 · <span class="bf-n">1</span>'));
-    assert.ok(chipHtml(all, 'price', 'mid').includes('₱180–299 · <span class="bf-n">3</span>'));
-    assert.ok(chipHtml(all, 'price', 'high').includes('₱300+ · <span class="bf-n">1</span>'));
+  await okAsync('tier rows show the colour, description and starting price; PS Plus its weekly price', async () => {
+    const deluxe = optHtml(all, 'tier', '2');
+    assert.ok(deluxe.includes('<span class="tier-dot tier-purple" aria-hidden="true"></span>'));
+    assert.ok(deluxe.includes('Deluxe<span class="bf-opt-sub">Big recent AAA games · from ₱249</span>'));
+    assert.ok(optHtml(all, 'tier', '3').includes('tier-pink') && optHtml(all, 'tier', '3').includes('<span class="bf-opt-sub">from ₱199</span>'));
+    assert.ok(optHtml(all, 'tier', 'psplus').includes('<span class="bf-opt-sub">Hundreds of games, one account · from ₱159/week</span>'));
   });
-  await okAsync('"What are tiers?" lists each tier with its pill, description and starting price, then PS Plus', async () => {
-    const t = between(all, 'bfTiers', 'resultsCount');
-    assert.ok(t.includes('<span class="tier-pill tier-blue">New Games</span>'));
-    assert.ok(t.includes('<span class="tier-pill tier-purple">Deluxe</span><span class="bf-tier-desc">Big recent AAA games</span><span class="bf-tier-from">from ₱249</span>'));
-    assert.ok(t.includes('<span class="tier-pill tier-gold">PS Plus Deluxe</span>') && t.includes('from ₱159/week'));
-    assert.ok(opening(all, 'bfTiers').includes('hidden'));
+  await okAsync('price options use the cut-offs from Settings and the card price', async () => {
+    assert.ok(optHtml(all, 'price', 'low').includes('Under ₱180<'));
+    assert.deepStrictEqual(['low', 'mid', 'high'].map(b => optCount(all, 'price', b)), [1, 3, 1]);
+    assert.ok(optHtml(all, 'price', 'mid').includes('₱180–299<'));
   });
 
   console.log('\nfiltering');
@@ -1384,25 +1490,44 @@ async function main() {
     assert.deepStrictEqual(cardIds(between(f, 'bfGrid', 'bfPsplus')), [3, 4]);
     assert.ok(opening(f, 'bfSections').includes('hidden') && !opening(f, 'bfResults').includes('hidden'));
     assert.ok(opening(f, 'bfUpcoming').includes('hidden') && opening(f, 'bfPsMonthly').includes('hidden'));
-    assert.ok(f.includes('2 games found') && !opening(f, 'bfClear').includes('hidden'));
     assert.deepStrictEqual(cardIds(f).sort(), [1, 2, 3, 4, 5], 'every card is still on the page once');
   });
-  await okAsync('chips: on, counts if tapped, and dimmed 0-chips with no link', async () => {
-    assert.ok(chipHtml(f, 'tier', '2').includes('chip-active') && chipHtml(f, 'console', 'ps4').includes('aria-pressed="true"'));
-    assert.strictEqual(chipCount(f, 'genre', 'Horror'), 1);
-    const plat = chipHtml(f, 'genre', 'Platformer');
-    assert.ok(plat.includes('chip-zero') && plat.includes('aria-disabled="true"') && !plat.includes('href='));
-    assert.ok(chipHtml(f, 'genre', 'Horror').includes('href="/browse?tier=2,3&amp;console=ps4&amp;genre=Horror"'));
-    assert.strictEqual(chipCount(f, 'console', 'ps5'), 3, 'PS4 or PS5 in Deluxe/Special');
+  await okAsync('the bar: "Filters · 3", a chip per filter that removes just that one, Clear all, the count', async () => {
+    assert.ok(opening(f, 'bfOpen').includes('bf-has') && between(f, 'bfOpenN', 'bfChips').startsWith('id="bfOpenN"> · 3</span>'));
+    assert.deepStrictEqual(barChips(f), [
+      { group: 'tier', value: '2', href: '/browse?tier=3&amp;console=ps4', label: 'Deluxe ✕' },
+      { group: 'tier', value: '3', href: '/browse?tier=2&amp;console=ps4', label: 'Special ✕' },
+      { group: 'console', value: 'ps4', href: '/browse?tier=2,3', label: 'PS4 ✕' }
+    ]);
+    assert.ok(between(f, 'bfChips', 'resultsCount').includes('<a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a>'));
+    assert.strictEqual(countOf(f), '2 games');
   });
-  await okAsync('old links keep working', async () => {
+  await okAsync('the panel starts from the applied filters: ticked, counts if ticked, dimmed 0-options', async () => {
+    assert.ok(optHtml(f, 'tier', '2').includes(' checked') && optHtml(f, 'console', 'ps4').includes(' checked'));
+    assert.ok(opening(f, 'bfPanel').includes('role="dialog"'));
+    assert.strictEqual(optCount(f, 'genre', 'Horror'), 1);
+    const plat = optHtml(f, 'genre', 'Platformer');
+    assert.ok(plat.includes('bf-opt-zero') && plat.includes(' disabled>'));
+    assert.strictEqual(optCount(f, 'console', 'ps5'), 3, 'PS4 or PS5 in Deluxe/Special');
+    assert.ok(!between(f, 'bfPanel', 'bfUpcoming').includes('data-clear="tier" hidden'), 'Tier has a Clear');
+    assert.ok(between(f, 'bfPanel', 'bfUpcoming').includes('data-clear="genre" hidden'), 'Genre has nothing to clear');
+    assert.ok(between(f, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 2 games</button>'));
+  });
+  await okAsync('old links and the plain form\'s repeated fields keep working', async () => {
     const old = await page('/browse?ps4=1&newOnly=1');
-    assert.ok(chipHtml(old, 'console', 'ps4').includes('chip-active') && chipHtml(old, 'show', 'new').includes('chip-active'));
-    assert.ok(old.includes('0 games found'), 'no PS4 game was just added');
-    const g = await page('/browse?genre=Horror');
-    assert.deepStrictEqual(cardIds(between(g, 'bfGrid', 'bfPsplus')), [4]);
+    assert.ok(optHtml(old, 'console', 'ps4').includes(' checked') && optHtml(old, 'show', 'new').includes(' checked'));
+    assert.strictEqual(countOf(old), '0 games', 'no PS4 game was just added');
+    assert.ok(between(old, 'bfGo', 'bfUpcoming').startsWith('id="bfGo" disabled>No games match</button>'));
+    const form = await page('/browse?tier=2&tier=3&console=ps4');
+    assert.deepStrictEqual(cardIds(between(form, 'bfGrid', 'bfPsplus')), [3, 4]);
     const gone = await page('/browse?tier=99&genre=Nope');
-    assert.ok(!opening(gone, 'bfSections').includes('hidden') && gone.includes('5 games found'), 'a deleted tier in an old link is dropped');
+    assert.ok(!opening(gone, 'bfSections').includes('hidden') && countOf(gone) === '5 games', 'a deleted tier in an old link is dropped');
+  });
+  await okAsync('a search shows as a removable chip and rides along in the form', async () => {
+    const p = await page('/browse?search=elden&genre=Action');
+    assert.deepStrictEqual(barChips(p).map(c => c.label), ['Action ✕', '&#34;elden&#34; ✕'], 'shown as "elden" ✕');
+    assert.strictEqual(barChips(p)[1].href, '/browse?genre=Action');
+    assert.ok(between(p, 'bfPanel', 'bfUpcoming').includes('<input type="hidden" name="search" value="elden">'));
   });
 
   console.log('\nPS Plus Deluxe');
@@ -1416,9 +1541,10 @@ async function main() {
   });
   await okAsync('"PS Plus Deluxe" alone shows no site games and counts PS Plus games', async () => {
     const p = await page('/browse?psplus=1');
-    assert.ok(p.includes('2 PS Plus games'));
+    assert.strictEqual(countOf(p), '2 PS Plus games');
     assert.ok(opening(p, 'bfResults').includes('hidden'));
-    assert.strictEqual(chipCount(p, 'genre', 'Action'), 1, 'Days Gone');
+    assert.strictEqual(optCount(p, 'genre', 'Action'), 1, 'Days Gone');
+    assert.ok(between(p, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 2 PS Plus games</button>'));
   });
   await okAsync('a search only PS Plus has says so instead of "No games found"', async () => {
     const p = await page('/browse?search=returnal');
@@ -1462,63 +1588,38 @@ Run: `node scripts/test-browse-page.js` → FAIL `bfSections found` (old page).
 Create `public/js/browse.js`:
 
 ````js
-// Browse filters in the page. A tap re-runs the shared rules
-// (public/js/browse-filter-core.js) on the facts the server embedded, moves
-// the existing game cards between their tier sections and the one results
-// grid, updates the chips, draws the "Also in PS Plus Deluxe" section and keeps
-// the address bar in step — no reload. See views/browse.ejs.
+// Browse filters in the page (views/browse.ejs), using the shared rules in
+// public/js/browse-filter-core.js on the facts the server embedded:
+//  - the filter panel keeps a draft: ticking only updates the panel's counts and
+//    its "Show N games" button; that button applies the draft, closing it any
+//    other way throws the draft away;
+//  - the sticky filter bar's chips drop one filter at once;
+//  - applying moves the existing game cards between their tier sections and the
+//    one results grid, draws "Also in PS Plus Deluxe" and keeps the URL in step —
+//    no reload.
 (function () {
   var C = window.BrowseFilterCore;
   var dataEl = document.getElementById('browseData');
   if (!C || !dataEl) return;
   var data = JSON.parse(dataEl.textContent);
-  var games = data.games, psplus = data.psplus, ctx = data.ctx, state = data.state;
-  var showAllPs = false;
+  var games = data.games, psplus = data.psplus, ctx = data.ctx;
+  var state = data.state, draft = null, showAllPs = false;
   var $ = function (id) { return document.getElementById(id); };
-  var each = function (sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); };
-  var filters = $('browseFilters'), toggleBtn = $('bfToggle');
+  var each = function (root, sel, fn) { Array.prototype.forEach.call(root.querySelectorAll(sel), fn); };
+  var copy = function (s) { return JSON.parse(JSON.stringify(s)); };
+  var panel = $('bfPanel'), form = $('bfForm');
 
   var cards = {}, homes = {};
-  each('.bf-item[data-id]', function (el) { cards[el.getAttribute('data-id')] = el; });
-  each('[data-home]', function (el) { homes[el.getAttribute('data-home')] = el; });
+  each(document, '.bf-item[data-id]', function (el) { cards[el.getAttribute('data-id')] = el; });
+  each(document, '[data-home]', function (el) { homes[el.getAttribute('data-home')] = el; });
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
-  // ── Show / hide filters: open on computers, a button on phones ───────────
-  function isPhone() { return window.matchMedia('(max-width: 767px)').matches; }
-  function filtersOpen() { return isPhone() ? filters.classList.contains('bf-shown') : !filters.classList.contains('bf-hidden'); }
-  function setToggleLabel() {
-    var n = C.selectedCount(state);
-    toggleBtn.textContent = filtersOpen() ? 'Hide filters' : 'Filters' + (n ? ' · ' + n + ' on' : '');
-    toggleBtn.setAttribute('aria-expanded', filtersOpen() ? 'true' : 'false');
-  }
-  toggleBtn.addEventListener('click', function () {
-    filters.classList.toggle(isPhone() ? 'bf-shown' : 'bf-hidden');
-    setToggleLabel();
-  });
-
-  // ── Chips ─────────────────────────────────────────────────────────────────
-  function updateChips(v) {
-    var byKey = {};
-    v.groups.forEach(function (g) { g.chips.forEach(function (c) { byKey[c.group + '|' + c.value] = c; }); });
-    each('.bf-chip', function (el) {
-      var c = byKey[el.getAttribute('data-group') + '|' + el.getAttribute('data-value')];
-      if (!c) return;
-      el.classList.toggle('chip-active', c.on);
-      el.classList.toggle('chip-zero', c.zero);
-      el.setAttribute('aria-pressed', c.on ? 'true' : 'false');
-      if (c.href) { el.setAttribute('href', c.href); el.removeAttribute('aria-disabled'); }
-      else { el.removeAttribute('href'); el.setAttribute('aria-disabled', 'true'); }
-      el.querySelector('.bf-n').textContent = c.count;
-    });
-  }
-
-  // ── Also in PS Plus Deluxe ────────────────────────────────────────────────
+  // ── The page for the applied filters ──────────────────────────────────────
   function psCard(p) {
     var cover = p.c
       ? '<img src="' + esc(p.c) + '" alt="' + esc(p.n) + '" class="gc2-cover" loading="lazy" decoding="async">'
@@ -1533,12 +1634,20 @@ Create `public/js/browse.js`:
     if (!v.psplusOn) { $('bfPsGrid').innerHTML = ''; return; }
     var shown = showAllPs ? v.psplus : v.psplus.slice(0, C.PSPLUS_LIMIT);
     $('bfPsGrid').innerHTML = shown.map(psCard).join('');
-    $('bfPsCount').textContent = plural(v.psplus.length, 'game');
+    $('bfPsCount').textContent = v.psplus.length + ' game' + (v.psplus.length === 1 ? '' : 's');
     $('bfPsAll').hidden = shown.length >= v.psplus.length;
     $('bfPsAll').textContent = 'Show all ' + v.psplus.length;
   }
-
-  // ── Everything for the current state ─────────────────────────────────────
+  function renderBar(v) {
+    var chips = C.appliedChips(state, ctx);
+    $('bfChips').innerHTML = chips.map(function (c) {
+      return '<a class="bf-chip-x" data-group="' + esc(c.group) + '" data-value="' + esc(c.value) + '" href="' + esc(c.href) +
+        '" aria-label="Remove ' + esc(c.label) + '">' + esc(c.label) + ' ✕</a>';
+    }).join('') + (chips.length >= 2 ? '<a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a>' : '');
+    $('bfOpenN').textContent = v.selected ? ' · ' + v.selected : '';
+    $('bfOpen').classList.toggle('bf-has', v.selected > 0);
+    $('resultsCount').textContent = C.countText(v);
+  }
   function render() {
     var v = C.view(games, psplus, state, ctx);
     var inGrid = {};
@@ -1549,13 +1658,9 @@ Create `public/js/browse.js`:
     $('bfResults').hidden = !(v.active && v.siteOn);
     $('bfEmpty').hidden = !(v.active && v.siteOn && v.site.length === 0);
     $('bfEmpty').textContent = v.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.';
-    $('resultsCount').textContent = v.siteOn ? plural(v.site.length, 'game') + ' found' : plural(v.psplus.length, 'PS Plus game');
-    $('bfClear').hidden = !v.active;
-    updateChips(v);
+    renderBar(v);
     renderPsplus(v);
-    setToggleLabel();
   }
-
   function go(next) {
     state = next;
     showAllPs = false;
@@ -1564,26 +1669,89 @@ Create `public/js/browse.js`:
     render();
   }
 
-  filters.addEventListener('click', function (e) {
-    var chip = e.target.closest('.bf-chip');
-    if (chip) {
-      e.preventDefault();
-      if (chip.getAttribute('aria-disabled') !== 'true') go(C.toggle(state, chip.getAttribute('data-group'), chip.getAttribute('data-value')));
-      return;
-    }
-    if (e.target.closest('#bfClear')) { e.preventDefault(); go(C.emptyState()); }
+  // ── The filter panel (a draft until "Show N games") ───────────────────────
+  function renderPanel() {
+    var v = C.view(games, psplus, draft, ctx);
+    var byKey = {};
+    v.groups.forEach(function (g) { g.chips.forEach(function (c) { byKey[c.group + '|' + c.value] = c; }); });
+    each(panel, '.bf-opt', function (row) {
+      var c = byKey[row.getAttribute('data-group') + '|' + row.getAttribute('data-value')];
+      if (!c) return;
+      var box = row.querySelector('input');
+      box.checked = c.on;
+      box.disabled = c.zero;
+      row.classList.toggle('bf-opt-zero', c.zero);
+      row.querySelector('.bf-n').textContent = c.count;
+    });
+    each(panel, '.bf-sec', function (sec) {
+      var g = sec.getAttribute('data-group');
+      sec.querySelector('.bf-sec-clear').hidden = !v.groups.some(function (x) { return x.key === g && x.chips.some(function (c) { return c.on; }); });
+      var more = sec.querySelector('.bf-more');
+      if (more && more.querySelector('input:checked')) more.open = true;
+    });
+    var label = C.applyLabel(v);
+    $('bfGo').textContent = label.text;
+    $('bfGo').disabled = label.disabled;
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closePanel(); }
+  }
+  function openPanel() {
+    draft = copy(state);
+    panel.classList.add('bf-show');
+    document.body.classList.add('bf-lock');
+    renderPanel();
+    document.addEventListener('keydown', onKey);
+    $('bfClose').focus();
+  }
+  function closePanel() {
+    panel.classList.remove('bf-show');
+    document.body.classList.remove('bf-lock');
+    document.removeEventListener('keydown', onKey);
+    draft = null;
+    $('bfOpen').focus();
+  }
+
+  $('bfOpen').addEventListener('click', function (e) { e.preventDefault(); openPanel(); });
+  [$('bfClose'), $('bfBackdrop')].forEach(function (el) {
+    el.addEventListener('click', function (e) { e.preventDefault(); closePanel(); });
+  });
+  form.addEventListener('change', function (e) {
+    var row = e.target.closest('.bf-opt');
+    if (!row || !draft) return;
+    draft = C.toggle(draft, row.getAttribute('data-group'), row.getAttribute('data-value'));
+    renderPanel();
+  });
+  form.addEventListener('click', function (e) {
+    var clear = e.target.closest('[data-clear]');
+    if (clear && draft) { draft = C.clearGroup(draft, clear.getAttribute('data-clear')); renderPanel(); }
+  });
+  $('bfClearAll').addEventListener('click', function () {
+    if (!draft) return;
+    draft = Object.assign(C.emptyState(), { search: draft.search });
+    renderPanel();
+  });
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!draft || $('bfGo').disabled) return;
+    var next = draft;
+    closePanel();
+    go(next);
+  });
+
+  // ── The filter bar's chips ────────────────────────────────────────────────
+  $('bfChips').addEventListener('click', function (e) {
+    var chip = e.target.closest('.bf-chip-x');
+    if (chip) { e.preventDefault(); go(C.toggle(state, chip.getAttribute('data-group'), chip.getAttribute('data-value'))); return; }
+    if (e.target.closest('[data-clear-all]')) { e.preventDefault(); go(C.emptyState()); }
   });
   $('bfPsAll').addEventListener('click', function () { showAllPs = true; render(); });
 
-  // ── "What are tiers?" ─────────────────────────────────────────────────────
-  var tiersLink = $('bfTiersLink'), tiers = $('bfTiers');
-  if (tiersLink && tiers) {
-    var setTiers = function (open) { tiers.hidden = !open; tiersLink.setAttribute('aria-expanded', open ? 'true' : 'false'); };
-    tiersLink.addEventListener('click', function (e) { e.stopPropagation(); setTiers(tiers.hidden); });
-    $('bfTiersClose').addEventListener('click', function () { setTiers(false); });
-    document.addEventListener('click', function (e) { if (!tiers.hidden && !tiers.contains(e.target)) setTiers(false); });
+  // A shared link to #bfPanel (or the no-script fallback) opens it properly.
+  if (location.hash === '#bfPanel') {
+    history.replaceState(null, '', location.pathname + location.search);
+    openPanel();
   }
-
   render();
 })();
 ````
@@ -1591,30 +1759,61 @@ Create `public/js/browse.js`:
 Create `public/css/browse-filters.css`:
 
 ````css
-/* Browse: filter chips, the one results grid and the PS Plus Deluxe section
-   (views/browse.ejs, public/js/browse.js). */
+/* Browse: the sticky filter bar, the floating filter panel, the one results
+   grid and the PS Plus Deluxe section (views/browse.ejs, public/js/browse.js). */
 
-/* Every chip stays visible, so rows wrap instead of scrolling sideways. */
-.bf-row { flex-wrap: wrap; overflow-x: visible; align-items: center; }
-.chip-zero { opacity: 0.4; border-style: dashed; cursor: default; pointer-events: none; }
-.tier-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; }
+/* ── Filter bar: sticks just under the 64px menu (nav is z-index 100) ── */
+.browse-header h1 { margin-bottom: 1rem; }
+.bf-bar { position: sticky; top: 64px; z-index: 90; background: rgba(10,10,10,0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #1a1a1a; }
+.bf-bar-in { max-width: 1400px; margin: 0 auto; padding: 0.6rem 2rem; display: flex; align-items: center; gap: 0.5rem; }
+.bf-open { flex-shrink: 0; display: inline-flex; align-items: center; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; color: #fff; font-size: 0.82rem; font-weight: 700; padding: 0.45rem 0.95rem; text-decoration: none; }
+.bf-open:hover { border-color: #444; }
+.bf-open.bf-has { border-color: var(--ps-blue); color: var(--ps-blue); }
+.bf-chips { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
+.bf-chips::-webkit-scrollbar { display: none; }
+.bf-chip-x { flex-shrink: 0; white-space: nowrap; background: rgba(240,165,0,0.12); color: var(--ps-blue); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700; text-decoration: none; }
+.bf-chip-x:hover { background: rgba(240,165,0,0.2); }
+.bf-clear { flex-shrink: 0; white-space: nowrap; color: #888; font-size: 0.76rem; text-decoration: underline; }
+.bf-bar .results-count { flex-shrink: 0; margin: 0 0 0 auto; white-space: nowrap; }
+@media (max-width: 600px) { .bf-bar-in { padding: 0.5rem 1rem; } }
 
-.bf-tiers-link { background: none; border: none; color: var(--ps-blue); font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0.5rem 0.25rem; white-space: nowrap; }
-.bf-tiers { position: relative; margin-top: 0.6rem; max-width: 560px; background: #111; border: 1px solid #222; border-radius: 12px; padding: 0.75rem 2.5rem 0.75rem 0.9rem; }
-.bf-tiers-close { position: absolute; top: 0.4rem; right: 0.5rem; background: none; border: none; color: #888; font-size: 1rem; cursor: pointer; }
-.bf-tier-row { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0; font-size: 0.82rem; color: #ccc; }
-.bf-tier-desc { flex: 1; }
-.bf-tier-from { color: #888; white-space: nowrap; }
+/* ── Filter panel: hidden until opened (by the page script, or #bfPanel without it) ── */
+.bf-panel { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; }
+.bf-panel.bf-show, .bf-panel:target { display: flex; }
+.bf-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.65); }
+.bf-sheet { position: relative; display: flex; flex-direction: column; width: min(560px, calc(100% - 2rem)); max-height: 85vh; background: #111; border: 1px solid #222; border-radius: 18px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,0.6); }
+@media (max-width: 767px) {
+  .bf-sheet { width: 100%; height: 100%; max-height: none; border: none; border-radius: 0; animation: bf-up 0.2s ease-out; }
+}
+@keyframes bf-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+body.bf-lock { overflow: hidden; }
 
-.bf-bar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem; }
-.bf-bar .results-count { margin: 0; }
-.bf-clear { color: var(--ps-blue); font-size: 0.82rem; font-weight: 600; text-decoration: none; }
-.bf-toggle { margin-left: auto; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; color: #ccc; font-size: 0.8rem; font-weight: 600; padding: 0.45rem 0.9rem; cursor: pointer; }
-.bf-toggle:hover { border-color: #444; color: #fff; }
-/* Phones start with the filters folded behind the button; computers open. */
-@media (max-width: 767px) { .bf:not(.bf-shown) .bf-groups { display: none; } }
-@media (min-width: 768px) { .bf.bf-hidden .bf-groups { display: none; } }
+.bf-head { display: flex; align-items: center; gap: 0.75rem; padding: 1rem 1.25rem; border-bottom: 1px solid #1e1e1e; }
+.bf-head h2 { flex: 1; margin: 0; font-size: 1.05rem; font-weight: 800; }
+.bf-x { color: #ccc; text-decoration: none; font-size: 1.1rem; line-height: 1; padding: 0.25rem; }
+.bf-clear-all { background: #1a1a1a; border: 1px solid #2a2a2a; color: #ccc; border-radius: 20px; padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+.bf-body { flex: 1; overflow-y: auto; padding: 0.25rem 1.25rem 1rem; }
 
+.bf-sec-head { display: flex; justify-content: space-between; align-items: baseline; margin: 1.2rem 0 0.35rem; }
+.bf-sec-head h3 { margin: 0; font-size: 1.15rem; font-weight: 900; }
+.bf-sec-clear { background: none; border: none; color: #888; text-decoration: underline; font-size: 0.78rem; cursor: pointer; }
+.bf-opt { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0; border-bottom: 1px solid #1a1a1a; cursor: pointer; font-size: 0.92rem; color: #e5e5e5; }
+.bf-opt-name { flex: 1; min-width: 0; }
+.bf-opt-sub { display: block; margin-top: 0.1rem; font-size: 0.74rem; color: #777; }
+.bf-opt .bf-n { color: #777; font-size: 0.8rem; }
+.bf-opt input { flex-shrink: 0; width: 20px; height: 20px; margin: 0; accent-color: var(--ps-blue); cursor: pointer; }
+.bf-opt-zero { opacity: 0.4; cursor: default; }
+.bf-opt-zero input { cursor: default; }
+.tier-dot { display: inline-block; flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; }
+.bf-more summary { list-style: none; cursor: pointer; color: var(--ps-blue); font-size: 0.82rem; font-weight: 700; padding: 0.65rem 0; }
+.bf-more summary::-webkit-details-marker { display: none; }
+.bf-more[open] summary { display: none; }
+
+.bf-foot { padding: 0.9rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom)); border-top: 1px solid #1e1e1e; }
+.bf-go { width: 100%; background: var(--ps-blue); color: #000; border: none; border-radius: 999px; padding: 0.95rem; font-size: 1rem; font-weight: 800; cursor: pointer; }
+.bf-go:disabled { background: #2a2a2a; color: #777; cursor: default; }
+
+/* ── Results ── */
 .cat-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
 .cat-count { font-size: 0.78rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.2rem 0.65rem; }
 .cat-desc { margin: -1rem 0 1.25rem; color: var(--text-secondary); font-size: 0.85rem; }
@@ -1627,6 +1826,20 @@ Create `public/css/browse-filters.css`:
 @media (min-width: 601px) {
   .browse-page .games-grid { grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)); }
 }
+````
+
+Create `views/partials/browse-filter-option.ejs`:
+
+````ejs
+<%# One tick-box row in the Browse filter panel (views/browse.ejs): an option's
+    name (tiers: coloured dot and a line with description and starting price),
+    what it would show, and its tick box (a GET form field). %>
+<label class="bf-opt<%= c.zero ? ' bf-opt-zero' : '' %>" data-group="<%= c.group %>" data-value="<%= c.value %>">
+  <% if (tr) { %><span class="tier-dot tier-<%= tr.color %>" aria-hidden="true"></span><% } %>
+  <span class="bf-opt-name"><%= c.label %><% if (tr && tr.sub) { %><span class="bf-opt-sub"><%= tr.sub %></span><% } %></span>
+  <span class="bf-n"><%= c.count %></span>
+  <input type="checkbox" name="<%= ff.name %>" value="<%= ff.value %>"<%= c.on ? ' checked' : '' %><%= c.zero ? ' disabled' : '' %>>
+</label>
 ````
 
 - [ ] **Step 4: Apply the server and template edits**
@@ -1653,43 +1866,59 @@ Create `.superpowers/tmp-edits/browse.ejs` (the new `views/browse.ejs`; the scri
 <%#
   Filters, layout and the PS Plus section follow
   docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md. The server
-  renders the page for the URL (GET /browse); public/js/browse.js then applies
-  taps with the same rules (public/js/browse-filter-core.js), moving these same
-  cards between their tier sections and the one results grid.
+  renders the page for the URL (GET /browse); public/js/browse.js then runs the
+  filter panel and the filter bar with the same rules
+  (public/js/browse-filter-core.js), moving these same cards between their tier
+  sections and the one results grid.
 %>
 <div class="browse-header">
   <h1>Browse Games</h1>
-  <div class="bf" id="browseFilters">
-    <div class="bf-groups chipfilters" id="bfGroups">
-      <% view.groups.forEach(gr => { %>
-      <div class="chipfilters-group">
-        <div class="chipfilters-label"><%= gr.label %></div>
-        <div class="chipfilters-row bf-row">
-          <% gr.chips.forEach(c => { %>
-          <a class="chip bf-chip<%= c.on ? ' chip-active' : '' %><%= c.zero ? ' chip-zero' : '' %>" data-group="<%= c.group %>" data-value="<%= c.value %>"<% if (c.href) { %> href="<%= c.href %>"<% } else { %> aria-disabled="true"<% } %> aria-pressed="<%= c.on ? 'true' : 'false' %>"><% if (gr.key === 'tier') { %><span class="tier-dot tier-<%= c.value === 'psplus' ? 'gold' : (tierColors[c.value] || 'grey') %>"></span><% } %><%= c.label %> · <span class="bf-n"><%= c.count %></span></a>
-          <% }) %>
-          <% if (gr.key === 'tier' && tierInfo.length) { %><button type="button" class="bf-tiers-link" id="bfTiersLink" aria-expanded="false" aria-controls="bfTiers">What are tiers?</button><% } %>
+</div>
+
+<!-- FILTER BAR — sticky under the menu: open the panel, drop a filter, the count -->
+<div class="bf-bar" id="bfBar">
+  <div class="bf-bar-in">
+    <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel">Filters<span id="bfOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
+    <div class="bf-chips" id="bfChips">
+      <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+      <% if (applied.length >= 2) { %><a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a><% } %>
+    </div>
+    <span class="results-count" id="resultsCount"><%= countText %></span>
+  </div>
+</div>
+
+<!-- FILTER PANEL — full screen on phones, a centred pop-up on computers. A plain
+     GET form, so it also works (with reloads) without the page script. -->
+<div class="bf-panel" id="bfPanel" role="dialog" aria-modal="true" aria-labelledby="bfPanelTitle">
+  <a href="#" class="bf-backdrop" id="bfBackdrop" tabindex="-1" aria-hidden="true"></a>
+  <form class="bf-sheet" id="bfForm" method="get" action="/browse">
+    <div class="bf-head">
+      <a href="#" class="bf-x" id="bfClose" aria-label="Close filters">✕</a>
+      <h2 id="bfPanelTitle">Filters</h2>
+      <button type="button" class="bf-clear-all" id="bfClearAll">Clear all</button>
+    </div>
+    <div class="bf-body">
+      <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+      <% view.groups.forEach(gr => { const extra = gr.chips.slice(6); %>
+      <section class="bf-sec" data-group="<%= gr.key %>">
+        <div class="bf-sec-head">
+          <h3><%= gr.label %></h3>
+          <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
         </div>
-        <% if (gr.key === 'tier' && tierInfo.length) { %>
-        <div class="bf-tiers" id="bfTiers" hidden>
-          <button type="button" class="bf-tiers-close" id="bfTiersClose" aria-label="Close">✕</button>
-          <% tierInfo.forEach(t => { %>
-          <div class="bf-tier-row"><span class="tier-pill tier-<%= t.color %>"><%= t.name %></span><span class="bf-tier-desc"><%= t.description %></span><% if (t.from) { %><span class="bf-tier-from">from ₱<%= t.from %></span><% } %></div>
-          <% }) %>
-          <% if (browseData.psplus.length) { %>
-          <div class="bf-tier-row"><span class="tier-pill tier-gold">PS Plus Deluxe</span><span class="bf-tier-desc">Hundreds of games on one account</span><% if (psplusFrom) { %><span class="bf-tier-from">from ₱<%= psplusFrom %>/week</span><% } %></div>
-          <% } %>
-        </div>
+        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+        <% if (extra.length) { %>
+        <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
+          <summary>Show all <%= gr.chips.length %></summary>
+          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+        </details>
         <% } %>
-      </div>
+      </section>
       <% }) %>
     </div>
-    <div class="bf-bar">
-      <span class="results-count" id="resultsCount"><%= view.siteOn ? (view.site.length + ' game' + (view.site.length !== 1 ? 's' : '') + ' found') : (view.psplus.length + ' PS Plus game' + (view.psplus.length !== 1 ? 's' : '')) %></span>
-      <a href="/browse" class="bf-clear" id="bfClear"<%= view.active ? '' : ' hidden' %>>Clear all</a>
-      <button type="button" class="bf-toggle" id="bfToggle" aria-controls="bfGroups">Filters</button>
+    <div class="bf-foot">
+      <button type="submit" class="bf-go" id="bfGo"<%= applyLabel.disabled ? ' disabled' : '' %>><%= applyLabel.text %></button>
     </div>
-  </div>
+  </form>
 </div>
 
 <!-- UPCOMING GAMES — hidden while filtering -->
@@ -1948,16 +2177,22 @@ app.get('/browse', (req, res) => {
   const inGrid = new Set(view.grid);
   const homeIds = {};
   facts.forEach(f => { if (!inGrid.has(f.id)) (homeIds[f.home] = homeIds[f.home] || []).push(f.id); });
-  const tierInfo = sections.filter(s => s.color).map(s => ({ name: s.title, color: s.color, description: s.description, from: s.from }));
-  const tierColors = {};
-  priceCategories.forEach(c => { tierColors[String(c.id)] = tierStyle.pillColor(c); });
+  // The filter panel's tier rows: coloured dot, description and starting price.
+  const tierRows = {};
+  priceCategories.forEach(c => {
+    const sec = sections.find(s => s.key === 'cat-' + c.id);
+    tierRows[String(c.id)] = { color: tierStyle.pillColor(c), sub: [c.description || '', sec && sec.from ? 'from ₱' + sec.from : ''].filter(Boolean).join(' · ') };
+  });
+  tierRows.psplus = { color: 'gold', sub: 'Hundreds of games, one account' + (ps.from ? ' · from ₱' + ps.from + '/week' : '') };
   const gamesById = {};
   allGames.forEach(g => { gamesById[g.id] = g; });
 
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   res.render('browse', {
-    view, sections, homeIds, gamesById, tierInfo, tierColors, psplusFrom: ps.from,
+    view, sections, homeIds, gamesById, tierRows,
+    applied: browseCore.appliedChips(state, ctx), countText: browseCore.countText(view),
+    applyLabel: browseCore.applyLabel(view), formField: browseCore.formField, search: state.search,
     browseData: { games: facts, psplus: ps.items, ctx, state },
     upcoming, psplus, priceCategories,
     announcement: getAnnouncement(), announcements: getAnnouncements(),
@@ -1983,14 +2218,14 @@ Then: `node --check server.js && file server.js views/browse.ejs` → both still
 
 - [ ] **Step 5: Run the tests and watch them pass**
 
-Run: `node scripts/test-browse-page.js` → `12 assertions passed`.
+Run: `node scripts/test-browse-page.js` → `15 assertions passed`.
 Run: `node scripts/test-browse-filter-core.js && node scripts/test-tier-pill.js && node scripts/test-admin-price-bands.js && node scripts/test-game-discount-pricing.js && node scripts/test-home-search.js` → all pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add public/js/browse.js public/css/browse-filters.css scripts/test-browse-page.js server.js views/browse.ejs
-git commit -m "Browse: combinable filters, one 6-per-row grid while filtering, tier descriptions, PS Plus Deluxe in results
+git add public/js/browse.js public/css/browse-filters.css views/partials/browse-filter-option.ejs scripts/test-browse-page.js server.js views/browse.ejs
+git commit -m "Browse: floating filter panel and sticky filter bar, one 6-per-row grid while filtering, tier descriptions, PS Plus Deluxe in results
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
