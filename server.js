@@ -37,6 +37,7 @@ const gamePsnView = require('./lib/game-psn-view');
 const swapCharge = require('./lib/swap-charge');
 const gameDiscount = require('./lib/game-discount');
 const tierStyle = require('./lib/tier-style');
+const browseCore = require('./public/js/browse-filter-core');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -402,6 +403,9 @@ app.locals.gameDiscountPct = (game, days, promo) => gameDiscount.discountPct(gam
 app.locals.gameTier = (game) => tierStyle.tierOf(game, getPriceCategories());
 app.locals.tierPillColor = (cat) => tierStyle.pillColor(cat);
 app.locals.TIER_PILL_COLORS = tierStyle.PILL_COLORS;
+// The Price chip cut-offs on Browse ({ low, high }; defaults 200 / 300).
+function getBrowseBands() { return browseCore.normalizeBands(getSiteSettings().browse_price_bands); }
+app.locals.browseBands = () => getBrowseBands();
 app.locals.gameSpecialDeal = (game, promo) => gameDiscount.specialDeal(game, promo);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
@@ -6458,6 +6462,15 @@ app.post('/admin/customers/delete/:id', requireAuth, async (req, res) => {
     await orders.deleteOrder(existing.order_ref).catch(() => {});
   }
   res.redirect('/admin?tab=customers&msg=customer_deleted');
+});
+
+// Settings → Browse price filter. Two whole numbers, the first below the second;
+// anything else is refused and nothing is saved.
+app.post('/admin/browse-price-bands', requireAuth, (req, res) => {
+  const bands = browseCore.parseBands((req.body || {}).low, (req.body || {}).high);
+  if (!bands) return res.redirect('/admin?tab=settings&msg=price_bands_invalid');
+  db.set('site_settings.browse_price_bands', bands).write();
+  res.redirect('/admin?tab=settings&msg=price_bands_saved');
 });
 
 // Settings → Game discounts: each game's own Weekly / Monthly % (lib/game-discount.js).

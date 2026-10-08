@@ -4,6 +4,7 @@
       <a href="#sec-site">Site</a>
       <a href="#sec-promo">Promo & pricing</a>
       <a href="#sec-game-discounts">Game discounts</a>
+      <a href="#sec-price-bands">Browse price filter</a>
       <a href="#sec-payments">Payment methods</a>
       <a href="#sec-alerts">Phone alerts</a>
       <a href="#sec-images">Images</a>
@@ -223,6 +224,28 @@
     </div><!-- /promo inner -->
       </div><!-- /accordion-body -->
     </div><!-- /accordion promo -->
+
+    <!-- BROWSE PRICE FILTER — the cut-offs behind Browse's Price chips -->
+    <% const pbBands = typeof browseBands === 'function' ? browseBands() : { low: 200, high: 300 }; %>
+    <div class="adm-card" id="sec-price-bands">
+      <div class="adm-card-head" style="border-left:3px solid #38bdf8;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(56,189,248,0.15);">💸</div>
+          <div>
+            <div class="sa-title">Browse price filter</div>
+            <div class="sa-desc">The cut-offs behind the Price chips on Browse</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <form method="POST" action="/admin/browse-price-bands" class="pb-form">
+          <label>Cheapest chip: under ₱ <input type="number" name="low" value="<%= pbBands.low %>" min="1" step="1" required></label>
+          <label>Top chip: ₱ <input type="number" name="high" value="<%= pbBands.high %>" min="2" step="1" required> and up</label>
+          <button type="submit" class="btn btn-primary">Save price filter</button>
+        </form>
+        <p class="gdt-note">Customers see: Under ₱<%= pbBands.low %> · ₱<%= pbBands.low %>–<%= pbBands.high - 1 %> · ₱<%= pbBands.high %>+. Each game counts at the "from ₱" price on its card; PS Plus games at the PS Plus weekly price.</p>
+      </div>
+    </div>
 
     <!-- GAME DISCOUNTS — each game's own Weekly / Monthly % (lib/game-discount.js) -->
     <%

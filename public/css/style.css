@@ -2863,6 +2863,9 @@ footer {
 .gdt tr[hidden] { display: none; }
 .gdt .gdt-in { width: 70px; padding: 0.3rem 0.4rem; text-align: center; }
 .gdt-pay { color: #4ade80; font-weight: 700; white-space: nowrap; }
+/* Admin → Settings → Browse price filter. */
+.pb-form { display: flex; gap: 0.75rem 1.25rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.6rem; font-size: 0.85rem; color: #ccc; }
+.pb-form input[type=number] { width: 90px; margin-left: 0.3rem; }
 .gc2-price-was { margin-left: 0.3rem; font-size: 0.66rem; color: rgba(255,255,255,0.4); }
 .gc2-buy-price { font-size: 0.64rem; color: #a78bfa; font-weight: 600; }
 /* Sits where the price goes on a normal card. These titles aren't rented
