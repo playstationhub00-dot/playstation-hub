@@ -6,6 +6,7 @@
   <title>Browse Games — <%= settings.title %></title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/browse-filters.css?v=<%= assetV %>">
   <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body class="browse-page">
@@ -13,141 +14,109 @@
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
 
+<%#
+  Filters, layout and the PS Plus section follow
+  docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md. The server
+  renders the page for the URL (GET /browse); public/js/browse.js then runs the
+  filter panel and the filter bar with the same rules
+  (public/js/browse-filter-core.js), moving these same cards between their tier
+  sections and the one results grid.
+%>
 <div class="browse-header">
   <h1>Browse Games</h1>
-  <div class="chipfilters">
-    <% if (showChips.length) { %>
-    <div class="chipfilters-group">
-      <div class="chipfilters-label">Show</div>
-      <div class="chipfilters-row">
-        <a href="/browse<%= search ? '?search=' + encodeURIComponent(search) : '' %>" class="chip<%= !anyFilterActive ? ' chip-active' : '' %>">All games</a>
-        <% showChips.forEach(c => { %>
-          <a href="/browse?<%= c.href %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" class="chip<%=
-            (c.key === 'avail' && avail) || (c.key === 'newOnly' && newOnly) || (c.key === 'buy' && buy) || (c.key === 'bundle' && bundle)
-              ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
-        <% }) %>
-      </div>
-    </div>
-    <% } %>
-    <% if (consoleChips.length) { %>
-    <div class="chipfilters-group">
-      <div class="chipfilters-label">Console</div>
-      <div class="chipfilters-row">
-        <% consoleChips.forEach(c => { %>
-          <a href="/browse?<%= c.href %><%= search ? '&search=' + encodeURIComponent(search) : '' %>" class="chip<%= ps4 ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
-        <% }) %>
-      </div>
-    </div>
-    <% } %>
-    <% if (genreChips.length) { %>
-    <div class="chipfilters-group">
-      <div class="chipfilters-label">Genre</div>
-      <div class="chipfilters-row">
-        <% genreChips.forEach(c => { %>
-          <% const isSelected = genre === c.label; %>
-          <a href="<%= isSelected ? '/browse' + (search ? '?search=' + encodeURIComponent(search) : '') : '/browse?' + c.href + (search ? '&search=' + encodeURIComponent(search) : '') %>" class="chip<%= isSelected ? ' chip-active' : '' %>"><%= c.label %> · <%= c.count %></a>
-        <% }) %>
-      </div>
-    </div>
-    <% } %>
-  </div>
-  <div class="results-count" id="resultsCount"><%= games.length %> game<%= games.length !== 1 ? 's' : '' %> found</div>
 </div>
 
-<!-- UPCOMING GAMES — hidden when searching/filtering -->
-<% if (!anyFilterActive) { %>
-<%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
-<% } %>
+<!-- FILTER BAR — sticky under the menu: open the panel, drop a filter, the count -->
+<div class="bf-bar" id="bfBar">
+  <div class="bf-bar-in">
+    <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel">Filters<span id="bfOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
+    <div class="bf-chips" id="bfChips">
+      <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+      <% if (applied.length >= 2) { %><a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a><% } %>
+    </div>
+    <span class="results-count" id="resultsCount"><%= countText %></span>
+  </div>
+</div>
 
-<!-- AVAILABLE GAMES grouped by price category -->
+<!-- FILTER PANEL — full screen on phones, a centred pop-up on computers. A plain
+     GET form, so it also works (with reloads) without the page script. -->
+<div class="bf-panel" id="bfPanel" role="dialog" aria-modal="true" aria-labelledby="bfPanelTitle">
+  <a href="#" class="bf-backdrop" id="bfBackdrop" tabindex="-1" aria-hidden="true"></a>
+  <form class="bf-sheet" id="bfForm" method="get" action="/browse">
+    <div class="bf-head">
+      <a href="#" class="bf-x" id="bfClose" aria-label="Close filters">✕</a>
+      <h2 id="bfPanelTitle">Filters</h2>
+      <button type="button" class="bf-clear-all" id="bfClearAll">Clear all</button>
+    </div>
+    <div class="bf-body">
+      <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+      <% view.groups.forEach(gr => { const extra = gr.chips.slice(6); %>
+      <section class="bf-sec" data-group="<%= gr.key %>">
+        <div class="bf-sec-head">
+          <h3><%= gr.label %></h3>
+          <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
+        </div>
+        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+        <% if (extra.length) { %>
+        <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
+          <summary>Show all <%= gr.chips.length %></summary>
+          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+        </details>
+        <% } %>
+      </section>
+      <% }) %>
+    </div>
+    <div class="bf-foot">
+      <button type="submit" class="bf-go" id="bfGo"<%= applyLabel.disabled ? ' disabled' : '' %>><%= applyLabel.text %></button>
+    </div>
+  </form>
+</div>
+
+<!-- UPCOMING GAMES — hidden while filtering -->
+<div id="bfUpcoming"<%= view.active ? ' hidden' : '' %>>
+<%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
+</div>
+
 <div id="section-rentals">
-  <% if (games.length === 0) { %>
-    <div id="no-rentals-msg" style="text-align:center;padding:4rem;color:var(--text-secondary);">
-      <div style="font-size:3rem;margin-bottom:1rem;">🎮</div>
-      <p>No games found. Try a different search.</p>
-    </div>
-  <% } else { %>
-    <%
-      // Bundle-flagged games get their own section above the price tiers instead
-      // of sitting inside them as a peer of the games they contain.
-      const bundleGames = games.filter(g => resolveBundleInfo(g));
-      const nonBundleGames = games.filter(g => !resolveBundleInfo(g));
-      // Group games by price category
-      const catMap = {};
-      const uncategorized = [];
-      nonBundleGames.forEach(g => {
-        if (g.price_category_id) {
-          const cat = priceCategories.find(c => c.id === g.price_category_id);
-          if (cat) {
-            if (!catMap[cat.id]) catMap[cat.id] = { cat, games: [] };
-            catMap[cat.id].games.push(g);
-          } else {
-            uncategorized.push(g);
-          }
-        } else {
-          uncategorized.push(g);
-        }
-      });
-      // Order categories as defined in admin
-      const orderedCats = priceCategories.filter(c => catMap[c.id]);
-      // Lowest promo-adjusted price across every game/duration/type in a category,
-      // for the "Price Starts at" line next to the category header.
-      function catMinPrice(gamesArr) {
-        let min = null;
-        gamesArr.forEach(g => {
-          RENTAL_DURATIONS.forEach(({ days: d }) => {
-            const pct = gameDiscountPct(g, d, promo);
-            ['nt_price_', 'tr_price_'].forEach(prefix => {
-              const base = g[prefix + d + 'd'];
-              if (base > 0) {
-                const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
-                if (min === null || final < min) min = final;
-              }
-            });
-          });
-        });
-        return min;
-      }
-    %>
-    <% if (bundleGames.length > 0) { %>
-    <div class="section cat-section" id="cat-section-bundles" style="<%= upcoming.length > 0 ? 'padding-top:3rem;' : 'padding-top:2rem;' %>">
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-        <h2 class="section-title" style="margin:0;">Account Bundles</h2>
-        <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= bundleGames.length %> bundle<%= bundleGames.length !== 1 ? 's' : '' %></span>
+  <!-- No filter on: a section per tier (Bundles, tiers in admin order, Other games) -->
+  <div id="bfSections"<%= view.active ? ' hidden' : '' %>>
+    <% sections.forEach((s, si) => { %>
+    <div class="section cat-section" id="cat-section-<%= s.key === 'other' ? 'uncategorized' : s.key.replace('cat-', '') %>" style="<%= si > 0 || upcoming.length > 0 ? 'padding-top:3rem;' : 'padding-top:2rem;' %>">
+      <div class="cat-head">
+        <h2 class="section-title" style="margin:0;"><%= s.title %></h2>
+        <span class="cat-count"><%= s.count %> <%= s.unit %><%= s.count !== 1 ? 's' : '' %></span>
+        <% if (s.from) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= s.from %></span><% } %>
       </div>
-      <div class="games-grid rentals-grid">
-        <% bundleGames.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
-      </div>
-    </div>
-    <% } %>
-    <% orderedCats.forEach((cat, ci) => { const catMin = catMinPrice(catMap[cat.id].games); %>
-    <div class="section cat-section" id="cat-section-<%= cat.id %>" style="<%= ci > 0 || upcoming.length > 0 ? 'padding-top:3rem;' : 'padding-top:2rem;' %>">
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-        <h2 class="section-title" style="margin:0;"><%= cat.name %></h2>
-        <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= catMap[cat.id].games.length %> game<%= catMap[cat.id].games.length !== 1 ? 's' : '' %></span>
-        <% if (catMin) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= catMin %></span><% } %>
-      </div>
-      <div class="games-grid rentals-grid">
-        <% catMap[cat.id].games.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
+      <% if (s.description) { %><p class="cat-desc"><%= s.description %></p><% } %>
+      <div class="games-grid rentals-grid" data-home="<%= s.key %>">
+        <% (homeIds[s.key] || []).forEach(id => { %><div class="bf-item" data-id="<%= id %>"><%- include('partials/game-card', { game: gamesById[id] }) %></div><% }) %>
       </div>
     </div>
     <% }) %>
-    <% if (uncategorized.length > 0) { const uncatMin = catMinPrice(uncategorized); %>
-    <div class="section cat-section" id="cat-section-uncategorized" style="padding-top:3rem;">
-      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
-        <h2 class="section-title" style="margin:0;">Other Games</h2>
-        <span style="font-size:0.78rem;color:var(--text-secondary);background:#111;border:1px solid #222;border-radius:20px;padding:0.2rem 0.65rem;"><%= uncategorized.length %> game<%= uncategorized.length !== 1 ? 's' : '' %></span>
-        <% if (uncatMin) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= uncatMin %></span><% } %>
-      </div>
-      <div class="games-grid rentals-grid">
-        <% uncategorized.forEach(game => { %><%- include('partials/game-card', { game }) %><% }) %>
-      </div>
+  </div>
+
+  <!-- Any filter on: every match in one grid, tier order then A–Z -->
+  <div class="section" id="bfResults"<%= view.active && view.siteOn ? '' : ' hidden' %>>
+    <p class="bf-empty" id="bfEmpty"<%= view.active && view.siteOn && view.site.length === 0 ? '' : ' hidden' %>><%= view.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.' %></p>
+    <div class="games-grid rentals-grid" id="bfGrid">
+      <% view.grid.forEach(id => { %><div class="bf-item" data-id="<%= id %>"><%- include('partials/game-card', { game: gamesById[id] }) %></div><% }) %>
     </div>
-    <% } %>
-  <% } %>
+  </div>
+
+  <!-- Also in PS Plus Deluxe — drawn by public/js/browse.js while filtering -->
+  <div class="section" id="bfPsplus" hidden>
+    <div class="cat-head">
+      <h2 class="section-title" style="margin:0;">Also in PS Plus Deluxe</h2>
+      <span class="cat-count" id="bfPsCount"></span>
+      <span class="bf-ps-sub">One account, play them all</span>
+    </div>
+    <div class="games-grid rentals-grid" id="bfPsGrid"></div>
+    <button type="button" class="btn btn-outline bf-ps-all" id="bfPsAll" hidden></button>
+  </div>
 </div>
 
-<!-- PS PLUS MONTHLY GAMES -->
+<!-- PS PLUS MONTHLY GAMES — hidden while filtering -->
+<div id="bfPsMonthly"<%= view.active ? ' hidden' : '' %>>
 <% if (psplus.length > 0) { %>
 <div class="section" id="section-psplus" style="padding-top:3rem;">
   <h2 class="section-title" style="display:flex;align-items:center;gap:0.6rem;">
@@ -187,9 +156,9 @@
     </a>
   <% }) %>
   </div>
-  <div id="no-psplus-msg" style="display:none;text-align:center;padding:2rem;color:var(--text-secondary);">No PS Plus monthly games match your search.</div>
 </div>
 <% } %>
+</div>
 
 <!-- RESERVE MODAL -->
 <div class="modal-overlay" id="reserveModal">
@@ -217,6 +186,9 @@
 
 <%- include('partials/rent-modal') %>
 
+<script type="application/json" id="browseData"><%- JSON.stringify(browseData).replace(/</g, '\\u003c') %></script>
+<script src="/js/browse-filter-core.js?v=<%= assetV %>"></script>
+<script src="/js/browse.js?v=<%= assetV %>"></script>
 <script>
 function openReserveModal(title) {
   document.getElementById('reserveGameTitle').textContent = title;
@@ -240,7 +212,3 @@ document.getElementById('rentModal').addEventListener('click', e => { if (e.targ
 </script>
 </body>
 </html>
-
-
-
-

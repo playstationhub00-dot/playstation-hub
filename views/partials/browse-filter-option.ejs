@@ -1,0 +1,9 @@
+<%# One tick-box row in the Browse filter panel (views/browse.ejs): an option's
+    name (tiers: coloured dot and a line with description and starting price),
+    what it would show, and its tick box (a GET form field). %>
+<label class="bf-opt<%= c.zero ? ' bf-opt-zero' : '' %>" data-group="<%= c.group %>" data-value="<%= c.value %>">
+  <% if (tr) { %><span class="tier-dot tier-<%= tr.color %>" aria-hidden="true"></span><% } %>
+  <span class="bf-opt-name"><%= c.label %><% if (tr && tr.sub) { %><span class="bf-opt-sub"><%= tr.sub %></span><% } %></span>
+  <span class="bf-n"><%= c.count %></span>
+  <input type="checkbox" name="<%= ff.name %>" value="<%= ff.value %>"<%= c.on ? ' checked' : '' %><%= c.zero ? ' disabled' : '' %>>
+</label>

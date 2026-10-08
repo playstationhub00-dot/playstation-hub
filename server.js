@@ -1376,8 +1376,7 @@ app.get('/ps-plus', (req, res) => {
     games: psplusCatalogStore.all(), siteGames: getGames(), entries, slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
   });
   const activeTab = ['games', 'monthly', 'pricing'].includes(req.query.tab) ? req.query.tab : (req.query.month ? 'monthly' : 'games');
-  const weeklyPrices = [(getPsplusPrices() || {}).nt_price_7d, (getPsplusPrices() || {}).tr_price_7d].map(Number).filter(n => n > 0);
-  const fromWeekly = weeklyPrices.length ? Math.min(...weeklyPrices) : 0;
+  const fromWeekly = psplusFromWeekly();
   // PS Plus has one real catalog entry behind it, so a review naming it floats.
   res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, catalog, activeTab, fromWeekly, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
     reviewBlockLocals(psplusGame ? psplusGame.title : '')));
@@ -2121,98 +2120,129 @@ app.get('/bundle/:slug', (req, res) => {
 // displays") is exactly the kind of duplicated-logic bug that has already
 // shipped twice this session (Coming Soon slot counts, a filter script split
 // from its markup).
-function applyBrowseFilters(games, state, accountSummaryMap) {
-  let out = games;
-  if (state.search) {
-    const q = state.search.toLowerCase();
-    const bundleContains = (g) => {
-      const b = resolveBundleInfo(g);
-      return b ? b.games.some(bg => bg.title.toLowerCase().includes(q)) : false;
-    };
-    out = out.filter(g =>
-      g.title.toLowerCase().includes(q) ||
-      (g.description && g.description.toLowerCase().includes(q)) ||
-      bundleContains(g)
-    );
-  }
-  if (state.ps4) out = out.filter(g => g.platform === 'PS4' || g.platform === 'PS4/PS5');
-  if (state.genre) out = out.filter(g => g.genre === state.genre);
-  if (state.avail) {
-    out = out.filter(g => {
-      const avail = computeAvailability(g, accountSummaryMap[g.id]);
-      // Console-aware: a PS4 owner cannot use a free PS5 trophy/non-trophy slot,
-      // so with the PS4 chip active, "available" must mean PS4 Primary is open —
-      // not "available on some slot type this customer cannot use."
-      return state.ps4 ? (avail.showPs4 && avail.ps4Avail) : (avail.trAvail || avail.ntAvail || (avail.showPs4 && avail.ps4Avail));
+// ── Browse ───────────────────────────────────────────────────────────────────
+// The filter rules live in public/js/browse-filter-core.js, shared with the
+// page script (public/js/browse.js); this builds the facts they read.
+// See docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md.
+function browseGameFacts(g, accountSummaryMap, promo) {
+  const a = computeAvailability(g, accountSummaryMap[g.id]);
+  const bundle = resolveBundleInfo(g);
+  const cat = g.price_category_id ? getPriceCategory(g.price_category_id) : null;
+  // The card's "from ₱X" (views/partials/game-card.ejs): the cheapest final price
+  // across Weekly/Monthly × Non-Trophy/Trophy, after the game's own discount or
+  // the site promo.
+  const finals = [[g.nt_price_7d, 7], [g.nt_price_30d, 30], ...(a.hasTrophy ? [[g.tr_price_7d, 7], [g.tr_price_30d, 30]] : [])]
+    .filter(([base]) => base > 0)
+    .map(([base, d]) => gameDiscount.applyPct(base, gameDiscount.discountPct(g, d, promo)));
+  return {
+    id: g.id,
+    title: g.title,
+    text: [g.title, g.description || ''].concat(bundle ? bundle.games.map(b => b.title) : []).join('\n').toLowerCase(),
+    tier: cat ? String(cat.id) : null,
+    ps4: g.platform === 'PS4' || g.platform === 'PS4/PS5',
+    ps5: g.platform === 'PS5' || g.platform === 'PS4/PS5',
+    genres: browseCore.genreParts(g.genre),
+    from: finals.length ? Math.min(...finals) : null,
+    avail: !!(a.trAvail || a.ntAvail || (a.showPs4 && a.ps4Avail)),
+    availPs4: !!(a.showPs4 && a.ps4Avail),
+    isNew: isAddedThisMonth(g),
+    buy: (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0,
+    bundle: !!g.is_bundle,
+    home: bundle ? 'bundles' : (cat ? 'cat-' + cat.id : 'other')
+  };
+}
+
+// The PS Plus page's "from ₱X / week": the cheaper weekly PS Plus price.
+function psplusFromWeekly() {
+  const p = getPsplusPrices() || {};
+  const weekly = [p.nt_price_7d, p.tr_price_7d].map(Number).filter(n => n > 0);
+  return weekly.length ? Math.min(...weekly) : 0;
+}
+
+// Browse's "Also in PS Plus Deluxe" section: the games the /ps-plus page lists,
+// and whether the PS Plus Deluxe account has a slot free. A catalogue that has
+// not loaded simply gives no PS Plus games.
+const PSPLUS_JUST_ADDED_DAYS = 11;
+function browsePsplusData(accountSummaryMap) {
+  let items = [];
+  try {
+    const catalog = psplusCatalogView.buildPublicCatalog({
+      games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
+    const since = new Date(Date.now() - PSPLUS_JUST_ADDED_DAYS * 86400000).toISOString().slice(0, 10);
+    items = catalog.items.map(it => ({
+      k: it.k, n: it.n, c: it.c || (it.i ? it.i + '?w=240' : ''),
+      ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || '', j: !!it.f && it.f >= since
+    }));
+  } catch (e) {
+    console.error('[browse] PS Plus list', e.message);
   }
-  if (state.buy) out = out.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
-  if (state.bundle) out = out.filter(g => !!g.is_bundle);
-  if (state.newOnly) out = out.filter(isAddedThisMonth);
-  return out;
+  const psGame = getGames().find(g => /ps plus deluxe|playstation plus deluxe/i.test(g.title));
+  let avail, availPs4;
+  if (psGame) {
+    const a = computeAvailability(psGame, accountSummaryMap[psGame.id]);
+    avail = !!(a.trAvail || a.ntAvail || (a.showPs4 && a.ps4Avail));
+    availPs4 = !!(a.showPs4 && a.ps4Avail);
+  } else {
+    const sl = getPsplusSlots();
+    avail = (sl.nt_slots || 0) + (sl.tr_slots || 0) + (sl.ps4_slots || 0) > 0;
+    availPs4 = (sl.ps4_slots || 0) > 0;
+  }
+  return { items, from: psplusFromWeekly(), avail, availPs4 };
 }
 
 app.get('/browse', (req, res) => {
-  const search = req.query.search || '';
-  const genre = req.query.genre || '';
-  const newOnly = req.query.newOnly === '1';
-  // Backward compatibility for bookmarks/links using the old dropdown params.
-  // platform=PS5 / platform=PS4/PS5 is dropped entirely — no chip ever produces
-  // it, and it matched 54 of 55 games, carrying no real filtering information.
-  const legacyUnit = req.query.unit;
-  const avail = req.query.avail === '1' || legacyUnit === 'ps4' || legacyUnit === 'ps5';
-  const ps4 = req.query.ps4 === '1' || req.query.platform === 'PS4' || legacyUnit === 'ps4';
-  const buy = req.query.buy === '1';
-  const bundle = req.query.bundle === '1';
-
+  const browseSettings = getSiteSettings();
+  const promo = browseSettings.promo;
   const accountSummaryMap = buildAccountSummaryMap();
-  const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays);
-  const state = { search, genre, newOnly, avail, ps4, buy, bundle };
+  const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays)
+    .sort((a, b) => a.title.localeCompare(b.title));
+  const priceCategories = getPriceCategories();
+  const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo));
+  const ps = browsePsplusData(accountSummaryMap);
+  const ctx = {
+    bands: getBrowseBands(),
+    tiers: priceCategories.map(c => ({ id: String(c.id), name: c.name })),
+    genres: browseCore.genreList(facts),
+    psplusFrom: ps.from, psplusAvail: ps.avail, psplusAvailPs4: ps.availPs4
+  };
+  const state = browseCore.cleanState(browseCore.parseState(req.query), ctx);
+  const view = browseCore.view(facts, ps.items, state, ctx);
 
-  let games = applyBrowseFilters(allGames, state, accountSummaryMap);
-  games.sort((a, b) => a.title.localeCompare(b.title));
-
-  // Per-chip counts: each computed with that one chip's flag flipped on, every
-  // other currently-active filter left as-is, and never combined with its own
-  // current state — this is what keeps a selected filter switchable instead of
-  // making every other option in its own group collapse to zero.
-  function countWith(overrides) {
-    return applyBrowseFilters(allGames, Object.assign({}, state, overrides), accountSummaryMap).length;
-  }
-  const showChips = [
-    { key: 'avail', label: 'Available now', href: 'avail=1', count: countWith({ avail: true }) },
-    { key: 'newOnly', label: 'New', href: 'newOnly=1', count: countWith({ newOnly: true }) },
-    { key: 'buy', label: 'Can buy', href: 'buy=1', count: countWith({ buy: true }) },
-    { key: 'bundle', label: 'Bundles', href: 'bundle=1', count: countWith({ bundle: true }) }
-  ].filter(c => c.count > 0);
-  const consoleChips = [
-    { key: 'ps4', label: 'Plays on PS4', href: 'ps4=1', count: countWith({ ps4: true }) }
-  ].filter(c => c.count > 0);
-  // A genre only ever appears if the UNFILTERED library has at least 3 games in
-  // it — computed once against allGames, not against the currently filtered
-  // set, so the chip list doesn't shrink further as other filters are applied.
-  const genreCounts = {};
-  allGames.forEach(g => { if (g.genre) genreCounts[g.genre] = (genreCounts[g.genre] || 0) + 1; });
-  const eligibleGenres = Object.keys(genreCounts).filter(g => genreCounts[g] >= 3).sort();
-  const genreChips = eligibleGenres.map(g => ({
-    key: 'genre', label: g, href: 'genre=' + encodeURIComponent(g),
-    // Counted against every active filter except genre itself, so switching
-    // between genres stays possible rather than every other genre reading 0
-    // once one is selected.
-    count: countWith({ genre: g })
-  })).filter(c => c.count > 0);
+  // The unfiltered sections: Bundles, each tier in admin order, Other games —
+  // only those with games. Every card has one home section; while filtering,
+  // the matches sit in the one grid instead.
+  const byHome = {};
+  facts.forEach(f => { (byHome[f.home] = byHome[f.home] || []).push(f); });
+  const minFrom = list => { const p = list.map(f => f.from).filter(n => n > 0); return p.length ? Math.min(...p) : null; };
+  const sections = [{ key: 'bundles', title: 'Account Bundles', unit: 'bundle' }]
+    .concat(priceCategories.map(c => ({ key: 'cat-' + c.id, title: c.name, description: c.description || '', color: tierStyle.pillColor(c), unit: 'game' })))
+    .concat([{ key: 'other', title: 'Other Games', unit: 'game' }])
+    .filter(s => byHome[s.key])
+    .map(s => Object.assign(s, { count: byHome[s.key].length, from: s.key === 'bundles' ? null : minFrom(byHome[s.key]) }));
+  const inGrid = new Set(view.grid);
+  const homeIds = {};
+  facts.forEach(f => { if (!inGrid.has(f.id)) (homeIds[f.home] = homeIds[f.home] || []).push(f.id); });
+  // The filter panel's tier rows: coloured dot, description and starting price.
+  const tierRows = {};
+  priceCategories.forEach(c => {
+    const sec = sections.find(s => s.key === 'cat-' + c.id);
+    tierRows[String(c.id)] = { color: tierStyle.pillColor(c), sub: [c.description || '', sec && sec.from ? 'from ₱' + sec.from : ''].filter(Boolean).join(' · ') };
+  });
+  tierRows.psplus = { color: 'gold', sub: 'Hundreds of games, one account' + (ps.from ? ' · from ₱' + ps.from + '/week' : '') };
+  const gamesById = {};
+  allGames.forEach(g => { gamesById[g.id] = g; });
 
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
-  const priceCategories = getPriceCategories();
-  const browseSettings = getSiteSettings();
-  const anyFilterActive = !!(search || genre || newOnly || avail || ps4 || buy || bundle);
   res.render('browse', {
-    games, search, genre, newOnly, avail, ps4, buy, bundle, anyFilterActive,
-    showChips, consoleChips, genreChips,
+    view, sections, homeIds, gamesById, tierRows,
+    applied: browseCore.appliedChips(state, ctx), countText: browseCore.countText(view),
+    applyLabel: browseCore.applyLabel(view), formField: browseCore.formField, search: state.search,
+    browseData: { games: facts, psplus: ps.items, ctx, state },
     upcoming, psplus, priceCategories,
     announcement: getAnnouncement(), announcements: getAnnouncements(),
-    settings: browseSettings, promo: browseSettings.promo, accountSummaryMap
+    settings: browseSettings, promo, accountSummaryMap
   });
 });
 
