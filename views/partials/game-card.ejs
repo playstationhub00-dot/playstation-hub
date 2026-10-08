@@ -52,6 +52,8 @@
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
   const gcBundle = resolveBundleInfo(game);
+  // The game's tier pill (lib/tier-style.js) — bundles already say "Bundle · N games".
+  const gcTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null;
   const gcBundleParent = findBundleContaining(game);
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
 %>
@@ -78,10 +80,11 @@
     <div class="card-ribbon">Full</div>
   <% } %>
   <% if (gcIsNew) { %>
-    <div class="gc2-badge gc2-badge-new">New</div>
+    <div class="gc2-badge gc2-badge-new">Just added</div>
   <% } %>
 
   <div class="gc2-body">
+    <% if (gcTier) { %><span class="tier-pill tier-<%= gcTier.color %>"><%= gcTier.name %></span><% } %>
     <div class="gc2-plat<%= gcBundle ? ' gc2-plat-bundle' : '' %>"><%= gcBundle ? ('Bundle · ' + gcBundle.count + ' games') : (game.platform + (game.genre ? ' · ' + game.genre.split('/')[0].trim() : '')) %></div>
     <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>"><%= game.title %></div>
 

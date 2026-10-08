@@ -36,6 +36,7 @@ const visitorFunnel = require('./lib/visitor-funnel');
 const gamePsnView = require('./lib/game-psn-view');
 const swapCharge = require('./lib/swap-charge');
 const gameDiscount = require('./lib/game-discount');
+const tierStyle = require('./lib/tier-style');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -397,6 +398,10 @@ app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, day
 // A specific game's rent discount (its own % if set, else the site promo) — see
 // lib/game-discount.js. Every view that prices a game's rental uses this.
 app.locals.gameDiscountPct = (game, days, promo) => gameDiscount.discountPct(game, days, promo);
+// A game's tier (price category) for its pill: { id, name, color, description } or null.
+app.locals.gameTier = (game) => tierStyle.tierOf(game, getPriceCategories());
+app.locals.tierPillColor = (cat) => tierStyle.pillColor(cat);
+app.locals.TIER_PILL_COLORS = tierStyle.PILL_COLORS;
 app.locals.gameSpecialDeal = (game, promo) => gameDiscount.specialDeal(game, promo);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
@@ -6838,7 +6843,8 @@ app.post('/admin/month-log/delete', requireAuth, (req, res) => {
 // Price category CRUD
 app.post('/admin/price-categories/add', requireAuth, upload.single('image'), async (req, res) => {
   const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
-    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size } = req.body;
+    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size,
+    pill_color, description } = req.body;
   if (!name || !name.trim()) return res.redirect('/admin?msg=error');
   const image = req.file ? await processUploadedImage(req.file) : '';
   db.get('price_categories').push({
@@ -6859,13 +6865,17 @@ app.post('/admin/price-categories/add', requireAuth, upload.single('image'), asy
     bg_color: /^#[0-9a-fA-F]{6}$/.test(bg_color) ? bg_color : '#F0A500',
     title_color: /^#[0-9a-fA-F]{6}$/.test(title_color) ? title_color : '#ffffff',
     title_size: Math.min(40, Math.max(10, parseInt(title_size) || 18)),
+    // Tier pill (lib/tier-style.js): null colour = picked from the name.
+    pill_color: tierStyle.cleanColor(pill_color),
+    description: tierStyle.cleanDescription(description),
   }).write();
   res.redirect('/admin?msg=cat_added');
 });
 
 app.post('/admin/price-categories/edit/:id', requireAuth, upload.single('image'), async (req, res) => {
   const { name, nt_price_7d, nt_price_30d, tr_price_7d, tr_price_30d,
-    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size, remove_image } = req.body;
+    image_width, image_height, image_opacity, image_blend, bg_color, title_color, title_size, remove_image,
+    pill_color, description } = req.body;
   const cat = getPriceCategory(req.params.id);
   if (!cat) return res.redirect('/admin?msg=error');
   const image = req.file ? await processUploadedImage(req.file) : (remove_image === 'on' ? '' : cat.image || '');
@@ -6883,6 +6893,8 @@ app.post('/admin/price-categories/edit/:id', requireAuth, upload.single('image')
     bg_color: /^#[0-9a-fA-F]{6}$/.test(bg_color) ? bg_color : (cat.bg_color || '#F0A500'),
     title_color: /^#[0-9a-fA-F]{6}$/.test(title_color) ? title_color : (cat.title_color || '#ffffff'),
     title_size: Math.min(40, Math.max(10, parseInt(title_size) || cat.title_size || 18)),
+    pill_color: pill_color === '' ? null : (tierStyle.cleanColor(pill_color) || cat.pill_color || null),
+    description: description !== undefined ? tierStyle.cleanDescription(description) : (cat.description || ''),
   }).write();
   res.redirect('/admin?msg=cat_updated');
 });

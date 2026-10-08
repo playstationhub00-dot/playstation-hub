@@ -14,7 +14,7 @@
         <details style="background:#0a0a0a;border:1px solid #1a2a1a;border-radius:10px;overflow:hidden;">
           <summary style="padding:0.85rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;list-style:none;user-select:none;">
             <span style="font-size:1rem;">🏷️</span>
-            <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %></span>
+            <span style="font-weight:700;color:#fff;flex:1;"><%= cat.name %> <span class="tier-pill tier-<%= typeof tierPillColor === 'function' ? tierPillColor(cat) : 'grey' %>"><%= cat.name %></span></span>
             <span style="font-size:0.75rem;color:#555;">NT: ₱<%= cat.nt_price_7d %>/₱<%= cat.nt_price_30d %> &nbsp;|&nbsp; TR: ₱<%= cat.tr_price_7d %>/₱<%= cat.tr_price_30d %></span>
             <span style="color:#444;font-size:0.8rem;margin-left:0.5rem;">▼</span>
           </summary>
@@ -22,6 +22,12 @@
             <form method="POST" action="/admin/price-categories/edit/<%= cat.id %>" enctype="multipart/form-data">
               <div class="form-grid">
                 <div class="form-group full"><label>Category Name</label><input type="text" name="name" value="<%= cat.name %>" required></div>
+                <div class="form-group"><label>Pill Colour <span style="color:#666;font-weight:400;">— tier label on game cards</span></label>
+                  <select name="pill_color">
+                    <option value=""<%= cat.pill_color ? '' : ' selected' %>>Automatic (from the name)</option>
+                    <% (typeof TIER_PILL_COLORS !== 'undefined' ? TIER_PILL_COLORS : []).forEach(c => { %><option value="<%= c %>"<%= cat.pill_color === c ? ' selected' : '' %>><%= c[0].toUpperCase() + c.slice(1) %></option><% }) %>
+                  </select></div>
+                <div class="form-group full"><label>Description <span style="color:#666;font-weight:400;">— one line customers see on Browse, e.g. "Big recent AAA games"</span></label><input type="text" name="description" value="<%= cat.description || '' %>" maxlength="120"></div>
                 <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
                 <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="<%= cat.nt_price_7d %>" min="1"></div>
                 <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="<%= cat.nt_price_30d %>" min="1"></div>
@@ -69,6 +75,12 @@
           <form method="POST" action="/admin/price-categories/add" enctype="multipart/form-data">
             <div class="form-grid">
               <div class="form-group full"><label>Category Name *</label><input type="text" name="name" placeholder="e.g. New Games, Classic, Special" required></div>
+                <div class="form-group"><label>Pill Colour <span style="color:#666;font-weight:400;">— tier label on game cards</span></label>
+                  <select name="pill_color">
+                    <option value=""<%= '' ? '' : ' selected' %>>Automatic (from the name)</option>
+                    <% (typeof TIER_PILL_COLORS !== 'undefined' ? TIER_PILL_COLORS : []).forEach(c => { %><option value="<%= c %>"<%= '' === c ? ' selected' : '' %>><%= c[0].toUpperCase() + c.slice(1) %></option><% }) %>
+                  </select></div>
+                <div class="form-group full"><label>Description <span style="color:#666;font-weight:400;">— one line customers see on Browse, e.g. "Big recent AAA games"</span></label><input type="text" name="description" value="<%= '' %>" maxlength="120"></div>
               <div class="form-group full" style="margin-bottom:0;"><label style="color:#aaa;">🎮 Non-Trophy Prices (₱)</label></div>
               <div class="form-group"><label>Weekly</label><input type="number" name="nt_price_7d" value="149" min="1"></div>
               <div class="form-group"><label>Monthly</label><input type="number" name="nt_price_30d" value="349" min="1"></div>

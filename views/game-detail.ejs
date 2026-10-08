@@ -107,6 +107,8 @@
     <div class="usd-hero-in">
       <div class="usd-badge-row">
         <span class="usd-badge <%= gdhStatus.cls %>"><%= gdhStatus.label %></span>
+        <% const gdTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null; %>
+        <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
         <span class="usd-plat-chip"><%= game.platform %></span>
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
