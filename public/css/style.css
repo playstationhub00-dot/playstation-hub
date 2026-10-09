@@ -2869,6 +2869,11 @@ footer {
 /* Admin → Settings → Browse price filter. */
 .pb-form { display: flex; gap: 0.75rem 1.25rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.6rem; font-size: 0.85rem; color: #ccc; }
 .pb-form input[type=number] { width: 90px; margin-left: 0.3rem; }
+/* Admin → Content → Homepage banner. */
+.hb-form { display: grid; gap: 0.5rem; max-width: 560px; }
+.hb-row { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: #ccc; }
+.hb-row span { width: 60px; flex-shrink: 0; }
+.hb-row select { flex: 1; min-width: 0; }
 .gc2-price-was { margin-left: 0.3rem; font-size: 0.66rem; color: rgba(255,255,255,0.4); }
 .gc2-buy-price { font-size: 0.64rem; color: #a78bfa; font-weight: 600; }
 /* Sits where the price goes on a normal card. These titles aren't rented

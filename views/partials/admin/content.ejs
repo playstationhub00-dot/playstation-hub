@@ -4,6 +4,7 @@
       <a href="#sec-hero-slider">Hero slider</a>
       <a href="#sec-signin-guide">Sign-in guide</a>
       <a href="#sec-popup">Popup</a>
+      <a href="#sec-home-banner">Homepage banner</a>
       <a href="#sec-hero-text">Hero text</a>
       <a href="#sec-reviews">Reviews</a>
       <a href="#sec-ask-reviews">Ask for reviews</a>
@@ -235,6 +236,34 @@
     </div><!-- /popup inner -->
       </div><!-- /accordion-body -->
     </div><!-- /accordion popup -->
+    <!-- HOMEPAGE BANNER — games pinned to the front of the "Now playing" banner -->
+    <% const hbIds = settings.home_banner_ids || []; const hbGames = [...games].sort((a, b) => a.title.localeCompare(b.title)); %>
+    <div class="adm-card" id="sec-home-banner">
+      <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎞️</div>
+          <div>
+            <div class="sa-title">Homepage banner</div>
+            <div class="sa-desc">Games shown first in the homepage's "Now playing" banner</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <p class="gdt-note">Pick up to 5 games, in order. Games without cover art are skipped. Empty slots fill up with the newest releases; your hero slides play after the games.</p>
+        <form method="POST" action="/admin/home-banner" class="hb-form">
+          <% for (let i = 0; i < 5; i++) { %>
+          <label class="hb-row"><span>Slide <%= i + 1 %></span>
+            <select name="banner_<%= i + 1 %>">
+              <option value="">— Newest release —</option>
+              <% hbGames.forEach(g => { %><option value="<%= g.id %>"<%= hbIds[i] === g.id ? ' selected' : '' %>><%= g.title %><%= g.cover_image ? '' : ' (no cover art)' %></option><% }) %>
+            </select>
+          </label>
+          <% } %>
+          <div><button type="submit" class="btn btn-primary">Save banner</button></div>
+        </form>
+      </div>
+    </div>
+
     <!-- HERO TEXT EDITOR -->
     <div class="adm-card" id="sec-hero-text">
       <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
@@ -242,7 +271,7 @@
           <div class="sa-icon" style="background:rgba(96,165,250,0.15);">✏️</div>
           <div>
             <div class="sa-title">Home Page Hero Text</div>
-            <div class="sa-desc">Edit headline, subtitle, colors & font size</div>
+            <div class="sa-desc">The homepage tagline: Line 1 + highlighted text + Line 2, on one line (subtitle and font size are no longer shown)</div>
           </div>
         </div>
       </div>

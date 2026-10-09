@@ -38,6 +38,7 @@ const swapCharge = require('./lib/swap-charge');
 const gameDiscount = require('./lib/game-discount');
 const tierStyle = require('./lib/tier-style');
 const browseCore = require('./public/js/browse-filter-core');
+const homeView = require('./lib/home-view');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -1888,8 +1889,22 @@ app.get('/', (req, res) => {
     .sort((a, b) => b.deal.pct - a.deal.pct || a.g.title.localeCompare(b.g.title))
     .slice(0, 12)
     .map(x => x.g);
-  res.render('index', Object.assign({ featured, specialDeals, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
-    reviewBlockLocals('')));
+  // The arcade-store homepage blocks (lib/home-view.js, views/partials/home/*).
+  const homeReviews = reviewBlockLocals('');
+  const withWeekly = g => ({ game: g, weekly: homeView.weeklyFrom(g, s.promo) });
+  const home = {
+    banner: homeView.bannerGames(all, s.home_banner_ids, newReleasesRaw).map(withWeekly),
+    topRented: homeView.topRented(all, homeCustomers, new Date()).map(withWeekly),
+    powerUp: homeView.powerUp(s.promo),
+    trust: homeView.trust(homeReviews.recommend, homeReviews.renterCount),
+    prices: homeView.playerPrices(all, psplusFromWeekly()),
+    quickGenres: homeView.quickGenres(all),
+    newGames: newReleasesRaw,
+    bands: getBrowseBands(),
+    hasPs4: all.some(g => g.platform === 'PS4' || g.platform === 'PS4/PS5')
+  };
+  res.render('index', Object.assign({ home, featured, specialDeals, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
+    homeReviews));
 });
 
 // Shared by /buy (summary cards) and /bundle/:slug (full page) so both compute
@@ -5778,6 +5793,21 @@ app.post('/admin/backfill-images', requireAuth, async (req, res) => {
   }
 
   res.json(stats);
+});
+
+// Admin → Content → Homepage banner: up to 5 games shown first in the
+// homepage's "Now playing" banner (lib/home-view.js bannerGames). Fields
+// banner_1..banner_5 hold game ids; blanks, unknown ids and repeats are dropped.
+app.post('/admin/home-banner', requireAuth, (req, res) => {
+  const b = req.body || {};
+  const known = new Set(getGames().map(g => Number(g.id)));
+  const ids = [];
+  for (let i = 1; i <= homeView.BANNER_MAX; i++) {
+    const id = parseInt(b['banner_' + i], 10);
+    if (known.has(id) && !ids.includes(id)) ids.push(id);
+  }
+  db.set('site_settings.home_banner_ids', ids).write();
+  res.redirect('/admin?tab=content&msg=home_banner_saved');
 });
 
 app.post('/admin/hero-text', requireAuth, (req, res) => {
