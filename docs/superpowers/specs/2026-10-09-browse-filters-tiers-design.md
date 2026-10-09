@@ -212,6 +212,14 @@ removable chips in the filter bar are the options currently applied.
 - `views/game-detail.ejs`: the same pill in the badge row just above the title.
 - Pill colours (fixed palette, readable on the dark card): blue, purple, coral, grey,
   teal, pink; PS Plus is gold and not selectable.
+- **Pill look (owner's follow-up, option A):** a solid tag with white uppercase text,
+  0.6px letter spacing and a small drop shadow (`0 2px 6px rgba(0,0,0,.45)`), and
+  `text-shadow: none` — the card body's dark text glow (`.gc2-body`) must not reach the
+  tag (that glow is what made the first pale pills hard to read). Solid fills: blue
+  `#2563EB`, purple `#7C3AED`, coral `#C2410C`, grey `#57534E`, teal `#0F766E`, pink
+  `#DB2777`, all with white text; PS Plus gold `#F0A500` with dark `#1A1200` text. The
+  colour names (and so the admin choices and the automatic-by-name rule) are unchanged;
+  the filter panel's tier dots take the same solid colours.
 
 ### Admin: price category
 
