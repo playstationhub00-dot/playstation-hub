@@ -2842,16 +2842,19 @@ footer {
 /* A game's own discount beating the site promo (lib/game-discount.js specialDeal). */
 .gc2-deal { font-size: 0.66rem; font-weight: 800; color: #4ade80; }
 /* Tier pill: a game's price category on cards, the game page and Browse
-   (lib/tier-style.js). Light fill + darkest text of the same hue. */
-.tier-pill { display: inline-block; align-self: flex-start; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.3px; line-height: 1.4; padding: 0.12rem 0.55rem; border-radius: 20px; white-space: nowrap; }
-.usd-tier-pill { font-size: 0.72rem; align-self: center; }
-.tier-blue { background: #B5D4F4; color: #042C53; }
-.tier-purple { background: #CECBF6; color: #26215C; }
-.tier-coral { background: #F5C4B3; color: #4A1B0C; }
-.tier-grey { background: #D3D1C7; color: #2C2C2A; }
-.tier-teal { background: #9FE1CB; color: #04342C; }
-.tier-pink { background: #F4C0D1; color: #4B1528; }
-.tier-gold { background: #FAC775; color: #412402; }
+   (lib/tier-style.js). A solid tag with white capitals, like the card's
+   "Last slot" / "Just added" badges. text-shadow: none matters: the card body
+   (.gc2-body) puts a dark glow on its text for the cover art, and inherited by
+   the tag it smeared the letters. Every fill keeps white text at 4.5:1 or more. */
+.tier-pill { display: inline-block; align-self: flex-start; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; line-height: 1.4; padding: 0.16rem 0.55rem; border-radius: 20px; white-space: nowrap; color: #fff; text-shadow: none; box-shadow: 0 2px 6px rgba(0,0,0,.45); }
+.usd-tier-pill { font-size: 0.7rem; align-self: center; }
+.tier-blue { background: #2563EB; color: #fff; }
+.tier-purple { background: #7C3AED; color: #fff; }
+.tier-coral { background: #C2410C; color: #fff; }
+.tier-grey { background: #57534E; color: #fff; }
+.tier-teal { background: #0F766E; color: #fff; }
+.tier-pink { background: #DB2777; color: #fff; }
+.tier-gold { background: #F0A500; color: #1A1200; }
 /* Admin → Settings → Game discounts table. */
 .gdt-note { font-size: 0.8rem; color: #888; margin: 0 0 0.75rem; }
 .gdt-tools { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.6rem; font-size: 0.8rem; color: #aaa; }
