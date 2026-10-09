@@ -1,0 +1,73 @@
+<%#
+  Top of the homepage: the search, the one-line tagline, the "Now playing"
+  banner and — on computers — the Top rented list beside it.
+  Banner: up to 5 games (owner's pins, then newest releases; lib/home-view.js)
+  followed by the owner's uploaded hero slides. Slides scroll natively, so a
+  phone can swipe them; public/js/home.js adds dots, arrows and auto-advance.
+  Locals: home, settings, featured.
+%>
+<%
+  const hmText = settings.hero_text || {};
+  const hmSlug = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const hmPromoSlides = (settings.hero_slides || []).filter(sl => sl && sl.path);
+  const hmSlideCount = home.banner.length + hmPromoSlides.length;
+%>
+<section class="hm-top">
+  <div class="hm-wrap">
+    <div class="hm-head">
+      <h1 class="hm-tagline"><%= hmText.line1 %> <span style="color:<%= hmText.highlight_color || '#F0A500' %>;"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
+      <%- include('../home-search', { featured, compact: true }) %>
+    </div>
+    <% if (hmSlideCount || home.topRented.length) { %>
+    <div class="hm-stage<%= hmSlideCount ? '' : ' hm-stage-solo' %>">
+      <% if (hmSlideCount) { %>
+      <div class="hm-banner" id="hmBanner" role="region" aria-roledescription="carousel" aria-label="Now playing">
+        <div class="hm-slides" id="hmSlides">
+          <% home.banner.forEach(b => {
+            const g = b.game;
+            const tier = (!g.is_bundle && typeof gameTier === 'function') ? gameTier(g) : null; %>
+          <a class="hm-slide" href="/game/<%= hmSlug(g.title) %>">
+            <img src="<%= g.cover_image %>" alt="" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
+            <span class="hm-slide-shade"></span>
+            <span class="hm-slide-body">
+              <span class="hm-kicker">▶ Now playing</span>
+              <span class="hm-slide-title"><%= g.title %></span>
+              <span class="hm-slide-meta">
+                <% if (tier) { %><span class="tier-pill tier-<%= tier.color %>"><%= tier.name %></span><% } %>
+                <% if (b.weekly) { %><span>Weekly from <b>₱<%= b.weekly %></b></span><% } %>
+              </span>
+              <span class="hm-btn">Rent now</span>
+            </span>
+          </a>
+          <% }) %>
+          <% hmPromoSlides.forEach(sl => { %>
+          <% if (sl.link) { %>
+          <a class="hm-slide hm-slide-promo" href="<%= sl.link %>"><img src="<%= sl.path %>" alt="<%= sl.caption || 'Promo' %>"><% if (sl.caption) { %><span class="hm-slide-caption"><%= sl.caption %></span><% } %></a>
+          <% } else { %>
+          <div class="hm-slide hm-slide-promo"><img src="<%= sl.path %>" alt="<%= sl.caption || 'Promo' %>"><% if (sl.caption) { %><span class="hm-slide-caption"><%= sl.caption %></span><% } %></div>
+          <% } %>
+          <% }) %>
+        </div>
+        <% if (hmSlideCount > 1) { %>
+        <button type="button" class="hm-arrow hm-arrow-prev" id="hmPrev" aria-label="Previous slide">&#8249;</button>
+        <button type="button" class="hm-arrow hm-arrow-next" id="hmNext" aria-label="Next slide">&#8250;</button>
+        <div class="hm-dots" id="hmDots">
+          <% for (let i = 0; i < hmSlideCount; i++) { %><button type="button" class="hm-dot<%= i === 0 ? ' on' : '' %>" aria-label="Slide <%= i + 1 %>"></button><% } %>
+        </div>
+        <% } %>
+      </div>
+      <% } %>
+      <% if (home.topRented.length) { %>
+      <aside class="hm-aside" aria-label="Top rented this month">
+        <div class="hm-aside-head"><span class="hm-mark hm-tri">△</span><b>Top rented</b><span>this month</span></div>
+        <ol class="hm-board">
+          <% home.topRented.slice(0, 5).forEach((t, i) => { %>
+          <li><a href="/game/<%= hmSlug(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>
+          <% }) %>
+        </ol>
+      </aside>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+</section>

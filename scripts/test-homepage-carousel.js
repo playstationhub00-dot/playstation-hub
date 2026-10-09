@@ -143,18 +143,17 @@ ok('Coming Soon renders six', () => {
     'the Coming Soon include still slices to 6');
 });
 
-ok('New Releases renders six', () => {
-  assert.ok(/newReleases\.slice\(0,\s*6\)\.forEach/.test(src),
-    'the New Releases row still slices to 6');
+ok('New releases shows at most six a row on computers', () => {
+  const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'home.css'), 'utf8');
+  assert.ok(css.includes('.hm-row > .hm-cell:nth-child(n+7) { display: none; }'), 'shelves cap at six');
 });
 
-ok('but the hero still draws from the whole list', () => {
-  // heroGames takes six that HAVE cover art. Capping the shared list would
-  // leave the hero short whenever one of the top six has no artwork.
-  const hero = src.match(/const heroGames\s*=\s*heroSource[^;]+;/);
-  assert.ok(hero, 'heroGames is still built from heroSource');
-  assert.ok(/const heroSource\s*=\s*\(newReleases[^;]+;/.test(src),
-    'and heroSource is the uncapped newReleases');
+ok('but the banner draws its own covered games from the whole list', () => {
+  // Capping the shared list would leave the banner short whenever one of the
+  // top six has no artwork.
+  assert.ok(/include\('partials\/home\/top'/.test(src), 'the banner block is on the page');
+  const hv = fs.readFileSync(path.join(__dirname, '..', 'lib', 'home-view.js'), 'utf8');
+  assert.ok(/g && g\.cover_image/.test(hv), 'bannerGames requires cover art');
 });
 
 console.log('\n' + passed + ' assertions passed\n');

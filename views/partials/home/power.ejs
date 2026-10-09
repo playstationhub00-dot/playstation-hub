@@ -1,0 +1,15 @@
+<%#
+  The Power-up line (the site promo in one sentence; hidden when the promo is
+  off) and the trust line (only the figures that exist). Locals: home.
+%>
+<section class="hm-wrap hm-power-wrap">
+  <% if (home.powerUp) { %>
+  <a class="hm-power" href="/browse"><span class="hm-power-tag">⚡ Power-up</span><span class="hm-power-text">Rent <%= home.powerUp.days %> days → <b><%= home.powerUp.pct %>% off</b>, automatically</span><span class="hm-power-go">See games ›</span></a>
+  <% } %>
+  <ul class="hm-trust">
+    <% if (home.trust.renters) { %><li>✓ <%= home.trust.renters %> players</li><% } %>
+    <% if (home.trust.recommendPct != null) { %><li>✓ <%= home.trust.recommendPct %>% recommend us</li><% } %>
+    <li>✓ Ready in minutes</li>
+    <li>✓ No password needed</li>
+  </ul>
+</section>

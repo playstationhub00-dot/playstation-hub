@@ -1,8 +1,8 @@
 // Run: node scripts/test-home-search.js
 //
 // Boots the real server against a throwaway DATA_DIR and a blank MONGODB_URI
-// and checks the homepage: the "What game are you looking for?" strip sits
-// above the hero with Popular chips built from the most-rented games, loads its
+// and checks the homepage: the search is the compact field at the top of the
+// page (no Popular chips — the Top rented list does that job), loads its
 // stylesheet and scripts, and /api/search-index carries the fields the search
 // draws (slots, price). The drawing script's ids must exist in the partial.
 const assert = require('assert');
@@ -59,20 +59,17 @@ async function main() {
   console.log('\nGET /');
   const home = await get('/');
 
-  await okAsync('the homepage renders with the search strip above the hero', async () => {
+  await okAsync('the homepage renders the compact search at the top, beside the tagline', async () => {
     assert.strictEqual(home.status, 200);
     const strip = home.body.indexOf('id="homeSearch"');
-    assert.ok(strip > 0, 'strip present');
-    const hero = Math.min(...['class="hero-slideshow"', 'class="hero hero-custom-bg"', 'class="hero hero-v2"', 'id="heroSlideshow"']
-      .map(m => home.body.indexOf(m)).filter(i => i > 0));
-    assert.ok(strip < hero, 'strip comes before the hero');
-    assert.ok(home.body.includes('What game are you looking for?'));
+    assert.ok(strip > home.body.indexOf('class="hm-head"') && strip < home.body.indexOf('aria-label="Quick picks"'), 'in the top block');
+    assert.ok(home.body.includes('class="hs hs-compact" id="homeSearch"'));
+    assert.ok(home.body.includes('<h2 class="hs-title hm-sr">What game are you looking for?</h2>'), 'heading kept for screen readers');
     assert.ok(home.body.includes('id="hsInput"') && home.body.includes('id="hsResults"') && home.body.includes('id="hsDim"'));
   });
 
-  await okAsync('chips are the first four covered most-rented games, linking to their pages', async () => {
-    const chips = [...home.body.matchAll(/<a class="hs-chip" href="([^"]+)">/g)].map(m => m[1]);
-    assert.deepStrictEqual(chips, ['/game/zzyzx-one', '/game/zzyzx-two', '/game/zzyzx-four', '/game/zzyzx-five']);
+  await okAsync('no Popular chips on the compact search', async () => {
+    assert.ok(!home.body.includes('class="hs-chip"') && !home.body.includes('Popular right now'));
   });
 
   await okAsync('the stylesheet and both scripts are requested', async () => {

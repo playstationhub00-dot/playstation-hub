@@ -133,9 +133,10 @@ async function main() {
     assert.ok(cardFor(browse.body, 'zzyzx-unpriced').length > 0);
     assert.ok(!cardFor(browse.body, 'zzyzx-unpriced').includes('gc2-deal'));
   });
-  await okAsync('on phones the row sits after New Releases, not above the hero', async () => {
+  await okAsync('the row sits below the top of the page on every screen (no CSS re-ordering)', async () => {
+    assert.ok(home.body.indexOf('id="specialDealsSection"') > home.body.indexOf('class="hm-top"'));
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
-    assert.ok(css.includes('.home-page #specialDealsSection { order: 17; }'));
+    assert.ok(!css.includes('#specialDealsSection { order'), 'no phone re-ordering rule');
   });
 
   console.log('\nfeed');

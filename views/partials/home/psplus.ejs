@@ -1,0 +1,26 @@
+<%#
+  PS Plus Deluxe in one card: what it is, its weekly price, and a strip of the
+  most-played PS Plus games. Locals: home, psplusPopular, psplusSlug.
+%>
+<% if (home.prices.psplus || psplusPopular.length) { %>
+<section class="hm-wrap hm-sec" id="psplus">
+  <div class="hm-psplus">
+    <div class="hm-psplus-info">
+      <h2 class="hm-title hm-title-plain"><span class="hm-mark hm-x">✕</span>PS Plus Deluxe</h2>
+      <p>Hundreds of games on one account — play any of them for the length of your rental.</p>
+      <% if (home.prices.psplus) { %><div class="hm-psplus-price">from <b>₱<%= home.prices.psplus %></b> / week</div><% } %>
+      <a class="hm-btn" href="/ps-plus">See the games</a>
+    </div>
+    <% if (psplusPopular.length) { %>
+    <div class="hm-psplus-strip" aria-label="Most played on PS Plus">
+      <% psplusPopular.slice(0, 6).forEach(p => { %>
+      <a class="hm-ps-tile" href="<%= psplusSlug ? '/game/' + psplusSlug : '/ps-plus' %>">
+        <% if (p.cover_image) { %><img src="<%= p.cover_image %>" alt="" loading="lazy" decoding="async"><% } %>
+        <span><%= p.title %></span>
+      </a>
+      <% }) %>
+    </div>
+    <% } %>
+  </div>
+</section>
+<% } %>

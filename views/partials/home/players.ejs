@@ -1,0 +1,36 @@
+<%#
+  "Choose your player": the ways to play side by side with their starting
+  prices (lib/home-view.js playerPrices). Buy and PS Plus only show when they
+  have a price. Locals: home, promo.
+%>
+<% const hmDeposit = (promo && promo.deposit) || 0; %>
+<section class="hm-wrap hm-sec" id="players">
+  <h2 class="hm-title">Choose your player</h2>
+  <div class="hm-players">
+    <a class="hm-player" href="/browse">
+      <span class="hm-player-name">Trophy</span>
+      <span class="hm-player-line">Plays on your own profile — trophies and saves stay yours.<% if (hmDeposit) { %> ₱<%= hmDeposit %> refundable deposit.<% } %></span>
+      <% if (home.prices.trophy) { %><span class="hm-player-price">from ₱<%= home.prices.trophy %></span><% } %>
+    </a>
+    <a class="hm-player" href="/browse">
+      <span class="hm-player-name">Non-trophy</span>
+      <span class="hm-player-line">Plays on our account — the cheapest way, no deposit.</span>
+      <% if (home.prices.nonTrophy) { %><span class="hm-player-price">from ₱<%= home.prices.nonTrophy %></span><% } %>
+    </a>
+    <% if (home.prices.buy) { %>
+    <a class="hm-player" href="/buy">
+      <span class="hm-player-name">Buy</span>
+      <span class="hm-player-line">Keep it for good — no return date.</span>
+      <span class="hm-player-price">from ₱<%= home.prices.buy %></span>
+    </a>
+    <% } %>
+    <% if (home.prices.psplus) { %>
+    <a class="hm-player" href="/ps-plus">
+      <span class="hm-player-name">PS Plus</span>
+      <span class="hm-player-line">A whole catalogue on one rental.</span>
+      <span class="hm-player-price">from ₱<%= home.prices.psplus %>/week</span>
+    </a>
+    <% } %>
+  </div>
+  <p class="hm-foot">You never give us your password — you sign our account into your console with a code from your own screen. <a href="/how-it-works">See how it works</a></p>
+</section>

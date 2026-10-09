@@ -9,14 +9,16 @@
   Locals: featured
 %>
 <% const hsChips = (featured || []).filter(g => g.cover_image).slice(0, 4); %>
-<section class="hs" id="homeSearch" aria-label="Find a game">
-  <h2 class="hs-title">What game are you looking for?</h2>
-  <p class="hs-sub">See right away if it's free.</p>
+<%# compact: just the search field (the homepage's Top rented list does the chips' job). %>
+<% const hsCompact = typeof compact !== 'undefined' && compact; %>
+<section class="hs<%= hsCompact ? ' hs-compact' : '' %>" id="homeSearch" aria-label="Find a game">
+  <h2 class="hs-title<%= hsCompact ? ' hm-sr' : '' %>">What game are you looking for?</h2>
+  <% if (!hsCompact) { %><p class="hs-sub">See right away if it's free.</p><% } %>
   <div class="hs-box">
     <input type="search" id="hsInput" class="hs-input" placeholder="Type a game, e.g. God of War" aria-label="Search games" autocomplete="off" enterkeyhint="search">
     <div class="hs-results" id="hsResults" hidden></div>
   </div>
-  <% if (hsChips.length) { %>
+  <% if (hsChips.length && !hsCompact) { %>
   <div class="hs-chips-label">🔥 Popular right now</div>
   <div class="hs-chips">
     <% hsChips.forEach(g => { %>

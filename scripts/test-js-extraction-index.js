@@ -9,30 +9,21 @@ function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
 
 const viewSrc = fs.readFileSync(path.join(REPO_ROOT, 'views', 'index.ejs'), 'utf8');
 
-console.log('\nindex.ejs — 4 inline blocks extracted to public/js/index-1..4.js');
+console.log('\nindex.ejs — the remaining extracted script, public/js/index-4.js');
 
-for (const n of [1, 2, 3, 4]) {
-  ok('public/js/index-' + n + '.js exists', () => {
-    assert.ok(fs.existsSync(path.join(REPO_ROOT, 'public', 'js', 'index-' + n + '.js')), 'missing index-' + n + '.js');
+ok('public/js/index-4.js exists with no leftover EJS tags', () => {
+  const js = fs.readFileSync(path.join(REPO_ROOT, 'public', 'js', 'index-4.js'), 'utf8');
+  assert.ok(!js.includes('<%'), 'an EJS tag was left in index-4.js');
+});
+ok('index.ejs requests index-4.js and then home.js, with the version query', () => {
+  assert.ok(/<script src="\/js\/index-4\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(viewSrc));
+  assert.ok(viewSrc.indexOf('/js/index-4.js') < viewSrc.indexOf('/js/home.js'));
+});
+ok('the old hero, PS Plus collapse and promo countdown scripts are gone with their sections', () => {
+  [1, 2, 3].forEach(n => {
+    assert.ok(!fs.existsSync(path.join(REPO_ROOT, 'public', 'js', 'index-' + n + '.js')), 'index-' + n + '.js still exists');
+    assert.ok(!viewSrc.includes('/js/index-' + n + '.js'), 'index.ejs still requests index-' + n + '.js');
   });
-  ok('index-' + n + '.js has no leftover EJS tags', () => {
-    const js = fs.readFileSync(path.join(REPO_ROOT, 'public', 'js', 'index-' + n + '.js'), 'utf8');
-    assert.ok(!js.includes('<%'), 'an EJS tag was left in index-' + n + '.js');
-  });
-  ok('index.ejs requests index-' + n + '.js with the version query, in document order', () => {
-    assert.ok(
-      new RegExp('<script src="\\/js\\/index-' + n + '\\.js\\?v=<%=\\s*assetV\\s*%>"><\\/script>').test(viewSrc),
-      'index.ejs does not request /js/index-' + n + '.js with ?v=<%= assetV %>'
-    );
-  });
-}
-
-ok('the 4 script tags still appear in their original relative order', () => {
-  const positions = [1, 2, 3, 4].map(n => viewSrc.indexOf('/js/index-' + n + '.js'));
-  assert.ok(positions.every(p => p !== -1), 'not all 4 script references found');
-  for (let i = 1; i < positions.length; i++) {
-    assert.ok(positions[i] > positions[i - 1], 'index-' + (i + 1) + '.js appears before index-' + i + '.js — order changed');
-  }
 });
 
 ok('index-4.js does not redeclare the hoisted promo globals', () => {

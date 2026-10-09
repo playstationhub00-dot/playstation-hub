@@ -1,0 +1,13 @@
+<%#
+  A shelf of game cards: a swipe row on phones, up to 6 a row on computers
+  (public/css/home.css). Used for Top rented (phones), New releases and Loot
+  drops. Locals: id, mark ('tri' | 'cir' | 'x' | 'sq'), title, sub, games,
+  viewAll (href or ''), ranked (badge #1..), dealPrice, extraClass.
+%>
+<% const hmMarks = { tri: '△', cir: '○', x: '✕', sq: '□' }; %>
+<section class="hm-wrap hm-sec<%= typeof extraClass !== 'undefined' && extraClass ? ' ' + extraClass : '' %>" id="<%= id %>">
+  <h2 class="hm-title"><span class="hm-mark hm-<%= mark %>"><%= hmMarks[mark] %></span><%= title %><% if (sub) { %> <span class="hm-sub"><%= sub %></span><% } %><% if (viewAll) { %><a class="hm-viewall" href="<%= viewAll %>">View all ›</a><% } %></h2>
+  <div class="hm-row">
+    <% games.forEach((game, i) => { %><div class="hm-cell"><% if (ranked) { %><span class="hm-medal hm-rk-<%= i + 1 %>">#<%= i + 1 %></span><% } %><%- include('../game-card', { game, showPriceStart: true, dealPrice: !!dealPrice }) %></div><% }) %>
+  </div>
+</section>

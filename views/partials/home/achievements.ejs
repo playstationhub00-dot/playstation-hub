@@ -1,0 +1,18 @@
+<%#
+  "Achievements unlocked": the shop's figures as trophies, then the same review
+  strip every other page shows. Locals: home, games, reviews, reviewStats,
+  recommend, reviewBadge, reviewDisplayName, renterCount.
+%>
+<% const hmStart = [home.prices.nonTrophy, home.prices.trophy].filter(Boolean); %>
+<section class="hm-wrap hm-sec" id="reviewsSection">
+  <h2 class="hm-title">🏆 Achievements unlocked</h2>
+  <div class="hm-trophies">
+    <% if (home.trust.recommendPct != null) { %><div class="hm-trophy"><b><%= home.trust.recommendPct %>%</b><span>would recommend us</span></div><% } %>
+    <% if (home.trust.renters) { %><div class="hm-trophy"><b><%= home.trust.renters %></b><span>players served</span></div><% } %>
+    <div class="hm-trophy"><b><%= games.length %></b><span>games to play</span></div>
+    <% if (hmStart.length) { %><div class="hm-trophy"><b>₱<%= Math.min(...hmStart) %></b><span>starting price</span></div><% } %>
+  </div>
+  <% if ((reviews && reviews.length > 0) || (recommend && recommend.total > 0)) { %>
+  <%- include('../review-block', { reviews, reviewStats, recommend, reviewBadge, reviewDisplayName, renterCount }) %>
+  <% } %>
+</section>
