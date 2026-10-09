@@ -5,10 +5,10 @@
 %>
 <%# A div, not <nav>: the site styles every nav element as the sticky menu bar. %>
 <div class="hm-wrap hm-picks" role="navigation" aria-label="Quick picks">
-  <% if (home.newGames.length) { %><a class="hm-pick hm-pick-tri" href="#newReleasesSection"><span class="hm-mark hm-tri">△</span>New releases</a><% } %>
-  <% if (specialDeals.length) { %><a class="hm-pick hm-pick-cir" href="#specialDealsSection"><span class="hm-mark hm-cir">○</span>Deals</a><% } %>
-  <% if (home.prices.psplus || psplusPopular.length) { %><a class="hm-pick hm-pick-x" href="#psplus"><span class="hm-mark hm-x">✕</span>PS Plus</a><% } %>
-  <% if (upcoming.length) { %><a class="hm-pick hm-pick-sq" href="#comingSoon"><span class="hm-mark hm-sq">□</span>Coming soon</a><% } %>
+  <% if (home.newGames.length) { %><a class="hm-pick hm-pick-tri" href="#newReleasesSection"><span aria-hidden="true" class="hm-mark hm-tri">△</span>New releases</a><% } %>
+  <% if (specialDeals.length) { %><a class="hm-pick hm-pick-cir" href="#specialDealsSection"><span aria-hidden="true" class="hm-mark hm-cir">○</span>Deals</a><% } %>
+  <% if (home.prices.psplus || psplusPopular.length) { %><a class="hm-pick hm-pick-x" href="#psplus"><span aria-hidden="true" class="hm-mark hm-x">✕</span>PS Plus</a><% } %>
+  <% if (upcoming.length) { %><a class="hm-pick hm-pick-sq" href="#comingSoon"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon</a><% } %>
   <a class="hm-pick" href="/browse?price=low">Under ₱<%= home.bands.low %></a>
   <% if (home.hasPs4) { %><a class="hm-pick" href="/browse?console=ps4">Plays on PS4</a><% } %>
   <% home.quickGenres.forEach(gn => { %><a class="hm-pick" href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %></a><% }) %>

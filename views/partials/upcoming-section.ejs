@@ -2,7 +2,7 @@
 <div class="section" data-upcoming="1" id="comingSoon" style="<%= typeof noBorderTop !== 'undefined' && noBorderTop ? '' : 'border-top:1px solid #1a1a1a;' %>padding-bottom:0;">
   <h2 class="section-title" style="color:#fff;">
     <% if (typeof homeMarker !== 'undefined' && homeMarker) { %>
-    <span style="display:inline-flex;align-items:center;"><span class="hm-mark hm-sq">□</span>Coming soon</span>
+    <span style="display:inline-flex;align-items:center;"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon</span>
     <span class="hm-sub">reserve a slot</span>
     <% } else { %>
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">

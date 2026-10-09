@@ -153,7 +153,7 @@ async function main() {
   await okAsync('new releases newest first; deals at their deal price; Coming soon with its marker', async () => {
     assert.deepStrictEqual(cardSlugs(slice(home, 'id="newReleasesSection"', 'id="specialDealsSection"')), ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-charlie']);
     assert.ok(slice(home, 'id="specialDealsSection"', '<!-- UPCOMING GAMES').includes('Monthly <b>₱599</b>'));
-    assert.ok(slice(home, 'id="comingSoon"', '</h2>').includes('<span class="hm-mark hm-sq">□</span>Coming soon'));
+    assert.ok(slice(home, 'id="comingSoon"', '</h2>').includes('<span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon'));
   });
   await okAsync('PS Plus card with its weekly price and most-played strip', async () => {
     const ps = slice(home, 'id="psplus"', 'id="players"');

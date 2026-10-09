@@ -59,7 +59,7 @@
       <% } %>
       <% if (home.topRented.length) { %>
       <aside class="hm-aside" aria-label="Top rented this month">
-        <div class="hm-aside-head"><span class="hm-mark hm-tri">△</span><b>Top rented</b><span>this month</span></div>
+        <div class="hm-aside-head"><span aria-hidden="true" class="hm-mark hm-tri">△</span><b>Top rented</b><span>this month</span></div>
         <ol class="hm-board">
           <% home.topRented.slice(0, 5).forEach((t, i) => { %>
           <li><a href="/game/<%= hmSlug(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>

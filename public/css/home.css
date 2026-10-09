@@ -7,11 +7,14 @@
 .hm-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* PlayStation-symbol markers */
-.hm-mark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 1.35em; height: 1.35em; border-radius: 50%; border: 1.5px solid currentColor; font-size: 0.72em; font-weight: 800; line-height: 1; margin-right: 0.5rem; }
-.hm-tri { color: var(--hm-tri); }
-.hm-cir { color: var(--hm-cir); }
-.hm-x { color: var(--hm-x); }
-.hm-sq { color: var(--hm-sq); }
+/* PlayStation-button discs: a dark disc with the coloured symbol drawn centred in it
+   (SVG, so it never depends on a font's glyph metrics). The text glyph in the
+   markup is aria-hidden and pushed out of the disc (text-indent), never painted. */
+.hm-mark { display: inline-block; flex-shrink: 0; width: 1.5em; height: 1.5em; border-radius: 50%; background: #0a0a0a center / 78% no-repeat; box-shadow: inset 0 0 0 1px #2c2c2c; overflow: hidden; text-indent: 300%; white-space: nowrap; color: transparent; margin-right: 0.5rem; vertical-align: middle; }
+.hm-tri { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M12 5.2 19.2 18H4.8z' stroke='%2333D6A6'/%3E%3C/svg%3E"); }
+.hm-cir { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='6' stroke='%23F23C4A'/%3E%3C/svg%3E"); }
+.hm-x { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7 7 17' stroke='%237F96DC'/%3E%3C/svg%3E"); }
+.hm-sq { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke-width='2.6' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='6.2' y='6.2' width='11.6' height='11.6' rx='0.8' stroke='%23E58FD2'/%3E%3C/svg%3E"); }
 
 .hm-title { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; margin: 0 0 1rem; font-size: 1.35rem; font-weight: 900; color: #fff; }
 .hm-sub { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-left: 0.35rem; }
