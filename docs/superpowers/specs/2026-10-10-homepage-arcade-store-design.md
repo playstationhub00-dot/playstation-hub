@@ -1,6 +1,6 @@
 # Homepage redesign — "Arcade store" — Design
 
-Date: 2026-10-10 · Status: approved by owner in chat, awaiting spec review
+Date: 2026-10-10 · Status: approved by owner; amended after the plan's dry run
 
 ## Problem
 
@@ -49,8 +49,8 @@ them in this order, with no CSS `order` re-sorting on phones.
 | 2 | Menu | `partials/nav` unchanged; the homepage search (`partials/home-search`) shrinks to a compact search field directly under the menu (phone) / beside the tagline (computer) — same search, results dropdown and tracking | the 201px search block |
 | 3 | Tagline | one line: `hero_text.line1` + `hero_text.highlight` (in `highlight_color`) + `hero_text.line2`; admin fields unchanged (subtitle no longer shown) | the big hero headline |
 | 4 | "Now playing" banner | swipeable slides, max 5 game slides + the owner's `hero_slides`. Game slide: cover art, "▶ NOW PLAYING", title, tier tag, "Weekly from ₱X" (card price rules: own discount / site promo), "Rent now" → `/game/<slug>`. Auto-advance 6s, pauses on touch/hover; dots; swipe on phones, arrows on computers. On computers the Top-rented list (block 7, top 5) sits to the right of the banner | hero, hero slideshow, custom-background hero |
-| 5 | Power-up bar + trust line | "⚡ Power-up · Rent 30 days → 10% off, automatically" built from the site promo (largest discount and its duration; hidden when the promo is off or has no discount) + "✓ 300+ players · ✓ 100% recommend · ✓ Ready in minutes" (renter count and recommend % from the existing review stats; a figure that is missing or zero is left out) | promo ladder section, hero stats |
-| 6 | Quick picks | chips: △ New releases (#newReleases) · ○ Deals (#deals, only when deals exist) · ✕ PS Plus (#psplus) · □ Coming soon (#comingSoon) · Under ₱A (`/browse?price=low`) · PS4 (`/browse?console=ps4`) · plus up to 2 genres with the most games (`/browse?genre=X`) | — (new) |
+| 5 | Power-up bar + trust line | "⚡ Power-up · Rent 30 days → 10% off, automatically" built from the site promo (largest discount and its duration; hidden when the promo is off or has no discount) + "✓ 300+ players · ✓ 100% recommend us · ✓ Ready in minutes · ✓ No password needed" (renter count and recommend % from the existing review stats; a figure that is missing or zero is left out) | promo ladder section, hero stats |
+| 6 | Quick picks | chips: △ New releases (#newReleasesSection) · ○ Deals (#specialDealsSection, only when deals exist) · ✕ PS Plus (#psplus) · □ Coming soon (#comingSoon) — existing section ids kept · Under ₱A (`/browse?price=low`) · PS4 (`/browse?console=ps4`) · plus up to 2 genres with the most games (`/browse?genre=X`) | — (new) |
 | 7 | Top rented | ranked by rentals started in the last 30 days (customer records' `start_date`, per `game_id`), ties and fill-up by all-time `renters`; games only (not upcoming). Phone: swipe row of cards #1–#10 with a rank badge (gold/silver/bronze for 1–3). Computer: top-5 list beside the banner (rank, title, from-price, link) and no separate row | Most popular, "Most rented" spotlight |
 | 8 | △ New releases | existing `newReleases` list; phone swipe row, computer up to 6 a row; "View all" → `/browse` | — |
 | 9 | ○ Loot drops | existing `specialDeals`; hidden when empty | Special deals |
@@ -63,7 +63,7 @@ them in this order, with no CSS `order` re-sorting on phones.
 
 Removed from the homepage: the account-type section, "Three ways to play", "Why rent
 from us", price-tier cards, spotlight, Most popular, Most played in PS Plus (as a
-section), promo ladder, Ways to pay, the `.home-page` CSS `order` rules. The reserve and
+section), promo ladder, Ways to pay, the `.home-page` CSS `order` rules, and the scripts only those sections used (`public/js/index-1.js` hero slideshow, `index-2.js` PS Plus collapse, `index-3.js` promo countdown). The page body class becomes `home2`, so leftover `.home-page` rules no longer apply. The reserve and
 rent modals the page includes stay.
 
 ## Admin
@@ -103,8 +103,11 @@ project's `games.json`, the database or the real admin.
 - `scripts/test-home-page.js` — boots a throwaway instance: blocks render in the order
   above; tagline from hero text; banner slides and prices; top-rented badges; empty deals
   hidden; removed sections gone; payment methods only in the footer; first game card
-  appears before the "Choose your player" block; admin banner picker saves ids (login
-  required).
+  appears before the "Choose your player" block; the Power-up line goes when the promo
+  is switched off.
+- `scripts/test-home-banner-admin.js` — the admin picker, saving ids (blanks, unknown
+  ids and repeats dropped), login required, toast and the hero-text / hero-background
+  notes.
 - Existing tests that assert removed homepage sections are updated; the full suite stays
   green except the known `scripts/test-requests-page.js`.
 
