@@ -65,8 +65,9 @@
     games.forEach(function (f) { if (!inGrid[f.id]) homes[f.home].appendChild(cards[f.id]); });
     $('bfSections').hidden = v.active;
     ['bfUpcoming', 'bfPsMonthly'].forEach(function (id) { if ($(id)) $(id).hidden = v.active; });
-    $('bfResults').hidden = !(v.active && v.siteOn);
-    $('bfEmpty').hidden = !(v.active && v.siteOn && v.site.length === 0);
+    var none = v.active && !v.site.length && !v.psplus.length;
+    $('bfResults').hidden = !(v.active && (v.siteOn || none));
+    $('bfEmpty').hidden = !(v.active && (v.siteOn || none) && v.site.length === 0);
     $('bfEmpty').textContent = v.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.';
     renderBar(v);
     renderPsplus(v);
@@ -115,6 +116,7 @@
     $('bfClose').focus();
   }
   function closePanel() {
+    if (location.hash === '#bfPanel') { location.hash = ''; history.replaceState(null, '', location.pathname + location.search); }
     panel.classList.remove('bf-show');
     document.body.classList.remove('bf-lock');
     document.removeEventListener('keydown', onKey);
@@ -159,6 +161,8 @@
 
   // A shared link to #bfPanel (or the no-script fallback) opens it properly.
   if (location.hash === '#bfPanel') {
+    // location.hash = '' (unlike replaceState alone) un-matches CSS :target, so the panel can close.
+    location.hash = '';
     history.replaceState(null, '', location.pathname + location.search);
     openPanel();
   }

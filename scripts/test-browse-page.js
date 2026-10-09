@@ -213,6 +213,11 @@ async function main() {
     assert.strictEqual(optCount(p, 'genre', 'Action'), 1, 'Days Gone');
     assert.ok(between(p, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 2 PS Plus games</button>'));
   });
+  await okAsync('PS Plus alone with nothing matching shows the empty message, not a blank page', async () => {
+    const p = await page('/browse?psplus=1&genre=Horror');
+    assert.ok(!opening(p, 'bfEmpty').includes('hidden') && !opening(p, 'bfResults').includes('hidden'));
+    assert.ok(between(p, 'bfEmpty', 'bfGrid').includes('No games found. Try a different filter.'));
+  });
   await okAsync('a search only PS Plus has says so instead of "No games found"', async () => {
     const p = await page('/browse?search=returnal');
     assert.ok(between(p, 'bfEmpty', 'bfGrid').includes('None of our own games match — but these PS Plus games do.'));
@@ -229,8 +234,11 @@ async function main() {
     assert.ok(d.games.find(g => g.id === 5).text.includes('</script><b>favourite'));
     ['/js/browse-filter-core.js', '/js/browse.js', '/css/browse-filters.css'].forEach(src => assert.ok(all.includes(src + '?v='), src));
     assert.strictEqual((await call('/js/browse.js')).status, 200);
+    const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'browse.js'), 'utf8');
+    assert.ok(js.includes("location.hash = ''"), 'clears the hash so :target un-matches');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
     assert.ok(css.includes('minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)'), 'at most 6 a row');
+    assert.ok(/\.cat-section\s*\{\s*scroll-margin-top:\s*130px/.test(css), 'section headings clear the menu and filter bar');
     assert.ok(/\.bf-ps-all\[hidden\]\s*\{\s*display:\s*none/.test(css), 'hidden Show all button stays hidden');
   });
   await okAsync('the PS Plus page still shows its weekly price', async () => {

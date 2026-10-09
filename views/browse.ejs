@@ -96,8 +96,8 @@
   </div>
 
   <!-- Any filter on: every match in one grid, tier order then A–Z -->
-  <div class="section" id="bfResults"<%= view.active && view.siteOn ? '' : ' hidden' %>>
-    <p class="bf-empty" id="bfEmpty"<%= view.active && view.siteOn && view.site.length === 0 ? '' : ' hidden' %>><%= view.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.' %></p>
+  <div class="section" id="bfResults"<%= view.active && (view.siteOn || !view.psplus.length) ? '' : ' hidden' %>>
+    <p class="bf-empty" id="bfEmpty"<%= view.active && (view.siteOn || !view.psplus.length) && view.site.length === 0 ? '' : ' hidden' %>><%= view.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.' %></p>
     <div class="games-grid rentals-grid" id="bfGrid">
       <% view.grid.forEach(id => { %><div class="bf-item" data-id="<%= id %>"><%- include('partials/game-card', { game: gamesById[id] }) %></div><% }) %>
     </div>
