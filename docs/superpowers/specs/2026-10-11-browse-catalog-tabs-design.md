@@ -1,6 +1,6 @@
 # Rent / Browse — one catalog with tabs, search and sort — Design
 
-Date: 2026-10-11 · Status: approved by owner
+Date: 2026-10-11 · Status: approved by owner; amended after the plan's dry run
 
 Builds on `2026-10-09-browse-filters-tiers-design.md` (filters panel, chip bar,
 tier pills) and the arcade-store homepage.
@@ -36,44 +36,60 @@ Top to bottom (`views/browse.ejs`):
 2. **Search box** — placeholder "Search N games…"; filters the current tab's grid as
    the customer types (title match, same lowercased text the filters already use).
    `?search=` (the nav search's "See all N results" link) pre-fills it.
-3. **Tab row** — pills in the order above; the active tab is gold. On phones the row
-   scrolls sideways. Search box and tab row stay pinned under the site header while
-   scrolling (as the filter bar is today).
-4. **Results bar** — "<Tab name> · N games", the active filter chips (existing chip
-   bar), **Sort** menu, **Filters** button (existing panel, unchanged).
+3. **Tab row** — pills in the order above, each with its count; the active tab is
+   gold. On phones the row scrolls sideways (a tapped tab scrolls into view).
+   On computers the search box, tab row and results bar stay pinned under the site
+   header while scrolling. On phones the search box slides under the header and the
+   tab row and results bar stay pinned (verified at 375px: tabs at 64px).
+4. **Results bar** — "<Tab name> · N games", **Sort** menu, **Filters** button
+   (existing panel), then the active filter chips on their own line. On phones the
+   count wraps to two lines rather than being cut off.
 5. **When a tier is filtered** — that tier's admin-written description above the grid.
 6. **Grid** — existing `partials/game-card` (or `partials/upcoming-card` on Coming
-   soon); 6 a row on computers, 2 on phones (existing `.rentals-grid`).
+   soon); the existing Browse grid rule: up to 6 a row (5 at 1280px wide, 6 from
+   about 1400px), 2 on phones. Every card is on the page once; the active tab's
+   matches come first and the rest wait hidden, so switching tabs needs no reload.
 7. **Empty state** — "No games match. Clear filters" (button clears search + filters,
    keeps the tab).
 
-Removed from Browse: the Coming soon slider, the per-tier and Account bundles
-sections, and the PS Plus monthly entries block (that information stays on
-`/ps-plus`).
+Removed from Browse: the Coming soon slider (`views/partials/upcoming-section.ejs`,
+deleted — nothing else includes it), the per-tier and Account bundles sections, and
+the PS Plus monthly entries block and its styles in `style.css` (that information
+stays on `/ps-plus`).
 
 ## Tabs
 
 | Tab | `?tab=` | Games | Default sort |
 |---|---|---|---|
 | All games | (none) / `all` | every rentable game | Most rented |
-| Most rented | `most-rented` | every game; #1–#10 rank badges on the first ten while sorted by Most rented | Most rented |
-| New releases | `new` | games the homepage counts as new releases (same rule as `home.newGames`) | Newest |
-| Coming soon | `coming-soon` | every Coming soon game (`sortUpcoming` order) with Reserve | Release date (soonest; TBA last) |
+| Most rented | `most-rented` | every game anyone has rented (never-rented games are on All games only); #1–#10 rank badges while sorted by Most rented | Most rented |
+| New releases | `new` | the 20 newest released games, by the homepage New releases rule (release date on or before today, not TBA); the homepage shelf is its first 10 | Newest |
+| Coming soon | `coming-soon` | every Coming soon game with Reserve | Release date = the site's Coming soon order (`sortUpcoming`: owner-ranked first, then soonest, TBA last — the homepage row's order) |
 | Deals | `deals` | every game whose own discount beats the site promo (same rule as the homepage "Loot drops", no 12 cap) | Biggest discount |
 | Available now | `available` | games with a free slot now (the existing "Available now" rule) | Most rented |
 | Buy to keep | `buy` | games with a buy price on sale (existing "Can buy" rule) | Most rented |
 | Bundles | `bundles` | account bundles (existing rule) | Most rented |
-| PS Plus Deluxe | `psplus` | one "PS Plus Deluxe — hundreds of games, from ₱X/week · Rent" card, then the PS Plus catalog (the grid Browse already renders for the PS Plus filter) | A–Z |
+| PS Plus Deluxe | `psplus` | one "PS Plus Deluxe — Hundreds of games, one account · from ₱X/week · Rent" card (Rent → the PS Plus Deluxe game's page, else `/ps-plus`), then the PS Plus catalog (24, then "Show all N", as Browse already draws it) | A–Z |
 
-- **"Most rented"** ranking = the homepage Top rented rule extended to every game:
-  rentals started in the last 30 days, then all-time `renters`, then title.
-- **Sort menu** options: Most rented, Newest, Price low→high, Price high→low, A–Z;
-  Coming soon offers Release date and A–Z; Deals adds Biggest discount; PS Plus
-  Deluxe offers A–Z only. `?sort=` keeps the choice in the address.
-- Each tab shows its own count; tabs with no games are hidden (except All games).
-- Filters still combine with any tab (e.g. Most rented + PS4 + Under ₱200). The
-  existing filter state in the address (`price`, `console`, `genre`, `tier`, …) is
-  unchanged, so old links (homepage quick picks) keep working and open All games.
+- **"Most rented"** ranking = the homepage Top rented rule extended to every rented
+  game (`rentalRanking` in `lib/home-view.js`; Top rented is its first 10): rentals
+  started in the last 30 days, then all-time `renters`, then title. On other tabs,
+  never-rented games follow in A–Z order.
+- **Sort menu** options (labels): Most rented, Newest, Price: low to high, Price:
+  high to low, A–Z; New releases lists Newest first; Deals adds Biggest discount
+  first; Coming soon offers Release date and A–Z; PS Plus Deluxe has A–Z only, so
+  no Sort menu shows. Ties go by title; missing prices and dates last. `?sort=`
+  keeps the choice in the address (the tab's default is left out); another tab
+  starts in its own default order and keeps the search and filters.
+- Each tab shows its count for the current search and filters; tabs with no games
+  at all are hidden (except All games).
+- Filters combine with any game tab (e.g. Most rented + PS4 + Under ₱200). On Coming
+  soon and PS Plus Deluxe the Filters button and chips are hidden; the filters stay
+  in the address for the other tabs. The panel's old "Show" options and the "PS Plus
+  Deluxe" tier option became tabs. The rest of the filter state in the address
+  (`price`, `console`, `genre`, `tier`) is unchanged, so old links (homepage quick
+  picks) keep working and open All games; old `avail=1`, `unit=ps4|ps5`, `new=1`,
+  `newOnly=1`, `buy=1`, `bundle=1` and `psplus=1` links open their tab.
 
 ## Links into the catalog
 
@@ -90,9 +106,10 @@ sections, and the PS Plus monthly entries block (that information stays on
 - **Rules (pure, shared server + browser):** `public/js/browse-filter-core.js` gains
   the tabs (which games each tab holds), sort orders and search matching, next to
   the filter rules it already has, so the first server render and every click
-  agree. Each game's facts gain `rank` (most-rented position), `added` (date for
-  Newest), `deal` (discount %), and Coming soon items get their own facts
-  (`release`, …).
+  agree. Each game's facts gain `rank` (most-rented position), `released` (release
+  date, for New releases and Newest) and `deal` (the game's own deal %); `isNew`,
+  `home` and the PS Plus "just added" mark are no longer needed. Coming soon games
+  get `{ id, title, text, order }`.
 - **Server (`GET /browse`):** reads `tab`, `sort`, `search` with the existing
   filters, renders the active tab's grid in final order, and hands the browser the
   facts it needs (`browseData`, as now).
@@ -103,8 +120,10 @@ sections, and the PS Plus monthly entries block (that information stays on
 
 ## Error handling
 
-- Unknown `tab` → All games; unknown `sort` → the tab's default; blank search →
-  none.
+- Unknown `tab` → All games; unknown `sort` (or one the tab does not offer) → the
+  tab's default; blank search → none.
+- No games match: "No games match." and a "Clear filters" button that clears the
+  search and filters and keeps the tab.
 - A tab with no games is hidden; if the address asks for a hidden tab, All games.
 
 ## Testing
@@ -112,11 +131,11 @@ sections, and the PS Plus monthly entries block (that information stays on
 Throwaway instance (temp `DATA_DIR`, blank `MONGODB_URI`, in-memory sessions), no
 real data.
 
-- Unit (`scripts/test-browse-filter-core.js` or a new
-  `scripts/test-browse-catalog-core.js`): each tab's membership, every sort order
+- Unit (`scripts/test-browse-filter-core.js`, rewritten): each tab's membership, every sort order
   (Most rented ties, Newest, prices, A–Z, release date with TBA last, biggest
   discount), search matching, tab + filter combinations, unknown tab/sort fallback.
-- Page (`scripts/test-browse-page.js` updated + a new catalog page test): tab row
+- Page (`scripts/test-browse-page.js`, rewritten; `scripts/test-home-coming-soon-row.js`
+  checks Browse's Coming soon tab): tab row
   with counts, active tab from `?tab=`, grid order per tab, #1–#10 badges only on
   Most rented, Coming soon cards with Reserve, PS Plus tab card, tier description
   when a tier is filtered, `?search=` pre-fill, removed sections gone, old filter
