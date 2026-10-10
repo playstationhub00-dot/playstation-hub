@@ -6,6 +6,7 @@
   <title><%= game.title %> — Coming Soon — Playstation Hub</title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
   <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body>
@@ -13,6 +14,9 @@
 <%- include('partials/nav', { active: 'browse' }) %>
 
 <%
+  // PlayStation's trailer, screenshots and game info (lib/game-psn-view.js),
+  // exactly as on a released game's page; hasPsn:false leaves the page as it was.
+  const udPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, about: '', info: [] };
   const hasNt = !!(game.nt_price_7d || game.nt_price_30d);
   const hasTr = !!(game.tr_price_7d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
   const showTr = hasTr;
@@ -67,6 +71,7 @@
         <% if (game.genre) { %><span class="usd-plat-chip"><%= game.genre %></span><% } %>
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
+      <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: udPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="usd-cd-row">
           <% if (udIsTba) { %>
@@ -102,7 +107,9 @@
     <div class="gd-layout">
 
       <div class="gd-cover-col">
-        <% if (game.cover_image) { %>
+        <% if (udPsn.media.length) { %>
+          <%- include('partials/game-psn-media', { items: udPsn.media, title: game.title }) %>
+        <% } else if (game.cover_image) { %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster">
         <% } %>
         <!-- Same poster badges as the released-game page: platform corner chip,
@@ -119,9 +126,10 @@
         <!-- Description only, matching the rent page. The release countdown used
              to repeat here, but the banner directly above already states it
              verbatim ("16 DAYS UNTIL RELEASE · September 15, 2026"). -->
-        <% if (game.description) { %>
+        <% if (game.description && !udPsn.hasPsn) { %>
           <p class="gd-desc gdh-poster-desc"><%= game.description %></p>
         <% } %>
+        <%- include('partials/game-psn-about', { psnView: udPsn }) %>
       </div>
 
       <div class="gd-detail-col">
@@ -345,7 +353,7 @@
 
     <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 
-    <% const gpGallery = (game.gallery || []).filter(Boolean); %>
+    <% const gpGallery = udPsn.hideGallery ? [] : (game.gallery || []).filter(Boolean); %>
     <% if (gpGallery.length) { %>
     <div class="rsv-gallery-section">
       <div class="rsv-gallery-label">Gameplay</div>
@@ -393,5 +401,6 @@ const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
 const gpSlideCount = <%= gpGallery.length %>;
 </script>
 <script src="/js/upcoming-detail.js?v=<%= assetV %>"></script>
+<% if (udPsn.media.length || udPsn.about) { %><script src="/js/game-media.js?v=<%= assetV %>" defer></script><% } %>
 </body>
 </html>

@@ -5367,7 +5367,7 @@ app.get('/upcoming/:slug', (req, res) => {
   // by sortForGame() the same way. It never surfaces as "reviews of this game";
   // it's the trust signal for the business, which is exactly what a customer
   // deciding whether to reserve an unreleased game needs to see.
-  res.render('upcoming-detail', Object.assign({ game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null },
+  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null },
     reviewBlockLocals(resolvedGame.title)));
 });
 
