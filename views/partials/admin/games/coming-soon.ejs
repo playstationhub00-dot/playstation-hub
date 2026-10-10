@@ -3,6 +3,7 @@
   data, including the reserved count and the ready-to-release nudge, comes
   from lib/games-view.js upcomingRows().
 %>
+<%- include('psn-update') %>
 <%
   const csRows = gamesView.upcoming;
   const csPeso = v => v ? '₱' + v : '₱—';

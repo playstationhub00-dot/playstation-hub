@@ -1,0 +1,80 @@
+<%#
+  Coming soon → "Update from PlayStation": the button, and — after a check —
+  the list to tick (gamesView.psnUpdate, built by lib/upcoming-psn.js
+  previewView). Nothing is saved until the gold button. The gold button's
+  counts follow the ticks via public/js/admin-upcoming-psn.js.
+%>
+<%
+  const pu = gamesView.psnUpdate;
+  const puFields = [
+    ['nt_price_7d', 'Non-trophy weekly', '₱'], ['nt_price_30d', 'Non-trophy monthly', '₱'],
+    ['tr_price_7d', 'Trophy weekly', '₱'], ['tr_price_30d', 'Trophy monthly', '₱'],
+    ['non_trophy_slots', 'Non-trophy slots', ''], ['trophy_slots', 'Trophy slots', '']
+  ];
+%>
+<div class="gmp-bar">
+  <form method="POST" action="/admin/upcoming/psn/refresh">
+    <button type="submit" class="gm-btn gmp-check">🔄 Update from PlayStation</button>
+  </form>
+  <span class="gmp-hint">Finds PlayStation's announced games — you tick which ones to add.</span>
+</div>
+<% if (gamesView.psnUpdateExpired) { %>
+<div class="gmp-warn">⏳ That list expired (they last 30 minutes) — press <b>Update from PlayStation</b> again.</div>
+<% } %>
+<% if (pu) { %>
+<form method="POST" action="/admin/upcoming/psn/apply" class="gmp" id="gmpForm">
+  <input type="hidden" name="token" value="<%= pu.token %>">
+  <% if (pu.upToDate) { %>
+  <div class="gmp-card"><div class="gmp-h">✅ You're up to date — nothing new on PlayStation.</div></div>
+  <% } %>
+  <% const puNew = pu.fresh.map(g => ({ g, on: true })).concat(pu.skippedBefore.map(g => ({ g, on: false }))); %>
+  <% if (puNew.length) { %>
+  <div class="gmp-card">
+    <div class="gmp-h">New on PlayStation (<%= puNew.length %>)<span class="gmp-meta"><%= pu.checkedLabel ? ' · checked ' + pu.checkedLabel : '' %> · tick the ones to add</span></div>
+    <% puNew.forEach(({ g, on }) => { %>
+    <div class="gmp-row">
+      <input type="checkbox" name="add" value="<%= g.concept_id %>" class="gmp-tick" data-gmp-add<%= on ? ' checked' : '' %> aria-label="Add <%= g.title %>">
+      <% if (g.image_url) { %><img src="<%= g.image_url %>" class="gmp-cover" alt="" loading="lazy"><% } else { %><span class="gmp-cover"></span><% } %>
+      <div class="gmp-name">
+        <input type="text" name="title_<%= g.concept_id %>" value="<%= g.title %>" maxlength="150" class="gmp-title" aria-label="Title for <%= g.title %>">
+        <div class="gmp-sub"><%= [on ? '' : 'Skipped before', g.publisher, g.genre].filter(Boolean).join(' · ') %></div>
+      </div>
+      <div class="gmp-date"><%= g.dateLabel %></div>
+      <div class="gmp-plat"><%= g.platform %></div>
+    </div>
+    <% }) %>
+    <div class="gmp-h gmp-h2">Prices and slots for the games you add</div>
+    <div class="gmp-prices">
+      <% puFields.forEach(([key, label, unit]) => { %>
+      <label class="gmp-f"><span><%= label %><%= unit ? ' (' + unit + ')' : '' %></span><input type="number" name="<%= key %>" min="0" step="1" value="<%= pu.defaults[key] %>"></label>
+      <% }) %>
+    </div>
+    <div class="gmp-note"><%= pu.defaultsFrom ? 'Filled in from ' + pu.defaultsFrom + ', the last upcoming game you added. ' : '' %>Cover, description and up to 6 screenshots come from PlayStation.</div>
+  </div>
+  <% } %>
+  <% if (pu.dateChanges.length) { %>
+  <div class="gmp-card">
+    <div class="gmp-h">Release date changed (<%= pu.dateChanges.length %>)</div>
+    <% pu.dateChanges.forEach(c => { %>
+    <label class="gmp-chg">
+      <input type="checkbox" name="date" value="<%= c.id %>" class="gmp-tick" data-gmp-date checked>
+      <span class="gmp-chg-title"><%= c.title %></span>
+      <span class="gmp-chg-from"><%= c.fromLabel %> →</span>
+      <span class="gmp-chg-to"><%= c.toLabel %></span>
+    </label>
+    <% }) %>
+    <div class="gmp-note">Only the date changes. Prices, slots, cover and reservations stay.</div>
+  </div>
+  <% } %>
+  <% if (pu.already.length) { %>
+  <div class="gmp-card gmp-already"><b>Already on your site (<%= pu.already.length %>)</b> · <%= pu.already.join(', ') %></div>
+  <% } %>
+  <div class="gmp-go">
+    <button type="submit" form="gmpCancel" class="gm-btn"><%= pu.upToDate ? 'Close' : 'Cancel' %></button>
+    <% if (!pu.upToDate) { %><button type="submit" class="gmp-apply" data-gmp-apply><%= pu.applyText %></button><% } %>
+  </div>
+</form>
+<form method="POST" action="/admin/upcoming/psn/cancel" id="gmpCancel" data-no-loading="1">
+  <input type="hidden" name="token" value="<%= pu.token %>">
+</form>
+<% } %>

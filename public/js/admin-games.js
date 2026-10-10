@@ -66,6 +66,8 @@
     // Every Requests action: approve, reject, stock, delete, cover image, and
     // the voter edits.
     if (/^(request|voter)_/.test(msg)) return 'requests';
+    // Every "Update from PlayStation" outcome.
+    if (/^psn_upcoming_/.test(msg)) return 'soon';
     return null;
   }
 
