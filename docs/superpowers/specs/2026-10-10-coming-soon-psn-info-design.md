@@ -1,6 +1,6 @@
 # Coming soon — PlayStation pictures and game info — Design
 
-Date: 2026-10-10 · Status: approved by owner
+Date: 2026-10-10 · Status: approved by owner; amended after the plan's dry run
 
 Builds on `2026-10-10-upcoming-from-playstation-design.md` (the "Update from
 PlayStation" button on Admin → Games → Coming soon).
@@ -42,7 +42,8 @@ shows none of that:
 - The description paragraph under the poster shows only when `!psnView.hasPsn`;
   with PlayStation data, `partials/game-psn-about` (About + Game info) takes its
   place in the poster column.
-- The bottom "Gameplay" section is left out when `psnView.hideGallery`.
+- The bottom "Gameplay" section is left out when `psnView.hideGallery` (its gallery
+  list is then empty, so the page's slider script sees no slides).
 - A game without `psn` renders exactly as today.
 
 What `buildGamePsnView` does with an upcoming record (no change to it):
@@ -70,8 +71,8 @@ pictures stay." Games in this section still appear in "Already on your site" whe
 the feed matched them.
 
 The gold button's words gain the count: `applyLabel(adds, dates, infos)` →
-"Add 2 games · update 1 date · get info for 4"; with only infos ticked, "Get info
-for 4 games" ("Get info for 1 game"). Same rule in
+"Add 2 games · update 1 date · get info for 4 games"; with only infos ticked, "Get
+info for 4 games" ("Get info for 1 game"). Same rule in
 `public/js/admin-upcoming-psn.js`, counting `[data-gmp-info]:checked`. Up-to-date
 means no new games, no date changes and no info updates.
 
@@ -96,13 +97,18 @@ New games added by the same apply also keep `psn` (the `fetchGameInfo` result
 
 Redirect: `psn_upcoming_applied` or `psn_upcoming_partial` with
 `&added=X&dates=Y&info=Z&missing=M` (M = not found + failed). Partial when a new
-game lacks cover or description, or M > 0. Toasts:
+game lacks cover or description, or M > 0. Not-found and failed games are logged
+(`[upcoming-psn] no info for <title> <reason>`). Toasts name only what happened,
+zero counts left out:
 
-- applied: "✅ Added {added} · updated {dates} · got info for {info}"
-- partial: "⚠ Added {added} · updated {dates} · got info for {info} — {missing}
-  couldn't be found or downloaded; check the title in Edit."
+- applied: "✅ {summary}"
+- partial: "⚠ {summary} — some covers, descriptions or game info couldn't be
+  found; check those games in Edit."
 
-with `{info}` → "N game(s)" and `{missing}` → "N game(s)", like `{added}`.
+where {summary} joins "added N game(s)", "updated N date(s)" and "got info for N
+game(s)" with " · ", first letter capitalised, or reads "Nothing changed" — e.g.
+"✅ Got info for 2 games", "⚠ Added 3 games · updated 1 date · got info for 1 game —
+…".
 
 ## Release
 
@@ -123,7 +129,7 @@ made-up admin password); PlayStation and image downloads stubbed.
   counts not-found and failed in `missing`, new games keep `psn`, info-only apply
   works.
 - `scripts/test-admin-upcoming-psn-page.js` — the new section, its ticks and
-  words, the button words, the toast placeholders.
+  words, the button words, the toast summary.
 - `scripts/test-upcoming-psn-page-public.js` (new) — `/upcoming/<slug>` with psn:
   slider, headline, About, Game info, no description paragraph, no bottom gallery
   when hidden; owner description wins; without psn: unchanged page.
