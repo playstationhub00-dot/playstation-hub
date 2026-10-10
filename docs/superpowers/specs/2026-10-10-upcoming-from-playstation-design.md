@@ -1,6 +1,6 @@
 # Coming soon — "Update from PlayStation" — Design
 
-Date: 2026-10-10 · Status: approved by owner
+Date: 2026-10-10 · Status: approved by owner; amended after the plan's dry run
 
 ## Problem
 
@@ -45,13 +45,16 @@ No PlayStation account, login or session is used anywhere.
 
 ## Admin UI (Games → Coming soon)
 
-- A **"🔄 Update from PlayStation"** button beside **+ Add New**, shown on the Coming
-  soon tab. It POSTs `/admin/upcoming/psn/refresh` (the button reads "Checking…"
-  while it waits).
+- A **"🔄 Update from PlayStation"** button at the top of the Coming soon sub-tab, with
+  the hint "Finds PlayStation's announced games — you tick which ones to add." It POSTs
+  `/admin/upcoming/psn/refresh`; while it waits the admin's loading overlay says
+  "🔄 Checking PlayStation...".
 - The server builds a preview, keeps it in memory under a random token for 30
   minutes (same pattern as the PS Plus catalog: `catalogPreviews` in `server.js`),
-  and redirects to `/admin?tab=games&psn_upcoming=<token>`. `public/js/admin-games.js`
-  opens the Coming soon sub-tab when that parameter is present.
+  and redirects to `/admin?tab=games&msg=psn_upcoming_preview&psn_upcoming=<token>`.
+  `public/js/admin-games.js` opens the Coming soon sub-tab for every `psn_upcoming_*`
+  message. An unknown or expired token shows "⏳ That list expired (they last 30
+  minutes) — press Update from PlayStation again."
 - The preview panel sits at the top of the Coming soon tab:
   1. **New on PlayStation (N)** — one row per game: tick box (ticked), cover thumbnail
      (shown straight from PlayStation's image CDN), editable title, publisher and
@@ -60,19 +63,23 @@ No PlayStation account, login or session is used anywhere.
   2. **Prices and slots for the games you add** — six number fields: non-trophy weekly,
      non-trophy monthly, trophy weekly, trophy monthly, non-trophy slots, trophy
      slots. Pre-filled from the upcoming game with the newest `created_at`; all 0 when
-     there is none. One note line: "Cover, description and up to 6 screenshots come
-     from PlayStation."
+     there is none. One note line: "Filled in from <that game>, the last upcoming game
+     you added. Cover, description and up to 6 screenshots come from PlayStation."
+     (the first sentence only when there is such a game).
   3. **Release date changed (N)** — one row per existing game: tick box (ticked), title,
      "old date → new date" ("TBA → Jan 15, 2027" for a TBA game). Note: "Only the date
      changes. Prices, slots, cover and reservations stay."
   4. **Already on your site (N)** — one line listing the titles, no controls.
-  5. **Cancel** (POST `/admin/upcoming/psn/cancel`, drops the preview) and the gold
-     button **"Add X games · update Y dates"**, which counts the ticks live and reads
-     "Adding…" once pressed. It POSTs `/admin/upcoming/psn/apply` with the token, the
-     ticked concept ids, the edited titles, the six price/slot fields and the ticked
-     date changes.
+  5. **Cancel** (POST `/admin/upcoming/psn/cancel`, drops the preview, back with
+     `psn_upcoming_cancelled` and no toast) and the gold button **"Add X games · update
+     Y dates"** ("Add 1 game", "Update 2 dates", "Add selected" when nothing is ticked),
+     which counts the ticks live. It POSTs `/admin/upcoming/psn/apply` with the token,
+     the ticked concept ids, the edited titles, the six price/slot fields and the ticked
+     date changes; while it runs the loading overlay says "⏳ Adding games from
+     PlayStation — this can take a minute...".
 - Empty sections are left out. With nothing new and no date changes the panel says
-  "You're up to date — nothing new on PlayStation." and shows only section 4.
+  "✅ You're up to date — nothing new on PlayStation.", shows section 4, has no gold
+  button, and its Cancel reads "Close".
 
 ## Rules
 
@@ -84,7 +91,8 @@ No PlayStation account, login or session is used anywhere.
 - Title cleanup: remove ®, ™ and ©, collapse spaces, drop a trailing "Standard
   Edition". Other edition names (Ultimate, Deluxe…) stay.
 - Genre: the store page's first genre, else the index's first; "Role Playing Games"
-  → "RPG", "Sport" → "Sports". Blank when neither has one.
+  (store page) and "Role Playing Game (RPG)" (index) → "RPG", "Sport" → "Sports".
+  Blank when neither has one.
 
 **Already on the site** (checked against Coming soon and the available games)
 - Same `psn_concept_id`, or the same match key: lower-case, accents removed, ®™©
@@ -104,7 +112,7 @@ pressed the gold button are saved to `site_settings.upcoming_psn_skipped` (uniqu
 ## Apply (`POST /admin/upcoming/psn/apply`)
 
 1. Unknown or expired token → `?msg=psn_upcoming_expired`. Nothing ticked →
-   `psn_upcoming_nothing`. Another apply still running → `psn_upcoming_busy` (one
+   `psn_upcoming_nothing`, with the list left open. Another apply still running → `psn_upcoming_busy` (one
    apply at a time, an in-process flag). The token is deleted as the apply starts, so
    a double press cannot add twice.
 2. Re-check against what is stored now (the owner may have added a game since the
@@ -140,11 +148,11 @@ with zero usable games is not an error: the panel shows "You're up to date".
 | File | Job |
 |---|---|
 | `lib/upcoming-psn-feed.js` (new) | The one index query. `fetchUpcoming({ fetchImpl, now, timeoutMs })` → `{ ok, games, reason }`, never throws; `parseHits(json, now)` pure. Each game: `{ concept_id, title, raw_title, release_date, platform, genres, publisher, image_url }`. |
-| `lib/upcoming-psn.js` (new, pure) | `cleanTitle`, `matchKey`, `mapGenre`, `manilaDate`, `buildPreview(upcoming, games, feedGames, skipped)` → `{ fresh, skippedBefore, dateChanges, already, defaults }`, `planApply(preview, form, upcomingNow, gamesNow)` → `{ adds, dateUpdates, skipped }`. |
+| `lib/upcoming-psn.js` (new; no network, disk or database of its own) | `cleanTitle`, `matchKey`, `mapGenre`, `manilaDate`, `platformOf`, `dateLabel`, `applyLabel`, `buildPreview({ upcoming, games, feedGames, skipped })` → `{ fresh, skippedBefore, dateChanges, already, defaults, defaultsFrom }`, `previewView`, `readForm(body)`, `planApply({ preview, form, upcoming, games, skipped })` → `{ adds, prices, dateUpdates, skipped }`, `newUpcomingRecord`, `buildRecord(game, { prices, nowIso, fetchInfo, saveImage })` (downloads through the functions it is handed), `mapLimit`. |
 | `lib/remote-image.js` (new) | `saveRemoteImage(url, { fetchImpl, uploadsDir, maxDim })` → `'/uploads/<name>.webp'` or `''`, never throws. |
 | `server.js` | The three routes, the preview map, the busy flag, the admin `GET` passing the preview to the view, the new toast messages and their tab mapping (`games` in `views/admin.ejs`, `soon` in `public/js/admin-games.js`). |
-| `views/partials/admin/games/psn-update.ejs` (new) | The panel; included at the top of `games/coming-soon.ejs`. The button lives in `games.ejs` beside + Add New. |
-| `public/js/admin-upcoming-psn.js` (new) | Live tick count on the gold button, "Checking…" / "Adding…" states. |
+| `views/partials/admin/games/psn-update.ejs` (new) | The button and the panel; included at the top of `games/coming-soon.ejs`. |
+| `public/js/admin-upcoming-psn.js` (new) | Live tick count on the gold button. "Checking…" / "Adding…" come from the admin's existing loading overlay (`views/admin.ejs`). |
 | `public/css/style.css` (CRLF, where the `.gm-*` Games-tab styles live) | Panel styles (`.gmp-*`) in the admin's existing look. |
 
 ## Testing
@@ -168,7 +176,11 @@ replies. Nothing touches the project's `games.json`, the database or the real ad
   ticked games with the typed prices and slots, cover and gallery paths, description and
   `psn_concept_id`; unticked ids saved as skipped and shown unticked next time; ticked
   date change updates only the date; expired token, nothing ticked and unreachable
-  messages; a second apply with the same token adds nothing.
+  messages; a second apply with the same token adds nothing; one apply at a time.
+- `scripts/test-admin-upcoming-psn-page.js` — the button, the list (ticks, skipped
+  last, escaped titles, pre-filled prices, date changes, already, button words), the
+  expired and up-to-date states, the toasts and overlay words, and that
+  `public/js/admin-upcoming-psn.js` words match `applyLabel`.
 - The full suite stays green except the known `scripts/test-requests-page.js`.
 
 ## Out of scope
