@@ -28,6 +28,9 @@ const psplusFeed = require('./lib/psplus-feed');
 const psplusCatalog = require('./lib/psplus-catalog');
 const psplusCatalogView = require('./lib/psplus-catalog-view');
 const psplusCatalogStore = require('./lib/psplus-catalog-store');
+const upcomingPsn = require('./lib/upcoming-psn');
+const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
+const remoteImage = require('./lib/remote-image');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
@@ -5282,11 +5285,17 @@ app.get('/admin', requireAuth, async (req, res) => {
   // Games tab rows, worked out once here with the customer site's own slot
   // and status rules — see lib/games-view.js.
   const gamesViewRows = gamesViewLib.gameRows(games, customers, buildAccountSummaryMap(), new Date());
+  // Coming soon → "Update from PlayStation": ?psn_upcoming=<token> shows that
+  // check's list until it is applied, cancelled or expires.
+  const psnUpcomingToken = String(req.query.psn_upcoming || '');
+  const psnUpcomingEntry = psnUpcomingToken ? getUpcomingPsnPreview(psnUpcomingToken) : null;
   const gamesView = {
     rows: gamesViewRows,
     counts: gamesViewLib.chipCounts(gamesViewRows),
     upcoming: gamesViewLib.upcomingRows(upcoming, upcomingReservedCount, todayManila),
-    requests: gamesViewLib.requestSummary(gameRequestRows)
+    requests: gamesViewLib.requestSummary(gameRequestRows),
+    psnUpdate: psnUpcomingEntry ? upcomingPsn.previewView(psnUpcomingEntry.preview, { token: psnUpcomingToken, checkedAt: psnUpcomingEntry.checkedAt }) : null,
+    psnUpdateExpired: !!psnUpcomingToken && !psnUpcomingEntry
   };
   res.locals.psnLastRun = db.get('psn_last_run').value() || null;
   // Settings → Game discounts table: every game with its own Weekly/Monthly %
@@ -5360,6 +5369,92 @@ app.get('/upcoming/:slug', (req, res) => {
   // deciding whether to reserve an unreleased game needs to see.
   res.render('upcoming-detail', Object.assign({ game: resolvedGame, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null },
     reviewBlockLocals(resolvedGame.title)));
+});
+
+// ── Coming soon: "Update from PlayStation" ─────────────────────────────────
+// PlayStation's announced, dated games (lib/upcoming-psn-feed.js) checked
+// against Coming soon and the catalogue (lib/upcoming-psn.js). Refresh only
+// builds a list; Apply adds the ticked games and date changes. See
+// docs/superpowers/specs/2026-10-10-upcoming-from-playstation-design.md.
+
+// Lists waiting for Apply, by random token. In memory on purpose, like the PS
+// Plus catalog previews: a list older than 30 minutes — or lost to a restart —
+// must be checked again rather than applied stale.
+const upcomingPsnPreviews = new Map();
+const UPCOMING_PSN_PREVIEW_MS = 30 * 60 * 1000;
+const UPCOMING_PSN_BACK = '/admin?tab=games&msg=';
+// One Apply at a time: it downloads for up to a minute, and a second one
+// running alongside could add the same game twice.
+let upcomingPsnApplying = false;
+
+function getUpcomingPsnPreview(token) {
+  const now = Date.now();
+  for (const [t, p] of upcomingPsnPreviews) {
+    if (now - p.createdAt > UPCOMING_PSN_PREVIEW_MS) upcomingPsnPreviews.delete(t);
+  }
+  return upcomingPsnPreviews.get(String(token || '')) || null;
+}
+
+app.post('/admin/upcoming/psn/refresh', requireAuth, asyncRoute(async (req, res) => {
+  const feed = await upcomingPsnFeed.fetchUpcoming();
+  if (!feed.ok) {
+    console.error('[upcoming-psn] refresh', feed.reason);
+    return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_unreachable');
+  }
+  const preview = upcomingPsn.buildPreview({
+    upcoming: getUpcoming(), games: getGames(), feedGames: feed.games,
+    skipped: getSiteSettings().upcoming_psn_skipped
+  });
+  const token = require('crypto').randomBytes(12).toString('hex');
+  getUpcomingPsnPreview(''); // drops expired lists before adding another
+  upcomingPsnPreviews.set(token, { createdAt: Date.now(), checkedAt: new Date().toISOString(), preview });
+  res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_preview&psn_upcoming=' + token);
+}));
+
+app.post('/admin/upcoming/psn/apply', requireAuth, asyncRoute(async (req, res) => {
+  if (upcomingPsnApplying) return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_busy');
+  const token = String(req.body.token || '');
+  const entry = getUpcomingPsnPreview(token);
+  if (!entry) return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_expired');
+  const form = upcomingPsn.readForm(req.body);
+  if (!form.add.length && !form.dates.length) {
+    return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_nothing&psn_upcoming=' + token);
+  }
+  // Gone before the first await, so a double press finds no list to apply.
+  upcomingPsnPreviews.delete(token);
+  upcomingPsnApplying = true;
+  try {
+    const plan = upcomingPsn.planApply({
+      preview: entry.preview, form, upcoming: getUpcoming(), games: getGames(),
+      skipped: getSiteSettings().upcoming_psn_skipped
+    });
+    const nowIso = new Date().toISOString();
+    const built = await upcomingPsn.mapLimit(plan.adds, 3, g => upcomingPsn.buildRecord(g, {
+      prices: plan.prices,
+      nowIso,
+      fetchInfo: conceptId => psnGame.fetchGameInfo({ psn_link: 'https://store.playstation.com/en-us/concept/' + conceptId }),
+      saveImage: url => remoteImage.saveRemoteImage(url, { uploadsDir })
+    }));
+    built.forEach(b => db.get('upcoming').push(Object.assign({ id: newUpcomingId() }, b.record)).write());
+    plan.dateUpdates.forEach(d => {
+      const current = getUpcomingGame(d.id);
+      if (!current) return;
+      const patch = { release_date: d.release_date };
+      if (!current.psn_concept_id && d.concept_id) patch.psn_concept_id = d.concept_id;
+      db.get('upcoming').find({ id: d.id }).assign(patch).write();
+    });
+    db.set('site_settings.upcoming_psn_skipped', plan.skipped).write();
+    const partial = built.some(b => !b.complete);
+    res.redirect(UPCOMING_PSN_BACK + (partial ? 'psn_upcoming_partial' : 'psn_upcoming_applied')
+      + '&added=' + built.length + '&dates=' + plan.dateUpdates.length);
+  } finally {
+    upcomingPsnApplying = false;
+  }
+}));
+
+app.post('/admin/upcoming/psn/cancel', requireAuth, (req, res) => {
+  upcomingPsnPreviews.delete(String(req.body.token || ''));
+  res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_cancelled');
 });
 
 app.post('/admin/upcoming/add', requireAuth, upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), async (req, res) => {
