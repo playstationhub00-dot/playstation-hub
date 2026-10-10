@@ -1,6 +1,7 @@
 <%#
   Top of the homepage: the search, the one-line tagline, the "Now playing"
-  banner and — on computers — the Top rented list beside it.
+  banner and — on computers — the Top rented list beside it (#1–#10 with
+  pictures; the banner grows to the list's height).
   Banner: up to 5 games (owner's pins, then newest releases; lib/home-view.js)
   followed by the owner's uploaded hero slides. Slides scroll natively, so a
   phone can swipe them; public/js/home.js adds dots, arrows and auto-advance.
@@ -61,10 +62,11 @@
       <aside class="hm-aside" aria-label="Top rented this month">
         <div class="hm-aside-head"><span aria-hidden="true" class="hm-mark hm-tri">△</span><b>Top rented</b><span>this month</span></div>
         <ol class="hm-board">
-          <% home.topRented.slice(0, 5).forEach((t, i) => { %>
-          <li><a href="/game/<%= hmSlug(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>
+          <% home.topRented.slice(0, 10).forEach((t, i) => { %>
+          <li><a href="/game/<%= hmSlug(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><% if (t.game.cover_image) { %><img src="<%= t.game.cover_image %>" alt="" class="hm-board-cover" loading="lazy" decoding="async"><% } else { %><span class="hm-board-cover" aria-hidden="true"></span><% } %><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>
           <% }) %>
         </ol>
+        <a class="hm-board-all" href="/browse">View all games ›</a>
       </aside>
       <% } %>
     </div>

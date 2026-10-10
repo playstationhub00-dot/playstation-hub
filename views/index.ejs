@@ -28,7 +28,7 @@
 
 <%# Phones only — on computers the same list sits beside the banner. %>
 <% if (home.topRented.length) { %>
-<%- include('partials/home/game-row', { id: 'topRented', mark: 'tri', title: 'Top rented', sub: 'this month', games: home.topRented.map(t => t.game), viewAll: '', ranked: true, dealPrice: false, extraClass: 'hm-phone-only' }) %>
+<%- include('partials/home/game-row', { id: 'topRented', mark: 'tri', title: 'Top rented', sub: 'this month', games: home.topRented.map(t => t.game), viewAll: '/browse', ranked: true, dealPrice: false, extraClass: 'hm-phone-only' }) %>
 <% } %>
 
 <% if (home.newGames.length) { %>

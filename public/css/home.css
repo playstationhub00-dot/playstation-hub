@@ -42,7 +42,8 @@
 .hm-slides { position: relative; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; height: 100%; }
 .hm-slides::-webkit-scrollbar { display: none; }
 .hm-slide { position: relative; flex: 0 0 100%; scroll-snap-align: start; aspect-ratio: 16 / 9; min-height: 190px; display: block; color: #fff; text-decoration: none; overflow: hidden; }
-@media (min-width: 900px) { .hm-slide { aspect-ratio: auto; height: 340px; } }
+/* On computers a slide fills the banner, which is as tall as the Top rented box beside it. */
+@media (min-width: 900px) { .hm-slide { aspect-ratio: auto; min-height: 340px; } }
 .hm-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .hm-slide-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 80%), linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 55%); }
 .hm-slide-body { position: absolute; left: 1.1rem; right: 1.1rem; bottom: 1.1rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; }
@@ -60,16 +61,19 @@
 .hm-dot { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: none; background: rgba(255,255,255,0.35); cursor: pointer; }
 .hm-dot.on { background: var(--ps-blue); width: 20px; border-radius: 4px; }
 
-.hm-aside { display: none; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem 1.1rem; }
-@media (min-width: 900px) { .hm-aside { display: block; } }
-.hm-aside-head { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.6rem; font-size: 1rem; color: #fff; }
+.hm-aside { display: none; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 0.85rem 1rem; }
+@media (min-width: 900px) { .hm-aside { display: flex; flex-direction: column; } }
+.hm-aside-head { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem; font-size: 1rem; color: #fff; }
 .hm-aside-head span:last-child { font-size: 0.8rem; color: var(--text-secondary); }
 .hm-board { list-style: none; margin: 0; padding: 0; }
-.hm-board li a { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.2rem; border-bottom: 1px solid var(--border); color: #eee; text-decoration: none; font-size: 0.9rem; }
+.hm-board li a { display: flex; align-items: center; gap: 0.6rem; padding: 0.24rem 0.2rem; border-bottom: 1px solid var(--border); color: #eee; text-decoration: none; font-size: 0.9rem; }
 .hm-board li:last-child a { border-bottom: none; }
 .hm-board li a:hover .hm-board-title { color: var(--ps-blue); }
 .hm-board-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
 .hm-board-price { color: var(--ps-blue); font-weight: 800; }
+.hm-board-cover { flex-shrink: 0; display: block; width: 30px; height: 30px; border-radius: 6px; object-fit: cover; background: #222; }
+.hm-board-all { margin-top: auto; padding-top: 0.45rem; align-self: flex-end; font-size: 0.8rem; font-weight: 700; color: var(--ps-blue); text-decoration: none; }
+.hm-board-all:hover { text-decoration: underline; }
 .hm-rk { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; background: #222; color: #ccc; }
 .hm-rk-1 { background: #F0A500; color: #1a1200; }
 .hm-rk-2 { background: #C9CED6; color: #1b1e22; }
