@@ -1,0 +1,14 @@
+<%#
+  The homepage's Coming soon games: the same still shelf as New releases (a
+  swipe row on phones, up to 6 a row on computers — public/css/home.css .hm-row),
+  with the Coming soon card (partials/upcoming-card). No arrows, no drifting.
+  Locals: upcoming (already in order: owner-ranked first, then soonest release).
+%>
+<% if (upcoming.length) { %>
+<section class="hm-wrap hm-sec" id="comingSoon">
+  <h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse#comingSoon">View all ›</a></h2>
+  <div class="hm-row">
+    <% upcoming.slice(0, 6).forEach(game => { %><div class="hm-cell"><%- include('../upcoming-card', { game }) %></div><% }) %>
+  </div>
+</section>
+<% } %>

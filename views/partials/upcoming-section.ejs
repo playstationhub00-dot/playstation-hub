@@ -1,100 +1,18 @@
 <% if (upcoming.length > 0) { %>
 <div class="section" data-upcoming="1" id="comingSoon" style="<%= typeof noBorderTop !== 'undefined' && noBorderTop ? '' : 'border-top:1px solid #1a1a1a;' %>padding-bottom:0;">
   <h2 class="section-title" style="color:#fff;">
-    <% if (typeof homeMarker !== 'undefined' && homeMarker) { %>
-    <span style="display:inline-flex;align-items:center;"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon</span>
-    <span class="hm-sub">reserve a slot</span>
-    <% } else { %>
     <span style="display:inline-flex;align-items:center;gap:0.5rem;">
       <span style="background:linear-gradient(135deg,#7b2ff7,#f107a3);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.1em;">🔜</span>
       Coming Soon
     </span>
     <span style="font-size:0.8rem;font-weight:500;color:#666;margin-left:0.5rem;">Open for Reservation</span>
-    <% } %>
-    <%# A page that already lists every Coming Soon game (browse) has nothing to
-        link out to, so it keeps the collapse toggle instead. The homepage shows
-        a trimmed set and passes viewAllHref to get the same View All the other
-        homepage rows use. %>
-    <% if (typeof viewAllHref !== 'undefined' && viewAllHref) { %>
-    <a href="<%= viewAllHref %>" class="section-viewall">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
-    <% } else { %>
     <button type="button" class="section-toggle-btn" onclick="toggleCollapsible('upcomingBody', this)" aria-label="Collapse Coming Soon">▾</button>
-    <% } %>
   </h2>
-  <div class="<%= (typeof viewAllHref !== 'undefined' && viewAllHref) ? '' : 'collapsible-body' %>" id="upcomingBody">
+  <div class="collapsible-body" id="upcomingBody">
   <div class="upcoming-slider-wrap">
     <button class="slider-arrow slider-arrow-left" onclick="slideUpcoming(-1)" aria-label="Previous">&#8249;</button>
     <div class="upcoming-slider" id="upcomingSlider">
-    <% upcoming.forEach(game => {
-      const csIsTba = !game.release_date || game.release_date === 'TBA';
-      let csDaysLeft = null;
-      if (!csIsTba) {
-        const csReleaseDate = new Date(game.release_date + 'T00:00:00');
-        const csToday0 = new Date(); csToday0.setHours(0,0,0,0);
-        csDaysLeft = Math.ceil((csReleaseDate - csToday0) / 86400000);
-      }
-      let csDisplayDate = 'TBA';
-      if (!csIsTba) {
-        csDisplayDate = new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-      }
-      const csSlotsLeft = (game.non_trophy_slots||0) + (game.trophy_slots||0);
-      const csFull = csSlotsLeft === 0;
-      // A full card gives its top-right corner to the FULL ribbon, so the
-      // countdown badge that normally sits there moves into the meta line as
-      // text. The release date still matters to someone waiting for a slot —
-      // it just stops being the loudest thing on the card.
-      const csCountdownText = csIsTba ? '' : (csDaysLeft > 0 ? csDaysLeft + ' day' + (csDaysLeft !== 1 ? 's' : '') : 'Any day now');
-      // Cheapest configured price across every duration/type, for the "from ₱X" line.
-      const csPrices = [game.nt_price_7d, game.nt_price_30d, game.tr_price_7d, game.tr_price_30d].filter(p => p > 0);
-      const csFromPrice = csPrices.length ? Math.min(...csPrices) : null;
-    %>
-    <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card game-card-link<%= csFull ? ' cs-full' : '' %>" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
-      <% if (game.cover_image) { %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
-      <% } else { %>
-        <div class="cs-cover-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-          </svg>
-          <span>No Image</span>
-        </div>
-      <% } %>
-      <div class="cs-scrim"></div>
-      <div class="cs-badge">Coming Soon</div>
-      <% if (game.rank) { %><div class="cs-hot">🔥 #<%= game.rank %></div><% } %>
-      <%# A full game trades its countdown badge for the FULL ribbon — both live
-          in the top-right corner and would otherwise overlap. %>
-      <% if (csFull) { %>
-        <div class="card-ribbon">Full</div>
-      <% } else if (csIsTba) { %>
-        <div class="cs-cd cs-cd-tba"><span class="cs-cd-n">Date<br>TBA</span></div>
-      <% } else if (csDaysLeft > 0) { %>
-        <div class="cs-cd"><span class="cs-cd-n"><%= csDaysLeft %></span><span class="cs-cd-u">days</span></div>
-      <% } else { %>
-        <div class="cs-cd cs-cd-tba"><span class="cs-cd-n" style="font-size:0.62rem;">Any Day<br>Now</span></div>
-      <% } %>
-      <div class="cs-body">
-        <div class="cs-plat"><%= game.platform %><%= game.genre ? ' · ' + game.genre : '' %></div>
-        <div class="cs-title"><%= game.title %></div>
-        <div class="cs-meta">
-          <span><%= csDisplayDate %></span>
-          <%# When full, the ribbon already says so — repeating it here in red
-              would state the same thing twice and crowd a three-line card. The
-              countdown takes the slot instead, since it lost its badge. %>
-          <% if (csFull) { %>
-            <% if (csCountdownText) { %><span>·</span><span><%= csCountdownText %></span><% } %>
-          <% } else { %>
-            <span>·</span>
-            <span class="cs-slots-ok"><%= csSlotsLeft %> slot<%= csSlotsLeft !== 1 ? 's' : '' %> left</span>
-          <% } %>
-        </div>
-        <div class="cs-foot">
-          <% if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
-          <div class="cs-cta<%= csFull ? ' cs-cta-ghost' : '' %>"><%= csFull ? 'Notify Me' : 'Reserve →' %></div>
-        </div>
-      </div>
-    </a>
-    <% }) %>
+    <% upcoming.forEach(game => { %><%- include('upcoming-card', { game }) %><% }) %>
     </div>
     <button class="slider-arrow slider-arrow-right" onclick="slideUpcoming(1)" aria-label="Next">&#8250;</button>
   </div>

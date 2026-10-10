@@ -190,10 +190,9 @@ function slideSection(id, dir) {
 
   // Slightly different speeds so the rows never drift in lockstep, which
   // would read as one big moving block rather than independent shelves.
-  // Only Coming Soon flows left to right; New Releases and Most Popular flow
-  // right to left (New Releases was briefly reversed too, then asked back).
+  // Coming soon no longer drifts: on the homepage it is a still shelf like
+  // New releases (views/partials/home/upcoming-row.ejs).
   autoDrift('newReleasesSlider', 18);
-  autoDrift('upcomingSlider', 16, true);
   autoDrift('popularSlider', 14);
 })();
 

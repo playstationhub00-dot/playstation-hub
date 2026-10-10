@@ -91,12 +91,10 @@ ok('a tap is never treated as a drag', () => {
 
 console.log('\nthe rows are wired up as expected');
 
-ok('all three rows drift, and only Coming Soon runs in reverse', () => {
+ok('New Releases and Most Popular drift; Coming Soon is a still shelf now', () => {
   const calls = jsSrc.match(/autoDrift\('[^']+',\s*\d+(?:,\s*true)?\)/g) || [];
-  assert.strictEqual(calls.length, 3, 'three rows: ' + JSON.stringify(calls));
-  const reversed = calls.filter(c => /,\s*true\)/.test(c));
-  assert.strictEqual(reversed.length, 1, 'exactly one reversed row: ' + JSON.stringify(reversed));
-  assert.ok(/upcomingSlider/.test(reversed[0]), 'and it is Coming Soon: ' + reversed[0]);
+  assert.deepStrictEqual(calls, ["autoDrift('newReleasesSlider', 18)", "autoDrift('popularSlider', 14)"]);
+  assert.ok(!/upcomingSlider/.test(jsSrc), 'Coming Soon is never drifted');
 });
 
 console.log('\nsix cards still have to loop');
@@ -139,8 +137,9 @@ ok('the wrap distance follows the copy count', () => {
 console.log('\nthe homepage rows are trimmed to six');
 
 ok('Coming Soon renders six', () => {
-  assert.ok(/upcoming-section[\s\S]{0,120}upcoming:\s*upcoming\.slice\(0,\s*6\)/.test(src),
-    'the Coming Soon include still slices to 6');
+  assert.ok(/include\('partials\/home\/upcoming-row', \{ upcoming \}\)/.test(src), 'the homepage uses the still shelf');
+  const row = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'home', 'upcoming-row.ejs'), 'utf8');
+  assert.ok(/upcoming\.slice\(0, 6\)/.test(row), 'and it takes six');
 });
 
 ok('New releases shows at most six a row on computers', () => {

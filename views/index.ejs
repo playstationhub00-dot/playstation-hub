@@ -40,7 +40,7 @@
 <% } %>
 
 <!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/upcoming-section', { upcoming: upcoming.slice(0, 6), noBorderTop: true, viewAllHref: '/browse#comingSoon', homeMarker: true }) %>
+<%- include('partials/home/upcoming-row', { upcoming }) %>
 
 <%- include('partials/home/psplus', { home, psplusPopular, psplusSlug }) %>
 <%- include('partials/home/players', { home, promo }) %>
