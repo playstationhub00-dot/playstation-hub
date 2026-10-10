@@ -97,6 +97,19 @@ function fakeStores(orderList, opts) {
     assert.strictEqual(UPCOMING.gallery.length, 1);
   });
 
+  await ok('carries the PlayStation info and its concept id over to the released game', () => {
+    const psn = { concept_id: '10018186', description: 'From PlayStation', screenshots: ['https://image.api.playstation.com/s1.jpg'], fetched_at: NOW };
+    const g = rel.releasedGameRecord(Object.assign({}, UPCOMING, { psn, psn_concept_id: '10018186' }), 77, NOW);
+    assert.deepStrictEqual(g.psn, psn);
+    assert.strictEqual(g.psn_concept_id, '10018186');
+  });
+
+  await ok('a Coming Soon game without PlayStation info releases without those fields', () => {
+    const g = rel.releasedGameRecord(UPCOMING, 77, NOW);
+    assert.strictEqual('psn' in g, false);
+    assert.strictEqual('psn_concept_id' in g, false);
+  });
+
   console.log('\npartitionReleaseOrders()');
 
   await ok('paid reservations move; unpaid ones convert', () => {
