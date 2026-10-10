@@ -115,6 +115,10 @@
 .hm-row { padding-top: 0.5rem; }
 
 .home2 .section-title::after { content: none; }
+/* Homepage Coming soon shelf: the heading already says "Coming soon", and on
+   these narrower cards the pill ran under the countdown / rank badge / FULL
+   ribbon. Browse's wider cards keep it. */
+.hm-cell .upcoming-card .cs-badge { display: none; }
 
 /* ── PS Plus Deluxe ── */
 .hm-psplus { display: grid; gap: 1.25rem; background: linear-gradient(135deg, rgba(91,141,239,0.12), rgba(91,141,239,0.02)); border: 1px solid rgba(91,141,239,0.4); border-radius: 16px; padding: 1.25rem; }

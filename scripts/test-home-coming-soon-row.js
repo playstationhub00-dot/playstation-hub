@@ -109,6 +109,12 @@ async function main() {
     const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'index-4.js'), 'utf8');
     assert.ok(!/autoDrift\('upcomingSlider'/.test(js));
   });
+  ok('the "Coming Soon" pill is hidden on homepage cards (Browse keeps it)', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'home.css'), 'utf8');
+    assert.ok(/\.hm-cell \.upcoming-card \.cs-badge \{ display: none; \}/.test(css));
+    const browseCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
+    assert.ok(!/\.cs-badge \{[^}]*display: none/.test(browseCss), 'the shared stylesheet still shows it');
+  });
 
   console.log('\nBrowse and the shared card');
   ok('Browse keeps its Coming soon slider with arrows and every game', () => {
