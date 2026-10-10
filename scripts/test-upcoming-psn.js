@@ -54,6 +54,27 @@ async function main() {
     assert.strictEqual(u.applyLabel(1, 0), 'Add 1 game');
     assert.strictEqual(u.applyLabel(0, 2), 'Update 2 dates');
     assert.strictEqual(u.applyLabel(0, 0), 'Add selected');
+    assert.strictEqual(u.applyLabel(2, 1, 4), 'Add 2 games · update 1 date · get info for 4 games');
+    assert.strictEqual(u.applyLabel(0, 0, 1), 'Get info for 1 game');
+    assert.strictEqual(u.applyLabel(0, 3, 2), 'Update 3 dates · get info for 2 games');
+    assert.strictEqual(u.applyLabel(1, 0, 0), 'Add 1 game');
+  });
+  ok('storeLink builds a store page only from a digit concept id', () => {
+    assert.strictEqual(u.storeLink('10018186'), 'https://store.playstation.com/en-us/concept/10018186');
+    assert.strictEqual(u.storeLink(42), 'https://store.playstation.com/en-us/concept/42');
+    assert.strictEqual(u.storeLink(''), '');
+    assert.strictEqual(u.storeLink('12ab'), '');
+    assert.strictEqual(u.storeLink(null), '');
+  });
+  ok('infoDue: no info, no date, an unreadable date or older than 7 days', () => {
+    const NOW = Date.UTC(2026, 9, 10);
+    const ago = days => new Date(NOW - days * 86400000).toISOString();
+    assert.strictEqual(u.infoDue({}, NOW), true);
+    assert.strictEqual(u.infoDue({ psn: {} }, NOW), true);
+    assert.strictEqual(u.infoDue({ psn: { fetched_at: 'garbage' } }, NOW), true);
+    assert.strictEqual(u.infoDue({ psn: { fetched_at: ago(8) } }, NOW), true);
+    assert.strictEqual(u.infoDue({ psn: { fetched_at: ago(6) } }, NOW), false);
+    assert.strictEqual(u.INFO_FRESH_MS, 7 * 24 * 60 * 60 * 1000);
   });
 
   console.log('\npreview');
@@ -114,26 +135,55 @@ async function main() {
     assert.strictEqual(v.dateChanges[1].fromLabel, 'TBA');
     assert.strictEqual(v.dateChanges[1].toLabel, 'Mar 1, 2027');
     assert.strictEqual(v.upToDate, false);
-    assert.strictEqual(v.applyText, 'Add 1 game · update 2 dates');
-    const none = u.previewView(u.buildPreview({ upcoming, games, feedGames: [], skipped: [] }), { token: 't', checkedAt: 'x' });
+    assert.strictEqual(v.applyText, 'Add 1 game · update 2 dates · get info for 4 games', 'none of the 4 Coming soon games has PlayStation info');
+    const NOW = Date.parse('2026-10-10T00:00:00.000Z');
+    const withInfo = upcoming.map(x => Object.assign({}, x, { psn: { fetched_at: '2026-10-09T00:00:00.000Z' } }));
+    const none = u.previewView(u.buildPreview({ upcoming: withInfo, games, feedGames: [], skipped: [], now: NOW }), { token: 't', checkedAt: 'x' });
     assert.strictEqual(none.upToDate, true);
     assert.strictEqual(none.checkedLabel, '');
+    const infoOnly = u.previewView(u.buildPreview({ upcoming, games, feedGames: [], skipped: [], now: NOW }), { token: 't', checkedAt: 'x' });
+    assert.strictEqual(infoOnly.upToDate, false, 'info updates alone are something to do');
+    assert.strictEqual(infoOnly.applyText, 'Get info for 4 games');
+  });
+  ok('info updates: no info, stale or unreadable info; concept id from this run, then stored, else name search', () => {
+    const NOW = Date.UTC(2026, 9, 10);
+    const ago = days => new Date(NOW - days * 86400000).toISOString();
+    const ups = [
+      { id: 1, title: 'No Info Yet', release_date: 'TBA' },
+      { id: 2, title: 'Stale Info', psn_concept_id: '222', psn: { fetched_at: ago(8) } },
+      { id: 3, title: 'Fresh Info', psn: { fetched_at: ago(1), concept_id: '333' } },
+      { id: 4, title: 'Bad Date', psn: { fetched_at: 'garbage', concept_id: '444' } },
+      { id: 5, title: 'Matched In Feed', release_date: '2027-01-01', psn_concept_id: '999' },
+      { id: 6, title: 'Odd Stored Id', psn_concept_id: 'x9' }
+    ];
+    const p = u.buildPreview({ upcoming: ups, games: [], feedGames: [feed(555, 'Matched In Feed', '2027-01-01')], skipped: [], now: NOW });
+    assert.deepStrictEqual(p.infoUpdates, [
+      { id: 1, title: 'No Info Yet', concept_id: '' },
+      { id: 2, title: 'Stale Info', concept_id: '222' },
+      { id: 4, title: 'Bad Date', concept_id: '444' },
+      { id: 5, title: 'Matched In Feed', concept_id: '555' },
+      { id: 6, title: 'Odd Stored Id', concept_id: '' }
+    ]);
+    const v = u.previewView(p, { token: 't', checkedAt: 'x' });
+    assert.deepStrictEqual(v.infoUpdates.map(i => i.matched), [false, true, true, true, false]);
   });
 
   console.log('\napply');
   ok('readForm keeps digit concept ids, whole-number ids, trimmed titles and safe numbers', () => {
     const f = u.readForm({
-      add: ['104', '105', '104', 'x1', '../2'], date: ['2', '3', 'zz', '-1'],
+      add: ['104', '105', '104', 'x1', '../2'], date: ['2', '3', 'zz', '-1'], info: ['4', '4', 'x', '0', '7'],
       title_104: '  Castlevania:   Belmont\'s Curse ', title_105: '   ',
       nt_price_7d: '349', nt_price_30d: '-5', tr_price_7d: 'abc', tr_price_30d: '1299.9', non_trophy_slots: '3', trophy_slots: '99999999'
     });
     assert.deepStrictEqual(f.add, ['104', '105']);
     assert.deepStrictEqual(f.dates, [2, 3]);
+    assert.deepStrictEqual(f.info, [4, 7]);
     assert.deepStrictEqual(f.titles, { 104: "Castlevania: Belmont's Curse" });
     assert.deepStrictEqual(f.prices, { nt_price_7d: 349, nt_price_30d: 0, tr_price_7d: 0, tr_price_30d: 1299, non_trophy_slots: 3, trophy_slots: 1000000 });
-    const single = u.readForm({ add: '104', date: '2' });
-    assert.deepStrictEqual([single.add, single.dates], [['104'], [2]]);
+    const single = u.readForm({ add: '104', date: '2', info: '3' });
+    assert.deepStrictEqual([single.add, single.dates, single.info], [['104'], [2], [3]]);
     assert.deepStrictEqual(u.readForm(undefined).add, []);
+    assert.deepStrictEqual(u.readForm(undefined).info, []);
   });
   ok('planApply adds ticked games with the owner\'s title, applies ticked date changes, remembers unticked ones', () => {
     const form = u.readForm({ add: ['105'], date: ['2'], title_105: 'Wandering Sword (PS5)' });
@@ -148,6 +198,22 @@ async function main() {
     const plan = u.planApply({ preview, form, upcoming: nowUpcoming, games, skipped: [] });
     assert.deepStrictEqual(plan.adds.map(g => g.concept_id), ['105'], '104 was added by hand meanwhile; 999 was never offered');
     assert.deepStrictEqual(plan.dateUpdates, [], 'game 3 was deleted meanwhile; game 4 had no change offered');
+  });
+  ok('planApply info updates: only offered games that still exist, with the title as stored now', () => {
+    const p = { fresh: [], skippedBefore: [], dateChanges: [], infoUpdates: [{ id: 1, title: 'Old Name', concept_id: '' }, { id: 5, title: 'Five', concept_id: '555' }, { id: 6, title: 'Gone', concept_id: '' }] };
+    const nowUpcoming = [{ id: 1, title: 'New Name' }, { id: 5, title: 'Five' }, { id: 7, title: 'Never offered' }];
+    const plan = u.planApply({ preview: p, form: u.readForm({ info: ['1', '5', '6', '7'] }), upcoming: nowUpcoming, games: [], skipped: [] });
+    assert.deepStrictEqual(plan.infoUpdates, [{ id: 1, title: 'New Name', concept_id: '' }, { id: 5, title: 'Five', concept_id: '555' }]);
+    assert.deepStrictEqual(u.planApply({ preview: p, form: u.readForm({}), upcoming: nowUpcoming, games: [], skipped: [] }).infoUpdates, []);
+    assert.deepStrictEqual(u.planApply({ preview: {}, form: undefined, upcoming: [], games: [], skipped: [] }).infoUpdates, [], 'no form at all');
+  });
+  ok('infoPatch stores what PlayStation gave, adds the concept id only when there was none', () => {
+    const psn = { concept_id: '555', description: 'D', fetched_at: 'now' };
+    assert.deepStrictEqual(u.infoPatch({ id: 1 }, { ok: true, psn }), { psn, psn_concept_id: '555' });
+    assert.deepStrictEqual(u.infoPatch({ id: 1, psn_concept_id: '111' }, { ok: true, psn }), { psn });
+    assert.deepStrictEqual(u.infoPatch({ id: 1 }, { ok: true, psn: { description: 'no id' } }), { psn: { description: 'no id' } });
+    assert.strictEqual(u.infoPatch({ id: 1 }, { ok: false, reason: 'no_match' }), null);
+    assert.strictEqual(u.infoPatch({ id: 1 }, null), null);
   });
   ok('planApply never adds the same game twice in one batch, and keeps the newest 200 skipped ids', () => {
     const twin = { fresh: [feed(1, 'Same Game', '2027-01-01'), feed(2, 'Same Game: Deluxe Edition', '2027-01-01')], skippedBefore: [], dateChanges: [] };
@@ -170,6 +236,9 @@ async function main() {
       nt_price_7d: 349, nt_price_30d: 1099, tr_price_7d: 449, tr_price_30d: 1299, buy_nt_price: 0, buy_tr_price: 0,
       psn_concept_id: '104', created_at: '2026-10-10T00:00:00.000Z'
     });
+    const psn = { description: 'D', fetched_at: 'now' };
+    const withPsn = u.newUpcomingRecord(feed(104, 'Castlevania', '2026-10-15'), { prices, nowIso: 'now', psn });
+    assert.deepStrictEqual(withPsn.psn, psn, 'PlayStation info kept when there is some');
   });
   await okAsync('buildRecord: store page description and genre, cover, first 6 screenshots in order', async () => {
     const saved = [];
@@ -185,6 +254,8 @@ async function main() {
     assert.strictEqual(record.cover_image, '/uploads/104.png.webp');
     assert.deepStrictEqual(record.gallery, ['s0', 's1', 's2', 's3', 's4', 's5'].map(s => '/uploads/' + s + '.jpg.webp'));
     assert.strictEqual(saved.length, 7);
+    assert.strictEqual(record.psn.description, 'Whip it. (104)', 'the full store info is kept for the page');
+    assert.strictEqual(record.psn.screenshots.length, 9);
   });
   await okAsync('buildRecord: a failed page, a thrown error or failed images leave pieces out, never the game', async () => {
     const a = await u.buildRecord(feed(1, 'A', '2027-01-01'), { prices, nowIso: 'now', fetchInfo: async () => ({ ok: false, reason: 'timeout' }), saveImage: async () => '' });

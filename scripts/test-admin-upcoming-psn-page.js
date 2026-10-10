@@ -16,9 +16,11 @@ const vm = require('vm');
 const PORT = 4622;
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-upcoming-psn-page-'));
 const TEST_PASSWORD = 'throwaway-' + Math.random().toString(36).slice(2);
+// Both already have fresh PlayStation info, so neither is offered for an info update.
+const FRESH_PSN = { fetched_at: new Date().toISOString() };
 const upcoming = [
-  { id: 1, title: 'Zzyzx Moved Game', platform: 'PS5', release_date: '2026-10-29', created_at: '2026-09-01T00:00:00.000Z', nt_price_7d: 349, nt_price_30d: 1099, tr_price_7d: 449, tr_price_30d: 1299, non_trophy_slots: 3, trophy_slots: 1 },
-  { id: 2, title: 'Zzyzx Tba Game', platform: 'PS5', release_date: 'TBA', created_at: '2026-08-01T00:00:00.000Z' }
+  { id: 1, title: 'Zzyzx Moved Game', platform: 'PS5', release_date: '2026-10-29', created_at: '2026-09-01T00:00:00.000Z', nt_price_7d: 349, nt_price_30d: 1099, tr_price_7d: 449, tr_price_30d: 1299, non_trophy_slots: 3, trophy_slots: 1, psn: FRESH_PSN },
+  { id: 2, title: 'Zzyzx Tba Game', platform: 'PS5', release_date: 'TBA', created_at: '2026-08-01T00:00:00.000Z', psn: FRESH_PSN }
 ];
 const games = [{ id: 50, title: 'Zzyzx Out Already', platform: 'PS5', nt_price_7d: 100 }];
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
