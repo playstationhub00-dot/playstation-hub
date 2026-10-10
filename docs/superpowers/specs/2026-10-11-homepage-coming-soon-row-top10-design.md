@@ -1,6 +1,6 @@
 # Homepage — still Coming soon row, Top rented top 10 — Design
 
-Date: 2026-10-11 · Status: approved by owner
+Date: 2026-10-11 · Status: approved by owner; amended after the plan's dry run
 
 ## Problem
 
@@ -25,8 +25,8 @@ Date: 2026-10-11 · Status: approved by owner
 
 - `views/index.ejs` shows the homepage's Coming soon games with a new
   `views/partials/home/upcoming-row.ejs`: the same shell as
-  `partials/home/game-row.ejs` — `<section class="hm-wrap hm-sec" id="comingSoon"
-  data-upcoming="1">`, heading `□ Coming soon` + `reserve a slot` + "View all ›" to
+  `partials/home/game-row.ejs` — `<section class="hm-wrap hm-sec" id="comingSoon">`,
+  heading `□ Coming soon` + `reserve a slot` + "View all ›" to
   `/browse#comingSoon`, then `.hm-row` of `.hm-cell`s. No arrows; nothing calls
   `slideUpcoming`.
 - Which games: the first 6 of `upcoming` as the route already orders them
@@ -35,21 +35,26 @@ Date: 2026-10-11 · Status: approved by owner
 - The card markup moves unchanged from `upcoming-section.ejs` into
   `views/partials/upcoming-card.ejs` (locals: `game`). `upcoming-section.ejs` (Browse)
   and `upcoming-row.ejs` (home) both include it, so the two cannot drift apart. Browse
-  looks and behaves as before.
-- `public/js/index-4.js` no longer calls `autoDrift('upcomingSlider', …)`.
+  looks and behaves as before. Only Browse uses `upcoming-section.ejs` now, so its
+  homepage-only branches (`homeMarker`, `viewAllHref`) go.
+- `public/js/index-4.js` no longer calls `autoDrift('upcomingSlider', …)`;
+  `scripts/test-homepage-carousel.js` is updated to match (two drifting rows, none
+  reversed; the homepage takes six through `upcoming-row`).
 - The `id="comingSoon"` anchor stays on the homepage section (the quick-pick chip
   "□ Coming soon" links to `#comingSoon`).
-- CSS (`public/css/home.css`): inside `.hm-cell` the Coming soon card fills the
-  cell's width the way game cards do; nothing else about the card changes.
+- CSS (`public/css/home.css`): the card already fills a `.hm-cell` (verified); the
+  old `.home2 .section[data-upcoming]` spacing rules match nothing any more and go.
 
 ## 2. Top rented box (computers, ≥ 900px)
 
 - Lists `home.topRented` #1–#10 (the list `lib/home-view.js` already builds, up to
   `TOP_MAX` = 10). Each row: rank circle (gold / silver / bronze for 1–3, as now),
-  a 36×36px rounded cover (`game.cover_image`, `object-fit: cover`, `loading="lazy"`;
+  a 30×30px rounded cover (`game.cover_image`, `object-fit: cover`, `loading="lazy"`;
   a dark square when there is none), title (one line, cut with …), weekly price.
 - Under the list: **View all games ›** → `/browse`.
-- Rows get slightly tighter padding so ten fit; the box keeps its look.
+- Rows get tighter padding (0.24rem), and the box's padding and heading gap shrink
+  a little, so ten fit and the box — and the banner beside it — is about 470px tall
+  (469px measured at 1440px wide).
 - The banner fills its grid row: on computers each `.hm-slide` is as tall as the
   row (at least 340px) instead of a fixed 340px, so it grows with the box. Slide
   pictures keep `object-fit: cover`.
