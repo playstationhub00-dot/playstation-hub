@@ -66,6 +66,19 @@
     <div class="gmp-note">Only the date changes. Prices, slots, cover and reservations stay.</div>
   </div>
   <% } %>
+  <% if (pu.infoUpdates.length) { %>
+  <div class="gmp-card">
+    <div class="gmp-h">Get PlayStation info (<%= pu.infoUpdates.length %>)</div>
+    <% pu.infoUpdates.forEach(i => { %>
+    <label class="gmp-chg">
+      <input type="checkbox" name="info" value="<%= i.id %>" class="gmp-tick" data-gmp-info checked>
+      <span class="gmp-chg-title"><%= i.title %></span>
+      <span class="gmp-chg-from"><%= i.matched ? 'Matched on PlayStation' : 'Will search by name' %></span>
+    </label>
+    <% }) %>
+    <div class="gmp-note">Trailer, screenshots, rating and game info from PlayStation. Your own description and pictures stay.</div>
+  </div>
+  <% } %>
   <% if (pu.already.length) { %>
   <div class="gmp-card gmp-already"><b>Already on your site (<%= pu.already.length %>)</b> · <%= pu.already.join(', ') %></div>
   <% } %>

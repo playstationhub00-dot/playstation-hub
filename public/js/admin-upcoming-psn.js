@@ -1,18 +1,19 @@
 // Admin → Games → Coming soon → "Update from PlayStation" list: keeps the gold
-// button's words ("Add 3 games · update 1 date") in step with the ticks.
-// Saves nothing. The same rule renders the first label on the server
-// (lib/upcoming-psn.js applyLabel); scripts/test-admin-upcoming-psn-page.js checks
-// the two agree. Page wiring is skipped when there is no document (tests).
+// button's words ("Add 3 games · update 1 date · get info for 2 games") in
+// step with the ticks. Saves nothing. The same rule renders the first label on
+// the server (lib/upcoming-psn.js applyLabel); scripts/test-admin-upcoming-psn-page.js
+// checks the two agree. Page wiring is skipped when there is no document (tests).
 (function () {
   'use strict';
 
   function plural(n, one) { return n + ' ' + one + (n === 1 ? '' : 's'); }
 
-  function applyLabel(adds, dates) {
-    if (adds && dates) return 'Add ' + plural(adds, 'game') + ' · update ' + plural(dates, 'date');
-    if (adds) return 'Add ' + plural(adds, 'game');
-    if (dates) return 'Update ' + plural(dates, 'date');
-    return 'Add selected';
+  function applyLabel(adds, dates, infos) {
+    var parts = [];
+    if (adds) parts.push('Add ' + plural(adds, 'game'));
+    if (dates) parts.push((parts.length ? 'update ' : 'Update ') + plural(dates, 'date'));
+    if (infos) parts.push((parts.length ? 'get info for ' : 'Get info for ') + plural(infos, 'game'));
+    return parts.length ? parts.join(' · ') : 'Add selected';
   }
 
   if (typeof window !== 'undefined') window.__gmpApplyLabel = applyLabel;
@@ -25,7 +26,8 @@
     function update() {
       button.textContent = applyLabel(
         form.querySelectorAll('[data-gmp-add]:checked').length,
-        form.querySelectorAll('[data-gmp-date]:checked').length
+        form.querySelectorAll('[data-gmp-date]:checked').length,
+        form.querySelectorAll('[data-gmp-info]:checked').length
       );
     }
     form.addEventListener('change', update);
