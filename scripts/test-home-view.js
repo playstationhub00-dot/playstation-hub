@@ -40,6 +40,15 @@ ok('top rented: last 30 days first, ties and the rest by all-time renters, unren
   assert.strictEqual(H.topRented(many, [], now).length, 10);
 });
 
+ok('rental ranking: the whole Top rented order, every rented game, no cap', () => {
+  const many = Array.from({ length: 14 }, (_, i) => g(i + 1, 'G' + String(i).padStart(2, '0'), { renters: 20 - i }));
+  many.push(g(15, 'Never', { renters: 0 }));
+  const all = H.rentalRanking(many, [{ game_id: 9, start_date: daysAgo(2) }], now);
+  assert.strictEqual(all.length, 14, 'never-rented left out');
+  assert.deepStrictEqual(all.slice(0, 3).map(x => x.id), [9, 1, 2], 'a rental in the last 30 days comes first');
+  assert.deepStrictEqual(H.topRented(many, [{ game_id: 9, start_date: daysAgo(2) }], now), all.slice(0, 10));
+});
+
 ok('power-up: the biggest promo discount, the longer duration on a tie, nothing when off', () => {
   assert.deepStrictEqual(H.powerUp({ enabled: true, discounts: { 7: 0, 30: 10 } }), { pct: 10, days: 30 });
   assert.deepStrictEqual(H.powerUp({ enabled: true, discounts: { 7: 15, 30: 10 } }), { pct: 15, days: 7 });
