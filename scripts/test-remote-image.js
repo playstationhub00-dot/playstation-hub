@@ -48,6 +48,17 @@ async function main() {
     }
     assert.strictEqual(called, false);
   });
+  await okAsync('fetch refuses redirects (redirect: error)', async () => {
+    let init = null;
+    await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: async (u, i) => { init = i; return respond(png)(u, i); } });
+    assert.strictEqual(init.redirect, 'error');
+  });
+  await okAsync('a response that ended up on another host is refused and nothing is saved', async () => {
+    const before = fs.readdirSync(DIR).length;
+    const moved = { ok: true, status: 200, url: 'https://evil.example/x.png', headers: { get: () => null }, arrayBuffer: async () => png.buffer.slice(png.byteOffset, png.byteOffset + png.length) };
+    assert.strictEqual(await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: async () => moved }), '');
+    assert.strictEqual(fs.readdirSync(DIR).length, before);
+  });
   await okAsync('too big, failed, not an image, thrown or timed out → empty, nothing saved', async () => {
     const before = fs.readdirSync(DIR).length;
     const big = { uploadsDir: DIR, fetchImpl: respond(png, { 'content-length': String(MAX_BYTES + 1) }) };
@@ -55,6 +66,7 @@ async function main() {
     assert.strictEqual(await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: async () => ({ ok: false, status: 404 }) }), '');
     assert.strictEqual(await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: respond(Buffer.from('<html>blocked</html>')) }), '');
     assert.strictEqual(await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: async () => { throw new Error('ECONNRESET'); } }), '');
+    assert.strictEqual(await saveRemoteImage(URL_OK, { uploadsDir: DIR, fetchImpl: respond(Buffer.alloc(MAX_BYTES + 1)) }), '', 'body over MAX_BYTES with no content-length');
     const hang = (u, init) => new Promise((resolve, reject) => {
       init.signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; reject(e); });
     });
