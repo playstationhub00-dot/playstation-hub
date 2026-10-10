@@ -1,7 +1,7 @@
 // Run: node scripts/test-admin-upcoming-psn.js
 //
 // Coming soon → "Update from PlayStation": the refresh, apply and cancel
-// routes. Boots a throwaway instance (temp DATA_DIR, blank MONGODB_URI,
+// routes, including filling PlayStation info on existing Coming soon games. Boots a throwaway instance (temp DATA_DIR, blank MONGODB_URI,
 // in-memory sessions, a made-up admin password) with PlayStation's list, the
 // store-page reader and the image saver replaced by stubs, so nothing reaches
 // PlayStation, a database, or the real admin.
@@ -17,7 +17,10 @@ const TEST_PASSWORD = 'throwaway-' + Math.random().toString(36).slice(2);
 const upcoming = [
   { id: 1, title: 'Zzyzx Moved Game', platform: 'PS5', release_date: '2026-10-29', created_at: '2026-09-01T00:00:00.000Z', nt_price_7d: 349, nt_price_30d: 1099, tr_price_7d: 449, tr_price_30d: 1299, non_trophy_slots: 3, trophy_slots: 1, cover_image: '/uploads/keep.webp' },
   { id: 2, title: 'Zzyzx Tba Game', platform: 'PS5', release_date: 'TBA', created_at: '2026-08-01T00:00:00.000Z' },
-  { id: 3, title: 'Zzyzx Same Date', platform: 'PS5', release_date: '2026-12-03', created_at: '2026-07-01T00:00:00.000Z' }
+  { id: 3, title: 'Zzyzx Same Date', platform: 'PS5', release_date: '2026-12-03', created_at: '2026-07-01T00:00:00.000Z' },
+  // Not in PlayStation's dated list: one it finds by name, one it doesn't know.
+  { id: 4, title: 'Zzyzx Not In Feed', platform: 'PS5', release_date: 'TBA', description: 'Owner wrote this.' },
+  { id: 5, title: 'Zzyzx Unknown Game', platform: 'PS5', release_date: 'TBA' }
 ];
 const games = [{ id: 50, title: 'Zzyzx Out Already', platform: 'PS5', nt_price_7d: 100 }];
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({ admin_password: TEST_PASSWORD, games, upcoming, nextUpcomingId: 10 }));
@@ -76,12 +79,18 @@ async function main() {
   const feedLib = require('../lib/upcoming-psn-feed');
   feedLib.fetchUpcoming = async () => (knob.feedOk ? { ok: true, games: knob.feed.slice() } : { ok: false, games: [], reason: 'timeout' });
   const infoCalls = [];
+  // With a store link: that game's page. Without: a search by title, which
+  // knows "Not In Feed" (as concept 777) and nothing called "Unknown".
   require('../lib/psn-game').fetchGameInfo = async game => {
-    infoCalls.push(game.psn_link);
+    infoCalls.push(game.psn_link || 'title:' + game.title);
     if (knob.delay) await new Promise(r => setTimeout(r, knob.delay));
-    const id = game.psn_link.split('/').pop();
+    const id = game.psn_link ? game.psn_link.split('/').pop() : '';
+    if (!id) {
+      if (/Unknown/.test(game.title)) return { ok: false, reason: 'no_match' };
+      return { ok: true, psn: { concept_id: '777', description: 'Found by name: ' + game.title, genres: [], screenshots: [], fetched_at: new Date().toISOString() } };
+    }
     if (id === '103') return { ok: false, reason: 'timeout' };
-    return { ok: true, psn: { description: 'About ' + id, genres: [], screenshots: ['https://image.api.playstation.com/s1-' + id + '.jpg', 'https://image.api.playstation.com/s2-' + id + '.jpg'] } };
+    return { ok: true, psn: { concept_id: id, description: 'About ' + id, genres: [], screenshots: ['https://image.api.playstation.com/s1-' + id + '.jpg', 'https://image.api.playstation.com/s2-' + id + '.jpg'], fetched_at: new Date().toISOString() } };
   };
   const saved = [];
   require('../lib/remote-image').saveRemoteImage = async (url, opts) => {
@@ -118,7 +127,7 @@ async function main() {
     const r = await refresh();
     knob.feedOk = true;
     assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_unreachable');
-    assert.strictEqual(readDb().upcoming.length, 3);
+    assert.strictEqual(readDb().upcoming.length, 5);
   });
   let token;
   await okAsync('a check opens the list on the Games tab under a token', async () => {
@@ -127,7 +136,7 @@ async function main() {
     assert.ok(r.headers.location.startsWith('/admin?tab=games&msg=psn_upcoming_preview&psn_upcoming='));
     token = tokenOf(r);
     assert.ok(/^[0-9a-f]{24}$/.test(token));
-    assert.strictEqual(readDb().upcoming.length, 3, 'nothing saved by a check');
+    assert.strictEqual(readDb().upcoming.length, 5, 'nothing saved by a check');
   });
 
   console.log('\napply');
@@ -138,13 +147,13 @@ async function main() {
   await okAsync('an unknown token → expired, nothing added', async () => {
     const r = await post('/admin/upcoming/psn/apply', Object.assign({ token: 'deadbeef', add: ['101'] }, prices));
     assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_expired');
-    assert.strictEqual(readDb().upcoming.length, 3);
+    assert.strictEqual(readDb().upcoming.length, 5);
   });
   await okAsync('apply adds the ticked games with the typed prices, PlayStation details and saved images', async () => {
     const r = await post('/admin/upcoming/psn/apply', Object.assign({
       token, add: ['101', '103'], title_101: 'Zzyzx New One (Owner Title)', date: ['1', '2']
     }, prices));
-    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_partial&added=2&dates=2', 'game 103 has no cover or description');
+    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_partial&added=2&dates=2&info=0&missing=0', 'game 103 has no cover or description');
     const added = readDb().upcoming.filter(x => x.id >= 10);
     assert.deepStrictEqual(added.map(x => [x.id, x.title, x.psn_concept_id]), [[10, 'Zzyzx New One (Owner Title)', '101'], [11, 'Zzyzx Broken Images', '103']]);
     const one = added[0];
@@ -152,6 +161,8 @@ async function main() {
     assert.strictEqual(one.platform, 'PS5');
     assert.strictEqual(one.genre, 'RPG');
     assert.strictEqual(one.description, 'About 101');
+    assert.strictEqual(one.psn.description, 'About 101', 'new games keep the full PlayStation info');
+    assert.strictEqual(one.psn.screenshots.length, 2);
     assert.strictEqual(one.cover_image, '/uploads/psn-101.png.webp');
     assert.deepStrictEqual(one.gallery, ['/uploads/psn-s1-101.jpg.webp', '/uploads/psn-s2-101.jpg.webp']);
     assert.deepStrictEqual([one.nt_price_7d, one.nt_price_30d, one.tr_price_7d, one.tr_price_30d, one.non_trophy_slots, one.trophy_slots, one.rank, one.buy_nt_price], [299, 999, 399, 1199, 2, 1, 0, 0]);
@@ -175,12 +186,12 @@ async function main() {
   await okAsync('the same token again adds nothing', async () => {
     const r = await post('/admin/upcoming/psn/apply', Object.assign({ token, add: ['101', '102'] }, prices));
     assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_expired');
-    assert.strictEqual(readDb().upcoming.length, 5);
+    assert.strictEqual(readDb().upcoming.length, 7);
   });
   await okAsync('the next check offers only what is still new; ticking a skipped game adds it and un-skips it', async () => {
     const t2 = tokenOf(await refresh());
     const r = await post('/admin/upcoming/psn/apply', Object.assign({ token: t2, add: ['102'] }, prices));
-    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_applied&added=1&dates=0');
+    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_applied&added=1&dates=0&info=0&missing=0');
     assert.deepStrictEqual(readDb().upcoming.filter(x => x.id >= 10).map(x => x.psn_concept_id), ['101', '103', '102']);
     assert.strictEqual(readDb().upcoming.find(x => x.psn_concept_id === '102').platform, 'PS4/PS5');
     assert.deepStrictEqual(readDb().site_settings.upcoming_psn_skipped, []);
@@ -191,7 +202,7 @@ async function main() {
     await post('/admin/upcoming/add', { title: 'Zzyzx Hand Added', platform: 'PS5', release_date: '2027-03-01' });
     const before = readDb().upcoming.length;
     const r = await post('/admin/upcoming/psn/apply', Object.assign({ token: t3, add: ['108'] }, prices));
-    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_applied&added=0&dates=0');
+    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_applied&added=0&dates=0&info=0&missing=0');
     assert.strictEqual(readDb().upcoming.length, before);
   });
   await okAsync('one apply at a time: a second while the first downloads is told it is busy', async () => {
@@ -208,6 +219,30 @@ async function main() {
     assert.ok(r1.headers.location.includes('msg=psn_upcoming_applied&added=1'));
     const after = await post('/admin/upcoming/psn/apply', Object.assign({ token: tb, add: ['110'] }, prices));
     assert.ok(after.headers.location.includes('msg=psn_upcoming_applied&added=1'), 'flag cleared afterwards');
+  });
+  await okAsync('info only: matched games read by store link, others by name; only the info changes; not found is counted', async () => {
+    const t = tokenOf(await refresh());
+    infoCalls.length = 0;
+    const r = await post('/admin/upcoming/psn/apply', Object.assign({ token: t, info: ['1', '4', '5'] }, prices));
+    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_partial&added=0&dates=0&info=2&missing=1');
+    assert.ok(infoCalls.includes('https://store.playstation.com/en-us/concept/104'), 'matched game read from its store page');
+    assert.ok(infoCalls.includes('title:Zzyzx Not In Feed') && infoCalls.includes('title:Zzyzx Unknown Game'), 'the others searched by name');
+    const moved = upcomingById(1);
+    assert.strictEqual(moved.psn.description, 'About 104');
+    assert.deepStrictEqual([moved.nt_price_7d, moved.cover_image, moved.title, moved.release_date, moved.psn_concept_id], [349, '/uploads/keep.webp', 'Zzyzx Moved Game', '2026-11-12', '104']);
+    const byName = upcomingById(4);
+    assert.strictEqual(byName.psn.description, 'Found by name: Zzyzx Not In Feed');
+    assert.strictEqual(byName.psn_concept_id, '777', 'linked to the game it found');
+    assert.strictEqual(byName.description, 'Owner wrote this.', "the owner's own description stays");
+    assert.strictEqual(upcomingById(5).psn, undefined, 'not found: left as it was');
+    assert.strictEqual(upcomingById(3).psn, undefined, 'not ticked: left as it was');
+  });
+  await okAsync('games with fresh info are not offered again; the one not found is', async () => {
+    const t = tokenOf(await refresh());
+    infoCalls.length = 0;
+    const r = await post('/admin/upcoming/psn/apply', Object.assign({ token: t, info: ['1', '4', '5'] }, prices));
+    assert.strictEqual(r.headers.location, '/admin?tab=games&msg=psn_upcoming_partial&added=0&dates=0&info=0&missing=1');
+    assert.deepStrictEqual(infoCalls, ['title:Zzyzx Unknown Game'], 'games 1 and 4 have fresh info now, so only 5 was offered');
   });
 
   console.log('\ncancel');

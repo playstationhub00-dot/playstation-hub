@@ -5417,7 +5417,7 @@ app.post('/admin/upcoming/psn/apply', requireAuth, asyncRoute(async (req, res) =
   const entry = getUpcomingPsnPreview(token);
   if (!entry) return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_expired');
   const form = upcomingPsn.readForm(req.body);
-  if (!form.add.length && !form.dates.length) {
+  if (!form.add.length && !form.dates.length && !form.info.length) {
     return res.redirect(UPCOMING_PSN_BACK + 'psn_upcoming_nothing&psn_upcoming=' + token);
   }
   // Gone before the first await, so a double press finds no list to apply.
@@ -5429,12 +5429,23 @@ app.post('/admin/upcoming/psn/apply', requireAuth, asyncRoute(async (req, res) =
       skipped: getSiteSettings().upcoming_psn_skipped
     });
     const nowIso = new Date().toISOString();
-    const built = await upcomingPsn.mapLimit(plan.adds, 3, g => upcomingPsn.buildRecord(g, {
-      prices: plan.prices,
-      nowIso,
-      fetchInfo: conceptId => psnGame.fetchGameInfo({ psn_link: 'https://store.playstation.com/en-us/concept/' + conceptId }),
-      saveImage: url => remoteImage.saveRemoteImage(url, { uploadsDir })
-    }));
+    const [built, infoResults] = await Promise.all([
+      upcomingPsn.mapLimit(plan.adds, 3, g => upcomingPsn.buildRecord(g, {
+        prices: plan.prices,
+        nowIso,
+        fetchInfo: conceptId => psnGame.fetchGameInfo({ psn_link: upcomingPsn.storeLink(conceptId) }),
+        saveImage: url => remoteImage.saveRemoteImage(url, { uploadsDir })
+      })),
+      // A game PlayStation's list matched is read from its store page; any other
+      // is found by its title, the way released games' "Update all" does.
+      upcomingPsn.mapLimit(plan.infoUpdates, 3, async item => {
+        try {
+          return await psnGame.fetchGameInfo({ title: item.title, psn_link: upcomingPsn.storeLink(item.concept_id) });
+        } catch (e) {
+          return { ok: false, reason: 'error' };
+        }
+      })
+    ]);
     built.forEach(b => db.get('upcoming').push(Object.assign({ id: newUpcomingId() }, b.record)).write());
     plan.dateUpdates.forEach(d => {
       const current = getUpcomingGame(d.id);
@@ -5443,10 +5454,22 @@ app.post('/admin/upcoming/psn/apply', requireAuth, asyncRoute(async (req, res) =
       if (!current.psn_concept_id && d.concept_id) patch.psn_concept_id = d.concept_id;
       db.get('upcoming').find({ id: d.id }).assign(patch).write();
     });
+    let infoDone = 0;
+    plan.infoUpdates.forEach((item, i) => {
+      const current = getUpcomingGame(item.id);
+      const patch = current ? upcomingPsn.infoPatch(current, infoResults[i]) : null;
+      if (!patch) {
+        console.error('[upcoming-psn] no info for', item.title, (infoResults[i] && infoResults[i].reason) || 'gone');
+        return;
+      }
+      db.get('upcoming').find({ id: item.id }).assign(patch).write();
+      infoDone++;
+    });
     db.set('site_settings.upcoming_psn_skipped', plan.skipped).write();
-    const partial = built.some(b => !b.complete);
+    const missing = plan.infoUpdates.length - infoDone;
+    const partial = built.some(b => !b.complete) || missing > 0;
     res.redirect(UPCOMING_PSN_BACK + (partial ? 'psn_upcoming_partial' : 'psn_upcoming_applied')
-      + '&added=' + built.length + '&dates=' + plan.dateUpdates.length);
+      + '&added=' + built.length + '&dates=' + plan.dateUpdates.length + '&info=' + infoDone + '&missing=' + missing);
   } finally {
     upcomingPsnApplying = false;
   }
