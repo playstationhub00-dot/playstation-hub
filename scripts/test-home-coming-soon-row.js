@@ -94,7 +94,7 @@ async function main() {
   console.log('\nhomepage');
   const soon = slice(home, '<section class="hm-wrap hm-sec" id="comingSoon">', '</section>');
   ok('a still shelf like New releases, with the Coming soon heading and View all', () => {
-    assert.ok(soon.includes('<h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse#comingSoon">View all ›</a></h2>'));
+    assert.ok(soon.includes('<h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse?tab=coming-soon">View all ›</a></h2>'));
     assert.ok(soon.includes('<div class="hm-row">'));
     assert.strictEqual((soon.match(/<div class="hm-cell">\s*<a href="\/upcoming\//g) || []).length, 6);
   });

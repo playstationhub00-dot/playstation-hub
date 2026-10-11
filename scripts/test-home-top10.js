@@ -2,8 +2,8 @@
 //
 // The homepage's "Top rented this month" box beside the banner (computers):
 // #1–#10, each with a small cover picture, and "View all games ›" to Browse;
-// the banner grows to the box's height. On phones the Top rented shelf gets
-// the same View all as New releases. Boots a throwaway instance (temp
+// the banner grows to the box's height. On phones the Top rented shelf's
+// View all opens Browse's Most rented tab. Boots a throwaway instance (temp
 // DATA_DIR, blank MONGODB_URI, in-memory sessions, a made-up admin password);
 // nothing touches the project's games.json or a database.
 const assert = require('assert');
@@ -96,9 +96,9 @@ async function main() {
   });
 
   console.log('\nTop rented shelf (phones)');
-  ok('its heading has View all, like New releases', () => {
+  ok('its heading\'s View all opens the Most rented tab', () => {
     const head = slice(home, 'id="topRented"', '</h2>');
-    assert.ok(head.includes('<a class="hm-viewall" href="/browse">View all ›</a>'));
+    assert.ok(head.includes('<a class="hm-viewall" href="/browse?tab=most-rented">View all ›</a>'));
   });
 
   console.log('\nstyles');

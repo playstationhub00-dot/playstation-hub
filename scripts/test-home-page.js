@@ -152,6 +152,7 @@ async function main() {
   console.log('\nshelves and blocks');
   await okAsync('new releases newest first; deals at their deal price; Coming soon with its marker', async () => {
     assert.deepStrictEqual(cardSlugs(slice(home, 'id="newReleasesSection"', 'id="specialDealsSection"')), ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-charlie']);
+    assert.ok(slice(home, 'id="newReleasesSection"', '</h2>').includes('<a class="hm-viewall" href="/browse?tab=new">View all ›</a>'), 'View all opens the New releases tab');
     assert.ok(slice(home, 'id="specialDealsSection"', '<!-- UPCOMING GAMES').includes('Monthly <b>₱599</b>'));
     assert.ok(slice(home, 'id="comingSoon"', '</h2>').includes('<span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon'));
   });

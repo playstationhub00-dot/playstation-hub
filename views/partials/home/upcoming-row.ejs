@@ -6,7 +6,7 @@
 %>
 <% if (upcoming.length) { %>
 <section class="hm-wrap hm-sec" id="comingSoon">
-  <h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse#comingSoon">View all ›</a></h2>
+  <h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse?tab=coming-soon">View all ›</a></h2>
   <div class="hm-row">
     <% upcoming.slice(0, 6).forEach(game => { %><div class="hm-cell"><%- include('../upcoming-card', { game }) %></div><% }) %>
   </div>
