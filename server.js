@@ -2131,18 +2131,14 @@ app.get('/bundle/:slug', (req, res) => {
   });
 });
 
-// Applies the Browse page's filter state to a games array. Shared by the route's
-// own result set and by the per-chip count computation below it, so there is
-// exactly one implementation of what each filter means — the alternative (one
-// copy for "what results show" and a second copy for "what count each chip
-// displays") is exactly the kind of duplicated-logic bug that has already
-// shipped twice this session (Coming Soon slot counts, a filter script split
-// from its markup).
 // ── Browse ───────────────────────────────────────────────────────────────────
-// The filter rules live in public/js/browse-filter-core.js, shared with the
-// page script (public/js/browse.js); this builds the facts they read.
-// See docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md.
-function browseGameFacts(g, accountSummaryMap, promo) {
+// The catalog rules (tabs, sort, search, filters) live in
+// public/js/browse-filter-core.js, shared with the page script
+// (public/js/browse.js); this builds the facts they read.
+// See docs/superpowers/specs/2026-10-11-browse-catalog-tabs-design.md.
+// rank: the game's place in the Most rented order (null when never rented);
+// todayIso: today's date, for "released" (the homepage New releases rule).
+function browseGameFacts(g, accountSummaryMap, promo, rank, todayIso) {
   const a = computeAvailability(g, accountSummaryMap[g.id]);
   const bundle = resolveBundleInfo(g);
   const cat = g.price_category_id ? getPriceCategory(g.price_category_id) : null;
@@ -2163,10 +2159,11 @@ function browseGameFacts(g, accountSummaryMap, promo) {
     from: finals.length ? Math.min(...finals) : null,
     avail: !!(a.trAvail || a.ntAvail || (a.showPs4 && a.ps4Avail)),
     availPs4: !!(a.showPs4 && a.ps4Avail),
-    isNew: isAddedThisMonth(g),
     buy: (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0,
     bundle: !!g.is_bundle,
-    home: bundle ? 'bundles' : (cat ? 'cat-' + cat.id : 'other')
+    rank: rank || null,
+    released: g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso ? g.release_date : null,
+    deal: (gameDiscount.specialDeal(g, promo) || {}).pct || 0
   };
 }
 
@@ -2177,20 +2174,18 @@ function psplusFromWeekly() {
   return weekly.length ? Math.min(...weekly) : 0;
 }
 
-// Browse's "Also in PS Plus Deluxe" section: the games the /ps-plus page lists,
-// and whether the PS Plus Deluxe account has a slot free. A catalogue that has
-// not loaded simply gives no PS Plus games.
-const PSPLUS_JUST_ADDED_DAYS = 11;
+// Browse's PS Plus Deluxe tab: the games the /ps-plus page lists, whether the
+// PS Plus Deluxe account has a slot free, and its rent page. A catalogue that
+// has not loaded simply gives no PS Plus games.
 function browsePsplusData(accountSummaryMap) {
   let items = [];
   try {
     const catalog = psplusCatalogView.buildPublicCatalog({
       games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
-    const since = new Date(Date.now() - PSPLUS_JUST_ADDED_DAYS * 86400000).toISOString().slice(0, 10);
     items = catalog.items.map(it => ({
       k: it.k, n: it.n, c: it.c || (it.i ? it.i + '?w=240' : ''),
-      ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || '', j: !!it.f && it.f >= since
+      ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || ''
     }));
   } catch (e) {
     console.error('[browse] PS Plus list', e.message);
@@ -2206,7 +2201,7 @@ function browsePsplusData(accountSummaryMap) {
     avail = (sl.nt_slots || 0) + (sl.tr_slots || 0) + (sl.ps4_slots || 0) > 0;
     availPs4 = (sl.ps4_slots || 0) > 0;
   }
-  return { items, from: psplusFromWeekly(), avail, availPs4 };
+  return { items, from: psplusFromWeekly(), avail, availPs4, rent: psGame ? '/game/' + gameSlug(psGame.title) : '/ps-plus' };
 }
 
 app.get('/browse', (req, res) => {
@@ -2216,49 +2211,39 @@ app.get('/browse', (req, res) => {
   const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays)
     .sort((a, b) => a.title.localeCompare(b.title));
   const priceCategories = getPriceCategories();
-  const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo));
+  const ranks = new Map(homeView.rentalRanking(allGames, getCustomers(), new Date()).map((g, i) => [Number(g.id), i + 1]));
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo, ranks.get(Number(g.id)), todayIso));
+  const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
+  const soon = upcoming.map((u, i) => ({ id: u.id, title: u.title, text: u.title.toLowerCase(), order: i }));
   const ps = browsePsplusData(accountSummaryMap);
   const ctx = {
     bands: getBrowseBands(),
-    tiers: priceCategories.map(c => ({ id: String(c.id), name: c.name })),
-    genres: browseCore.genreList(facts),
-    psplusFrom: ps.from, psplusAvail: ps.avail, psplusAvailPs4: ps.availPs4
+    tiers: priceCategories.map(c => ({ id: String(c.id), name: c.name, desc: c.description || '' })),
+    genres: browseCore.genreList(facts)
   };
-  const state = browseCore.cleanState(browseCore.parseState(req.query), ctx);
-  const view = browseCore.view(facts, ps.items, state, ctx);
+  const data = { games: facts, soon, psplus: ps.items };
+  const state = browseCore.cleanState(browseCore.parseState(req.query), ctx, data);
+  const view = browseCore.view(data, state, ctx);
 
-  // The unfiltered sections: Bundles, each tier in admin order, Other games —
-  // only those with games. Every card has one home section; while filtering,
-  // the matches sit in the one grid instead.
-  const byHome = {};
-  facts.forEach(f => { (byHome[f.home] = byHome[f.home] || []).push(f); });
-  const minFrom = list => { const p = list.map(f => f.from).filter(n => n > 0); return p.length ? Math.min(...p) : null; };
-  const sections = [{ key: 'bundles', title: 'Account Bundles', unit: 'bundle' }]
-    .concat(priceCategories.map(c => ({ key: 'cat-' + c.id, title: c.name, description: c.description || '', color: tierStyle.pillColor(c), unit: 'game' })))
-    .concat([{ key: 'other', title: 'Other Games', unit: 'game' }])
-    .filter(s => byHome[s.key])
-    .map(s => Object.assign(s, { count: byHome[s.key].length, from: s.key === 'bundles' ? null : minFrom(byHome[s.key]) }));
-  const inGrid = new Set(view.grid);
-  const homeIds = {};
-  facts.forEach(f => { if (!inGrid.has(f.id)) (homeIds[f.home] = homeIds[f.home] || []).push(f.id); });
   // The filter panel's tier rows: coloured dot, description and starting price.
   const tierRows = {};
   priceCategories.forEach(c => {
-    const sec = sections.find(s => s.key === 'cat-' + c.id);
-    tierRows[String(c.id)] = { color: tierStyle.pillColor(c), sub: [c.description || '', sec && sec.from ? 'from ₱' + sec.from : ''].filter(Boolean).join(' · ') };
+    const from = facts.filter(f => f.tier === String(c.id) && f.from > 0).map(f => f.from);
+    tierRows[String(c.id)] = { color: tierStyle.pillColor(c), sub: [c.description || '', from.length ? 'from ₱' + Math.min(...from) : ''].filter(Boolean).join(' · ') };
   });
-  tierRows.psplus = { color: 'gold', sub: 'Hundreds of games, one account' + (ps.from ? ' · from ₱' + ps.from + '/week' : '') };
   const gamesById = {};
   allGames.forEach(g => { gamesById[g.id] = g; });
+  const upcomingById = {};
+  upcoming.forEach(u => { upcomingById[u.id] = u; });
 
-  const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
-  const psplus = [...getPsplus()].sort((a, b) => b.year !== a.year ? b.year - a.year : b.month - a.month);
   res.render('browse', {
-    view, sections, homeIds, gamesById, tierRows,
+    view, state, facts, soon, gamesById, upcomingById, tierRows,
     applied: browseCore.appliedChips(state, ctx), countText: browseCore.countText(view),
-    applyLabel: browseCore.applyLabel(view), formField: browseCore.formField, search: state.search,
-    browseData: { games: facts, psplus: ps.items, ctx, state },
-    upcoming, psplus, priceCategories,
+    applyLabel: browseCore.applyLabel(view),
+    clearHref: browseCore.href(browseCore.clearFilters(state)), resetHref: browseCore.href(browseCore.resetState(state)),
+    psplusCard: { from: ps.from, href: ps.rent },
+    browseData: { games: facts, soon, psplus: ps.items, ctx, state, psplusFrom: ps.from },
     announcement: getAnnouncement(), announcements: getAnnouncements(),
     settings: browseSettings, promo, accountSummaryMap
   });

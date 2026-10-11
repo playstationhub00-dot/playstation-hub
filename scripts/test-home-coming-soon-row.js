@@ -2,8 +2,8 @@
 //
 // The homepage's Coming soon games sit still, like New releases: one shelf
 // (.hm-row) of at most 6 cards, owner-ranked first then soonest release, no
-// arrows and no drifting. Browse keeps its own slider, and both pages draw the
-// same card (views/partials/upcoming-card.ejs). Boots a throwaway instance
+// arrows and no drifting. Browse lists them all on its Coming soon tab, and
+// both pages draw the same card (views/partials/upcoming-card.ejs). Boots a throwaway instance
 // (temp DATA_DIR, blank MONGODB_URI, in-memory sessions, a made-up admin
 // password); nothing touches the project's games.json or a database.
 const assert = require('assert');
@@ -89,7 +89,7 @@ async function main() {
   assert.ok(ready, 'server did not come up within 15s');
 
   const home = (await get('/')).body;
-  const browse = (await get('/browse')).body;
+  const browse = (await get('/browse?tab=coming-soon')).body;
 
   console.log('\nhomepage');
   const soon = slice(home, '<section class="hm-wrap hm-sec" id="comingSoon">', '</section>');
@@ -117,13 +117,9 @@ async function main() {
   });
 
   console.log('\nBrowse and the shared card');
-  ok('Browse keeps its Coming soon slider with arrows and every game', () => {
-    const b = slice(browse, 'id="upcomingSlider"', 'slider-arrow-right');
-    assert.ok(browse.includes('onclick="slideUpcoming(-1)"'));
-    const head = slice(browse, 'id="comingSoon"', '</h2>');
-    assert.ok(head.includes('Open for Reservation') && head.includes('class="section-toggle-btn"'), "Browse's own heading and collapse button");
-    assert.ok(browse.includes('<div class="collapsible-body" id="upcomingBody">'));
-    assert.deepStrictEqual(upcomingIds(b), [1, 2, 3, 5, 6, 7, 4]);
+  ok('Browse\'s Coming soon tab lists every game in the same order, no slider', () => {
+    assert.deepStrictEqual(upcomingIds(slice(browse, 'id="bfSoonGrid"', 'id="bfPsplus"')), [1, 2, 3, 5, 6, 7, 4]);
+    assert.ok(!browse.includes('id="upcomingSlider"') && !browse.includes('slideUpcoming'));
   });
   ok('both pages draw the same card', () => {
     [2, 5].forEach(id => assert.strictEqual(card(home, id), card(browse, id), 'card ' + id));

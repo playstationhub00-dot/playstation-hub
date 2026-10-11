@@ -15,26 +15,41 @@
 <%- include('partials/nav', { active: 'browse' }) %>
 
 <%#
-  Filters, layout and the PS Plus section follow
-  docs/superpowers/specs/2026-10-09-browse-filters-tiers-design.md. The server
-  renders the page for the URL (GET /browse); public/js/browse.js then runs the
-  filter panel and the filter bar with the same rules
-  (public/js/browse-filter-core.js), moving these same cards between their tier
-  sections and the one results grid.
+  One catalog (docs/superpowers/specs/2026-10-11-browse-catalog-tabs-design.md):
+  a search box, a row of tabs (ready-made collections), a results bar with the
+  filter chips, Sort and Filters, then one grid. The server renders the page for
+  the URL (GET /browse); public/js/browse.js then runs every tab, search, sort
+  and filter change with the same rules (public/js/browse-filter-core.js),
+  showing, hiding and ordering these same cards — no reload.
 %>
 <div class="browse-header">
-  <h1>Browse Games</h1>
+  <h1>Browse games</h1>
 </div>
 
-<!-- FILTER BAR — sticky under the menu: open the panel, drop a filter, the count -->
-<div class="bf-bar" id="bfBar">
-  <div class="bf-bar-in">
-    <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel">Filters<span id="bfOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
-    <div class="bf-chips" id="bfChips">
-      <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
-      <% if (applied.length >= 2) { %><a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a><% } %>
+<!-- SEARCH, TABS AND RESULTS BAR — pinned under the menu (on phones the search box scrolls away) -->
+<div class="bf-top" id="bfTop">
+  <div class="bf-top-in">
+    <form class="bf-search" id="bfSearchForm" method="get" action="/browse" role="search">
+      <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
+      <input type="search" id="bfSearch" name="search" value="<%= state.search %>" placeholder="Search <%= facts.length %> games…" aria-label="Search games" autocomplete="off" enterkeyhint="search">
+    </form>
+    <nav class="bf-tabs" id="bfTabs" aria-label="Collections">
+      <% view.tabs.forEach(t => { %><a class="bf-tab<%= t.on ? ' on' : '' %>" data-tab="<%= t.key %>" href="<%= t.href %>"<%- t.on ? ' aria-current="page"' : '' %>><%= t.label %> <span class="bf-tab-n"><%= t.count %></span></a><% }) %>
+    </nav>
+    <div class="bf-bar" id="bfBar">
+      <span class="bf-count" id="bfCount"><%= countText %></span>
+      <label class="bf-sort" id="bfSortWrap"<%= view.sorts.length > 1 ? '' : ' hidden' %>>
+        <span class="bf-sort-l">Sort</span>
+        <select id="bfSort" aria-label="Sort games">
+          <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
+        </select>
+      </label>
+      <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="bfOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
+      <div class="bf-chips" id="bfChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
+        <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+        <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
+      </div>
     </div>
-    <span class="results-count" id="resultsCount"><%= countText %></span>
   </div>
 </div>
 
@@ -49,18 +64,20 @@
       <button type="button" class="bf-clear-all" id="bfClearAll">Clear all</button>
     </div>
     <div class="bf-body">
-      <% if (search) { %><input type="hidden" name="search" value="<%= search %>"><% } %>
+      <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
+      <% if (view.sort !== view.sorts[0].key) { %><input type="hidden" name="sort" value="<%= view.sort %>"><% } %>
+      <% if (state.search) { %><input type="hidden" name="search" value="<%= state.search %>"><% } %>
       <% view.groups.forEach(gr => { const extra = gr.chips.slice(6); %>
       <section class="bf-sec" data-group="<%= gr.key %>">
         <div class="bf-sec-head">
           <h3><%= gr.label %></h3>
           <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
         </div>
-        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
         <% if (extra.length) { %>
         <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
           <summary>Show all <%= gr.chips.length %></summary>
-          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: formField(c.group, c.value), tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
+          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
         </details>
         <% } %>
       </section>
@@ -72,92 +89,40 @@
   </form>
 </div>
 
-<!-- UPCOMING GAMES — hidden while filtering -->
-<div id="bfUpcoming"<%= view.active ? ' hidden' : '' %>>
-<%- include('partials/upcoming-section', { upcoming, noBorderTop: true }) %>
-</div>
+<%
+  // Every card is on the page once; the active tab's matches come first, in
+  // order, and the rest wait hidden for another tab.
+  const leadGames = view.kind === 'games' ? view.ids : [];
+  const gridFacts = leadGames.map(id => facts.find(f => f.id === id)).concat(facts.filter(f => !leadGames.includes(f.id)));
+  const leadSoon = view.kind === 'soon' ? view.ids : [];
+  const soonList = leadSoon.map(id => soon.find(u => u.id === id)).concat(soon.filter(u => !leadSoon.includes(u.id)));
+%>
+<div class="section bf-results" id="section-rentals">
+  <div class="bf-notes" id="bfNotes"><% view.notes.forEach(n => { %><p class="cat-desc"><b><%= n.name %></b> — <%= n.desc %></p><% }) %></div>
 
-<div id="section-rentals">
-  <!-- No filter on: a section per tier (Bundles, tiers in admin order, Other games) -->
-  <div id="bfSections"<%= view.active ? ' hidden' : '' %>>
-    <% sections.forEach((s, si) => { %>
-    <div class="section cat-section" id="cat-section-<%= s.key === 'other' ? 'uncategorized' : s.key.replace('cat-', '') %>" style="<%= si > 0 || upcoming.length > 0 ? 'padding-top:3rem;' : 'padding-top:2rem;' %>">
-      <div class="cat-head">
-        <h2 class="section-title" style="margin:0;"><%= s.title %></h2>
-        <span class="cat-count"><%= s.count %> <%= s.unit %><%= s.count !== 1 ? 's' : '' %></span>
-        <% if (s.from) { %><span class="cat-price-start">🎮 Price Starts at ₱<%= s.from %></span><% } %>
-      </div>
-      <% if (s.description) { %><p class="cat-desc"><%= s.description %></p><% } %>
-      <div class="games-grid rentals-grid" data-home="<%= s.key %>">
-        <% (homeIds[s.key] || []).forEach(id => { %><div class="bf-item" data-id="<%= id %>"><%- include('partials/game-card', { game: gamesById[id] }) %></div><% }) %>
-      </div>
-    </div>
-    <% }) %>
+  <div class="bf-empty" id="bfEmpty"<%= view.count ? ' hidden' : '' %>>
+    <p>No games match.</p>
+    <a class="btn btn-outline" id="bfReset" href="<%= resetHref %>">Clear filters</a>
   </div>
 
-  <!-- Any filter on: every match in one grid, tier order then A–Z -->
-  <div class="section" id="bfResults"<%= view.active && (view.siteOn || !view.psplus.length) ? '' : ' hidden' %>>
-    <p class="bf-empty" id="bfEmpty"<%= view.active && (view.siteOn || !view.psplus.length) && view.site.length === 0 ? '' : ' hidden' %>><%= view.psplus.length ? 'None of our own games match — but these PS Plus games do.' : 'No games found. Try a different filter.' %></p>
-    <div class="games-grid rentals-grid" id="bfGrid">
-      <% view.grid.forEach(id => { %><div class="bf-item" data-id="<%= id %>"><%- include('partials/game-card', { game: gamesById[id] }) %></div><% }) %>
-    </div>
+  <div class="games-grid rentals-grid" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
+    <% gridFacts.forEach(f => { %><div class="bf-item" data-id="<%= f.id %>"<%= leadGames.includes(f.id) ? '' : ' hidden' %>><% if (f.rank && f.rank <= 10) { %><span class="bf-rank bf-rk-<%= f.rank %>"<%= view.ranked ? '' : ' hidden' %>>#<%= f.rank %></span><% } %><%- include('partials/game-card', { game: gamesById[f.id] }) %></div><% }) %>
   </div>
 
-  <!-- Also in PS Plus Deluxe — drawn by public/js/browse.js while filtering -->
-  <div class="section" id="bfPsplus" hidden>
-    <div class="cat-head">
-      <h2 class="section-title" style="margin:0;">Also in PS Plus Deluxe</h2>
-      <span class="cat-count" id="bfPsCount"></span>
-      <span class="bf-ps-sub">One account, play them all</span>
-    </div>
+  <div class="games-grid rentals-grid" id="bfSoonGrid"<%= view.kind === 'soon' ? '' : ' hidden' %>>
+    <% soonList.forEach(u => { %><div class="bf-item" data-soon="<%= u.id %>"<%= leadSoon.includes(u.id) ? '' : ' hidden' %>><%- include('partials/upcoming-card', { game: upcomingById[u.id] }) %></div><% }) %>
+  </div>
+
+  <div id="bfPsplus"<%= view.kind === 'psplus' ? '' : ' hidden' %>>
+    <a class="bf-ps-lead" href="<%= psplusCard.href %>">
+      <span class="tier-pill tier-gold">PS Plus Deluxe</span>
+      <span class="bf-ps-lead-t">Hundreds of games, one account</span>
+      <% if (psplusCard.from) { %><span class="bf-ps-lead-p">from <b>₱<%= psplusCard.from %></b>/week</span><% } %>
+      <span class="btn btn-primary bf-ps-lead-go">Rent</span>
+    </a>
     <div class="games-grid rentals-grid" id="bfPsGrid"></div>
     <button type="button" class="btn btn-outline bf-ps-all" id="bfPsAll" hidden></button>
   </div>
-</div>
-
-<!-- PS PLUS MONTHLY GAMES — hidden while filtering -->
-<div id="bfPsMonthly"<%= view.active ? ' hidden' : '' %>>
-<% if (psplus.length > 0) { %>
-<div class="section" id="section-psplus" style="padding-top:3rem;">
-  <h2 class="section-title" style="display:flex;align-items:center;gap:0.6rem;">
-    <span style="background:linear-gradient(135deg,#FFD700,#ffa500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">★</span>
-    PS Plus Deluxe — Monthly Games
-    <a href="/ps-plus" style="font-size:0.8rem;font-weight:500;color:var(--ps-blue);text-decoration:none;margin-left:0.5rem;">View Full Page →</a>
-  </h2>
-  <p style="color:var(--text-secondary);font-size:0.85rem;margin:-0.5rem 0 1.5rem;">Access these games anytime through a PS Plus Deluxe account rental.</p>
-  <div id="psplus-entries">
-  <% psplus.forEach(entry => { %>
-    <%
-      const monthNames = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
-      const mName = monthNames[entry.month] || '';
-      const gamesList = (entry.games_list || '').split('\n').map(g => g.trim()).filter(Boolean);
-    %>
-    <a href="/game/ps-plus-deluxe" class="psplus-browse-entry" data-games="<%= gamesList.join('|').toLowerCase() %>" data-month="<%= mName.toLowerCase() %> <%= entry.year %>" style="text-decoration:none;color:inherit;display:block;">
-      <div class="psplus-browse-header">
-        <% if (entry.cover_image) { %>
-          <img src="<%= entry.cover_image %>" alt="<%= mName %> <%= entry.year %>" class="psplus-browse-cover-wide" loading="lazy" decoding="async">
-        <% } else { %>
-          <div class="psplus-browse-cover-wide psplus-browse-cover-placeholder" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:1.5rem;">★</span>
-          </div>
-        <% } %>
-        <div>
-          <div style="font-weight:700;font-size:1rem;color:#FFD700;"><%= mName %> <span style="color:#888;"><%= entry.year %></span></div>
-          <div style="font-size:0.75rem;color:#555;margin-top:0.2rem;"><%= gamesList.length %> game<%= gamesList.length !== 1 ? 's' : '' %></div>
-          <% if (entry.notes) { %><div style="font-size:0.75rem;color:#666;margin-top:0.15rem;"><%= entry.notes %></div><% } %>
-        </div>
-        <span class="btn btn-outline" style="margin-left:auto;padding:0.3rem 0.85rem;font-size:0.78rem;white-space:nowrap;">Rent Access →</span>
-      </div>
-      <div class="psplus-browse-games">
-        <% gamesList.forEach(g => { %>
-          <span class="psplus-browse-game-tag"><%= g %></span>
-        <% }) %>
-      </div>
-    </a>
-  <% }) %>
-  </div>
-</div>
-<% } %>
 </div>
 
 <!-- RESERVE MODAL -->

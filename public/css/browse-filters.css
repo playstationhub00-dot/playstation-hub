@@ -1,20 +1,43 @@
-/* Browse: the sticky filter bar, the floating filter panel, the one results
-   grid and the PS Plus Deluxe section (views/browse.ejs, public/js/browse.js). */
+/* Browse: the pinned search box, tabs and results bar, the floating filter
+   panel and the one grid (views/browse.ejs, public/js/browse.js). */
 
-/* ── Filter bar: sticks just under the 64px menu (nav is z-index 100) ── */
+/* ── Search, tabs and results bar: pinned just under the 64px menu (nav is
+   z-index 100). On phones the block sticks 64px higher, so the search box
+   slides under the menu and the tabs and results bar stay. ── */
 .browse-header h1 { margin-bottom: 1rem; }
-.bf-bar { position: sticky; top: 64px; z-index: 90; background: rgba(10,10,10,0.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #1a1a1a; }
-.bf-bar-in { max-width: 1400px; margin: 0 auto; padding: 0.6rem 2rem; display: flex; align-items: center; gap: 0.5rem; }
+.bf-top { position: sticky; top: 64px; z-index: 90; background: rgba(10,10,10,0.96); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid #1a1a1a; }
+.bf-top-in { max-width: 1400px; margin: 0 auto; padding: 10px 2rem 0.55rem; }
+.bf-search { display: flex; height: 44px; margin: 0 0 10px; }
+.bf-search input { flex: 1; min-width: 0; max-width: 560px; height: 44px; background: #141414 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 1rem center; border: 1px solid #2a2a2a; border-radius: 999px; color: #fff; font-size: 0.95rem; padding: 0 1rem 0 2.6rem; }
+.bf-search input:focus { outline: none; border-color: var(--ps-blue); }
+.bf-tabs { display: flex; gap: 0.45rem; overflow-x: auto; scrollbar-width: none; }
+.bf-tabs::-webkit-scrollbar { display: none; }
+.bf-tab { flex-shrink: 0; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.4rem; background: #141414; border: 1px solid #2a2a2a; border-radius: 999px; color: #ddd; padding: 0.45rem 0.9rem; font-size: 0.84rem; font-weight: 700; text-decoration: none; }
+.bf-tab:hover { border-color: #444; color: #fff; }
+.bf-tab-n { color: #888; font-size: 0.74rem; font-weight: 600; }
+.bf-tab.on { background: var(--ps-blue); border-color: var(--ps-blue); color: #000; }
+.bf-tab.on .bf-tab-n { color: rgba(0,0,0,0.65); }
+.bf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-top: 0.55rem; }
+.bf-count { flex: 1; min-width: 0; color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bf-sort { flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem; color: #888; font-size: 0.78rem; }
+.bf-sort select { background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; color: #fff; font-size: 0.8rem; font-weight: 700; padding: 0.4rem 0.6rem; cursor: pointer; }
 .bf-open { flex-shrink: 0; display: inline-flex; align-items: center; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; color: #fff; font-size: 0.82rem; font-weight: 700; padding: 0.45rem 0.95rem; text-decoration: none; }
 .bf-open:hover { border-color: #444; }
 .bf-open.bf-has { border-color: var(--ps-blue); color: var(--ps-blue); }
-.bf-chips { flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
+.bf-chips { flex-basis: 100%; min-width: 0; display: flex; align-items: center; gap: 0.4rem; overflow-x: auto; scrollbar-width: none; }
 .bf-chips::-webkit-scrollbar { display: none; }
 .bf-chip-x { flex-shrink: 0; white-space: nowrap; background: rgba(240,165,0,0.12); color: var(--ps-blue); border: 1px solid rgba(240,165,0,0.35); border-radius: 20px; padding: 0.3rem 0.7rem; font-size: 0.76rem; font-weight: 700; text-decoration: none; }
 .bf-chip-x:hover { background: rgba(240,165,0,0.2); }
 .bf-clear { flex-shrink: 0; white-space: nowrap; color: #888; font-size: 0.76rem; text-decoration: underline; }
-.bf-bar .results-count { flex-shrink: 0; margin: 0 0 0 auto; white-space: nowrap; }
-@media (max-width: 600px) { .bf-bar-in { padding: 0.5rem 1rem; } }
+.bf-top [hidden] { display: none; }
+@media (max-width: 767px) {
+  .bf-top { top: 0; }
+  .bf-top-in { padding: 10px 1rem 0.5rem; }
+  .bf-search input { max-width: none; }
+  .bf-sort-l { display: none; }
+  /* "Available now · 23 games" beside Sort and Filters: two short lines, never cut. */
+  .bf-count { white-space: normal; line-height: 1.25; font-size: 0.78rem; }
+}
 
 /* ── Filter panel: hidden until opened (by the page script, or #bfPanel without it) ── */
 .bf-panel { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; }
@@ -52,12 +75,25 @@ body.bf-lock { overflow: hidden; }
 .bf-go { width: 100%; background: var(--ps-blue); color: #000; border: none; border-radius: 999px; padding: 0.95rem; font-size: 1rem; font-weight: 800; cursor: pointer; }
 .bf-go:disabled { background: #2a2a2a; color: #777; cursor: default; }
 
-/* ── Results ── */
-.cat-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-.cat-count { font-size: 0.78rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.2rem 0.65rem; }
-.cat-desc { margin: -1rem 0 1.25rem; color: var(--text-secondary); font-size: 0.85rem; }
+/* ── The grid ── */
+.bf-results { padding-top: 1.5rem; }
+.bf-results [hidden] { display: none; }
+.cat-desc { margin: 0 0 1rem; color: var(--text-secondary); font-size: 0.85rem; }
+.cat-desc b { color: #ddd; }
 .bf-empty { text-align: center; padding: 2rem 1rem; color: var(--text-secondary); }
-.bf-ps-sub { font-size: 0.8rem; color: var(--text-secondary); }
+.bf-empty p { margin: 0 0 1rem; }
+.bf-item { position: relative; }
+/* #1–#10 on the Most rented tab: gold, silver and bronze for the top three. */
+.bf-rank { position: absolute; z-index: 3; top: 0.45rem; left: 0.45rem; min-width: 28px; height: 22px; padding: 0 0.35rem; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900; background: #2a2a2a; color: #eee; box-shadow: 0 2px 6px rgba(0,0,0,0.5); pointer-events: none; }
+.bf-rk-1 { background: #F0A500; color: #1a1200; }
+.bf-rk-2 { background: #C9CED6; color: #1b1e22; }
+.bf-rk-3 { background: #C98B4E; color: #1f1206; }
+/* PS Plus Deluxe tab: the account to rent, then its games. */
+.bf-ps-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-bottom: 1rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, rgba(240,165,0,0.14), rgba(240,165,0,0.04)); border: 1px solid rgba(240,165,0,0.35); border-radius: 14px; color: #fff; text-decoration: none; }
+.bf-ps-lead-t { font-weight: 800; }
+.bf-ps-lead-p { color: var(--text-secondary); font-size: 0.85rem; }
+.bf-ps-lead-p b { color: var(--ps-blue); }
+.bf-ps-lead-go { margin-left: auto; padding: 0.45rem 1.4rem; }
 .bf-ps-all { margin-top: 1rem; }
 .bf-ps-card .gc2-cover-placeholder span { padding: 0 0.75rem; text-align: center; opacity: 0.8; }
 
@@ -65,5 +101,3 @@ body.bf-lock { overflow: hidden; }
 @media (min-width: 601px) {
   .browse-page .games-grid { grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)); }
 }
-.bf-ps-all[hidden] { display: none; }
-.cat-section { scroll-margin-top: 130px; }

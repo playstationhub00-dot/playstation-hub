@@ -1,15 +1,14 @@
 // Run: node scripts/test-browse-page.js
 //
-// The Browse page as the server renders it for a URL: tier sections with no
-// filter, one grid in tier order while filtering, the sticky filter bar's
-// removable chips and count, the filter panel's sections, rows, counts and
-// 0-options (a plain GET form), old links, the price bands from Settings, "PS
-// Plus Deluxe" alone, and the facts and PS Plus games handed to the page script.
-// The draft/apply rules are the same module (scripts/test-browse-filter-core.js).
-// Boots a
-// throwaway instance (temp DATA_DIR, blank MONGODB_URI, in-memory sessions, a
-// stubbed PS Plus list); the project's games.json and the database are never
-// touched.
+// The Browse catalog as the server renders it for a URL: the search box, the
+// tab row (counts, hidden empty tabs, the active tab), each tab's grid in its
+// order, #1–#10 badges on Most rented, Coming soon cards, the PS Plus Deluxe
+// tab, the Sort menu, filters on top of a tab, the filter bar and panel, a
+// tier's description, the empty grid, old links, and the facts handed to the
+// page script. The rules themselves: scripts/test-browse-filter-core.js.
+// Boots a throwaway instance (temp DATA_DIR, blank MONGODB_URI, in-memory
+// sessions, a stubbed PS Plus list); the project's games.json and the
+// database are never touched.
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
@@ -18,11 +17,20 @@ const path = require('path');
 
 const PORT = 4616;
 const DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'browse-page-'));
+const daysAgo = d => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+// A local calendar date d days from today — the Coming soon card counts days in local time.
+const daysAhead = d => {
+  const t = new Date(Date.now() + d * 86400000);
+  return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+};
 const price = (nt7, nt30, tr7, tr30) => ({ nt_price_7d: nt7, nt_price_30d: nt30, tr_price_7d: tr7, tr_price_30d: tr30 });
 const game = (id, title, extra) => Object.assign({
   id, title, platform: 'PS5', genre: 'Action', cover_image: '/uploads/' + id + '.png',
-  non_trophy_slots: 1, trophy_slots: 1, renters: 1, created_at: '2020-01-01T00:00:00.000Z'
+  non_trophy_slots: 1, trophy_slots: 1, renters: 0, created_at: '2020-01-01T00:00:00.000Z'
 }, price(349, 799, 399, 899), extra || {});
+const up = (id, title, release_date) => Object.assign({
+  id, title, platform: 'PS5', release_date, cover_image: '/uploads/up' + id + '.png', non_trophy_slots: 1, trophy_slots: 1
+}, price(349, 1099, 0, 0));
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: 'throwaway-' + Math.random().toString(36).slice(2),
   site_settings: { promo: { enabled: false, discounts: { 7: 0, 30: 0 }, deposit: 100 }, browse_price_bands: { low: 180, high: 300 } },
@@ -34,12 +42,15 @@ fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   psplus_prices: { nt_price_7d: 159, tr_price_7d: 199 },
   psplus_slots: { nt_slots: 1, tr_slots: 0, ps4_slots: 0 },
   games: [
-    game(1, 'Zzyzx Astro', { price_category_id: 1, genre: 'Platformer', created_at: new Date().toISOString() }),
-    game(2, 'Zzyzx Elden', { price_category_id: 2, genre: 'Action, RPG' }),
-    game(3, 'Zzyzx Tekken', { price_category_id: 2, genre: 'Fighting', platform: 'PS4/PS5', ps4_primary_slots: 1 }),
+    game(1, 'Zzyzx Astro', { price_category_id: 1, genre: 'Platformer', release_date: daysAgo(5) }),
+    game(2, 'Zzyzx Elden', { price_category_id: 2, genre: 'Action, RPG', release_date: '2022-02-25', renters: 9 }),
+    game(3, 'Zzyzx Tekken', { price_category_id: 2, genre: 'Fighting', platform: 'PS4/PS5', ps4_primary_slots: 1, release_date: '2024-01-26', renters: 3, discounts: { 7: 40 } }),
     game(4, 'Zzyzx Callisto', { price_category_id: 3, genre: 'Horror', platform: 'PS4/PS5', non_trophy_slots: 0, trophy_slots: 0, buy_nt_price: 999 }),
-    game(5, 'Zzyzx Plain', Object.assign({ platform: 'PS4', description: 'Old </script><b>favourite' }, price(149, 349, 199, 449)))
-  ]
+    game(5, 'Zzyzx Plain', Object.assign({ platform: 'PS4', description: 'Old </script><b>favourite', release_date: 'TBA', renters: 1 }, price(149, 349, 199, 449))),
+    game(6, 'PS Plus Deluxe', { genre: '' })
+  ],
+  customers: [{ id: 1, game_id: 3, start_date: daysAgo(2), status: 'renting' }],
+  upcoming: [up(1, 'Zzyzx Wolverine', daysAhead(30)), up(2, 'Zzyzx Fable', 'TBA'), up(3, 'Zzyzx Marvel', daysAhead(5))]
 }));
 process.env.PORT = String(PORT);
 process.env.DATA_DIR = DATA_DIR;
@@ -60,7 +71,7 @@ function call(p) {
   });
 }
 async function page(p) { const r = await call(p); assert.strictEqual(r.status, 200, p); return r.body; }
-// The HTML between an element's id and the next element id from `ids`.
+// The HTML between an element's id and the next element id given.
 function between(html, startId, endId) {
   const i = html.indexOf('id="' + startId + '"');
   assert.ok(i >= 0, startId + ' found');
@@ -68,16 +79,17 @@ function between(html, startId, endId) {
   return html.slice(i, j);
 }
 const opening = (html, id) => { const i = html.indexOf('id="' + id + '"'); return html.slice(html.lastIndexOf('<', i), html.indexOf('>', i) + 1); };
-const cardIds = html => [...html.matchAll(/class="bf-item" data-id="(\d+)"/g)].map(m => Number(m[1]));
-// The filter panel's row for an option, and its count.
-function optHtml(html, group, value) {
-  const m = new RegExp('<label class="bf-opt[^"]*" data-group="' + group + '" data-value="' + value + '">[\\s\\S]*?</label>').exec(html);
-  assert.ok(m, 'option ' + group + '/' + value);
-  return m[0];
-}
-const optCount = (html, group, value) => Number(/<span class="bf-n">(\d+)<\/span>/.exec(optHtml(html, group, value))[1]);
-const barChips = html => [...between(html, 'bfChips', 'resultsCount').matchAll(/<a class="bf-chip-x" data-group="(\w+)" data-value="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(m => ({ group: m[1], value: m[2], href: m[3], label: m[4] }));
-const countOf = html => /<span class="results-count" id="resultsCount">([^<]*)<\/span>/.exec(html)[1];
+const unamp = s => s.replace(/&amp;/g, '&');
+// The game cards the grid shows, in order (hidden ones wait for another tab).
+const shown = html => [...between(html, 'bfGrid', 'bfSoonGrid').matchAll(/<div class="bf-item" data-id="(\d+)"( hidden)?>/g)].filter(m => !m[2]).map(m => Number(m[1]));
+const allCards = html => [...between(html, 'bfGrid', 'bfSoonGrid').matchAll(/<div class="bf-item" data-id="(\d+)"/g)].map(m => Number(m[1]));
+const soonShown = html => [...between(html, 'bfSoonGrid', 'bfPsplus').matchAll(/<div class="bf-item" data-soon="(\d+)"( hidden)?>/g)].filter(m => !m[2]).map(m => Number(m[1]));
+const tabs = html => [...between(html, 'bfTabs', 'bfBar').matchAll(/<a class="bf-tab( on)?" data-tab="([\w-]+)" href="([^"]*)"[^>]*>([^<]*?) <span class="bf-tab-n">(\d+)<\/span><\/a>/g)]
+  .map(m => ({ key: m[2], on: !!m[1], href: unamp(m[3]), label: m[4], count: Number(m[5]) }));
+const countOf = html => /<span class="bf-count" id="bfCount">([^<]*)<\/span>/.exec(html)[1];
+const sorts = html => [...between(html, 'bfSort', 'bfOpen').matchAll(/<option value="([\w-]+)"( selected)?>/g)].map(m => (m[2] ? '*' : '') + m[1]);
+const barChips = html => [...between(html, 'bfChips', 'bfPanel').matchAll(/<a class="bf-chip-x" data-group="(\w+)" data-value="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(m => ({ group: m[1], value: m[2], href: unamp(m[3]), label: m[4] }));
+const ranks = html => [...between(html, 'bfGrid', 'bfSoonGrid').matchAll(/<span class="bf-rank bf-rk-(\d+)"( hidden)?>#\d+<\/span>/g)].map(m => (m[2] ? 'hidden ' : '') + '#' + m[1]);
 function browseData(html) {
   const m = /<script type="application\/json" id="browseData">([\s\S]*?)<\/script>/.exec(html);
   assert.ok(m, 'embedded data');
@@ -95,10 +107,9 @@ async function main() {
     return store;
   };
   // A small PS Plus Deluxe list instead of the database copy.
-  const today = new Date().toISOString();
   require('../lib/psplus-catalog-store').all = () => [
-    { key: 'days-gone', name: 'Days Gone', image_url: 'https://image.test/dg.png', platforms: ['PS4'], genres: ['ACTION'], lists: ['catalog'], first_seen_at: '2020-01-01T00:00:00.000Z' },
-    { key: 'returnal', name: 'Returnal', image_url: '', platforms: ['PS5'], genres: ['SHOOTER'], lists: ['catalog'], first_seen_at: today },
+    { key: 'returnal', name: 'Returnal', image_url: '', platforms: ['PS5'], genres: ['SHOOTER'], lists: ['catalog'] },
+    { key: 'days-gone', name: 'Days Gone', image_url: 'https://image.test/dg.png', platforms: ['PS4'], genres: ['ACTION'], lists: ['catalog'] },
     { key: 'hidden-one', name: 'Hidden One', platforms: ['PS5'], genres: [], lists: ['catalog'], hidden: true }
   ];
   require('../server.js');
@@ -109,137 +120,149 @@ async function main() {
   }
   assert.ok(up, 'server did not come up within 15s');
 
-  console.log('\nno filter');
   const all = await page('/browse');
-  await okAsync('a section per tier in admin order, then Other games, each with its cards', async () => {
-    const sec = between(all, 'bfSections', 'bfResults');
-    const order = ['cat-section-1', 'cat-section-2', 'cat-section-3', 'cat-section-uncategorized'].map(id => sec.indexOf('id="' + id + '"'));
-    assert.ok(order.every((x, i) => x > 0 && (i === 0 || x > order[i - 1])), JSON.stringify(order));
-    assert.deepStrictEqual(cardIds(sec), [1, 2, 3, 4, 5]);
-    assert.ok(sec.includes('<p class="cat-desc">Big recent AAA games</p>'));
-    assert.ok(!opening(all, 'bfSections').includes('hidden') && opening(all, 'bfResults').includes('hidden'));
+
+  console.log('\nthe page');
+  await okAsync('title, search box, the tab row with counts (no Bundles tab: there are none), All games on', async () => {
+    assert.ok(all.includes('<h1>Browse games</h1>'));
+    assert.ok(opening(all, 'bfSearch').includes('placeholder="Search 6 games…"'));
+    assert.ok(opening(all, 'bfSearch').includes('value=""'));
+    assert.deepStrictEqual(tabs(all).map(t => t.key + ' ' + t.count), ['all 6', 'most-rented 3', 'new 3', 'coming-soon 3', 'deals 1', 'available 5', 'buy 1', 'psplus 2']);
+    assert.deepStrictEqual(tabs(all).filter(t => t.on).map(t => t.key), ['all']);
+    assert.ok(all.includes('data-tab="all" href="/browse" aria-current="page"'));
+    assert.deepStrictEqual(tabs(all).slice(1, 4).map(t => t.href), ['/browse?tab=most-rented', '/browse?tab=new', '/browse?tab=coming-soon']);
+    assert.strictEqual(countOf(all), 'All games · 6 games');
   });
-  await okAsync('the filter bar: a Filters button, no chips yet, and the count', async () => {
-    assert.ok(opening(all, 'bfOpen').includes('href="#bfPanel"') && !opening(all, 'bfOpen').includes('bf-has'));
-    assert.deepStrictEqual(barChips(all), []);
-    assert.strictEqual(countOf(all), '5 games');
-    assert.ok(all.indexOf('id="bfBar"') < all.indexOf('id="bfSections"'), 'above the games');
+  await okAsync('All games: every game, most rented first, then the never-rented A–Z', async () => {
+    assert.deepStrictEqual(shown(all), [3, 2, 5, 6, 1, 4]);
+    assert.deepStrictEqual(ranks(all), ['hidden #1', 'hidden #2', 'hidden #3'], 'badges wait for the Most rented tab');
+    assert.deepStrictEqual(sorts(all), ['*most-rented', 'newest', 'price-asc', 'price-desc', 'az']);
+    assert.ok(opening(all, 'bfSoonGrid').includes(' hidden') && opening(all, 'bfPsplus').includes(' hidden'));
+    assert.ok(opening(all, 'bfEmpty').includes(' hidden'));
   });
-  await okAsync('the panel: a form with every option the library supports, no Bundles without bundles', async () => {
-    const panel = between(all, 'bfPanel', 'bfUpcoming');
-    assert.ok(opening(all, 'bfPanel').includes('role="dialog"') && opening(all, 'bfPanel').includes('aria-modal="true"'));
-    assert.ok(opening(all, 'bfForm').includes('method="get" action="/browse"'));
-    const show = [...panel.matchAll(/data-group="show" data-value="(\w+)"/g)].map(m => m[1]);
-    assert.deepStrictEqual(show, ['avail', 'new', 'buy']);
-    assert.deepStrictEqual([...panel.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['show', 'tier', 'console', 'genre', 'price']);
-    assert.ok(optHtml(all, 'show', 'new').includes('<input type="checkbox" name="new" value="1">'));
-    assert.ok(optHtml(all, 'tier', 'psplus').includes('name="psplus" value="1"'));
-    assert.ok(optHtml(all, 'genre', 'RPG').includes('name="genre" value="RPG"'));
-    assert.strictEqual(optCount(all, 'genre', 'Action'), 2, '"Action, RPG" counts as Action');
-    assert.ok(between(all, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 5 games</button>'));
-  });
-  await okAsync('tier rows show the colour, description and starting price; PS Plus its weekly price', async () => {
-    const deluxe = optHtml(all, 'tier', '2');
-    assert.ok(deluxe.includes('<span class="tier-dot tier-purple" aria-hidden="true"></span>'));
-    assert.ok(deluxe.includes('Deluxe<span class="bf-opt-sub">Big recent AAA games · from ₱249</span>'));
-    assert.ok(optHtml(all, 'tier', '3').includes('tier-pink') && optHtml(all, 'tier', '3').includes('<span class="bf-opt-sub">from ₱199</span>'));
-    assert.ok(optHtml(all, 'tier', 'psplus').includes('<span class="bf-opt-sub">Hundreds of games, one account · from ₱159/week</span>'));
-  });
-  await okAsync('price options use the cut-offs from Settings and the card price', async () => {
-    assert.ok(optHtml(all, 'price', 'low').includes('Under ₱180<'));
-    assert.deepStrictEqual(['low', 'mid', 'high'].map(b => optCount(all, 'price', b)), [1, 3, 1]);
-    assert.ok(optHtml(all, 'price', 'mid').includes('₱180–299<'));
+  await okAsync('the old page is gone: no Coming soon slider, tier sections or PS Plus monthly block', async () => {
+    ['upcomingSlider', 'slideUpcoming', 'bfSections', 'cat-section', 'psplus-entries', 'psplus-browse-entry', 'Also in PS Plus Deluxe'].forEach(t => assert.ok(!all.includes(t), t));
+    assert.ok(!fs.existsSync(path.join(__dirname, '..', 'views', 'partials', 'upcoming-section.ejs')));
   });
 
-  console.log('\nfiltering');
-  const f = await page('/browse?tier=2,3&console=ps4');
-  await okAsync('one grid of the matches, tier order then A–Z; sections hidden', async () => {
-    assert.deepStrictEqual(cardIds(between(f, 'bfGrid', 'bfPsplus')), [3, 4]);
-    assert.ok(opening(f, 'bfSections').includes('hidden') && !opening(f, 'bfResults').includes('hidden'));
-    assert.ok(opening(f, 'bfUpcoming').includes('hidden') && opening(f, 'bfPsMonthly').includes('hidden'));
-    assert.deepStrictEqual(cardIds(f).sort(), [1, 2, 3, 4, 5], 'every card is still on the page once');
+  console.log('\ntabs');
+  await okAsync('Most rented: rented games only, with #1–#10 badges', async () => {
+    const h = await page('/browse?tab=most-rented');
+    assert.deepStrictEqual(shown(h), [3, 2, 5]);
+    assert.deepStrictEqual(allCards(h).sort(), [1, 2, 3, 4, 5, 6], 'every card is on the page for the other tabs');
+    assert.deepStrictEqual(ranks(h), ['#1', '#2', '#3']);
+    assert.ok(h.includes('data-tab="most-rented" href="/browse?tab=most-rented" aria-current="page"'));
+    assert.strictEqual(countOf(h), 'Most rented · 3 games');
+    assert.deepStrictEqual(ranks(await page('/browse?tab=most-rented&sort=az')).sort(), ['hidden #1', 'hidden #2', 'hidden #3'], 'only in Most rented order');
   });
-  await okAsync('the bar: "Filters · 3", a chip per filter that removes just that one, Clear all, the count', async () => {
-    assert.ok(opening(f, 'bfOpen').includes('bf-has') && between(f, 'bfOpenN', 'bfChips').startsWith('id="bfOpenN"> · 3</span>'));
-    assert.deepStrictEqual(barChips(f), [
-      { group: 'tier', value: '2', href: '/browse?tier=3&amp;console=ps4', label: 'Deluxe ✕' },
-      { group: 'tier', value: '3', href: '/browse?tier=2&amp;console=ps4', label: 'Special ✕' },
-      { group: 'console', value: 'ps4', href: '/browse?tier=2,3', label: 'PS4 ✕' }
-    ]);
-    assert.ok(between(f, 'bfChips', 'resultsCount').includes('<a class="bf-clear" href="/browse" data-clear-all="1">Clear all</a>'));
-    assert.strictEqual(countOf(f), '2 games');
+  await okAsync('New releases: released games, newest first (TBA and undated left out)', async () => {
+    const h = await page('/browse?tab=new');
+    assert.deepStrictEqual(shown(h), [1, 3, 2]);
+    assert.deepStrictEqual(sorts(h), ['*newest', 'most-rented', 'price-asc', 'price-desc', 'az']);
   });
-  await okAsync('the panel starts from the applied filters: ticked, counts if ticked, dimmed 0-options', async () => {
-    assert.ok(optHtml(f, 'tier', '2').includes(' checked') && optHtml(f, 'console', 'ps4').includes(' checked'));
-    assert.ok(opening(f, 'bfPanel').includes('role="dialog"'));
-    assert.strictEqual(optCount(f, 'genre', 'Horror'), 1);
-    const plat = optHtml(f, 'genre', 'Platformer');
-    assert.ok(plat.includes('bf-opt-zero') && plat.includes(' disabled>'));
-    assert.strictEqual(optCount(f, 'console', 'ps5'), 3, 'PS4 or PS5 in Deluxe/Special');
-    assert.ok(!between(f, 'bfPanel', 'bfUpcoming').includes('data-clear="tier" hidden'), 'Tier has a Clear');
-    assert.ok(between(f, 'bfPanel', 'bfUpcoming').includes('data-clear="genre" hidden'), 'Genre has nothing to clear');
-    assert.ok(between(f, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 2 games</button>'));
+  await okAsync('Coming soon: every Coming soon game, soonest first, TBA last; no filters', async () => {
+    const h = await page('/browse?tab=coming-soon');
+    assert.deepStrictEqual(soonShown(h), [3, 1, 2]);
+    assert.deepStrictEqual(shown(h), []);
+    assert.ok(opening(h, 'bfGrid').includes(' hidden'));
+    assert.ok(between(h, 'bfSoonGrid', 'bfPsplus').includes('href="/upcoming/zzyzx-marvel-3" class="game-card upcoming-card'));
+    assert.deepStrictEqual(sorts(h), ['*release', 'az']);
+    assert.ok(opening(h, 'bfOpen').includes(' hidden'), 'no Filters button');
+    assert.strictEqual(countOf(h), 'Coming soon · 3 games');
   });
-  await okAsync('old links and the plain form\'s repeated fields keep working', async () => {
-    const old = await page('/browse?ps4=1&newOnly=1');
-    assert.ok(optHtml(old, 'console', 'ps4').includes(' checked') && optHtml(old, 'show', 'new').includes(' checked'));
-    assert.strictEqual(countOf(old), '0 games', 'no PS4 game was just added');
-    assert.ok(between(old, 'bfGo', 'bfUpcoming').startsWith('id="bfGo" disabled>No games match</button>'));
-    const form = await page('/browse?tier=2&tier=3&console=ps4');
-    assert.deepStrictEqual(cardIds(between(form, 'bfGrid', 'bfPsplus')), [3, 4]);
-    const gone = await page('/browse?tier=99&genre=Nope');
-    assert.ok(!opening(gone, 'bfSections').includes('hidden') && countOf(gone) === '5 games', 'a deleted tier in an old link is dropped');
+  await okAsync('Deals, Available now and Buy to keep', async () => {
+    assert.deepStrictEqual(shown(await page('/browse?tab=deals')), [3]);
+    assert.deepStrictEqual(sorts(await page('/browse?tab=deals')).slice(0, 2), ['*discount', 'most-rented']);
+    assert.deepStrictEqual(shown(await page('/browse?tab=available')), [3, 2, 5, 6, 1]);
+    assert.deepStrictEqual(shown(await page('/browse?tab=buy')), [4]);
   });
-  await okAsync('a search shows as a removable chip and rides along in the form', async () => {
-    const p = await page('/browse?search=elden&genre=Action');
-    assert.deepStrictEqual(barChips(p).map(c => c.label), ['Action ✕', '&#34;elden&#34; ✕'], 'shown as "elden" ✕');
-    assert.strictEqual(barChips(p)[1].href, '/browse?genre=Action');
-    assert.ok(between(p, 'bfPanel', 'bfUpcoming').includes('<input type="hidden" name="search" value="elden">'));
+  await okAsync('PS Plus Deluxe: the account to rent, then its games (drawn by the page script), A–Z only', async () => {
+    const h = await page('/browse?tab=psplus');
+    assert.ok(!opening(h, 'bfPsplus').includes(' hidden'));
+    const lead = between(h, 'bfPsplus', 'bfPsGrid');
+    assert.ok(lead.includes('<a class="bf-ps-lead" href="/game/ps-plus-deluxe">'));
+    assert.ok(lead.includes('Hundreds of games, one account') && lead.includes('from <b>₱159</b>/week') && lead.includes('>Rent</span>'));
+    assert.ok(opening(h, 'bfSortWrap').includes(' hidden'), 'one order: no Sort menu');
+    assert.deepStrictEqual(browseData(h).psplus.map(p => p.k).sort(), ['days-gone', 'returnal'], 'hidden games left out');
+    assert.strictEqual(countOf(h), 'PS Plus Deluxe · 2 games');
+  });
+  await okAsync('unknown or empty tabs open All games; an unknown sort falls back', async () => {
+    const h = await page('/browse?tab=bundles&sort=cheapest');
+    assert.deepStrictEqual(tabs(h).filter(t => t.on).map(t => t.key), ['all']);
+    assert.deepStrictEqual(shown(h), [3, 2, 5, 6, 1, 4]);
+    assert.strictEqual(browseData(h).state.tab, 'all');
   });
 
-  console.log('\nPS Plus Deluxe');
-  await okAsync('the page script gets the PS Plus list, the account price and availability', async () => {
-    const d = browseData(all);
-    assert.deepStrictEqual(d.psplus.map(p => p.k), ['days-gone', 'returnal'], 'hidden games left out');
-    assert.deepStrictEqual(d.psplus[0], { k: 'days-gone', n: 'Days Gone', c: 'https://image.test/dg.png?w=240', ps4: true, ps5: false, g: 'Action', j: false });
-    assert.strictEqual(d.psplus[1].j, true, 'joined today = just added');
-    assert.deepStrictEqual([d.ctx.psplusFrom, d.ctx.psplusAvail, d.ctx.psplusAvailPs4], [159, true, false]);
-    assert.deepStrictEqual(d.ctx.bands, { low: 180, high: 300 });
+  console.log('\nsearch, sort and filters');
+  await okAsync('?search= fills the box and narrows the grid and every tab count', async () => {
+    const h = await page('/browse?search=elden');
+    assert.ok(opening(h, 'bfSearch').includes('value="elden"'));
+    assert.deepStrictEqual(shown(h), [2]);
+    assert.deepStrictEqual(tabs(h).map(t => t.count), [1, 1, 1, 0, 0, 1, 0, 0]);
+    assert.strictEqual(tabs(h)[2].href, '/browse?tab=new&search=elden');
   });
-  await okAsync('"PS Plus Deluxe" alone shows no site games and counts PS Plus games', async () => {
-    const p = await page('/browse?psplus=1');
-    assert.strictEqual(countOf(p), '2 PS Plus games');
-    assert.ok(opening(p, 'bfResults').includes('hidden'));
-    assert.strictEqual(optCount(p, 'genre', 'Action'), 1, 'Days Gone');
-    assert.ok(between(p, 'bfGo', 'bfUpcoming').startsWith('id="bfGo">Show 2 PS Plus games</button>'));
+  await okAsync('?sort= orders the grid and stays out of the tab links', async () => {
+    const h = await page('/browse?sort=az');
+    assert.deepStrictEqual(shown(h), [6, 1, 4, 2, 5, 3]);
+    assert.deepStrictEqual(sorts(h), ['most-rented', 'newest', 'price-asc', 'price-desc', '*az']);
+    assert.strictEqual(tabs(h)[1].href, '/browse?tab=most-rented');
+    assert.deepStrictEqual(shown(await page('/browse?sort=price-asc')), [5, 3, 4, 2, 6, 1], 'Tekken\'s 40% deal makes it ₱149; ties by title');
   });
-  await okAsync('PS Plus alone with nothing matching shows the empty message, not a blank page', async () => {
-    const p = await page('/browse?psplus=1&genre=Horror');
-    assert.ok(!opening(p, 'bfEmpty').includes('hidden') && !opening(p, 'bfResults').includes('hidden'));
-    assert.ok(between(p, 'bfEmpty', 'bfGrid').includes('No games found. Try a different filter.'));
+  await okAsync('filters on top of a tab, with the filter bar\'s chips', async () => {
+    const h = await page('/browse?tab=most-rented&console=ps4&price=low');
+    assert.deepStrictEqual(shown(h), [3, 5]);
+    assert.deepStrictEqual(barChips(h).map(c => c.label + ' ' + c.href), ['PS4 ✕ /browse?tab=most-rented&price=low', 'Under ₱180 ✕ /browse?tab=most-rented&console=ps4']);
+    assert.ok(between(h, 'bfChips', 'bfPanel').includes('<a class="bf-clear" href="/browse?tab=most-rented" data-clear-all="1">Clear all</a>'));
+    assert.ok(opening(h, 'bfOpen').includes('bf-open bf-has'));
+    assert.ok(h.includes('<span id="bfOpenN"> · 2</span>'));
   });
-  await okAsync('a search only PS Plus has says so instead of "No games found"', async () => {
-    const p = await page('/browse?search=returnal');
-    assert.ok(between(p, 'bfEmpty', 'bfGrid').includes('None of our own games match — but these PS Plus games do.'));
-    assert.ok(!opening(p, 'bfEmpty').includes('hidden'));
+  await okAsync('old links: Show ticks open their tab, PS4 links still pick PS4, quick picks open All games', async () => {
+    assert.deepStrictEqual(tabs(await page('/browse?avail=1')).filter(t => t.on).map(t => t.key), ['available']);
+    assert.deepStrictEqual(tabs(await page('/browse?newOnly=1')).filter(t => t.on).map(t => t.key), ['new']);
+    assert.deepStrictEqual(shown(await page('/browse?unit=ps4')), [3], 'a free PS4 slot');
+    const pick = await page('/browse?genre=Horror');
+    assert.deepStrictEqual([tabs(pick).filter(t => t.on).map(t => t.key), shown(pick)], [['all'], [4]]);
+  });
+  await okAsync('a filtered tier shows its description', async () => {
+    const h = await page('/browse?tier=2');
+    assert.ok(between(h, 'bfNotes', 'bfEmpty').includes('<p class="cat-desc"><b>Deluxe</b> — Big recent AAA games</p>'));
+    assert.ok(!between(all, 'bfNotes', 'bfEmpty').includes('cat-desc'));
+  });
+  await okAsync('nothing matches: the empty grid clears search and filters, keeps the tab', async () => {
+    const h = await page('/browse?tab=deals&search=zzzz&console=ps5');
+    assert.ok(!opening(h, 'bfEmpty').includes(' hidden'));
+    assert.ok(between(h, 'bfEmpty', 'bfGrid').includes('No games match.'));
+    assert.ok(between(h, 'bfEmpty', 'bfGrid').includes('<a class="btn btn-outline" id="bfReset" href="/browse?tab=deals">Clear filters</a>'));
+  });
+  await okAsync('the filter panel: tier, console, genre and price rows; a plain form that keeps tab, sort and search', async () => {
+    const h = await page('/browse?tab=deals&sort=az&search=zzyzx');
+    const form = between(h, 'bfForm', 'bfGo');
+    assert.deepStrictEqual([...form.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['tier', 'console', 'genre', 'price']);
+    ['<input type="hidden" name="tab" value="deals">', '<input type="hidden" name="sort" value="az">', '<input type="hidden" name="search" value="zzyzx">'].forEach(t => assert.ok(form.includes(t), t));
+    assert.ok(/<label class="bf-opt" data-group="tier" data-value="2">[\s\S]*?Big recent AAA games · from ₱149[\s\S]*?<input type="checkbox" name="tier" value="2">/.test(form));
+    assert.ok(!between(all, 'bfForm', 'bfGo').includes('name="tab"'), 'All games needs no tab field');
   });
 
   console.log('\npage script');
-  await okAsync('facts for every game, safely embedded, plus the scripts and styles', async () => {
+  await okAsync('facts for every game and Coming soon game, safely embedded, plus the scripts and styles', async () => {
     const d = browseData(all);
-    const elden = d.games.find(g => g.id === 2);
-    assert.deepStrictEqual([elden.tier, elden.genres, elden.from, elden.home], ['2', ['Action', 'RPG'], 249, 'cat-2']);
-    assert.deepStrictEqual(d.state, { search: '', avail: false, isNew: false, buy: false, bundle: false, tiers: [], psplus: false, consoles: [], genres: [], prices: [] });
+    const tekken = d.games.find(g => g.id === 3);
+    assert.deepStrictEqual([tekken.tier, tekken.rank, tekken.released, tekken.deal, tekken.availPs4], ['2', 1, '2024-01-26', 40, true]);
+    assert.deepStrictEqual([d.games.find(g => g.id === 5).released, d.games.find(g => g.id === 1).rank], [null, null]);
+    assert.deepStrictEqual(d.soon.map(u => [u.id, u.order]), [[3, 0], [1, 1], [2, 2]]);
+    assert.deepStrictEqual(d.state, { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [] });
+    assert.deepStrictEqual(d.ctx.tiers[1], { id: '2', name: 'Deluxe', desc: 'Big recent AAA games' });
+    assert.strictEqual(d.psplusFrom, 159);
     assert.ok(all.includes('\\u003c/script>\\u003cb>favourite'), 'a description cannot close the script');
-    assert.ok(d.games.find(g => g.id === 5).text.includes('</script><b>favourite'));
     ['/js/browse-filter-core.js', '/js/browse.js', '/css/browse-filters.css'].forEach(src => assert.ok(all.includes(src + '?v='), src));
     assert.strictEqual((await call('/js/browse.js')).status, 200);
     const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'browse.js'), 'utf8');
+    assert.ok(js.includes("location.hash === '#comingSoon'"), 'old #comingSoon links open the Coming soon tab');
     assert.ok(js.includes("location.hash = ''"), 'clears the hash so :target un-matches');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
     assert.ok(css.includes('minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)'), 'at most 6 a row');
-    assert.ok(/\.cat-section\s*\{\s*scroll-margin-top:\s*130px/.test(css), 'section headings clear the menu and filter bar');
-    assert.ok(/\.bf-ps-all\[hidden\]\s*\{\s*display:\s*none/.test(css), 'hidden Show all button stays hidden');
+    assert.ok(/\.bf-top \{ position: sticky; top: 64px;/.test(css), 'search, tabs and bar pinned under the menu');
+    assert.ok(/\.bf-results \[hidden\] \{ display: none; \}/.test(css), 'hidden cards stay hidden');
   });
   await okAsync('the PS Plus page still shows its weekly price', async () => {
     const r = await call('/ps-plus');
