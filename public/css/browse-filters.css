@@ -90,6 +90,7 @@ body.bf-lock { overflow: hidden; }
 .bf-rk-3 { background: #C98B4E; color: #1f1206; }
 /* PS Plus Deluxe tab: the account to rent, then its games. */
 .bf-ps-lead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-bottom: 1rem; padding: 1rem 1.25rem; background: linear-gradient(135deg, rgba(240,165,0,0.14), rgba(240,165,0,0.04)); border: 1px solid rgba(240,165,0,0.35); border-radius: 14px; color: #fff; text-decoration: none; }
+.bf-ps-lead .tier-pill { align-self: center; }
 .bf-ps-lead-t { font-weight: 800; }
 .bf-ps-lead-p { color: var(--text-secondary); font-size: 0.85rem; }
 .bf-ps-lead-p b { color: var(--ps-blue); }
