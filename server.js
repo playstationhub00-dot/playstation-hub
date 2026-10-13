@@ -19,6 +19,7 @@ const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
+const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
@@ -1128,6 +1129,13 @@ function getSiteSettings() {
   // kind added later starts working instead of being muted by an older blob,
   // and this seed never has to be edited again.
   if (s.alerts === undefined) { db.set('site_settings.alerts', {}).write(); s.alerts = {}; }
+  // Reminders start on; auto-cancel does not. An old settings blob with no
+  // payment_reminders key keeps that, and a later save is left alone.
+  if (s.payment_reminders === undefined) {
+    const seeded = { enabled: true, hold_hours: 24, auto_cancel: false };
+    db.set('site_settings.payment_reminders', seeded).write();
+    s.payment_reminders = seeded;
+  }
   // The m.me handle is a setting rather than a constant because the whole
   // referral link depends on it, and getting it wrong silently breaks PSID
   // capture with no visible symptom on the page.
@@ -2795,6 +2803,7 @@ app.get('/order/:ref', asyncRoute(async (req, res) => {
     // For the "reassurance" panel on the payment step: real reviews and a
     // real median approval time, not invented urgency.
     approvalEtaMinutes: getApprovalEtaMinutes(),
+    holdState: paymentReminders.holdDisplay(order, new Date()),
   }, reviewBlockLocals('')));
 }));
 
@@ -3067,6 +3076,14 @@ function notifyOwnerRequest(request) {
 async function createOrderNotified(fields) {
   const order = await orders.create(fields);
   notifyOwnerOrder(order, 'created');
+  // The customer's page reads hold_expires_at on the next request. A failure
+  // here must not lose the order they just placed.
+  try {
+    const plan = paymentReminders.holdPlan(order, getSiteSettings().payment_reminders);
+    if (plan) await orders.setHoldExpiry(order.ref, plan.expires, plan.anchor);
+  } catch (e) {
+    console.error('[payment reminder hold]', e.message);
+  }
   return order;
 }
 
@@ -5114,7 +5131,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     reviews: dashboard.reviewStats(reviews),
     // Drives the count on the "Now" pill, so the badge and the cards below it
     // can never disagree about how much is waiting.
-    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length
+    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length,
+    reminders: paymentReminders.recoveryStats(allOrders, dashPeriod)
   };
 
   // Prices for Quick Add's game picker, promo already applied. The form used to
@@ -5293,7 +5311,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -7257,6 +7275,44 @@ function sendText(recipientId, text) {
   sendMessage(recipientId, { text });
 }
 
+// A payment reminder, not a reply to something the customer just typed.
+// messaging_type RESPONSE is the standard window. No message tag: a tag would
+// keep sending after the customer has gone quiet, which this shop does not do.
+function sendMessengerResponse(recipientId, text) {
+  return new Promise((resolve) => {
+    if (!PAGE_ACCESS_TOKEN) return resolve({ ok: false, reason: 'not_configured', code: null });
+    if (!recipientId) return resolve({ ok: false, reason: 'no_psid', code: null });
+    const https = require('https');
+    const payload = JSON.stringify({
+      recipient: { id: String(recipientId) },
+      messaging_type: 'RESPONSE',
+      message: { text: String(text || '') }
+    });
+    const options = {
+      hostname: 'graph.facebook.com',
+      path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+    };
+    const req2 = https.request(options, (res2) => {
+      let data = '';
+      res2.on('data', chunk => { data += chunk; });
+      res2.on('end', () => {
+        if (res2.statusCode === 200) return resolve({ ok: true });
+        const code = paymentReminders.graphErrorCode(data);
+        console.error('Messenger reminder error:', res2.statusCode, String(data).slice(0, 300));
+        resolve({ ok: false, code, reason: 'api' });
+      });
+    });
+    req2.on('error', (e) => {
+      console.error('Messenger reminder send error:', e.message);
+      resolve({ ok: false, code: null, reason: 'network' });
+    });
+    req2.write(payload);
+    req2.end();
+  });
+}
+
 function sendImage(recipientId, imageUrl) {
   sendMessage(recipientId, {
     attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
@@ -7530,6 +7586,17 @@ app.post('/admin/settings/alerts', requireAuth, (req, res) => {
   res.redirect('/admin?tab=orders&msg=alerts_saved');
 });
 
+app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
+  const hours = Math.round(Number(req.body.hold_hours));
+  const hold = Number.isFinite(hours) ? Math.max(0, Math.min(168, hours)) : 24;
+  db.set('site_settings.payment_reminders', {
+    enabled: req.body.enabled === 'on',
+    hold_hours: hold,
+    auto_cancel: req.body.auto_cancel === 'on'
+  }).write();
+  res.redirect('/admin?tab=settings&msg=reminders_saved');
+});
+
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
   const when = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
   const result = await sendTelegramMessage(
@@ -7759,6 +7826,38 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err && err.stack ? err.stack : err);
 });
+
+// About every five minutes, in this process. unref so a test that required
+// the server is not kept alive by the timer after it closes the listener.
+// Mongo claims are what stop two overlapping runs from sending twice.
+const paymentReminderTimer = setInterval(() => {
+  const settings = getSiteSettings();
+  paymentReminders.runSweep({
+    now: new Date(),
+    settings: settings.payment_reminders,
+    alertEnabled: telegram.isAlertEnabled(settings, 'payment_reminder'),
+    adminUrl: SITE_URL + '/admin?tab=orders',
+    listAwaiting: () => orders.listByStates(['awaiting_payment']),
+    get: (ref) => orders.getByRef(ref),
+    claim: (ref, stage) => orders.claimPaymentReminder(ref, stage),
+    release: (ref, stage) => orders.releasePaymentReminder(ref, stage),
+    complete: (ref, stage, result) => orders.completePaymentReminder(ref, stage, result),
+    setHold: (ref, plan) => orders.setHoldExpiry(ref, plan.expires, plan.anchor),
+    cancel: async (ref) => !!(await orders.transition(ref, 'cancelled', { cancel_reason: 'hold_expired' })),
+    contactFor: (psid) => {
+      try { return db.get('messenger_contacts').find({ psid: String(psid) }).value() || null; }
+      catch (e) { return null; }
+    },
+    orderLink: (order) => SITE_URL + '/order/' + order.ref + '?k=' + order.url_key,
+    sendMessenger: (psid, text) => sendMessengerResponse(psid, text),
+    sendTelegram: (text) => sendTelegramMessage(text)
+  }).then(summary => {
+    if (summary && (summary.messenger || summary.telegram || summary.cancelled)) {
+      console.log('[payment reminder]', summary.messenger, 'messenger,', summary.telegram, 'telegram,', summary.cancelled, 'cancelled');
+    }
+  }).catch(e => console.error('[payment reminder]', e && e.message ? e.message : e));
+}, paymentReminders.SWEEP_INTERVAL_MS);
+if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);

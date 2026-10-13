@@ -217,6 +217,8 @@
     <div class="oq-main">
       <div class="oq-top">
         <span class="oq-ref"><%= o.ref %></span>
+        <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
+        <% if (reminded) { %><span class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span><% } %>
         <span class="oq-ab-name"><%= o.fb_name %></span>
         <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       </div>
