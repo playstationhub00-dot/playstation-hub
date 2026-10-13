@@ -54,6 +54,10 @@ const gameRequests = require('./lib/requests');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 const mongoConnection = require('./lib/mongo-connection');
+const supportFacts = require('./lib/support-facts');
+const supportThreads = require('./lib/support-threads');
+const supportAssistant = require('./lib/support-assistant');
+const supportMessenger = require('./lib/messenger-webhook');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -215,7 +219,8 @@ db.defaults({
   nextSigninStepId: 1,
   accounts: [],
   nextAccountId: 1,
-  month_logs: []
+  month_logs: [],
+  support_threads: []
 }).write();
 
 // Seed default sign-in steps on first run only — an owner who has already
@@ -510,7 +515,9 @@ app.use(express.urlencoded({ extended: true }));
 // webhook paths, so ordinary requests don't each hold a spare copy of their body.
 app.use(express.json({
   verify: (req, res, buf) => {
-    if (req.originalUrl && req.originalUrl.startsWith('/webhooks/')) {
+    // /webhook is the Messenger bot. Signature verification needs the exact
+    // bytes, same as PayMongo under /webhooks/.
+    if (req.originalUrl && (req.originalUrl.startsWith('/webhooks/') || req.originalUrl === '/webhook' || req.originalUrl.startsWith('/webhook?'))) {
       req.rawBody = buf.toString('utf8');
     }
   }
@@ -605,6 +612,9 @@ app.use((req, res, next) => {
 // cluttered with staff tooling customers can't use.
 app.use((req, res, next) => {
   res.locals.isAdmin = !!(req.session && req.session.isAdmin);
+  // The floating support chat is for customers. Admin pages include the
+  // public footer on a few edit screens, and the widget does not belong there.
+  res.locals.showSupportChat = !req.path.startsWith('/admin');
   next();
 });
 
@@ -5253,10 +5263,11 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   const rentIgnored = rentAudit.dismissedRows(customers);
 
+  const supportHandoffs = supportThreads.createStore(supportThreads.bind(db)).listHandoffs();
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
     negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
-    rentMismatches, paymongoHealth, now: dashNowDate
+    rentMismatches, paymongoHealth, supportHandoffs, now: dashNowDate
   });
 
   // Paid reservations per Coming Soon game, for the "N reserved" line and the
@@ -5293,7 +5304,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -7164,356 +7175,271 @@ app.get('/feed/meta.csv', (req, res) => {
   res.send(csv);
 });
 // ═══════════════════════════════════════════════════════════════════════════
-// MESSENGER WEBHOOK
+// SUPPORT ASSISTANT — website widget and Messenger share one brain
 // ═══════════════════════════════════════════════════════════════════════════
 
-const VERIFY_TOKEN    = process.env.MESSENGER_VERIFY_TOKEN || 'playstation_hub_verify';
-const PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_TOKEN || '';
+const supportChatLimiter = supportAssistant.createLimiter(12, 10 * 60 * 1000);
 
-// Webhook verification (Meta calls this when you set up the webhook)
-app.get('/webhook', (req, res) => {
-  if (
-    req.query['hub.mode']       === 'subscribe' &&
-    req.query['hub.verify_token'] === VERIFY_TOKEN
-  ) {
-    console.log('✅ Messenger webhook verified');
-    return res.status(200).send(req.query['hub.challenge']);
-  }
-  res.sendStatus(403);
-});
+function supportThreadStore() {
+  return supportThreads.createStore(supportThreads.bind(db));
+}
 
-// Receive messages
-app.post('/webhook', express.json(), (req, res) => {
-  res.sendStatus(200); // ack immediately
-
-  const body = req.body;
-  if (body.object !== 'page') return;
-
-  body.entry?.forEach(entry => {
-    entry.messaging?.forEach(event => {
-      if (event.message && event.message.is_echo) return;
-      const senderId = event.sender?.id;
-      if (!senderId) return;
-
-      // A customer arriving from m.me/<page>?ref=PH-1234 produces a referral —
-      // either a standalone `referral` event on an existing thread, or one
-      // nested in the `postback` when they tap Get Started on a new thread.
-      // This pairing of ref and PSID is the only way the app ever learns which
-      // Facebook thread belongs to which order, and it cannot be recovered
-      // afterwards, so it is recorded even though nothing sends messages yet.
-      const rawRef = event.referral?.ref || event.postback?.referral?.ref;
-      if (rawRef) {
-        const orderRef = orders.parseOrderRef(rawRef);
-        if (orderRef) {
-          orders.linkPsid(orderRef, senderId)
-            .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
-            .catch(e => console.error('[order psid]', e.message));
-        }
-      }
-
-      // Everything below this point is the existing chat bot, which only
-      // handles real inbound text.
-      if (!event.message) return;
-
-      // Save/update PSID. Runs for every inbound message — used to identify
-      // which Facebook thread a customer's messages come from.
-      const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
-      if (!existingContact) {
-        db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
-      } else {
-        db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
-      }
-
-      const text = (event.message.text || '').toLowerCase().trim();
-      handleMessage(senderId, text).catch(e => console.error('[handleMessage]', e));
-    });
+function supportFactsNow() {
+  const settings = getSiteSettings();
+  return supportFacts.faqBundle({
+    categories: getPriceCategories(),
+    promo: settings.promo || {},
+    paymentMethods: settings.payment_methods || [],
+    siteUrl: process.env.SITE_URL || 'https://www.playstation-hub.com',
+    pageUsername: settings.fb_page_username || 'PlaystationHub00',
+    psplusPrices: getPsplusPrices(),
+    psplusSlots: getPsplusSlots()
   });
-});
+}
+
+async function supportInvokeTool(name, args) {
+  if (name === 'get_pricing') return supportFactsNow();
+  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+  const promo = (getSiteSettings().promo) || {};
+  const games = getGames().map(resolveGamePrices);
+  const hits = supportFacts.searchGames(games, args && args.query);
+  const cards = [];
+  for (const g of hits) {
+    const avail = computeAvailability(g, gameAccountSummary(g.id));
+    let summary = { nonTrophy: 0, trophy: 0, ps4Primary: 0 };
+    try {
+      const candidates = await orders.listQueueCandidates(g.id);
+      summary = supportFacts.waitlistSummary(queueRules.buildQueue(candidates || []));
+    } catch (e) {
+      // No Mongo (local dev, or a blip) still leaves slot counts usable.
+      // The waitlist is reported as empty rather than guessed.
+    }
+    cards.push(supportFacts.publicGame(g, avail, summary, promo));
+  }
+  return { query: String((args && args.query) || ''), games: cards };
+}
+
+function supportLookup(query) {
+  const promo = (getSiteSettings().promo) || {};
+  const games = getGames().map(resolveGamePrices);
+  return supportFacts.searchGames(games, query).map(g => {
+    const avail = computeAvailability(g, gameAccountSummary(g.id));
+    return supportFacts.publicGame(g, avail, { nonTrophy: 0, trophy: 0, ps4Primary: 0 }, promo);
+  });
+}
+
+function notifySupportHandoff(result) {
+  if (!result || !result.newlyHandedOff) return;
+  if (!telegram.isAlertEnabled(getSiteSettings(), 'support_handoff')) return;
+  const site = process.env.SITE_URL || 'https://www.playstation-hub.com';
+  const text = telegram.formatSupportAlert(
+    { channel: result.channel, reason: result.reason, preview: result.preview },
+    { adminUrl: site + '/admin?tab=messaging' }
+  );
+  sendTelegramMessage(text).catch(e => console.error('[support handoff alert]', e.message));
+}
+
+function graphPost(pathname, payload) {
+  const token = supportMessenger.config(process.env).pageToken;
+  if (!token) return Promise.resolve({ ok: false, reason: 'no_token' });
+  const https = require('https');
+  const body = JSON.stringify(payload);
+  const pathWithToken = pathname + (pathname.includes('?') ? '&' : '?') + 'access_token=' + encodeURIComponent(token);
+  return new Promise(resolve => {
+    const req2 = https.request({
+      hostname: 'graph.facebook.com',
+      path: pathWithToken,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res2 => {
+      let data = '';
+      res2.on('data', chunk => { data += chunk; });
+      res2.on('end', () => {
+        if (res2.statusCode !== 200) console.error('[messenger]', pathname, res2.statusCode, String(data).slice(0, 300));
+        resolve({ ok: res2.statusCode === 200, status: res2.statusCode });
+      });
+    });
+    req2.on('error', e => {
+      console.error('[messenger]', e.message);
+      resolve({ ok: false, reason: 'network' });
+    });
+    req2.write(body);
+    req2.end();
+  });
+}
 
 function sendMessage(recipientId, messageData, cb) {
-  if (!PAGE_ACCESS_TOKEN) return;
-  const https = require('https');
-  const payload = JSON.stringify({ recipient: { id: recipientId }, message: messageData });
-  const options = {
-    hostname: 'graph.facebook.com',
-    path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-  };
-  const req2 = https.request(options, (res2) => {
-    let data = '';
-    res2.on('data', chunk => { data += chunk; });
-    res2.on('end', () => {
-      if (res2.statusCode !== 200) console.error('Messenger API error:', res2.statusCode, data);
-      if (cb) cb();
-    });
-  });
-  req2.on('error', e => console.error('Messenger send error:', e));
-  req2.write(payload);
-  req2.end();
+  graphPost('/v19.0/me/messages', { recipient: { id: recipientId }, message: messageData })
+    .then(() => { if (cb) cb(); });
 }
 
 function sendText(recipientId, text) {
-  sendMessage(recipientId, { text });
+  const body = supportMessenger.sendText(recipientId, text);
+  return graphPost('/v19.0/me/messages', body);
 }
 
-function sendImage(recipientId, imageUrl) {
-  sendMessage(recipientId, {
-    attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
-  });
+// A browser on another origin cannot read this, and a JSON POST from one
+// does not pass the preflight. When Origin is present and does not match
+// the host, reject it anyway so a misconfigured proxy cannot spend the
+// model budget on someone else's page.
+function supportSameOrigin(req) {
+  const origin = req.get('origin');
+  if (!origin) return true;
+  try { return new URL(origin).host === req.get('host'); }
+  catch (e) { return false; }
 }
 
-async function handleMessage(senderId, text) {
-  const games = getGames();
-  const upcoming = getUpcoming();
-  const SITE = process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app';
-
-  // ── HELP / GREETING ──────────────────────────────────────────────────────
-  if (!text || /^(hi|hello|hey|uy|oi|sup|start|help|menu|kamusta|good morning|good afternoon|good evening|musta|helo|hellow|helow)/.test(text)) {
-    return sendText(senderId,
-      '👋 Hi! Welcome to PlayStation Hub!\n\n' +
-      'Here\'s what I can help you with:\n\n' +
-      '🎮 Type "games" — see all available games\n' +
-      '🔜 Type "coming soon" — see upcoming games\n' +
-      '🔍 Type a game name — check price & availability\n' +
-      '💰 Type "prices" — see pricing guide\n' +
-      '📋 Type "how to rent" — step-by-step rental guide\n' +
-      '♾️ Type "buy" — permanent access info\n' +
-      '📞 Type "contact" — talk to a human\n\n' +
-      'Browse all games 👉 ' + SITE + '/browse'
-    );
-  }
-
-  // ── HOW TO RENT / PROCESS ────────────────────────────────────────────────
-  if (/how.*(rent|order|borrow|get|kumuha|mag|process|works?|start|begin)|pano|paano|step|guide|tutorial|procedure/.test(text)) {
-    return sendText(senderId,
-      '📋 How to Rent at PlayStation Hub\n\n' +
-      '𝟭. Choose a game\n' +
-      '   Browse our games 👉 ' + SITE + '/browse\n\n' +
-      '𝟮. Pick your account type\n' +
-      '   🎮 Non-Trophy — play on our account\n' +
-      '   🏆 Trophy — earn trophies on your own PSN\n\n' +
-      '𝟯. Choose rental duration\n' +
-      '   ⏱ Weekly | Monthly\n\n' +
-      '𝟰. Message us here to confirm\n' +
-      '   We\'ll set up your account access!\n\n' +
-      '𝟱. Pay via GCash & enjoy! 🎉\n\n' +
-      '✨ BONUS: 3 hours FREE trial before you commit!\n\n' +
-      '💬 Ready to rent? Just tell me which game you want! 😊'
-    );
-  }
-
-  // ── SELL GAMES / BUY PERMANENT ───────────────────────────────────────────
-  if (/sell|nagbebenta|ibebenta|nabibili|pabili|for sale/.test(text)) {
-    const buyGames = games.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
-    const s = getSiteSettings();
-    const promo = s.promo || {};
-    let msg = '✅ Yes! We offer Permanent Access (Buy) on select games!\n\n';
-    msg += '♾️ PERMANENT ACCESS — One-time payment, play forever!\n\n';
-    if (buyGames.length > 0) {
-      msg += '🎮 Games available for purchase:\n';
-      buyGames.slice(0, 8).forEach(g => {
-        msg += `• ${g.title}`;
-        if (g.buy_nt_price) msg += ` — NT: ₱${g.buy_nt_price}`;
-        if (g.buy_tr_price) msg += ` / TR: ₱${g.buy_tr_price}`;
-        msg += '\n';
-      });
-      if (buyGames.length > 8) msg += `  ...and ${buyGames.length - 8} more\n`;
-    } else {
-      msg += '🎮 Select games available — message us for current titles!\n';
-    }
-    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
-      msg += `\n🔥 BUY PROMO: ${promo.buy_promo_pct}% OFF right now!\n`;
-    }
-    msg += '\n✨ FREE 3-hour trial before you buy!\n';
-    msg += '\n👉 See all: ' + SITE + '/browse\n';
-    msg += '💬 Tell me which game you want to buy!';
-    return sendText(senderId, msg);
-  }
-
-  // ── BUY PERMANENT ────────────────────────────────────────────────────────
-  if (/^buy|permanent|lifetime|forever|kahit kailan|sarili|own/.test(text)) {
-    return sendText(senderId,
-      '♾️ Buy Permanent Access — PlayStation Hub\n\n' +
-      'Own a game slot forever with a one-time payment!\n\n' +
-      '🎮 Non-Trophy Permanent\n' +
-      '   Play on our account, no time limit\n\n' +
-      '🏆 Trophy Permanent\n' +
-      '   Earn trophies on YOUR own PSN account\n\n' +
-      '✨ Benefits:\n' +
-      '• One-time payment, play forever\n' +
-      '• No monthly fees\n' +
-      '• 3 hours FREE trial before you buy\n' +
-      '• Message us to set it up anytime\n\n' +
-      '👉 Check buy prices: ' + SITE + '/browse\n\n' +
-      '💬 Which game are you interested in buying?'
-    );
-  }
-
-  // ── TRIAL ────────────────────────────────────────────────────────────────
-  if (/trial|libre|free|try|subukan|test/.test(text)) {
-    return sendText(senderId,
-      '🎮 FREE 3-Hour Trial!\n\n' +
-      'Yes! We offer a 3-hour FREE trial on our account before you rent or buy. 🎉\n\n' +
-      'Just tell us which game you want to try and we\'ll set it up for you!\n\n' +
-      '💬 Which game would you like to try?'
-    );
-  }
-
-  // ── PAYMENT ──────────────────────────────────────────────────────────────
-  if (/pay|gcash|payment|bayad|bayaran|how.*pay|magbayad/.test(text)) {
-    return sendText(senderId,
-      '💳 Payment at PlayStation Hub\n\n' +
-      'We accept payment via:\n\n' +
-      '📱 GCash — send to our GCash number\n\n' +
-      'Once you\'ve chosen a game and duration, message us and we\'ll give you the payment details. Payment first before we set up access. 😊\n\n' +
-      '💬 Ready to rent? Tell me which game!'
-    );
-  }
-
-  // ── CONTACT / HUMAN ───────────────────────────────────────────────────────
-  if (/contact|human|agent|tao|admin|owner|staff|ikaw|sino/.test(text)) {
-    return sendText(senderId,
-      '📞 Talk to our team!\n\n' +
-      'Just send your message here on Messenger and we\'ll reply as soon as possible. 😊\n\n' +
-      'We\'re usually available during the day. For urgent concerns, message us directly!'
-    );
-  }
-
-  // ── PRICES GUIDE ─────────────────────────────────────────────────────────
-  if (/price|magkano|how much|pricelist|presyo|halaga|cost/.test(text)) {
-    const sample = games.filter(g => g.nt_price_7d).slice(0, 4);
-    let msg = '💰 PlayStation Hub Pricing\n\n';
-    msg += '━━━━━━━━━━━━━━━━━━━\n';
-    msg += '🎮 NON-TROPHY ACCOUNT\n';
-    msg += '  Weekly / Monthly\n';
-    if (sample.length) {
-      sample.forEach(g => {
-        msg += `  ${g.title.slice(0,18)}: ₱${g.nt_price_7d}/₱${g.nt_price_30d}\n`;
-      });
-    }
-    msg += '\n🏆 TROPHY ACCOUNT (+₱50)\n';
-    if (sample.length) {
-      sample.forEach(g => {
-        if (g.tr_price_7d) msg += `  ${g.title.slice(0,18)}: ₱${g.tr_price_7d}/₱${g.tr_price_30d}\n`;
-      });
-    }
-    msg += '\n✨ FREE 3-hour trial available!\n';
-    msg += '📖 See all prices: ' + SITE + '/browse';
-    return sendText(senderId, msg);
-  }
-
-  // ── PROMO / DISCOUNT ─────────────────────────────────────────────────────
-  if (/promo|discount|sale|diskaunto|bawas|may promo|meron.*promo|promo.*meron|special/.test(text)) {
-    const s = getSiteSettings();
-    const promo = s.promo || {};
-    let msg = '🎉 PlayStation Hub Promos!\n\n';
-    let hasPromo = false;
-    const activeDurations = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0) : [];
-    if (activeDurations.length > 0) {
-      hasPromo = true;
-      msg += `⏱️ RENT PROMO!\n`;
-      activeDurations.forEach(d => { msg += `   ${getPromoDiscountPct(promo, d)}% OFF on ${d}-day rentals\n`; });
-      if (promo.deposit) msg += `   +₱${promo.deposit} refundable deposit (Trophy accounts)\n`;
-      msg += '\n';
-    }
-    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
-      hasPromo = true;
-      msg += `♾️ BUY PERMANENT PROMO — ${promo.buy_promo_pct}% OFF!\n`;
-      msg += `   Discounted one-time permanent access\n\n`;
-    }
-    if (!hasPromo) {
-      msg += '😊 Wala pang active promo ngayon, pero meron kaming:\n\n';
-    }
-    msg += '✨ FREE 3-hour trial bago mag-rent o bumili!\n';
-    msg += '🎮 Malawak na game selection — PS5 & PS4\n\n';
-    msg += '👉 Check our games: ' + SITE + '/browse\n';
-    msg += '💬 Message us para sa pinakabagong deals!';
-    return sendText(senderId, msg);
-  }
-
-  // ── COMING SOON ───────────────────────────────────────────────────────────
-  if (/coming soon|upcoming|reserve|reservation/.test(text)) {
-    if (!upcoming.length) return sendText(senderId, '📭 No upcoming games right now. Check back soon!');
-    let msg = '🔜 Coming Soon Games — Open for Reservation!\n\n';
-    upcoming.slice(0, 8).forEach(g => {
-      const date = g.release_date === 'TBA' ? 'TBA' : g.release_date;
-      msg += `📌 ${g.title} (${g.platform})\n   Expected: ${date}\n`;
-      if (g.nt_price_30d) msg += `   From ₱${g.nt_price_30d} (30 days)\n`;
-      msg += '\n';
+app.post('/api/support/chat', asyncRoute(async (req, res) => {
+  if (!supportSameOrigin(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
+  const ip = clientIp(req) || 'unknown';
+  if (rateLimited('support_chat', ip, 12, 10 * 60 * 1000)) {
+    return res.status(429).json({
+      ok: false,
+      error: 'slow_down',
+      reply: 'Sandali lang — too many messages. Try again in a few minutes.'
     });
-    msg += '📩 Reserve now: ' + SITE + '/browse';
-    return sendText(senderId, msg);
   }
-
-  // ── ALL GAMES LIST ────────────────────────────────────────────────────────
-  if (/^(games?|list|lahat|all games?|available|ano.*games?|anong games?|meron.*games?)/.test(text)) {
-    const avail = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) > 0);
-    const full  = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) === 0);
-    let msg = `🎮 PlayStation Hub — ${games.length} Games\n\n`;
-    if (avail.length) {
-      msg += `✅ AVAILABLE NOW (${avail.length}):\n`;
-      avail.slice(0, 12).forEach(g => { msg += `• ${g.title} (${g.platform})\n`; });
-      if (avail.length > 12) msg += `  ...and ${avail.length - 12} more\n`;
-    }
-    if (full.length) {
-      msg += `\n🔴 FULLY RENTED (${full.length} games)\n`;
-      full.slice(0, 4).forEach(g => { msg += `• ${g.title}\n`; });
-      if (full.length > 4) msg += `  ...and ${full.length - 4} more\n`;
-    }
-    msg += '\n🔍 See all: ' + SITE + '/browse';
-    return sendText(senderId, msg);
+  const message = req.body && typeof req.body.message === 'string' ? req.body.message : '';
+  const abuse = supportFacts.abuseReason(message);
+  if (abuse) {
+    const reply = abuse === 'empty'
+      ? 'Type a question and I’ll take a look.'
+      : 'That message is too long to send. Keep it to a sentence or two.';
+    return res.status(400).json({ ok: false, error: abuse, reply });
   }
+  const sid = sessionId(req, res);
+  const result = await supportAssistant.runTurn({
+    store: supportThreadStore(),
+    channel: 'web',
+    externalId: sid,
+    message,
+    complete: supportAssistant.createComplete(process.env),
+    invokeTool: supportInvokeTool,
+    facts: supportFactsNow(),
+    lookup: supportLookup
+  });
+  if (!result.ok) return res.status(400).json({ ok: false, error: result.error || 'bad_message' });
+  notifySupportHandoff(result);
+  res.json({
+    ok: true,
+    reply: result.reply,
+    paused: !!result.paused,
+    handedOff: !!result.handoff
+  });
+}));
 
-  // ── GAME SEARCH ───────────────────────────────────────────────────────────
-  const matches = games.filter(g => g.title.toLowerCase().includes(text));
-  const upMatches = upcoming.filter(g => g.title.toLowerCase().includes(text));
-
-  if (matches.length > 0) {
-    const g = matches[0];
-    const ntSlots = g.non_trophy_slots || 0;
-    const trSlots = g.trophy_slots || 0;
-    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    let msg = `🎮 ${g.title} (${g.platform})\n\n`;
-    msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
-    if (g.tr_price_7d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
-    msg += `\n💰 PRICING:\n`;
-    msg += `🎮 Non-Trophy: ₱${g.nt_price_7d} / ₱${g.nt_price_30d}\n`;
-    if (g.tr_price_7d) msg += `🏆 Trophy: ₱${g.tr_price_7d} / ₱${g.tr_price_30d}\n`;
-    msg += `(Weekly / Monthly)\n`;
-    msg += `\n✨ FREE 3-hour trial available!\n`;
-    msg += `\n📄 View game: ${SITE}/game/${slug}`;
-    if (matches.length > 1) msg += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
-    if (g.cover_image) {
-      return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
-    }
-    return sendText(senderId, msg);
+app.post('/admin/support/:id/resume', requireAuth, (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^(web|mes)_[a-z0-9]+$/.test(id)) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const resumed = supportThreadStore().resume(id);
+  if (!resumed) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  if (resumed.channel === 'messenger') {
+    const inbox = supportMessenger.config(process.env).inboxAppId;
+    graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(resumed.external_id))
+      .catch(e => console.error('[messenger resume]', e.message));
+    sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
   }
+  res.redirect('/admin?tab=messaging&msg=support_resumed');
+});
 
-  if (upMatches.length > 0) {
-    const g = upMatches[0];
-    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
-    let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON — Open for Reservation!\n`;
-    msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
-    if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
-    if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
-    msg += `\n📄 Reserve: ${SITE}/upcoming/${slug}`;
-    if (g.cover_image) {
-      return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
+// Meta's webhook. GET is the verify handshake. POST is messages.
+// Signature is required once FB_APP_SECRET (or MESSENGER_APP_SECRET) is set.
+// Until then the route still accepts posts, matching the bot that was already
+// live, and logs that signatures are not being checked.
+let _messengerSecretWarned = false;
+
+app.get('/webhook', (req, res) => {
+  const check = supportMessenger.verifyChallenge({
+    mode: req.query['hub.mode'],
+    token: req.query['hub.verify_token'],
+    challenge: req.query['hub.challenge'],
+    expected: supportMessenger.config(process.env).verifyToken
+  });
+  if (!check.ok) return res.sendStatus(403);
+  console.log('✅ Messenger webhook verified');
+  res.status(200).send(check.challenge);
+});
+
+app.post('/webhook', (req, res) => {
+  const secret = supportMessenger.config(process.env).appSecret;
+  if (!secret) {
+    if (!_messengerSecretWarned) {
+      console.warn('[messenger] FB_APP_SECRET is not set — webhook signatures are not being checked');
+      _messengerSecretWarned = true;
     }
-    return sendText(senderId, msg);
+  } else {
+    const sig = supportMessenger.verifySignature(secret, req.rawBody, req.get('x-hub-signature-256'));
+    if (!sig.ok) {
+      console.error('[messenger] bad signature');
+      return res.sendStatus(403);
+    }
   }
+  res.sendStatus(200);
 
-  // ── FINAL FALLBACK ────────────────────────────────────────────────────────
-  return sendText(senderId,
-    '😊 Hindi ko sure kung ano ang ibig mong sabihin, pero nandito kami para tumulong!\n\n' +
-    '🎮 Type "games" — available games\n' +
-    '💰 Type "prices" — pricing guide\n' +
-    '📋 Type "how to rent" — rental steps\n' +
-    '🔍 Or type a game name to search!\n\n' +
-    'Browse: ' + SITE + '/browse'
-  );
+  const events = supportMessenger.inboundEvents(req.body);
+  events.forEach(event => {
+    if (event.referral) {
+      const orderRef = orders.parseOrderRef(event.referral);
+      if (orderRef) {
+        orders.linkPsid(orderRef, event.psid)
+          .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
+          .catch(e => console.error('[order psid]', e.message));
+      }
+    }
+    if (!event.reply) return;
+
+    const existingContact = db.get('messenger_contacts').find({ psid: event.psid }).value();
+    if (!existingContact) {
+      db.get('messenger_contacts').push({
+        psid: event.psid,
+        first_seen: new Date().toISOString(),
+        last_seen: new Date().toISOString()
+      }).write();
+    } else {
+      db.get('messenger_contacts').find({ psid: event.psid }).assign({ last_seen: new Date().toISOString() }).write();
+    }
+
+    handleSupportMessage(event).catch(e => console.error('[support message]', e));
+  });
+});
+
+async function handleSupportMessage(event) {
+  const paused = supportThreadStore().isPaused('messenger', event.psid);
+  // Over the limit: tell them once if the bot is still the one answering.
+  // A paused thread stays silent — the slow-down line would be an auto-reply
+  // after Michael took the chat.
+  if (supportChatLimiter('m:' + event.psid)) {
+    if (!paused) return sendText(event.psid, 'Sandali lang — too many messages. Try again in a few minutes.');
+    return;
+  }
+  const photoOnly = event.attachments && !String(event.text || '').trim();
+  const result = await supportAssistant.runTurn({
+    store: supportThreadStore(),
+    channel: 'messenger',
+    externalId: event.psid,
+    message: photoOnly ? '[attachment]' : event.text,
+    forceReason: photoOnly ? 'attachment' : null,
+    complete: supportAssistant.createComplete(process.env),
+    invokeTool: supportInvokeTool,
+    facts: supportFactsNow(),
+    lookup: supportLookup
+  });
+  if (!result.ok) {
+    if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
+      return sendText(event.psid, 'That message is too long. Send a sentence or two, or say “human” and I’ll flag Michael.');
+    }
+    return;
+  }
+  if (result.paused || !result.reply) return;
+  await sendText(event.psid, result.reply);
+  if (result.newlyHandedOff) {
+    const inbox = supportMessenger.config(process.env).inboxAppId;
+    graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
+      .catch(e => console.error('[messenger handoff]', e.message));
+    notifySupportHandoff(result);
+  }
 }
+
 
 // Proves the Telegram alert path end to end, on demand. Without this the first
 // real test is a customer's sign-in — and a wrong variable is discovered by

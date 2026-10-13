@@ -99,3 +99,6 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
     </div>
   </div>
 </footer>
+<% if (typeof showSupportChat === 'undefined' || showSupportChat) { %>
+<%- include('support-chat') %>
+<% } %>
