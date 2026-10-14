@@ -21,7 +21,27 @@
       <div class="qa-err" id="qaErr" hidden></div>
 
       <div class="qa-l">Customer</div>
-      <input class="qa-in" type="text" name="customer_name" id="qaName" placeholder="Facebook name — e.g. Ana Cruz" required autocomplete="off">
+      <input class="qa-in" type="text" name="customer_name" id="qaName" list="qaNames" placeholder="Facebook name — e.g. Ana Cruz" required autocomplete="off" oninput="qaNameChanged()" onchange="qaNameChanged()">
+      <div class="qa-loyalty" id="qaLoyalty" hidden></div>
+      <datalist id="qaNames">
+        <%
+          const qaLoyaltySeen = Object.create(null);
+          const qaLoyaltyNames = [];
+          const qaLoyaltyProfiles = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex && loyaltyIndex.profiles) ? loyaltyIndex.profiles : [];
+          qaLoyaltyProfiles.forEach(p => {
+            const addQaName = raw => {
+              const shown = String(raw || '').trim().replace(/\s+/g, ' ');
+              const key = shown.toLowerCase();
+              if (!shown || qaLoyaltySeen[key]) return;
+              qaLoyaltySeen[key] = true;
+              qaLoyaltyNames.push(shown);
+            };
+            addQaName(p && p.name);
+            (p && p.rows || []).forEach(r => addQaName(r && r.customer_name));
+          });
+        %>
+        <% qaLoyaltyNames.forEach(n => { %><option value="<%= n %>"></option><% }) %>
+      </datalist>
 
       <%# Status was buried in "More options", but it decides everything now:
           rental pricing vs buy pricing, whether there is a duration at all,
@@ -214,6 +234,10 @@
 <script>
 (function () {
   var last = { msg: '', url: '' };
+  var loyaltyOffer = null;
+  var loyaltyStatus = null;
+  var loyaltyTimer = null;
+  var loyaltySeq = 0;
 
   function el(id) { return document.getElementById(id); }
 
@@ -242,6 +266,8 @@
     el('qaStDone').disabled = false;
     el('qaUpcomingNote').hidden = true;
     qaPaidChanged(); qaStatusChanged();
+    loyaltyStatus = null;
+    qaApplyLoyaltyStatus(null);
   };
 
   // Is this a sale? One question the rest of the form hangs off.
@@ -414,6 +440,107 @@
     return Math.round(p7 + (p30 - p7) * (d - 7) / 23);
   }
 
+  // Same arithmetic as loyalty.adjustedRent. A free rental of exactly that many
+  // days is ₱0; any other length subtracts the value of the free rental. A
+  // rebook discount subtracts its amount. The server applies the same rule
+  // when the rental is saved.
+  function qaLoyaltyRent(amount, days, offer, weekPrice) {
+    amount = Math.max(0, parseInt(amount, 10) || 0);
+    if (!offer) return amount;
+    if (offer.kind === 'punch') {
+      if (parseInt(days, 10) === parseInt(offer.days, 10)) return 0;
+      return Math.max(0, amount - (parseInt(weekPrice, 10) || 0));
+    }
+    if (offer.kind === 'rebook') return Math.max(0, amount - (parseInt(offer.amount, 10) || 0));
+    return amount;
+  }
+
+  function qaEscape(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  window.qaApplyLoyaltyStatus = function (status) {
+    var box = el('qaLoyalty');
+    var previous = loyaltyOffer && loyaltyOffer.choice;
+    loyaltyOffer = null;
+    if (!box) return;
+    if (!status || status.blank) {
+      box.hidden = true;
+      box.innerHTML = '';
+      qaPrice();
+      return;
+    }
+    var offers = status.offers || [];
+    var kept = previous && offers.filter(function (o) { return o.choice === previous; })[0];
+    var html = (status.lines || []).map(function (line) {
+      return '<div class="qa-loyalty-line">' + qaEscape(line) + '</div>';
+    }).join('');
+    if (offers.length) {
+      html += '<div class="qa-loyalty-offers">';
+      html += '<label class="qa-loyalty-opt"><input type="radio" name="loyalty_choice" value=""' + (kept ? '' : ' checked') + ' onchange="qaLoyaltyChanged()"> Don\'t apply a reward</label>';
+      offers.forEach(function (o) {
+        var on = kept && kept.choice === o.choice;
+        html += '<label class="qa-loyalty-opt"><input type="radio" name="loyalty_choice" value="' + qaEscape(o.choice) + '"' + (on ? ' checked' : '') + ' onchange="qaLoyaltyChanged()"> ' + qaEscape(o.label) + '</label>';
+      });
+      html += '</div>';
+      loyaltyOffer = kept || null;
+    }
+    box.innerHTML = html;
+    box.hidden = false;
+    loyaltyStatus = status;
+    qaPrice();
+  };
+
+  window.qaUseLoyaltyOffer = function (offer) {
+    loyaltyOffer = offer || null;
+    qaPrice();
+  };
+
+  window.qaLoyaltyChanged = function () {
+    var picked = document.querySelector('input[name="loyalty_choice"]:checked');
+    loyaltyOffer = null;
+    if (picked && picked.value && loyaltyStatus && loyaltyStatus.offers) {
+      loyaltyOffer = loyaltyStatus.offers.filter(function (o) { return o.choice === picked.value; })[0] || null;
+    }
+    qaPrice();
+  };
+
+  window.qaNameChanged = function () {
+    if (loyaltyTimer) clearTimeout(loyaltyTimer);
+    var name = el('qaName').value;
+    loyaltyTimer = setTimeout(function () { qaFetchLoyalty(name); }, 200);
+  };
+
+  function qaFetchLoyalty(name) {
+    var seq = ++loyaltySeq;
+    if (!String(name || '').trim()) {
+      loyaltyStatus = null;
+      qaApplyLoyaltyStatus(null);
+      return;
+    }
+    var pending = fetch('/admin/loyalty/for-name?name=' + encodeURIComponent(name), {
+      headers: { Accept: 'application/json' }
+    });
+    if (!pending || typeof pending.then !== 'function') return;
+    pending.then(function (r) {
+      return r.text().then(function (text) {
+        try { return JSON.parse(text); } catch (e) { return null; }
+      });
+    }).then(function (body) {
+      if (seq !== loyaltySeq) return;
+      if (!body || body.blank || !body.lines) {
+        qaApplyLoyaltyStatus({ blank: false, lines: ['Could not check loyalty. Reload the page and try the name again.'], offers: [] });
+        return;
+      }
+      loyaltyStatus = body;
+      qaApplyLoyaltyStatus(body);
+    }).catch(function () {
+      if (seq !== loyaltySeq) return;
+      qaApplyLoyaltyStatus({ blank: false, lines: ['Could not check loyalty. Reload the page and try the name again.'], offers: [] });
+    });
+  }
+
   // Mirrors the server's pricing so the number on screen is the number saved.
   // The server still recomputes it — this is a preview, not the source.
   window.qaPrice = function () {
@@ -482,7 +609,12 @@
     // honour, and 29 days quoted higher than 30. Keep these two in step.
     var base = qaAmountForDays(d, p7, p30);
     var amount = override !== '' ? (parseInt(override) || 0) : base;
-    if (!amount) {
+    var offer = loyaltyOffer;
+    if (offer) {
+      var weekPrice = offer.kind === 'punch' ? qaAmountForDays(parseInt(offer.days, 10) || 0, p7, p30) : 0;
+      amount = qaLoyaltyRent(amount, d, offer, weekPrice);
+    }
+    if (!amount && !offer) {
       box.className = 'qa-price qa-price-empty';
       box.textContent = 'No price set for this type and duration — set one in Games, or use a price override.';
       return;
@@ -495,8 +627,12 @@
     var derived = override === '' && d !== 7 && d !== 30
       ? ' <span style="color:#7a7a7a;">· worked out for ' + d + ' day' + (d === 1 ? '' : 's') + '</span>' : '';
     var fullTag = full ? ' <span style="color:#7a7a7a;">(full price)</span>' : '';
+    var loyaltyTag = '';
+    if (offer && offer.kind === 'punch') loyaltyTag = ' <span style="color:#f0a500;">· free ' + offer.days + '-day rental</span>';
+    else if (offer && offer.kind === 'rebook') loyaltyTag = ' <span style="color:#f0a500;">· ₱' + offer.amount + ' rebook</span>';
     box.innerHTML = '<b>₱' + amount.toLocaleString() + '</b> rent'
       + (override !== '' ? ' <span style="color:#888;">(your override)</span>' : derived + fullTag)
+      + loyaltyTag
       + ' <span style="color:#7a7a7a;">· any deposit is added when it saves</span>';
   };
 
@@ -543,7 +679,8 @@
         el('qaOkSub').textContent = res.body.summary || '';
         el('qaMsg').textContent = last.msg;
         el('qaChips').innerHTML = '<span>customer record ✓</span><span>order ✓</span>'
-          + (res.body.paid ? '<span>marked paid ✓</span>' : '<span>awaiting payment</span>');
+          + (res.body.paid ? '<span>marked paid ✓</span>' : '<span>awaiting payment</span>')
+          + (res.body.loyalty ? '<span>loyalty · ' + String(res.body.loyalty).replace(/[<>&]/g, '') + '</span>' : '');
       })
       .catch(function () {
         btn.disabled = false;

@@ -227,6 +227,15 @@ check('a support handoff names the channel and not a blank preview', () => {
   assert.ok(msg.includes('https://x/admin?tab=messaging'));
 });
 
+check('a thread-control failure names Messenger, not a blank reason', () => {
+  const msg = tg.formatSupportAlert(
+    { channel: 'messenger', reason: 'thread_control', preview: 'May slot pa ba' },
+    {}
+  );
+  assert.ok(msg.includes('Messenger still has the chat'), msg);
+  assert.ok(msg.includes('May slot pa ba'));
+});
+
 check('a website handoff with no preview still reads cleanly', () => {
   const msg = tg.formatSupportAlert({ channel: 'web' }, {});
   assert.ok(msg.includes('Website chat'));

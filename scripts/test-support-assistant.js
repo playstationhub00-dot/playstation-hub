@@ -65,7 +65,7 @@ async function main() {
     assert.strictEqual(sheet[0].trophy.monthlyNow, 719);
   });
 
-  await ok('the month price is the checkout total, and the category price stays on the sheet', () => {
+  await ok('the month price is the checkout total, and the category price stays on the sheet', async () => {
     // POST /order/create charges base - round(base * pct / 100) when a promo percent is on.
     function checkout(base, pct) {
       return pct > 0 ? base - Math.round(base * pct / 100) : base;
@@ -78,7 +78,7 @@ async function main() {
     assert.strictEqual(sheet[0].nonTrophy.monthlyNow, checkout(699, 10));
     assert.strictEqual(sheet[0].trophy.monthlyNow, checkout(799, 10));
     assert.strictEqual(sheet[0].nonTrophy.weeklyNow, checkout(349, 0));
-    const blurb = facts.fallbackReply('how much for new games', shopFacts(), () => []);
+    const blurb = await facts.fallbackReply('how much for new games', shopFacts(), () => []);
     assert.ok(blurb.text.includes('₱629'), blurb.text);
     assert.ok(blurb.text.includes('₱699'), blurb.text);
     assert.ok(blurb.text.includes('₱719'), blurb.text);
@@ -90,19 +90,19 @@ async function main() {
     assert.ok(emoji >= 1 && emoji <= 3, 'emoji ' + emoji + ' in ' + blurb.text);
   });
 
-  await ok('the scripted fallback matches English, Filipino, and Taglish', () => {
+  await ok('the scripted fallback matches English, Filipino, and Taglish', async () => {
     assert.strictEqual(facts.replyLanguage('What is the difference between the accounts?'), 'en');
     assert.strictEqual(facts.replyLanguage('Magkano ang rental?'), 'fil');
     assert.strictEqual(facts.replyLanguage('How much po ang presyo?'), 'mix');
     assert.strictEqual(facts.replyLanguage('Elden Ring'), 'en');
 
-    const en = facts.fallbackReply('how much for a week', shopFacts(), () => []);
+    const en = await facts.fallbackReply('how much for a week', shopFacts(), () => []);
     assert.ok(en.text.includes('Order here:'), en.text);
     assert.ok(en.text.includes('₱349'));
     assert.ok(!en.text.includes('Mag-order'));
     assert.ok(!/^\d+\.\s/m.test(en.text));
 
-    const fil = facts.fallbackReply('Magkano ang rental?', shopFacts(), () => []);
+    const fil = await facts.fallbackReply('Magkano ang rental?', shopFacts(), () => []);
     assert.ok(fil.text.includes('Mag-order po dito:'), fil.text);
     assert.ok(fil.text.includes('Kasama na'), fil.text);
     assert.ok(fil.text.includes('₱629'), fil.text);
@@ -110,31 +110,39 @@ async function main() {
     const filEmoji = (fil.text.match(/\p{Extended_Pictographic}/gu) || []).length;
     assert.ok(filEmoji >= 1 && filEmoji <= 3, fil.text);
 
-    const mix = facts.fallbackReply('how much po ang presyo', shopFacts(), () => []);
+    const mix = await facts.fallbackReply('how much po ang presyo', shopFacts(), () => []);
     assert.strictEqual(facts.replyLanguage('how much po ang presyo'), 'mix');
     assert.ok(mix.text.includes('Order po dito:'), mix.text);
+    assert.ok(mix.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), mix.text);
     assert.ok(mix.text.includes('kasama na'), mix.text);
     assert.ok(mix.text.includes('₱699'));
 
-    const filPay = facts.fallbackReply('paano magbayad', shopFacts(), () => []);
+    const filPay = await facts.fallbackReply('paano magbayad', shopFacts(), () => []);
     assert.ok(filPay.text.includes('GCash'), filPay.text);
     assert.ok(filPay.text.includes('Mag-order po dito:'), filPay.text);
 
-    const filHuman = facts.fallbackReply('kausap naman', shopFacts(), () => []);
+    const filHuman = await facts.fallbackReply('kausap naman', shopFacts(), () => []);
     assert.strictEqual(filHuman.handoff, true);
-    assert.ok(filHuman.text.includes('Michael'));
+    assert.ok(filHuman.text.includes('admin'), filHuman.text);
     assert.ok(filHuman.text.includes('Sige po'), filHuman.text);
     assert.ok(!/\bOo\b/.test(filHuman.text));
+    assert.ok(!/m\.me/i.test(filHuman.text));
+    assert.ok(!/Reply ADMIN/i.test(filHuman.text));
 
     const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 0 }, {}, promo);
-    const filGame = facts.fallbackReply('meron ba Elden Ring', shopFacts(), () => [open]);
+    const filGame = await facts.fallbackReply('meron ba Elden Ring', shopFacts(), () => [open]);
     assert.ok(filGame.text.includes('Yes po'), filGame.text);
-    assert.ok(filGame.text.includes('Wala po'), filGame.text);
+    assert.ok(filGame.text.includes('Wala pong available slot'), filGame.text);
     assert.ok(!/\bOo\b/.test(filGame.text));
-    const enGame = facts.fallbackReply('is Elden Ring available', shopFacts(), () => [open]);
-    assert.ok(enGame.text.includes('2 open'), enGame.text);
-    assert.ok(enGame.text.includes('full'), enGame.text);
+    assert.ok(filGame.text.includes('\n\n'));
+    const enGame = await facts.fallbackReply('is Elden Ring available', shopFacts(), () => [open]);
+    assert.ok(enGame.text.includes('2 slots available'), enGame.text);
+    assert.ok(enGame.text.includes('No slots available'), enGame.text);
     assert.ok(!enGame.text.includes(' po'), enGame.text);
+    assert.ok(!/late return/i.test(enGame.text), enGame.text);
+    assert.ok(en.text.includes('Want to chat with an admin? Reply ADMIN.'), en.text);
+    assert.ok(fil.text.includes('Gusto mo po bang makausap ang admin? Reply ADMIN.'), fil.text);
+    assert.ok(!enGame.text.includes('m.me'));
   });
 
   await ok('bare amounts get a peso sign and plain text keeps it', async () => {
@@ -165,14 +173,14 @@ async function main() {
     assert.ok(stored.includes('₱100'));
   });
 
-  await ok('a different category price is what gets quoted', () => {
+  await ok('a different category price is what gets quoted', async () => {
     const sheet = facts.pricingSheet(
       [{ name: 'Regular', nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 150, tr_price_30d: 300 }],
       { enabled: false, discounts: { 30: 10 }, deposit: 100 }
     );
     assert.strictEqual(sheet[0].nonTrophy.weeklyNow, 111);
     assert.strictEqual(sheet[0].nonTrophy.monthlyNow, 222);
-    const blurb = facts.fallbackReply('magkano', facts.faqBundle({
+    const blurb = await facts.fallbackReply('magkano', facts.faqBundle({
       categories: [{ name: 'Regular', nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 150, tr_price_30d: 300 }],
       promo: { enabled: false, deposit: 80 },
       siteUrl: 'https://www.playstation-hub.com'
@@ -272,7 +280,9 @@ async function main() {
     assert.strictEqual(called, false);
     assert.strictEqual(result.handoff, true);
     assert.strictEqual(result.reason, 'asked_for_human');
-    assert.ok(result.reply.includes('Michael'));
+    assert.ok(result.reply.includes('reply here'));
+    assert.ok(!/m\.me/i.test(result.reply));
+    assert.ok(!/message Michael/i.test(result.reply));
   });
 
   await ok('a payment proof or dispute hands off', async () => {
@@ -303,7 +313,7 @@ async function main() {
     let toolBody = '';
     let round = 0;
     const result = await assistant.respond({
-      message: 'meron ba Elden Ring',
+      message: 'how much is Elden Ring',
       facts: shopFacts(),
       history: [{ role: 'user', text: 'hi' }, { role: 'assistant', text: 'Hello!' }],
       invokeTool: async (name, args) => {
@@ -445,7 +455,8 @@ async function main() {
       facts: shopFacts(),
       complete: assistant.createComplete({ OPENAI_API_KEY: 'sk-openai' }, fetchImpl)
     });
-    assert.strictEqual(result.reply, 'OpenAI reply');
+    assert.ok(result.reply.startsWith('OpenAI reply'), result.reply);
+    assert.ok(result.reply.includes('Want to chat with an admin? Reply ADMIN.'), result.reply);
     assert.strictEqual(seen.url, 'https://api.openai.com/v1/chat/completions');
     assert.strictEqual(seen.auth, 'Bearer sk-openai');
     assert.strictEqual(seen.body.model, 'gpt-4o-mini');
@@ -493,9 +504,11 @@ async function main() {
       facts: shopFacts(),
       complete: async () => ({ content: raw })
     });
-    assert.strictEqual(result.reply, raw);
+    assert.ok(result.reply.startsWith(raw), result.reply);
+    assert.ok(result.reply.includes('Want to chat with an admin? Reply ADMIN.'), result.reply);
     const saved = store.get('messenger', 'psid-md').messages.filter(m => m.role === 'assistant').pop();
-    assert.strictEqual(saved.text, plain);
+    assert.ok(saved.text.startsWith(plain), saved.text);
+    assert.ok(saved.text.includes('Reply ADMIN'));
   });
 
   await ok('the system prompt carries the live tier, not a fixed 349', () => {
@@ -516,6 +529,187 @@ async function main() {
     assert.ok(prompt.includes('Yes po'));
     assert.ok(prompt.includes('Wala po'));
     assert.ok(prompt.includes('₱'));
+    assert.ok(prompt.includes('Want to chat with an admin? Reply ADMIN.'));
+    assert.ok(prompt.includes('Gusto mo po bang makausap ang admin? Reply ADMIN.'));
+    assert.ok(prompt.includes('Coming Soon'));
+    assert.ok(prompt.includes('waitlist is free'));
+    assert.ok(prompt.includes('lookup_game'));
+    assert.ok(!/https?:\/\/m\.me/i.test(prompt));
+    assert.ok(prompt.includes('do not send an m.me link'));
+  });
+
+  await ok('ADMIN hands off in this chat, and reserving without paying is explained', async () => {
+    const admin = await assistant.respond({
+      message: 'ADMIN',
+      facts: shopFacts(),
+      complete: async () => { throw new Error('should not run'); }
+    });
+    assert.strictEqual(admin.handoff, true);
+    assert.strictEqual(admin.reason, 'asked_for_human');
+    assert.ok(admin.reply.includes('reply here'), admin.reply);
+    assert.ok(!/m\.me/i.test(admin.reply));
+    assert.ok(!/message Michael/i.test(admin.reply));
+    assert.ok(!/Reply ADMIN/i.test(admin.reply));
+    const asked = facts.withAdminCta('Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.', 'en');
+    assert.strictEqual(asked, 'Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.');
+    const oldLine = facts.withAdminCta('Prices are on the site.\nReply ADMIN to talk to a person.', 'en');
+    assert.strictEqual(oldLine, 'Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.');
+
+    const reserve = await facts.fallbackReply('can I reserve without paying', shopFacts(), () => []);
+    assert.strictEqual(reserve.handoff, false);
+    assert.ok(/free waitlist/i.test(reserve.text), reserve.text);
+    assert.ok(/Coming Soon/i.test(reserve.text), reserve.text);
+    assert.ok(reserve.text.includes('₱100'), reserve.text);
+    assert.ok(!/don'?t know|not sure|di ko po sure/i.test(reserve.text), reserve.text);
+    assert.ok(reserve.text.includes('Reply ADMIN'), reserve.text);
+    assert.ok(!/m\.me/i.test(reserve.text));
+
+    const trial = await facts.fallbackReply('can I try before I pay', shopFacts(), () => []);
+    assert.ok(trial.text.includes('3-hour'), trial.text);
+    const pw = await facts.fallbackReply('do I need to give my PSN password', shopFacts(), () => []);
+    assert.ok(/never ask/i.test(pw.text), pw.text);
+    assert.ok(!/m\.me/i.test(pw.text));
+  });
+
+  await ok('a game answer waits for the live lookup and does not send the guess', async () => {
+    const seen = [];
+    const card = facts.publicGame(elden, { ntSlots: 2, trSlots: 0 }, { nonTrophy: 0, trophy: 1 }, promo);
+    const result = await assistant.respond({
+      message: 'is Elden Ring available',
+      facts: shopFacts(),
+      invokeTool: async (name, args) => {
+        assert.strictEqual(name, 'lookup_game');
+        seen.push(args.query);
+        return { games: [card] };
+      },
+      complete: async () => {
+        if (!seen.length) return { content: 'Sure, it has 9 slots open.' };
+        return { content: 'Elden Ring has 2 Non-Trophy slots open. Trophy is full.' };
+      }
+    });
+    assert.ok(!result.reply.includes('9 slots'), result.reply);
+    assert.ok(result.reply.includes('Hello! Yes, we have slots available.'), result.reply);
+    assert.ok(result.reply.includes('- Non-Trophy: 2 slots available'), result.reply);
+    assert.ok(result.reply.includes('- Trophy Account: No slots available'), result.reply);
+    assert.ok(!/on the waitlist/i.test(result.reply), result.reply);
+    assert.ok(!/late return/i.test(result.reply), result.reply);
+    assert.ok(result.reply.includes('Reply ADMIN'), result.reply);
+    assert.strictEqual(result.source, 'template');
+    assert.strictEqual(result.handoff, false);
+  });
+
+  await ok('a failed lookup does not invent slots', async () => {
+    const result = await assistant.respond({
+      message: 'is Elden Ring available',
+      facts: shopFacts(),
+      invokeTool: async () => { throw new Error('mongo down'); },
+      complete: async () => ({ content: 'Yes, 4 slots are open.' })
+    });
+    assert.ok(!/4 slots/.test(result.reply), result.reply);
+    assert.ok(result.reply.includes('guess'), result.reply);
+    assert.ok(result.reply.includes('Reply ADMIN'), result.reply);
+    assert.strictEqual(result.handoff, false);
+  });
+
+  await ok('Coming Soon reserves at list price, not the monthly promo', async () => {
+    const soon = facts.publicGame(Object.assign({}, elden, {
+      comingSoon: true, id: 5, release_date: '2026-11-01'
+    }), { ntSlots: 2, trSlots: 0 }, null, promo);
+    assert.strictEqual(soon.comingSoon, true);
+    assert.strictEqual(soon.prices.nonTrophyMonthly, 699);
+    assert.strictEqual(soon.slots.ps4Primary, undefined);
+    assert.strictEqual(soon.waitlistKnown, false);
+    const blurb = await facts.fallbackReply('reserve Elden Ring', shopFacts(), () => [soon]);
+    assert.ok(blurb.text.includes('₱699'), blurb.text);
+    assert.ok(!blurb.text.includes('₱629'), blurb.text);
+    assert.ok(/Coming Soon/i.test(blurb.text), blurb.text);
+    assert.ok(blurb.text.includes('Reply ADMIN'), blurb.text);
+    assert.ok(!/m\.me/i.test(blurb.text));
+    const hits = facts.searchCatalog([elden], [{ id: 5, title: 'Elden Ring', comingSoon: false }], 'Elden Ring');
+    assert.strictEqual(hits.length, 2);
+    assert.strictEqual(hits[1].comingSoon, true);
+  });
+
+  await ok('a slot reply is the fixed layout, line for line', async () => {
+    const wolverine = {
+      id: 9, title: "Marvel's Wolverine", platform: 'PS5',
+      nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799
+    };
+    const shop = shopFacts();
+    shop.siteUrl = 'https://playstation-hub.com';
+    const open = facts.publicGame(wolverine, { ntSlots: 1, trSlots: 1 }, {}, promo);
+    const both = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", shop, () => [open]);
+    assert.strictEqual(both.text, [
+      'Hello po! Yes po, meron pa po. 🎮',
+      '',
+      "Marvel's Wolverine (PS5)",
+      '',
+      '- Non-Trophy: 1 slot available',
+      '  ₱349/week | ₱629/month',
+      '',
+      '- Trophy Account: 1 slot available',
+      '  ₱399/week | ₱719/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      'Mag-order po dito:',
+      'https://playstation-hub.com/game/marvel-s-wolverine',
+      '',
+      'Gusto mo po bang makausap ang admin? Reply ADMIN.'
+    ].join('\n'));
+    assert.strictEqual(facts.toPlainText(both.text), both.text);
+    assert.ok(!/late/i.test(both.text));
+    assert.ok(!/naka-waitlist/i.test(both.text));
+    assert.ok(!both.text.includes('₱699'));
+
+    const none = facts.publicGame(wolverine, { ntSlots: 0, trSlots: 0 }, {}, promo);
+    const empty = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", shop, () => [none]);
+    assert.strictEqual(empty.text, [
+      'Hello po! Wala na po munang available slot. 🎮',
+      '',
+      "Marvel's Wolverine (PS5)",
+      '',
+      'Libre pong waitlist. Optional na ₱100 priority fee para mauna, at ibabawas iyan sa rent pag may slot.',
+      '',
+      'Mag-order po dito:',
+      'https://playstation-hub.com/game/marvel-s-wolverine',
+      '',
+      'Gusto mo po bang makausap ang admin? Reply ADMIN.'
+    ].join('\n'));
+
+    const ps4 = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 2 }, {}, promo);
+    const mixed = await facts.fallbackReply('is Hogwarts Legacy available', shopFacts(), () => [ps4]);
+    assert.strictEqual(mixed.text, [
+      'Hello! Yes, we have slots available. 🎮',
+      '',
+      'Hogwarts Legacy (PS4/PS5)',
+      '',
+      '- Non-Trophy: No slots available',
+      '  Free waitlist, or an optional ₱100 priority fee.',
+      '',
+      '- Trophy Account: 1 slot available',
+      '  ₱299/week | ₱539/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      '- PS4 Primary: 2 slots available',
+      '  ₱249/week | ₱449/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      'Order here:',
+      'https://www.playstation-hub.com/game/hogwarts-legacy',
+      '',
+      'Want to chat with an admin? Reply ADMIN.'
+    ].join('\n'));
+    assert.ok(!mixed.text.includes('PS4 Primary: No'));
+    assert.ok(!/late return/i.test(mixed.text));
+
+    const viaModel = await assistant.respond({
+      message: "May slot pa ba ang Marvel's Wolverine?",
+      facts: shop,
+      invokeTool: async () => ({ games: [open] }),
+      complete: async () => ({ content: 'Marvel\'s Wolverine: Non-Trophy Yes po, may 1 slot. Trophy Yes po, may 1 slot. 4 po ang naka-waitlist.' })
+    });
+    assert.strictEqual(viaModel.reply, both.text);
+    assert.strictEqual(viaModel.source, 'template');
   });
 
   console.log('\nthreads');
@@ -571,6 +765,37 @@ async function main() {
     assert.strictEqual(called, false);
     assert.strictEqual(result.reason, 'attachment');
     assert.strictEqual(result.newlyHandedOff, true);
+  });
+
+  await ok('a refused take keeps the Messenger chat visible and a second failure does not re-alert', () => {
+    const store = threads.createStore(threads.memory());
+    store.handoff('messenger', 'psid-7', 'asked_for_human');
+    const id = store.listHandoffs()[0].id;
+    const kept = store.setControlError(id, '(#10) Only Main Receiver can take thread control');
+    assert.strictEqual(kept.handed_off, true);
+    assert.strictEqual(kept.handoff_reason, 'asked_for_human');
+    assert.strictEqual(kept.control_error, '(#10) Only Main Receiver can take thread control');
+    assert.strictEqual(kept.external_id, undefined);
+    assert.strictEqual(store.lookup(id).external_id, 'psid-7');
+    assert.ok(!JSON.stringify(store.listHandoffs()).includes('psid-7'));
+
+    store.resume(id);
+    assert.strictEqual(store.isPaused('messenger', 'psid-7'), false);
+    assert.strictEqual(store.lookup(id).control_error, null);
+
+    const again = store.noteControlFailure('messenger', 'psid-7', 'Messenger returned HTTP 400.');
+    assert.strictEqual(again.changed, true);
+    assert.strictEqual(store.isPaused('messenger', 'psid-7'), true);
+    assert.strictEqual(store.listHandoffs()[0].handoff_reason, 'thread_control');
+    assert.strictEqual(store.listHandoffs()[0].control_error, 'Messenger returned HTTP 400.');
+    const second = store.noteControlFailure('messenger', 'psid-7', 'still bad');
+    assert.strictEqual(second.changed, false);
+    assert.strictEqual(store.listHandoffs().length, 1);
+    assert.strictEqual(store.listHandoffs()[0].control_error, 'still bad');
+
+    const fresh = store.noteControlFailure('messenger', 'psid-new', 'x'.repeat(400));
+    assert.strictEqual(fresh.changed, true);
+    assert.strictEqual(fresh.thread.control_error.length, 180);
   });
 
   console.log('\nabuse and rate limit');
@@ -666,6 +891,83 @@ async function main() {
     assert.strictEqual(events[2].reply, false);
   });
 
+  await ok('standby messages and handover events are not dropped', () => {
+    const events = messenger.inboundEvents({
+      object: 'page',
+      entry: [{
+        messaging: [
+          { sender: { id: '9' }, pass_thread_control: { new_owner_app_id: '111', metadata: 'back' } }
+        ],
+        standby: [
+          { sender: { id: '2' }, message: { text: "May slot pa ba ang Marvel's Wolverine?" } },
+          { sender: { id: '8' }, message: { is_echo: true, text: 'page reply' } },
+          { sender: { id: '7' }, take_thread_control: { previous_owner_app_id: '111', metadata: 'inbox' } }
+        ]
+      }]
+    });
+    assert.strictEqual(events.length, 3);
+    assert.strictEqual(events[0].control, 'pass_thread_control');
+    assert.strictEqual(events[0].standby, false);
+    assert.strictEqual(events[0].reply, false);
+    assert.strictEqual(events[0].newOwnerAppId, '111');
+    assert.strictEqual(events[0].metadata, 'back');
+    assert.strictEqual(events[1].standby, true);
+    assert.strictEqual(events[1].reply, true);
+    assert.strictEqual(events[1].text, "May slot pa ba ang Marvel's Wolverine?");
+    assert.strictEqual(events[1].control, null);
+    assert.strictEqual(events[2].control, 'take_thread_control');
+    assert.strictEqual(events[2].standby, true);
+    assert.strictEqual(events[2].previousOwnerAppId, '111');
+
+    assert.strictEqual(messenger.decideInbound(events[1], false), 'take_then_answer');
+    assert.strictEqual(messenger.decideInbound(events[1], true), 'record_only');
+    assert.strictEqual(messenger.decideInbound({ reply: true, standby: false }, true), 'answer');
+    assert.strictEqual(messenger.decideInbound(events[0], false), 'note_control');
+    assert.strictEqual(messenger.decideInbound({ reply: false, referral: 'PH-1' }, false), 'ignore');
+  });
+
+  await ok('a failed take_thread_control is the Graph error, and a website resume skips it', async () => {
+    let asked = null;
+    const okTake = await messenger.resumeMessenger({
+      channel: 'messenger',
+      externalId: 'psid-1',
+      take: async (psid) => {
+        asked = psid;
+        return { ok: true, status: 200, body: '{"success":true}' };
+      }
+    });
+    assert.strictEqual(asked, 'psid-1');
+    assert.deepStrictEqual(okTake, { ok: true });
+
+    const body = JSON.stringify({
+      error: {
+        message: '(#10) Message failed to send because another app is controlling this thread now. access_token=SECRET',
+        code: 10,
+        error_subcode: 2018300
+      }
+    });
+    const failed = await messenger.resumeMessenger({
+      channel: 'messenger',
+      externalId: 'psid-1',
+      take: async () => ({ ok: false, status: 400, body })
+    });
+    assert.strictEqual(failed.ok, false);
+    assert.ok(failed.error.includes('another app is controlling this thread'), failed.error);
+    assert.ok(failed.error.includes('10/2018300'), failed.error);
+    assert.ok(!failed.error.includes('SECRET'), failed.error);
+    assert.strictEqual(messenger.graphErrorSummary({ reason: 'no_token' }), 'Page token is missing.');
+    assert.strictEqual(messenger.graphErrorSummary({ status: 500, body: 'nope' }), 'Messenger returned HTTP 500.');
+
+    let called = false;
+    const web = await messenger.resumeMessenger({
+      channel: 'web',
+      externalId: 'sess',
+      take: async () => { called = true; return { ok: false }; }
+    });
+    assert.strictEqual(web.ok, true);
+    assert.strictEqual(called, false);
+  });
+
   await ok('pass and take thread control target the inbox app and the PSID', () => {
     const pass = messenger.passThreadControl('psid-1', '263902037430900');
     assert.strictEqual(pass.recipient.id, 'psid-1');
@@ -693,8 +995,15 @@ async function main() {
     assert.ok(server.includes('supportFacts.toPlainText'));
     assert.ok(server.includes("app.post('/api/support/chat'"));
     assert.ok(server.includes("rateLimited('support_chat'"));
+    assert.ok(server.includes('SUPPORT_CHAT_LIMIT'));
+    assert.strictEqual(assistant.SUPPORT_CHAT_LIMIT, 40);
+    assert.strictEqual(assistant.SUPPORT_CHAT_WINDOW_MS, 10 * 60 * 1000);
     assert.ok(server.includes('x-hub-signature-256'));
     assert.ok(server.includes("app.post('/admin/support/:id/resume'"));
+    assert.ok(server.includes('resumeMessenger'));
+    assert.ok(server.includes('take_then_answer'));
+    assert.ok(server.includes('support_control_failed'));
+    assert.ok(server.includes('[messenger take_thread_control] failed'));
   });
 
   await ok('the admin card escapes the transcript and offers resume', () => {
@@ -706,6 +1015,7 @@ async function main() {
         channel: 'web',
         handoff_reason: 'asked_for_human',
         handoff_at: '2026-10-13T19:00:00.000Z',
+        control_error: '<b>bad</b>',
         messages: [
           { role: 'user', text: '<script>alert(1)</script>' },
           { role: 'assistant', text: 'Flagged.' }
@@ -716,11 +1026,14 @@ async function main() {
     assert.ok(html.includes('/admin/support/web_abc123/resume'));
     assert.ok(html.includes('&lt;script&gt;'));
     assert.ok(!html.includes('<script>alert'));
+    assert.ok(html.includes('Messenger did not hand this chat back'));
+    assert.ok(html.includes('&lt;b&gt;bad&lt;/b&gt;'));
+    assert.ok(!html.includes('<b>bad</b>'));
     const empty = ejs.render(fs.readFileSync(file, 'utf8'), { supportHandoffs: [] }, { filename: file });
     assert.ok(empty.includes('No chats waiting'));
   });
 
-  await ok('expired and disabled promos never reach the assistant', () => {
+  await ok('expired and disabled promos never reach the assistant', async () => {
     const promos = require('../lib/promos');
     const stored = [
       { id: 'p1', title: 'Elden week', text: '₱50 off Elden Ring this week.', terms: 'One rental per customer.', starts_on: '2026-10-01', ends_on: '2026-10-20', enabled: true, game_id: 7, badge: 'Promo', featured: true },
@@ -749,7 +1062,7 @@ async function main() {
     assert.ok(!dumped.includes('Off terms'));
     assert.ok(dumped.includes('no promo'));
 
-    const asked = facts.fallbackReply('may promo ba?', bundle, () => []);
+    const asked = await facts.fallbackReply('may promo ba?', bundle, () => []);
     assert.ok(asked.text.includes('Elden week'), asked.text);
     assert.ok(asked.text.includes('One rental per customer'), asked.text);
     assert.ok(asked.text.includes('Oct 20, 2026'), asked.text);
@@ -758,12 +1071,12 @@ async function main() {
     assert.ok(!asked.text.includes('Secret'));
 
     const quietFacts = facts.faqBundle({ categories, promo, offers: [], loyaltyNote: '' });
-    const quiet = facts.fallbackReply('may promo ba?', quietFacts, () => []);
+    const quiet = await facts.fallbackReply('may promo ba?', quietFacts, () => []);
     assert.ok(quiet.text.includes('Wala pong promo'), quiet.text);
     assert.ok(!quiet.text.includes('Elden'));
     assert.ok(!quiet.text.includes('Ghost'));
 
-    const price = facts.fallbackReply('how much for a week', bundle, () => []);
+    const price = await facts.fallbackReply('how much for a week', bundle, () => []);
     assert.ok(price.text.includes('rebook'), price.text);
     assert.ok(price.text.includes("You're 2 rentals away"), price.text);
     assert.ok(!price.text.includes('Elden week'), price.text);
@@ -771,10 +1084,10 @@ async function main() {
 
     const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 1, ps4Slots: 0 }, {}, promo);
     const other = facts.publicGame(hogwarts, { ntSlots: 1, trSlots: 1, ps4Slots: 1 }, {}, promo);
-    const onGame = facts.fallbackReply('is Elden Ring available', bundle, () => [open]);
+    const onGame = await facts.fallbackReply('is Elden Ring available', bundle, () => [open]);
     assert.ok(onGame.text.includes('Elden week'), onGame.text);
     assert.ok(onGame.text.includes("You're 2 rentals away"), onGame.text);
-    const elsewhere = facts.fallbackReply('is Hogwarts Legacy available', bundle, () => [other]);
+    const elsewhere = await facts.fallbackReply('is Hogwarts Legacy available', bundle, () => [other]);
     assert.ok(!elsewhere.text.includes('Elden week'), elsewhere.text);
     assert.ok(elsewhere.text.includes('rebook') || elsewhere.text.includes('₱50'), elsewhere.text);
   });

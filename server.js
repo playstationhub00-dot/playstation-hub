@@ -3641,7 +3641,7 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   // tracks amount_due and deposit_due as two fields added back together for
   // display, so amount_due must be the base alone or the deposit is charged
   // twice (see POST /order/reserve, which has the same split).
-  const amountDue = override != null && override >= 0 ? override
+  let amountDue = override != null && override >= 0 ? override
     : upcomingReservation ? pricing.base
     : pricing.amountDue;
   // A reservation's deposit is carried on the order the way the web flow
@@ -3685,6 +3685,51 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     : b.signed_in === 'no' ? 'awaiting_qr'
     : 'active';
   const initialState = paid ? settleState : 'awaiting_payment';
+
+  // A reward chosen on this form changes the rent and is recorded against the
+  // new row, using the same offers the Loyalty tab would show for this name.
+  // Checked before anything is written: a refused reward must not leave a
+  // half-priced rental behind.
+  let loyaltyApply = null;
+  const loyaltyChoice = String(b.loyalty_choice || '').trim();
+  if (loyaltyChoice) {
+    const snap = loyaltySnapshot();
+    const profile = snap.profileFor({ name });
+    const offer = loyalty.offerByChoice(profile, loyaltyChoice);
+    let weekValue = 0;
+    if (offer && offer.kind === 'punch' && mode === 'rent' && !upcomingGame && days !== offer.days) {
+      const week = computeRentPricing(game, type, offer.days, promoForPricing);
+      weekValue = week ? week.amountDue : 0;
+    }
+    const prepared = loyalty.prepareApply(profile, loyaltyChoice, {
+      amountDue,
+      days,
+      mode: (mode === 'rent' && !upcomingGame) ? 'rent' : 'buy',
+      weekValue
+    });
+    if (!prepared.ok) {
+      const message = prepared.error === 'not_rental'
+        ? 'A loyalty reward applies to a rental with dates, not a purchase or a reservation. Choose Don\'t apply, or switch back to Renting.'
+        : prepared.error === 'no_credit'
+          ? 'That game has no price for the free rental, so it cannot be credited against this one.'
+          : 'That loyalty reward is not available for this customer.';
+      return res.status(400).json({ ok: false, reason: 'loyalty_' + prepared.error, message });
+    }
+    const plan = loyalty.planRedemption(profile, {
+      choice: prepared.offer.choice,
+      order_ref: 'NEW',
+      amount: String(prepared.credited),
+      note: 'Applied on the new rental'
+    }, new Date().toISOString());
+    if (!plan.ok) {
+      return res.status(400).json({
+        ok: false, reason: 'loyalty_' + plan.error,
+        message: 'That loyalty reward is not available for this customer.'
+      });
+    }
+    amountDue = prepared.amountDue;
+    loyaltyApply = { offer: prepared.offer, credited: prepared.credited, record: plan.record };
+  }
 
   try {
     const order = await orders.create(Object.assign({
@@ -3759,6 +3804,16 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     }).write();
     await orders.setCustomerId(order.ref, customerId).catch(() => {});
 
+    if (loyaltyApply) {
+      ensureLoyaltyStore();
+      const redemptionId = db.get('loyalty_next_id').value() || 1;
+      db.set('loyalty_next_id', redemptionId + 1).write();
+      db.get('loyalty_redemptions').push(Object.assign({ id: redemptionId }, loyaltyApply.record, {
+        rental_id: customerId,
+        order_ref: order.ref
+      })).write();
+    }
+
     // An unreleased game has no account slots to assign yet.
     if (b.account_assign && !upcomingGame) {
       applyAccountAssignment(b.account_assign, {
@@ -3791,7 +3846,8 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
       summary: [name, game.title, TYPE_LABELS_SHORT[type] || type,
         mode === 'buy' ? 'Purchase' : days + ' days',
         '\u20b1' + (amountDue + depositDue)].join(' \u00b7 '),
-      message
+      message,
+      loyalty: loyaltyApply ? loyaltyApply.offer.label : ''
     });
   } catch (e) {
     console.error('[quick-add]', e.message);
@@ -7405,7 +7461,10 @@ app.get('/feed/meta.csv', (req, res) => {
 // SUPPORT ASSISTANT — website widget and Messenger share one brain
 // ═══════════════════════════════════════════════════════════════════════════
 
-const supportChatLimiter = supportAssistant.createLimiter(12, 10 * 60 * 1000);
+const supportChatLimiter = supportAssistant.createLimiter(
+  supportAssistant.SUPPORT_CHAT_LIMIT,
+  supportAssistant.SUPPORT_CHAT_WINDOW_MS
+);
 
 function supportThreadStore() {
   return supportThreads.createStore(supportThreads.bind(db));
@@ -7427,35 +7486,42 @@ function supportFactsNow(loyaltyNote) {
   });
 }
 
-async function supportInvokeTool(name, args) {
-  if (name === 'get_pricing') return supportFactsNow();
-  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+async function supportGameCards(query) {
   const promo = (getSiteSettings().promo) || {};
   const games = getGames().map(resolveGamePrices);
-  const hits = supportFacts.searchGames(games, args && args.query);
+  const upcoming = getUpcoming().map(g => Object.assign({}, g, { comingSoon: true }));
+  const hits = supportFacts.searchCatalog(games, upcoming, query);
   const cards = [];
   for (const g of hits) {
+    if (g.comingSoon) {
+      const avail = computeAvailability(g, null);
+      cards.push(supportFacts.publicGame(g, avail, null, promo));
+      continue;
+    }
     const avail = computeAvailability(g, gameAccountSummary(g.id));
-    let summary = { nonTrophy: 0, trophy: 0, ps4Primary: 0 };
+    let summary = null;
     try {
       const candidates = await orders.listQueueCandidates(g.id);
       summary = supportFacts.waitlistSummary(queueRules.buildQueue(candidates || []));
     } catch (e) {
-      // No Mongo (local dev, or a blip) still leaves slot counts usable.
-      // The waitlist is reported as empty rather than guessed.
+      // Slot counts still come from the game record. A failed queue read is
+      // not reported as zero people waiting.
+      summary = null;
     }
     cards.push(supportFacts.publicGame(g, avail, summary, promo));
   }
-  return { query: String((args && args.query) || ''), games: cards };
+  return { query: String(query || ''), games: cards };
 }
 
-function supportLookup(query) {
-  const promo = (getSiteSettings().promo) || {};
-  const games = getGames().map(resolveGamePrices);
-  return supportFacts.searchGames(games, query).map(g => {
-    const avail = computeAvailability(g, gameAccountSummary(g.id));
-    return supportFacts.publicGame(g, avail, { nonTrophy: 0, trophy: 0, ps4Primary: 0 }, promo);
-  });
+async function supportInvokeTool(name, args) {
+  if (name === 'get_pricing') return supportFactsNow();
+  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+  return supportGameCards(args && args.query);
+}
+
+async function supportLookup(query) {
+  const result = await supportGameCards(query);
+  return result.games;
 }
 
 function notifySupportHandoff(result) {
@@ -7485,8 +7551,15 @@ function graphPost(pathname, payload) {
       let data = '';
       res2.on('data', chunk => { data += chunk; });
       res2.on('end', () => {
-        if (res2.statusCode !== 200) console.error('[messenger]', pathname, res2.statusCode, String(data).slice(0, 300));
-        resolve({ ok: res2.statusCode === 200, status: res2.statusCode, body: data });
+        const result = { ok: res2.statusCode === 200, status: res2.statusCode, body: data };
+        const err = supportMessenger.graphError(data);
+        if (err) result.ok = false;
+        result.error = err;
+        if (!result.ok) {
+          const raw = result.error ? '' : String(data || '').replace(/access_token=[^&\s]+/gi, 'access_token=redacted').slice(0, 300);
+          console.error('[messenger]', pathname, supportMessenger.graphErrorSummary(result), raw);
+        }
+        resolve(result);
       });
     });
     req2.on('error', e => {
@@ -7545,7 +7618,7 @@ function supportSameOrigin(req) {
 app.post('/api/support/chat', asyncRoute(async (req, res) => {
   if (!supportSameOrigin(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
   const ip = clientIp(req) || 'unknown';
-  if (rateLimited('support_chat', ip, 12, 10 * 60 * 1000)) {
+  if (rateLimited('support_chat', ip, supportAssistant.SUPPORT_CHAT_LIMIT, supportAssistant.SUPPORT_CHAT_WINDOW_MS)) {
     return res.status(429).json({
       ok: false,
       error: 'slow_down',
@@ -7584,19 +7657,32 @@ app.post('/api/support/chat', asyncRoute(async (req, res) => {
   });
 }));
 
-app.post('/admin/support/:id/resume', requireAuth, (req, res) => {
+app.post('/admin/support/:id/resume', requireAuth, asyncRoute(async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^(web|mes)_[a-z0-9]+$/.test(id)) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const row = supportThreadStore().lookup(id);
+  if (!row) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const taken = await supportMessenger.resumeMessenger({
+    channel: row.channel,
+    externalId: row.external_id,
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid))
+  });
+  if (!taken.ok) {
+    console.error('[messenger take_thread_control] failed', row.external_id, taken.error);
+    supportThreadStore().setControlError(id, taken.error);
+    return res.redirect('/admin?tab=messaging&msg=support_control_failed');
+  }
+  if (row.channel === 'messenger') console.log('[messenger take_thread_control] ok', row.external_id);
   const resumed = supportThreadStore().resume(id);
   if (!resumed) return res.redirect('/admin?tab=messaging&msg=support_missing');
   if (resumed.channel === 'messenger') {
-    const inbox = supportMessenger.config(process.env).inboxAppId;
-    graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(resumed.external_id))
-      .catch(e => console.error('[messenger resume]', e.message));
-    sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
+    const sent = await sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
+    if (!sent || !sent.ok) {
+      console.error('[messenger resume greeting]', resumed.external_id, supportMessenger.graphErrorSummary(sent));
+    }
   }
   res.redirect('/admin?tab=messaging&msg=support_resumed');
-});
+}));
 
 // Meta's webhook. GET is the verify handshake. POST is messages.
 // Signature is required once FB_APP_SECRET (or MESSENGER_APP_SECRET) is set.
@@ -7642,22 +7728,68 @@ app.post('/webhook', (req, res) => {
           .catch(e => console.error('[order psid]', e.message));
       }
     }
-    if (!event.reply) return;
-
-    const existingContact = db.get('messenger_contacts').find({ psid: event.psid }).value();
-    if (!existingContact) {
-      db.get('messenger_contacts').push({
-        psid: event.psid,
-        first_seen: new Date().toISOString(),
-        last_seen: new Date().toISOString()
-      }).write();
-    } else {
-      db.get('messenger_contacts').find({ psid: event.psid }).assign({ last_seen: new Date().toISOString() }).write();
+    const paused = supportThreadStore().isPaused('messenger', event.psid);
+    const action = supportMessenger.decideInbound(event, paused);
+    if (action === 'note_control') {
+      console.log('[messenger ' + event.control + ']', event.standby ? 'standby' : 'messaging', event.psid, event.newOwnerAppId || '');
+      return;
     }
+    if (action === 'record_only') {
+      const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+      if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+      console.log('[messenger standby] paused, not replying', event.psid);
+      return;
+    }
+    if (action === 'take_then_answer') {
+      reclaimMessengerThread(event).catch(e => console.error('[messenger standby]', e && e.message ? e.message : e));
+      return;
+    }
+    if (action !== 'answer') return;
 
+    rememberMessengerContact(event.psid);
     handleSupportMessage(event).catch(e => console.error('[support message]', e));
   });
 });
+
+function rememberMessengerContact(psid) {
+  const existingContact = db.get('messenger_contacts').find({ psid }).value();
+  if (!existingContact) {
+    db.get('messenger_contacts').push({
+      psid,
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString()
+    }).write();
+  } else {
+    db.get('messenger_contacts').find({ psid }).assign({ last_seen: new Date().toISOString() }).write();
+  }
+}
+
+// The pause flag is already clear, but Page Inbox still owns the thread, so
+// the customer's text arrived on standby. Take control, then answer. A failed
+// take puts the chat back on the admin list instead of dropping the message.
+async function reclaimMessengerThread(event) {
+  console.log('[messenger standby] Page Inbox owns this thread and the bot is not paused', event.psid);
+  const taken = await graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(event.psid));
+  if (!taken.ok) {
+    const summary = supportMessenger.graphErrorSummary(taken);
+    console.error('[messenger take_thread_control] failed', event.psid, summary);
+    const flagged = supportThreadStore().noteControlFailure('messenger', event.psid, summary);
+    const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+    if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+    if (flagged.changed) {
+      notifySupportHandoff({
+        newlyHandedOff: true,
+        channel: 'messenger',
+        reason: 'thread_control',
+        preview: text || 'Messenger still has this chat.'
+      });
+    }
+    return;
+  }
+  console.log('[messenger take_thread_control] ok', event.psid);
+  rememberMessengerContact(event.psid);
+  await handleSupportMessage(event);
+}
 
 async function handleSupportMessage(event) {
   const paused = supportThreadStore().isPaused('messenger', event.psid);
@@ -7685,7 +7817,7 @@ async function handleSupportMessage(event) {
   });
   if (!result.ok) {
     if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
-      return sendText(event.psid, 'That message is too long. Send a sentence or two, or say “human” and I’ll flag Michael.');
+      return sendText(event.psid, 'That message is too long. Send a sentence or two.\n\nWant to chat with an admin? Reply ADMIN.');
     }
     return;
   }
@@ -7694,7 +7826,14 @@ async function handleSupportMessage(event) {
   if (result.newlyHandedOff) {
     const inbox = supportMessenger.config(process.env).inboxAppId;
     graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
-      .catch(e => console.error('[messenger handoff]', e.message));
+      .then(result => {
+        if (!result || !result.ok) {
+          console.error('[messenger pass_thread_control] failed', event.psid, supportMessenger.graphErrorSummary(result));
+          return;
+        }
+        console.log('[messenger pass_thread_control] ok', event.psid);
+      })
+      .catch(e => console.error('[messenger pass_thread_control]', e && e.message ? e.message : e));
     notifySupportHandoff(result);
   }
 }
@@ -7926,6 +8065,13 @@ app.post('/admin/promos/delete', requireAuth, (req, res) => {
   const settings = getSiteSettings();
   db.set('site_settings.promos', promos.deleteOffer(settings.promos, req.body && req.body.id)).write();
   res.redirect('/admin?tab=loyalty&msg=offers_deleted');
+});
+
+app.get('/admin/loyalty/for-name', requireAuth, (req, res) => {
+  const name = String(req.query.name || '');
+  if (!name.trim()) return res.json({ blank: true, lines: [], offers: [] });
+  const snap = loyaltySnapshot();
+  res.json(loyalty.addFormStatus(snap.profileFor({ name }), snap.settings));
 });
 
 app.post('/admin/loyalty/settings', requireAuth, (req, res) => {

@@ -14,7 +14,8 @@
     s = s.replace(/__([^_\n]+)__/g, '$1');
     s = s.replace(/^#{1,6}\s+/gm, '');
     // "* item" is a markdown bullet. Messenger already shows "- item" fine.
-    s = s.replace(/^(\s*)[*+]\s+/gm, '$1- ');
+    // "+ ₱100" is a deposit line in a slot reply, not a bullet, so it stays.
+    s = s.replace(/^(\s*)[*+]\s+(?!₱|\d)/gm, '$1- ');
     s = s.replace(/\*\*/g, '');
     return s.trim();
   }
@@ -27,7 +28,7 @@
     var lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
     lines.forEach(function (line, idx) {
       if (idx) parent.appendChild(doc.createElement('br'));
-      var bullet = /^(\s*)[*+]\s+([\s\S]*)$/.exec(line);
+      var bullet = /^(\s*)[*+]\s+(?!₱|\d)([\s\S]*)$/.exec(line);
       var row = doc.createElement('span');
       if (bullet) {
         row.appendChild(doc.createTextNode(bullet[1] + '- '));

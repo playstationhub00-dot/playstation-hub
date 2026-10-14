@@ -67,7 +67,7 @@
     }).then(function (out) {
       var data = out.data;
       if (data.paused) {
-        bubble('This chat is with Michael now. The bot stays quiet until he resumes it.', 'wait');
+        bubble('This chat is with an admin now. The bot stays quiet until they resume it.', 'wait');
         return;
       }
       if (data.reply) {
@@ -78,9 +78,9 @@
         bubble('Sandali lang — too many messages. Try again in a few minutes.', 'wait');
         return;
       }
-      bubble('Something went wrong on my side. Say “human” and I’ll flag Michael.', 'wait');
+      bubble('Something went wrong on my side.\n\nWant to chat with an admin? Reply ADMIN.', 'wait');
     }).catch(function () {
-      bubble('Can’t reach the shop right now. Try again in a bit, or message us on Messenger.', 'wait');
+      bubble('Can’t reach the shop right now. Try again in a bit.', 'wait');
     }).then(function () {
       busy = false;
       input.disabled = false;

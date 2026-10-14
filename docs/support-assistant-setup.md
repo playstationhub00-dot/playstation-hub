@@ -34,12 +34,12 @@ After saving, Railway redeploys. Check the deploy log for `Messenger webhook ver
    - Callback URL: `https://www.playstation-hub.com/webhook`
    - Verify token: the value already in `MESSENGER_VERIFY_TOKEN` (or `FB_VERIFY_TOKEN` if you set that name). The GET handshake accepts that value.
    - Meta sends a GET to that URL. The site answers only when the token matches.
-5. Subscribe the Page to these fields: **messages**, **messaging_postbacks**, **messaging_referrals**, **messaging_handovers**.
+5. Subscribe the Page to these fields: **messages**, **messaging_postbacks**, **messaging_referrals**, **messaging_handovers**, **standby**. Standby is required. After a handoff, Meta delivers the customer’s next messages there instead of in messages, until this app owns the thread again.
 6. Handover, so a flagged chat lands in your inbox instead of the bot keeping it:
    - Page settings → **Advanced messaging** → **Handover protocol**
    - **Primary receiver:** this app
    - **Secondary receiver:** Page Inbox
-   - When the assistant flags a chat it calls `pass_thread_control` to the Page Inbox. **Resume bot** in admin calls `take_thread_control` and the bot speaks again.
+   - When the assistant flags a chat it calls `pass_thread_control` to the Page Inbox. **Resume bot** in admin calls `take_thread_control` and waits for Meta to accept it before the bot speaks again. If Meta refuses, the chat stays in the list and the card shows the Graph error. A customer message that still arrives on standby while the bot is not paused is taken back and answered.
 7. In the Page’s Messenger settings, the app must be connected to the PlayStation Hub Page (the same Page as `m.me/PlaystationHub00`).
 
 The existing order links (`m.me/...?ref=PH-1234`) still record which thread belongs to which order. That part did not move.
@@ -52,16 +52,18 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 2. Open **Meta Business Agent** (under All tools, or Inbox). Switch its replies **off**. If you see **Disconnect** or **Pause**, use that.
 3. Open **Inbox → Automations**. Turn **off** Instant reply, Away message, and any FAQ bot that would send a second greeting. Those are Meta’s built-in replies, separate from the agent.
 4. From a personal Facebook account (not the Page), send the Page “how much is a new game for a week?”. You should get one reply, from this app, with the prices currently saved under admin price categories. You should not also get a “Facebook created this reply” message.
-5. Send “I want to talk to a human”. The bot should say it flagged Michael, then go quiet. In `/admin` → **Messaging**, the chat appears under **Support handoffs**, and the bell shows **Support chat needs you**. A Telegram alert fires too, unless you switched **Support handoff** off under Settings → Phone alerts.
-6. Reply to that person from the Page Inbox if you need to. When you are done, press **Resume bot** on that card. The next message is answered by the bot again.
+5. Send “ADMIN” (or “I want to talk to a human”). The bot should say it paused the chat for an admin, then go quiet. In `/admin` → **Messaging**, the chat appears under **Support handoffs**, and the bell shows **Support chat needs you**. A Telegram alert fires too, unless you switched **Support handoff** off under Settings → Phone alerts. On Messenger the thread is passed to the Page Inbox. The customer is not sent to an m.me link.
+6. Reply to that person from the Page Inbox if you need to. When you are done, press **Resume bot** on that card. The bot takes the thread back and sends a short hello. If Messenger still has the chat, the card stays up with the reason, and the bot does not pretend it resumed.
 
 ## What the assistant will and will not say
 
 - Prices come from **price categories** (and a game’s own discount, when it has one), plus the deposit and the weekly/monthly promo in Settings. The month figure it quotes is the checkout total: the category’s monthly amount minus Monthly Discount %. New Games at ₱699 with a 10% monthly promo is ₱629 at checkout, and the bot says both numbers. Set that percent to 0 if the category amount is already the price customers pay. Change them in admin and the next reply uses the new numbers. Every amount is written with ₱ (₱349, ₱100), on the website and on Messenger. A percent stays as 10%.
 - Filipino and Taglish replies use po. An open slot is “Yes po”; a full one is “Wala po”. English replies stay in English, without po.
-- “Is Elden Ring available?” uses the same slot counts as the game page (Trophy, Non-Trophy, and PS4 Primary only when the game runs on PS4) and a waitlist **count**. It does not see other customers’ names, order refs, or payment details.
+- “May slot pa ba?” is a fixed layout, not a paragraph: a hello line, the title, then each account that exists (Non-Trophy, Trophy, and PS4 Primary only when the game runs on PS4) with its slot count and checkout price. A full account says there is no slot and that the waitlist is free. If every account is full, one short line covers the free waitlist and the optional ₱100 priority fee. It does not add the late fee or a waitlist count unless the customer asks. The same spacing (short lines, a blank line between sections) is used for prices, payment, and how-to replies. If the lookup fails, the reply says so and does not invent a number.
+- The waitlist is free. An optional ₱100 priority fee moves someone ahead of the free list and is taken off the rent when a slot opens. A Coming Soon game can reserve a slot (list price, paid in full now, nothing more due on release). An open slot on a released game is ordered on the site at the checkout price. There is a 3-hour free trial. Sign-in is a code; the bot never asks for a PSN password. Trophy and PS4 Primary use the refundable deposit (₱100 unless you changed it), and a late return costs the late fee per day from that deposit. Non-Trophy has no deposit.
+- Every reply ends by asking if they want an admin: “Want to chat with an admin? Reply ADMIN.” (Filipino and Taglish: “Gusto mo po bang makausap ang admin? Reply ADMIN.”). ADMIN, “talk to a human”, or “talk to Michael” pauses the bot in this chat.
 - Payment screenshots, “I already paid”, refunds, and “talk to a human” always pause the bot, even when the model is off.
-- The public chat allows 12 messages per IP each 10 minutes. Messenger allows 12 per person in the same window. A paused Messenger chat stays silent even if they keep typing.
+- The public chat allows 40 messages per IP each 10 minutes. Messenger allows 40 per person in the same window. Empty, huge, repeated, and link-dump messages are still refused. A paused Messenger chat stays silent even if they keep typing.
 
 ## If replies do not show up
 
@@ -71,3 +73,4 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 - Replies stay on the short scripted lines: `ANTHROPIC_API_KEY` is missing or Claude returned an error. Prices and slots still come from the shop data.
 - Two replies arrive: Meta Business Agent or Inbox → Automations is still on.
 - Handoff does not appear in the inbox: the app is not the Primary receiver, or `messaging_handovers` is not subscribed. The admin card still lists the chat, because the pause flag does not depend on Meta accepting the handover.
+- Resume looks successful but the customer gets nothing: the Page Inbox still owns the thread. Look for `[messenger take_thread_control] failed` in the server log — the line includes Meta’s error code and message, not the page token. The admin card stays in the list with that same text. Also subscribe **standby**. A message that arrives there while the bot is not paused is taken back and answered; if the take fails, the chat returns to the list.
