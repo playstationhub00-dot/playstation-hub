@@ -78,7 +78,7 @@
         bubble('Sandali lang — too many messages. Try again in a few minutes.', 'wait');
         return;
       }
-      bubble('Something went wrong on my side. Reply ADMIN to talk to a person.', 'wait');
+      bubble('Something went wrong on my side.\n\nWant to chat with an admin? Reply ADMIN.', 'wait');
     }).catch(function () {
       bubble('Can’t reach the shop right now. Try again in a bit.', 'wait');
     }).then(function () {

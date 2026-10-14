@@ -7632,7 +7632,7 @@ async function handleSupportMessage(event) {
   });
   if (!result.ok) {
     if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
-      return sendText(event.psid, 'That message is too long. Send a sentence or two.\nReply ADMIN to talk to a person.');
+      return sendText(event.psid, 'That message is too long. Send a sentence or two.\n\nWant to chat with an admin? Reply ADMIN.');
     }
     return;
   }
