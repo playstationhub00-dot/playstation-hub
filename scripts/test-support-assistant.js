@@ -65,6 +65,27 @@ async function main() {
     assert.strictEqual(sheet[0].trophy.monthlyNow, 719);
   });
 
+  await ok('the month price is the checkout total, and the category price stays on the sheet', () => {
+    // POST /order/create charges base - round(base * pct / 100) when a promo percent is on.
+    function checkout(base, pct) {
+      return pct > 0 ? base - Math.round(base * pct / 100) : base;
+    }
+    const sheet = facts.pricingSheet(categories, promo);
+    assert.strictEqual(sheet[0].nonTrophy.weekly, 349);
+    assert.strictEqual(sheet[0].nonTrophy.monthly, 699);
+    assert.strictEqual(sheet[0].trophy.weekly, 399);
+    assert.strictEqual(sheet[0].trophy.monthly, 799);
+    assert.strictEqual(sheet[0].nonTrophy.monthlyNow, checkout(699, 10));
+    assert.strictEqual(sheet[0].trophy.monthlyNow, checkout(799, 10));
+    assert.strictEqual(sheet[0].nonTrophy.weeklyNow, checkout(349, 0));
+    const blurb = facts.fallbackReply('how much for new games', shopFacts(), () => []);
+    assert.ok(blurb.text.includes('₱629'), blurb.text);
+    assert.ok(blurb.text.includes('₱699'), blurb.text);
+    assert.ok(blurb.text.includes('₱719'), blurb.text);
+    assert.ok(blurb.text.includes('₱799'), blurb.text);
+    assert.ok(blurb.text.includes('already taken off'), blurb.text);
+  });
+
   await ok('a different category price is what gets quoted', () => {
     const sheet = facts.pricingSheet(
       [{ name: 'Regular', nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 150, tr_price_30d: 300 }],
@@ -374,6 +395,30 @@ async function main() {
     assert.ok(result.reply.includes('₱349'));
   });
 
+  await ok('Messenger and the saved thread get plain text, and the widget still receives the model wording', async () => {
+    const raw = [
+      'Ang main difference ay yung **deposit** at **presyo**:',
+      '',
+      '- **Non-Trophy:** walang deposit.',
+      '* **Trophy:** may **₱100 refundable deposit**.'
+    ].join('\n');
+    const plain = facts.toPlainText(raw);
+    assert.ok(!plain.includes('**'), plain);
+    assert.ok(plain.includes('- Non-Trophy:'));
+    assert.ok(plain.includes('- Trophy:'));
+    assert.ok(plain.includes('₱100'));
+    const store = threads.createStore(threads.memory());
+    const result = await assistant.runTurn({
+      store, channel: 'messenger', externalId: 'psid-md',
+      message: 'what is the difference between accounts',
+      facts: shopFacts(),
+      complete: async () => ({ content: raw })
+    });
+    assert.strictEqual(result.reply, raw);
+    const saved = store.get('messenger', 'psid-md').messages.filter(m => m.role === 'assistant').pop();
+    assert.strictEqual(saved.text, plain);
+  });
+
   await ok('the system prompt carries the live tier, not a fixed 349', () => {
     const prompt = assistant.systemPrompt(facts.faqBundle({
       categories: [{ name: 'Regular', nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 1, tr_price_30d: 2 }],
@@ -383,6 +428,8 @@ async function main() {
     assert.ok(prompt.includes('111'));
     assert.ok(!prompt.includes('349'));
     assert.ok(prompt.includes('lookup_game'));
+    assert.ok(prompt.includes('already included'));
+    assert.ok(prompt.includes('Never subtract the percent'));
   });
 
   console.log('\nthreads');
@@ -552,8 +599,12 @@ async function main() {
     const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
     assert.ok(footer.includes("include('support-chat')"));
     assert.ok(widget.includes('phsLauncher'));
+    assert.ok(widget.includes('/js/support-plain.js'));
     assert.ok(client.includes("fetch('/api/support/chat'"));
     assert.ok(client.includes('textContent'));
+    assert.ok(client.includes('supportPlain.fill'));
+    assert.ok(!client.includes('innerHTML'));
+    assert.ok(server.includes('supportFacts.toPlainText'));
     assert.ok(server.includes("app.post('/api/support/chat'"));
     assert.ok(server.includes("rateLimited('support_chat'"));
     assert.ok(server.includes('x-hub-signature-256'));

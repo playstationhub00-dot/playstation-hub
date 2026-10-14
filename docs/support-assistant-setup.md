@@ -57,7 +57,7 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 
 ## What the assistant will and will not say
 
-- Prices come from **price categories** (and a game’s own discount, when it has one), plus the deposit and the weekly/monthly promo in Settings. Change them in admin and the next reply uses the new numbers.
+- Prices come from **price categories** (and a game’s own discount, when it has one), plus the deposit and the weekly/monthly promo in Settings. The month figure it quotes is the checkout total: the category’s monthly amount minus Monthly Discount %. New Games at ₱699 with a 10% monthly promo is ₱629 at checkout, and the bot says both numbers. Set that percent to 0 if the category amount is already the price customers pay. Change them in admin and the next reply uses the new numbers.
 - “Is Elden Ring available?” uses the same slot counts as the game page (Trophy, Non-Trophy, and PS4 Primary only when the game runs on PS4) and a waitlist **count**. It does not see other customers’ names, order refs, or payment details.
 - Payment screenshots, “I already paid”, refunds, and “talk to a human” always pause the bot, even when the model is off.
 - The public chat allows 12 messages per IP each 10 minutes. Messenger allows 12 per person in the same window. A paused Messenger chat stays silent even if they keep typing.

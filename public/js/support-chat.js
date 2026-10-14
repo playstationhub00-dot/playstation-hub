@@ -1,6 +1,7 @@
 // Website half of the support assistant. The server owns the thread, so this
-// file only shows bubbles and posts the latest line. Text is set with
-// textContent — a reply is untrusted even when we wrote it.
+// file only shows bubbles and posts the latest line. Bot replies go through
+// supportPlain.fill, which keeps the words in text nodes. A customer's own
+// line is shown exactly as typed.
 (function () {
   var launcher = document.getElementById('phsLauncher');
   var panel = document.getElementById('phsPanel');
@@ -16,7 +17,8 @@
   function bubble(text, kind) {
     var el = document.createElement('div');
     el.className = 'phs-msg phs-msg-' + kind;
-    el.textContent = text;
+    if (kind === 'me' || !window.supportPlain) el.textContent = text;
+    else window.supportPlain.fill(el, text);
     log.appendChild(el);
     log.scrollTop = log.scrollHeight;
   }

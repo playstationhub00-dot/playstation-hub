@@ -7557,7 +7557,7 @@ async function handleSupportMessage(event) {
     return;
   }
   if (result.paused || !result.reply) return;
-  await sendText(event.psid, result.reply);
+  await sendText(event.psid, supportFacts.toPlainText(result.reply));
   if (result.newlyHandedOff) {
     const inbox = supportMessenger.config(process.env).inboxAppId;
     graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
