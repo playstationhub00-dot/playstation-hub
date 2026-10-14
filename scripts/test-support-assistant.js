@@ -113,6 +113,7 @@ async function main() {
     const mix = await facts.fallbackReply('how much po ang presyo', shopFacts(), () => []);
     assert.strictEqual(facts.replyLanguage('how much po ang presyo'), 'mix');
     assert.ok(mix.text.includes('Order po dito:'), mix.text);
+    assert.ok(mix.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), mix.text);
     assert.ok(mix.text.includes('kasama na'), mix.text);
     assert.ok(mix.text.includes('₱699'));
 
@@ -139,8 +140,8 @@ async function main() {
     assert.ok(enGame.text.includes('No slots available'), enGame.text);
     assert.ok(!enGame.text.includes(' po'), enGame.text);
     assert.ok(!/late return/i.test(enGame.text), enGame.text);
-    assert.ok(en.text.includes('Reply ADMIN to talk to a person'), en.text);
-    assert.ok(fil.text.includes('Reply ADMIN po'), fil.text);
+    assert.ok(en.text.includes('Want to chat with an admin? Reply ADMIN.'), en.text);
+    assert.ok(fil.text.includes('Gusto mo po bang makausap ang admin? Reply ADMIN.'), fil.text);
     assert.ok(!enGame.text.includes('m.me'));
   });
 
@@ -455,7 +456,7 @@ async function main() {
       complete: assistant.createComplete({ OPENAI_API_KEY: 'sk-openai' }, fetchImpl)
     });
     assert.ok(result.reply.startsWith('OpenAI reply'), result.reply);
-    assert.ok(result.reply.includes('Reply ADMIN to talk to a person'), result.reply);
+    assert.ok(result.reply.includes('Want to chat with an admin? Reply ADMIN.'), result.reply);
     assert.strictEqual(seen.url, 'https://api.openai.com/v1/chat/completions');
     assert.strictEqual(seen.auth, 'Bearer sk-openai');
     assert.strictEqual(seen.body.model, 'gpt-4o-mini');
@@ -504,7 +505,7 @@ async function main() {
       complete: async () => ({ content: raw })
     });
     assert.ok(result.reply.startsWith(raw), result.reply);
-    assert.ok(result.reply.includes('Reply ADMIN to talk to a person'), result.reply);
+    assert.ok(result.reply.includes('Want to chat with an admin? Reply ADMIN.'), result.reply);
     const saved = store.get('messenger', 'psid-md').messages.filter(m => m.role === 'assistant').pop();
     assert.ok(saved.text.startsWith(plain), saved.text);
     assert.ok(saved.text.includes('Reply ADMIN'));
@@ -528,7 +529,8 @@ async function main() {
     assert.ok(prompt.includes('Yes po'));
     assert.ok(prompt.includes('Wala po'));
     assert.ok(prompt.includes('₱'));
-    assert.ok(prompt.includes('Reply ADMIN'));
+    assert.ok(prompt.includes('Want to chat with an admin? Reply ADMIN.'));
+    assert.ok(prompt.includes('Gusto mo po bang makausap ang admin? Reply ADMIN.'));
     assert.ok(prompt.includes('Coming Soon'));
     assert.ok(prompt.includes('waitlist is free'));
     assert.ok(prompt.includes('lookup_game'));
@@ -548,6 +550,10 @@ async function main() {
     assert.ok(!/m\.me/i.test(admin.reply));
     assert.ok(!/message Michael/i.test(admin.reply));
     assert.ok(!/Reply ADMIN/i.test(admin.reply));
+    const asked = facts.withAdminCta('Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.', 'en');
+    assert.strictEqual(asked, 'Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.');
+    const oldLine = facts.withAdminCta('Prices are on the site.\nReply ADMIN to talk to a person.', 'en');
+    assert.strictEqual(oldLine, 'Prices are on the site.\n\nWant to chat with an admin? Reply ADMIN.');
 
     const reserve = await facts.fallbackReply('can I reserve without paying', shopFacts(), () => []);
     assert.strictEqual(reserve.handoff, false);
@@ -648,7 +654,7 @@ async function main() {
       'Mag-order po dito:',
       'https://playstation-hub.com/game/marvel-s-wolverine',
       '',
-      'Reply ADMIN po para makausap ang admin.'
+      'Gusto mo po bang makausap ang admin? Reply ADMIN.'
     ].join('\n'));
     assert.strictEqual(facts.toPlainText(both.text), both.text);
     assert.ok(!/late/i.test(both.text));
@@ -667,7 +673,7 @@ async function main() {
       'Mag-order po dito:',
       'https://playstation-hub.com/game/marvel-s-wolverine',
       '',
-      'Reply ADMIN po para makausap ang admin.'
+      'Gusto mo po bang makausap ang admin? Reply ADMIN.'
     ].join('\n'));
 
     const ps4 = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 2 }, {}, promo);
@@ -691,7 +697,7 @@ async function main() {
       'Order here:',
       'https://www.playstation-hub.com/game/hogwarts-legacy',
       '',
-      'Reply ADMIN to talk to a person.'
+      'Want to chat with an admin? Reply ADMIN.'
     ].join('\n'));
     assert.ok(!mixed.text.includes('PS4 Primary: No'));
     assert.ok(!/late return/i.test(mixed.text));
