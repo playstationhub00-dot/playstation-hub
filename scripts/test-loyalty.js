@@ -427,4 +427,121 @@ ok('the settings form clamps numbers and reads the checkboxes', () => {
   assert.strictEqual(s.trophy_double, true);
 });
 
+console.log('\nadding a rental');
+
+ok('the add-rental form describes a new name as 0 punches', () => {
+  const s = L.addFormStatus(null, L.DEFAULT_SETTINGS);
+  assert.strictEqual(s.known, false);
+  assert.strictEqual(s.headline, 'New customer, 0 punches');
+  assert.ok(s.lines.indexOf('New customer, 0 punches') >= 0);
+  assert.ok(s.lines.some(l => l.includes('0 paid rentals') && l.includes('0/5') && l.includes('free 7-day')));
+  assert.ok(s.lines.some(l => /no rebook discount open/i.test(l)));
+  assert.deepStrictEqual(s.offers, []);
+});
+
+ok('with both offers off, the add form does not talk about punches', () => {
+  const s = L.addFormStatus(null, Object.assign({}, L.DEFAULT_SETTINGS, {
+    punch_enabled: false, rebook_enabled: false
+  }));
+  assert.strictEqual(s.headline, 'Loyalty offers are off');
+  assert.deepStrictEqual(s.offers, []);
+  assert.ok(!s.lines.join(' ').toLowerCase().includes('punch'));
+});
+
+ok('the add form shows punches, progress, and an open rebook expiry', () => {
+  const built = L.build([
+    rental({ id: 1, start_date: '2026-09-24', end_date: '2026-10-01' })
+  ], { today: '2026-10-04' });
+  const s = L.addFormStatus(built.profiles[0]);
+  assert.strictEqual(s.known, true);
+  assert.ok(s.lines.some(l => l.includes('1 paid rental') && l.includes('1 punch')));
+  assert.ok(s.lines.some(l => l.includes('1/5') && l.includes('free 7-day')));
+  assert.ok(s.lines.some(l => l.includes('₱50') && l.includes('Oct 8, 2026')));
+  assert.strictEqual(s.offers.length, 1);
+  assert.strictEqual(s.offers[0].kind, 'rebook');
+  assert.ok(s.offers[0].choice.indexOf('rebook:open:') === 0);
+  assert.strictEqual(s.offers[0].amount, 50);
+  assert.strictEqual(s.offers[0].expires, '2026-10-08');
+});
+
+ok('a finished punch card offers the free rental on the add form', () => {
+  const built = L.build(five(), { today: '2026-10-14' });
+  const s = L.addFormStatus(built.profiles[0]);
+  assert.ok(s.lines.some(l => l.includes('5 paid rentals') && l.includes('5 punches')));
+  assert.ok(s.lines.some(l => l.includes('1 free rental available')));
+  assert.ok(s.lines.some(l => /no rebook discount open/i.test(l)));
+  const punch = s.offers.find(o => o.kind === 'punch');
+  assert.ok(punch);
+  assert.strictEqual(punch.choice, 'punch:1');
+  assert.strictEqual(punch.days, 7);
+  assert.ok(!s.offers.some(o => o.kind === 'rebook'));
+});
+
+ok('a merged spelling uses the same profile the Loyalty tab would', () => {
+  const merged = L.mergeNames(emptyId, 'Ana C.', 'Ana Cruz');
+  const built = L.build(five(), { today: '2026-10-14', identity: merged.identity });
+  const s = L.addFormStatus(built.profileFor({ name: '  ana   c. ' }));
+  assert.strictEqual(s.known, true);
+  assert.strictEqual(s.rentalCount, 5);
+  assert.ok(s.offers.some(o => o.choice === 'punch:1'));
+});
+
+ok('switching the punch card off removes the free rental from the add form', () => {
+  const built = L.build(five(), {
+    today: '2026-10-14',
+    settings: Object.assign({}, L.DEFAULT_SETTINGS, { punch_enabled: false })
+  });
+  const s = L.addFormStatus(built.profiles[0]);
+  assert.ok(!s.offers.some(o => o.kind === 'punch'));
+  assert.ok(!s.lines.join(' ').toLowerCase().includes('punch'));
+  assert.ok(s.lines.some(l => l.includes('5 paid rentals')));
+});
+
+ok('a free 7-day rental zeros a 7-day price and credits that value off a longer one', () => {
+  const offer = { kind: 'punch', days: 7, choice: 'punch:1' };
+  const week = L.adjustedRent(199, offer, { days: 7, weekValue: 199 });
+  assert.strictEqual(week.amountDue, 0);
+  assert.strictEqual(week.credited, 199);
+  const month = L.adjustedRent(599, offer, { days: 30, weekValue: 199 });
+  assert.strictEqual(month.amountDue, 400);
+  assert.strictEqual(month.credited, 199);
+  const tiny = L.adjustedRent(100, offer, { days: 30, weekValue: 199 });
+  assert.strictEqual(tiny.amountDue, 0);
+  assert.strictEqual(tiny.credited, 100);
+});
+
+ok('the rebook discount subtracts ₱50 and never goes below zero', () => {
+  const offer = { kind: 'rebook', amount: 50, choice: 'rebook:open:1' };
+  const priced = L.adjustedRent(199, offer, {});
+  assert.strictEqual(priced.amountDue, 149);
+  assert.strictEqual(priced.credited, 50);
+  const small = L.adjustedRent(40, offer, {});
+  assert.strictEqual(small.amountDue, 0);
+  assert.strictEqual(small.credited, 40);
+});
+
+ok('applying a reward the customer does not have is refused', () => {
+  const built = L.build([
+    rental({ id: 1, start_date: '2026-09-24', end_date: '2026-10-01' })
+  ], { today: '2026-10-04' });
+  const profile = built.profiles[0];
+  const open = L.offerByChoice(profile, L.addFormStatus(profile).offers[0].choice);
+  assert.strictEqual(open.kind, 'rebook');
+  assert.strictEqual(L.offerByChoice(profile, 'punch:1'), null);
+  const missing = L.prepareApply(null, 'punch:1', { amountDue: 199, days: 7, mode: 'rent' });
+  assert.strictEqual(missing.ok, false);
+  const purchase = L.prepareApply(profile, open.choice, { amountDue: 199, days: 7, mode: 'buy' });
+  assert.strictEqual(purchase.ok, false);
+  assert.strictEqual(purchase.error, 'not_rental');
+  const noCredit = L.prepareApply(L.build(five(), { today: '2026-10-14' }).profiles[0], 'punch:1', {
+    amountDue: 599, days: 30, mode: 'rent', weekValue: 0
+  });
+  assert.strictEqual(noCredit.ok, false);
+  assert.strictEqual(noCredit.error, 'no_credit');
+  const applied = L.prepareApply(profile, open.choice, { amountDue: 199, days: 7, mode: 'rent' });
+  assert.strictEqual(applied.ok, true);
+  assert.strictEqual(applied.amountDue, 149);
+  assert.strictEqual(applied.credited, 50);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

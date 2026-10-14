@@ -4150,6 +4150,10 @@ body.light-mode .qa-nodur { border-color:#d7dce1; color:#8b939c; }
 .qa-price { margin-top:0.5rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.55rem 0.8rem; font-size:0.8rem; color:#9fd8ae; }
 .qa-price b { color:#22c55e; font-size:1rem; }
 .qa-price.qa-price-empty { background:#0d0d0d; border-color:#1e1e1e; color:#555; }
+.qa-loyalty { margin-top:0.45rem; background:#141006; border:1px solid #3a2a00; border-radius:9px; padding:0.55rem 0.7rem; font-size:0.75rem; color:#e8c06a; line-height:1.45; }
+.qa-loyalty-offers { display:flex; flex-direction:column; gap:0.28rem; margin-top:0.4rem; }
+.qa-loyalty-opt { display:flex; gap:0.4rem; align-items:flex-start; cursor:pointer; color:#f3e6c4; }
+.qa-loyalty-opt input { margin-top:0.15rem; }
 .qa-radios { display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center; }
 .qa-radio { flex:0 0 auto; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:9px; padding:0.5rem 0.8rem; font-size:0.82rem; font-weight:700; color:#999; cursor:pointer; }
 .qa-radio input { display:none; }

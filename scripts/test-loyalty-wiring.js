@@ -31,7 +31,7 @@ ok('loyalty settings are seeded only when the key is missing', () => {
 });
 
 ok('redeem, merge, and link routes exist and stay on the loyalty tab', () => {
-  ["'/admin/loyalty/settings'", "'/admin/loyalty/redeem'", "'/admin/loyalty/merge'", "'/admin/loyalty/link-name'", "'/admin/loyalty/link-row'", "'/admin/loyalty/unlink'"]
+  ["'/admin/loyalty/for-name'", "'/admin/loyalty/settings'", "'/admin/loyalty/redeem'", "'/admin/loyalty/merge'", "'/admin/loyalty/link-name'", "'/admin/loyalty/link-row'", "'/admin/loyalty/unlink'"]
     .forEach(route => assert.ok(server.includes(route), route));
   assert.ok(server.includes("res.redirect('/admin?tab=loyalty&msg=loyalty_redeemed')"));
   assert.ok(server.includes('loyalty.planRedemption(profile, req.body'));

@@ -480,4 +480,53 @@ ok('the toggle is hidden for a Coming Soon pick and reset back to promo', () => 
   assert.strictEqual(f.el('qaPriceModePromo').checked, true, 'reset back to the default');
 });
 
+console.log('\nQuick Add — loyalty on the name');
+
+ok('the name field looks the customer up and can offer a reward', () => {
+  assert.ok(/id="qaName"[^>]*oninput="qaNameChanged\(\)"/.test(src));
+  assert.ok(/id="qaLoyalty"/.test(src));
+  assert.ok(/id="qaNames"/.test(src));
+  assert.ok(/list="qaNames"/.test(src));
+});
+
+ok('a new name says 0 punches, and picking a reward changes the price', () => {
+  const f = loadForm();
+  f.el('qaDays').value = '7';
+  f.win.qaApplyLoyaltyStatus({
+    blank: false,
+    lines: ['New customer, 0 punches', '0 paid rentals · 0/5 toward a free 7-day rental', 'No rebook discount open'],
+    offers: []
+  });
+  assert.strictEqual(f.el('qaLoyalty').hidden, false);
+  assert.ok(f.el('qaLoyalty').innerHTML.includes('New customer, 0 punches'));
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('199'), f.el('qaPriceBox').innerHTML);
+
+  f.win.qaUseLoyaltyOffer({ kind: 'punch', days: 7, choice: 'punch:1' });
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('>₱0<'), f.el('qaPriceBox').innerHTML);
+  assert.ok(/free 7-day rental/i.test(f.el('qaPriceBox').innerHTML));
+
+  f.el('qaDays').value = '30';
+  f.win.qaUseLoyaltyOffer({ kind: 'punch', days: 7, choice: 'punch:1' });
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('400'), f.el('qaPriceBox').innerHTML);
+
+  f.win.qaUseLoyaltyOffer({ kind: 'rebook', amount: 50, choice: 'rebook:open:1' });
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('549'), f.el('qaPriceBox').innerHTML);
+
+  f.win.qaApplyLoyaltyStatus(null);
+  assert.strictEqual(f.el('qaLoyalty').hidden, true);
+  f.win.qaPrice();
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('599'), f.el('qaPriceBox').innerHTML);
+});
+
+ok('a purchase does not preview the loyalty discount', () => {
+  const f = loadForm();
+  const game = { value: '12', dataset: { buynt: '1999', nt7: '199', nt30: '599' } };
+  f.el('qaGame').selectedOptions = [game];
+  f.el('qaStBought').checked = true;
+  f.win.qaStatusChanged();
+  f.win.qaUseLoyaltyOffer({ kind: 'rebook', amount: 50, choice: 'rebook:open:1' });
+  assert.ok(f.el('qaPriceBox').innerHTML.includes('1,999'), f.el('qaPriceBox').innerHTML);
+  assert.ok(!f.el('qaPriceBox').innerHTML.includes('1,949'));
+});
+
 console.log('\n' + passed + ' assertions passed\n');

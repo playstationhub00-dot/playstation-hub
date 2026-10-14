@@ -3557,7 +3557,7 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   // tracks amount_due and deposit_due as two fields added back together for
   // display, so amount_due must be the base alone or the deposit is charged
   // twice (see POST /order/reserve, which has the same split).
-  const amountDue = override != null && override >= 0 ? override
+  let amountDue = override != null && override >= 0 ? override
     : upcomingReservation ? pricing.base
     : pricing.amountDue;
   // A reservation's deposit is carried on the order the way the web flow
@@ -3601,6 +3601,51 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     : b.signed_in === 'no' ? 'awaiting_qr'
     : 'active';
   const initialState = paid ? settleState : 'awaiting_payment';
+
+  // A reward chosen on this form changes the rent and is recorded against the
+  // new row, using the same offers the Loyalty tab would show for this name.
+  // Checked before anything is written: a refused reward must not leave a
+  // half-priced rental behind.
+  let loyaltyApply = null;
+  const loyaltyChoice = String(b.loyalty_choice || '').trim();
+  if (loyaltyChoice) {
+    const snap = loyaltySnapshot();
+    const profile = snap.profileFor({ name });
+    const offer = loyalty.offerByChoice(profile, loyaltyChoice);
+    let weekValue = 0;
+    if (offer && offer.kind === 'punch' && mode === 'rent' && !upcomingGame && days !== offer.days) {
+      const week = computeRentPricing(game, type, offer.days, promoForPricing);
+      weekValue = week ? week.amountDue : 0;
+    }
+    const prepared = loyalty.prepareApply(profile, loyaltyChoice, {
+      amountDue,
+      days,
+      mode: (mode === 'rent' && !upcomingGame) ? 'rent' : 'buy',
+      weekValue
+    });
+    if (!prepared.ok) {
+      const message = prepared.error === 'not_rental'
+        ? 'A loyalty reward applies to a rental with dates, not a purchase or a reservation. Choose Don\'t apply, or switch back to Renting.'
+        : prepared.error === 'no_credit'
+          ? 'That game has no price for the free rental, so it cannot be credited against this one.'
+          : 'That loyalty reward is not available for this customer.';
+      return res.status(400).json({ ok: false, reason: 'loyalty_' + prepared.error, message });
+    }
+    const plan = loyalty.planRedemption(profile, {
+      choice: prepared.offer.choice,
+      order_ref: 'NEW',
+      amount: String(prepared.credited),
+      note: 'Applied on the new rental'
+    }, new Date().toISOString());
+    if (!plan.ok) {
+      return res.status(400).json({
+        ok: false, reason: 'loyalty_' + plan.error,
+        message: 'That loyalty reward is not available for this customer.'
+      });
+    }
+    amountDue = prepared.amountDue;
+    loyaltyApply = { offer: prepared.offer, credited: prepared.credited, record: plan.record };
+  }
 
   try {
     const order = await orders.create(Object.assign({
@@ -3675,6 +3720,16 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     }).write();
     await orders.setCustomerId(order.ref, customerId).catch(() => {});
 
+    if (loyaltyApply) {
+      ensureLoyaltyStore();
+      const redemptionId = db.get('loyalty_next_id').value() || 1;
+      db.set('loyalty_next_id', redemptionId + 1).write();
+      db.get('loyalty_redemptions').push(Object.assign({ id: redemptionId }, loyaltyApply.record, {
+        rental_id: customerId,
+        order_ref: order.ref
+      })).write();
+    }
+
     // An unreleased game has no account slots to assign yet.
     if (b.account_assign && !upcomingGame) {
       applyAccountAssignment(b.account_assign, {
@@ -3707,7 +3762,8 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
       summary: [name, game.title, TYPE_LABELS_SHORT[type] || type,
         mode === 'buy' ? 'Purchase' : days + ' days',
         '\u20b1' + (amountDue + depositDue)].join(' \u00b7 '),
-      message
+      message,
+      loyalty: loyaltyApply ? loyaltyApply.offer.label : ''
     });
   } catch (e) {
     console.error('[quick-add]', e.message);
@@ -7790,6 +7846,13 @@ app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
   if (!customer) return res.status(404).json({ ok: false });
   db.get('customers').find({ id }).assign({ review_asked_at: null }).write();
   res.json({ ok: true });
+});
+
+app.get('/admin/loyalty/for-name', requireAuth, (req, res) => {
+  const name = String(req.query.name || '');
+  if (!name.trim()) return res.json({ blank: true, lines: [], offers: [] });
+  const snap = loyaltySnapshot();
+  res.json(loyalty.addFormStatus(snap.profileFor({ name }), snap.settings));
 });
 
 app.post('/admin/loyalty/settings', requireAuth, (req, res) => {
