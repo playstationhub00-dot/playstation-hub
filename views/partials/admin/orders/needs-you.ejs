@@ -67,6 +67,9 @@
     : '';
 %>
 <div class="oq-zone oq-zone-act">Needs you <span class="oq-zone-n"><%= nyCount %></span></div>
+<% if (typeof promoWeek !== 'undefined' && promoWeek) { %>
+<p class="oq-group-sub" id="promoWeekLine">Promos this week: <%= promoWeek.banner %> banner views · <%= promoWeek.page %> promos page views · <%= promoWeek.orders %> orders used a promo</p>
+<% } %>
 
 <% if (!nyDoNow.length && !nyReleased.length && !nyRefunds.length && !nyFollowUps.length && !nyWaitlist.length) { %>
 <div class="oq-empty">Nothing waiting on you right now.</div>

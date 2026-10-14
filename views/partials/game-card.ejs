@@ -56,6 +56,7 @@
   const gcTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null;
   const gcBundleParent = findBundleContaining(game);
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
+  const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
 %>
 <a href="/game/<%= gameSlug %>" class="game-card gc2-card gc2-split<%= allUnavail ? ' gc2-full' : '' %>">
   <div class="gc2-art">
@@ -77,8 +78,9 @@
           site now reads identically. %>
       <div class="card-ribbon">Full</div>
     <% } %>
-    <% if (isLastSlot || gcIsNew) { %>
+    <% if (isLastSlot || gcIsNew || gcPromoBadge) { %>
     <div class="gc2-badges">
+      <% if (gcPromoBadge) { %><div class="gc2-badge gc2-badge-promo"><%= gcPromoBadge.text %></div><% } %>
       <% if (isLastSlot) { %><div class="gc2-badge gc2-badge-last">Last slot</div><% } %>
       <% if (gcIsNew) { %><div class="gc2-badge gc2-badge-new">Just added</div><% } %>
     </div>

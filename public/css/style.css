@@ -107,6 +107,45 @@ body {
 .announcement-close:hover { color: #fff; background: rgba(255,255,255,0.15); }
 @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
 
+.promo-banner {
+  background: #003791;
+  color: #fff;
+  text-align: center;
+  padding: 0.55rem 2.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  position: relative;
+  line-height: 1.35;
+}
+.promo-banner a { color: #fff; text-decoration: none; }
+.promo-banner a:hover { text-decoration: underline; }
+.promo-banner-close {
+  position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: rgba(255,255,255,0.75);
+  font-size: 1.1rem; cursor: pointer; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+.promo-banner-close:hover { color: #fff; }
+.promo-page { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem 4rem; display: flex; flex-direction: column; gap: 1rem; }
+.promo-empty { color: var(--text-secondary); text-align: center; padding: 2rem 0; }
+.promo-card { background: #111; border: 1px solid #222; border-radius: 14px; padding: 1.1rem 1.2rem; }
+.promo-card h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
+.promo-card-text { margin: 0 0 0.45rem; color: #eee; }
+.promo-card-game { margin: 0 0 0.35rem; }
+.promo-card-game a { color: var(--ps-blue); font-weight: 700; }
+.promo-card-when { margin: 0 0 0.35rem; color: var(--text-secondary); font-size: 0.85rem; }
+.promo-card-terms { margin: 0.4rem 0 0; color: var(--text-secondary); font-size: 0.88rem; }
+.gd-promo-note { margin-top: 0.75rem; padding: 0.65rem 0.75rem; border-radius: 10px; background: rgba(0,55,145,0.18); border: 1px solid rgba(0,112,209,0.35); }
+.gd-promo-note p { margin: 0; color: #d6e6ff; font-size: 0.84rem; font-weight: 650; }
+.gd-promo-note p + p { margin-top: 0.35rem; }
+.gc2-badges .gc2-badge-promo, .usd-badge-promo {
+  background: #003791; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.promo-admin-live { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.promo-admin-live li { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #ddd; }
+.promo-admin-live span { font-size: 0.72rem; font-weight: 700; color: #9ecbff; background: #102038; border-radius: 99px; padding: 0.1rem 0.45rem; }
+.promo-admin-form { border-top: 1px solid #222; padding-top: 1rem; margin-top: 0.5rem; }
+
 /* NAV */
 nav {
   background: #000;

@@ -137,6 +137,19 @@
     <% } %>
   </div>
 
+  <%
+    const ordPromoLines = (typeof promoCheckoutLines === 'function')
+      ? ((typeof loyaltyProgress !== 'undefined' && loyaltyProgress && loyaltyProgress.show)
+        ? ((typeof promoCatalogLines === 'function') ? promoCatalogLines(order.game_id) : [])
+        : promoCheckoutLines(order.game_id, null))
+      : [];
+  %>
+  <% if (ordPromoLines.length) { %>
+  <div class="ord-card" id="ordPromo">
+    <% ordPromoLines.forEach(function (line) { %><div class="ord-refund-note"><%= line %></div><% }) %>
+  </div>
+  <% } %>
+
   <% if (typeof loyaltyProgress !== 'undefined' && loyaltyProgress && loyaltyProgress.show) { %>
   <div class="ord-card" id="ordLoyalty">
     <div class="ord-row"><span>Loyalty</span><span><%= loyaltyProgress.headline %></span></div>
