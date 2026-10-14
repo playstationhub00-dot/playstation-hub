@@ -7295,7 +7295,10 @@ app.get('/feed/meta.csv', (req, res) => {
 // SUPPORT ASSISTANT — website widget and Messenger share one brain
 // ═══════════════════════════════════════════════════════════════════════════
 
-const supportChatLimiter = supportAssistant.createLimiter(12, 10 * 60 * 1000);
+const supportChatLimiter = supportAssistant.createLimiter(
+  supportAssistant.SUPPORT_CHAT_LIMIT,
+  supportAssistant.SUPPORT_CHAT_WINDOW_MS
+);
 
 function supportThreadStore() {
   return supportThreads.createStore(supportThreads.bind(db));
@@ -7314,35 +7317,42 @@ function supportFactsNow() {
   });
 }
 
-async function supportInvokeTool(name, args) {
-  if (name === 'get_pricing') return supportFactsNow();
-  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+async function supportGameCards(query) {
   const promo = (getSiteSettings().promo) || {};
   const games = getGames().map(resolveGamePrices);
-  const hits = supportFacts.searchGames(games, args && args.query);
+  const upcoming = getUpcoming().map(g => Object.assign({}, g, { comingSoon: true }));
+  const hits = supportFacts.searchCatalog(games, upcoming, query);
   const cards = [];
   for (const g of hits) {
+    if (g.comingSoon) {
+      const avail = computeAvailability(g, null);
+      cards.push(supportFacts.publicGame(g, avail, null, promo));
+      continue;
+    }
     const avail = computeAvailability(g, gameAccountSummary(g.id));
-    let summary = { nonTrophy: 0, trophy: 0, ps4Primary: 0 };
+    let summary = null;
     try {
       const candidates = await orders.listQueueCandidates(g.id);
       summary = supportFacts.waitlistSummary(queueRules.buildQueue(candidates || []));
     } catch (e) {
-      // No Mongo (local dev, or a blip) still leaves slot counts usable.
-      // The waitlist is reported as empty rather than guessed.
+      // Slot counts still come from the game record. A failed queue read is
+      // not reported as zero people waiting.
+      summary = null;
     }
     cards.push(supportFacts.publicGame(g, avail, summary, promo));
   }
-  return { query: String((args && args.query) || ''), games: cards };
+  return { query: String(query || ''), games: cards };
 }
 
-function supportLookup(query) {
-  const promo = (getSiteSettings().promo) || {};
-  const games = getGames().map(resolveGamePrices);
-  return supportFacts.searchGames(games, query).map(g => {
-    const avail = computeAvailability(g, gameAccountSummary(g.id));
-    return supportFacts.publicGame(g, avail, { nonTrophy: 0, trophy: 0, ps4Primary: 0 }, promo);
-  });
+async function supportInvokeTool(name, args) {
+  if (name === 'get_pricing') return supportFactsNow();
+  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+  return supportGameCards(args && args.query);
+}
+
+async function supportLookup(query) {
+  const result = await supportGameCards(query);
+  return result.games;
 }
 
 function notifySupportHandoff(result) {
@@ -7432,7 +7442,7 @@ function supportSameOrigin(req) {
 app.post('/api/support/chat', asyncRoute(async (req, res) => {
   if (!supportSameOrigin(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
   const ip = clientIp(req) || 'unknown';
-  if (rateLimited('support_chat', ip, 12, 10 * 60 * 1000)) {
+  if (rateLimited('support_chat', ip, supportAssistant.SUPPORT_CHAT_LIMIT, supportAssistant.SUPPORT_CHAT_WINDOW_MS)) {
     return res.status(429).json({
       ok: false,
       error: 'slow_down',
@@ -7566,7 +7576,7 @@ async function handleSupportMessage(event) {
   });
   if (!result.ok) {
     if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
-      return sendText(event.psid, 'That message is too long. Send a sentence or two, or say “human” and I’ll flag Michael.');
+      return sendText(event.psid, 'That message is too long. Send a sentence or two.\nReply ADMIN to talk to a person.');
     }
     return;
   }
