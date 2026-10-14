@@ -166,7 +166,7 @@
         <div class="bundle-game-grid" style="margin-top:0.75rem;">
           <% gdBundle.games.forEach(g => { %>
           <div class="bundle-game-tile">
-            <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
+            <% if (g.cover_image) { %><img <%- imgCard(g.cover_image) %> alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
             <% } else { %><div class="bundle-game-cover buy-cover-placeholder"></div><% } %>
             <div class="bundle-game-title"><%= g.title %></div>
           </div>
@@ -579,7 +579,7 @@
     <% if (gdhGallery.length > 1) { %>
     <div class="gd-thumbs" id="gdThumbs">
       <% gdhGallery.forEach((img, i) => { %>
-        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img <%- imgThumb(img) %> alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
       <% }) %>
     </div>
     <% } %>

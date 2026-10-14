@@ -376,7 +376,7 @@
       <% if (gpGallery.length > 1) { %>
       <div class="gd-thumbs" id="gpThumbs">
         <% gpGallery.forEach((img, i) => { %>
-          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img <%- imgThumb(img) %> alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
         <% }) %>
       </div>
       <% } %>

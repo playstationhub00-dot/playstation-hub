@@ -15,7 +15,7 @@
     <div class="hm-psplus-strip" aria-label="Most played on PS Plus">
       <% psplusPopular.slice(0, 6).forEach(p => { %>
       <a class="hm-ps-tile" href="<%= psplusSlug ? '/game/' + psplusSlug : '/ps-plus' %>">
-        <% if (p.cover_image) { %><img src="<%= p.cover_image %>" alt="" loading="lazy" decoding="async"><% } %>
+        <% if (p.cover_image) { %><img <%- imgCard(p.cover_image) %> alt="" loading="lazy" decoding="async"><% } %>
         <span><%= p.title %></span>
       </a>
       <% }) %>

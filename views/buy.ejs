@@ -33,7 +33,7 @@
         <% if (b.perGame) { %><div class="buy-bundle-each">from ₱<%= b.perGame %> per game</div><% } %>
         <div class="buy-bundle-covers">
           <% b.covers.forEach(g => { %>
-            <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
+            <% if (g.cover_image) { %><img <%- imgThumb(g.cover_image) %> alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
             <% } else { %><div class="buy-cover-thumb buy-cover-placeholder"></div><% } %>
           <% }) %>
           <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
@@ -86,7 +86,7 @@
     <div class="buy-single-grid">
       <% group.games.forEach(g => { %>
       <a href="/game/<%= g.slug %>?mode=buy" class="game-card gc2-card<%= g.pending ? ' buy-card-pending' : '' %>" data-pending="<%= g.pending %>">
-        <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
+        <% if (g.cover_image) { %><img <%- imgCard(g.cover_image) %> alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
         <% } else { %>
           <div class="gc2-cover-placeholder">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

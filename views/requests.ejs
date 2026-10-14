@@ -75,7 +75,7 @@
     <% const stockedTag = r.linkedUrl ? 'a' : 'div'; %>
     <<%= stockedTag %> class="req-stocked-card<%= r.linkedUrl ? ' req-stocked-card-link' : '' %>" id="req-<%= r.slug %>"<% if (r.linkedUrl) { %> href="<%= r.linkedUrl %>"<% } %>>
       <% if (r.cover_image) { %>
-        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
+        <img class="req-stocked-cover" <%- imgCard(r.cover_image) %> alt="">
       <% } else { %>
         <div class="req-stocked-cover req-cover-empty">🎮</div>
       <% } %>
@@ -115,7 +115,7 @@
     <div class="req-row" id="req-<%= r.slug %>">
       <span class="req-votes"><%= votes %></span>
       <% if (r.cover_image) { %>
-        <img class="req-cover" src="<%= r.cover_image %>" alt="">
+        <img class="req-cover" <%- imgThumb(r.cover_image) %> alt="">
       <% } else { %>
         <div class="req-cover req-cover-empty">🎮</div>
       <% } %>
