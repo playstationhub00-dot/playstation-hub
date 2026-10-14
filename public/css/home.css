@@ -98,14 +98,43 @@
 .hm-pick-x { border-color: rgba(91,141,239,0.5); }
 .hm-pick-sq { border-color: rgba(217,138,192,0.5); }
 
-/* ── Game shelves: swipe row on phones, up to 6 a row on computers ── */
+/* ── Game shelves ──
+   Phones: one sideways row, exactly 3 cards wide, swipe for the rest.
+   Wider windows: a single filled row. The count matches .games-grid in
+   style.css, and anything past that row is hidden so the cards are not
+   stretched back up to the size that made the covers soft. */
 .hm-row { display: flex; gap: 0.75rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 0.25rem; }
 .hm-row::-webkit-scrollbar { display: none; }
-.hm-cell { position: relative; flex: 0 0 44%; max-width: 200px; scroll-snap-align: start; }
-@media (min-width: 700px) {
-  .hm-row { display: grid; overflow: visible; grid-template-columns: repeat(auto-fill, minmax(max(170px, calc((100% - 6.25rem) / 6)), 1fr)); gap: 1.25rem; }
-  .hm-cell { max-width: none; }
+.hm-cell { position: relative; flex: 0 0 calc((100% - 1.5rem) / 3); max-width: none; scroll-snap-align: start; min-width: 0; }
+@media (min-width: 452px) {
+  .hm-row { display: grid; overflow: visible; grid-template-columns: repeat(4, minmax(0, 1fr)); scroll-snap-type: none; }
+  .hm-cell { max-width: none; width: auto; }
+  .hm-row > .hm-cell:nth-child(n+5) { display: none; }
+}
+@media (min-width: 629px) {
+  .hm-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .hm-row > .hm-cell:nth-child(n+5) { display: block; }
+  .hm-row > .hm-cell:nth-child(n+6) { display: none; }
+}
+@media (min-width: 773px) {
+  .hm-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .hm-row > .hm-cell:nth-child(n+6) { display: block; }
   .hm-row > .hm-cell:nth-child(n+7) { display: none; }
+}
+@media (min-width: 917px) {
+  .hm-row { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .hm-row > .hm-cell:nth-child(n+7) { display: block; }
+  .hm-row > .hm-cell:nth-child(n+8) { display: none; }
+}
+@media (min-width: 1061px) {
+  .hm-row { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .hm-row > .hm-cell:nth-child(n+8) { display: block; }
+  .hm-row > .hm-cell:nth-child(n+9) { display: none; }
+}
+@media (min-width: 1280px) {
+  .hm-row { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+  .hm-row > .hm-cell:nth-child(n+9) { display: block; }
+  .hm-row > .hm-cell:nth-child(n+11) { display: none; }
 }
 @media (min-width: 900px) { .hm-phone-only { display: none; } }
 .hm-medal { position: absolute; z-index: 3; top: -0.45rem; left: -0.35rem; min-width: 28px; height: 22px; padding: 0 0.35rem; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900; background: #2a2a2a; color: #eee; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }

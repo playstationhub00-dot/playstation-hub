@@ -260,7 +260,8 @@ async function main() {
     assert.ok(js.includes("location.hash === '#comingSoon'"), 'old #comingSoon links open the Coming soon tab');
     assert.ok(js.includes("location.hash = ''"), 'clears the hash so :target un-matches');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
-    assert.ok(css.includes('minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)'), 'at most 6 a row');
+    const gridCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
+    assert.ok(gridCss.includes('.games-grid, .buy-single-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }'), 'ten cards a row on a wide screen');
     assert.ok(/\.bf-top \{ position: sticky; top: 64px;/.test(css), 'search, tabs and bar pinned under the menu');
     assert.ok(/\.bf-results \[hidden\] \{ display: none; \}/.test(css), 'hidden cards stay hidden');
   });

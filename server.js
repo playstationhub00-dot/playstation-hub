@@ -2224,7 +2224,7 @@ function browsePsplusData(accountSummaryMap) {
       games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
     items = catalog.items.map(it => ({
-      k: it.k, n: it.n, c: it.c ? imageVariants.cardSrc(it.c) : (it.i ? it.i + '?w=240' : ''),
+      k: it.k, n: it.n, c: it.c ? imageVariants.cardSrc(it.c) : (it.i ? it.i + '?w=720' : ''),
       ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || ''
     }));
   } catch (e) {

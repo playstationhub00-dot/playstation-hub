@@ -34,11 +34,12 @@ function get(urlPath, headers) {
 
 async function main() {
   console.log('\nurl helpers');
-  await ok('a hosted cover becomes a 480px card url with a 240px alternate', async () => {
+  await ok('a hosted cover is 480px on a 1x screen and 720px on a 2x screen', async () => {
     const attrs = v.cardAttrs('/uploads/1791607091002.webp');
     assert.ok(attrs.includes('src="/uploads/w/480/1791607091002.webp"'));
-    assert.ok(attrs.includes('srcset="/uploads/w/240/1791607091002.webp 240w, /uploads/w/480/1791607091002.webp 480w"'));
-    assert.ok(attrs.includes('sizes="(max-width: 700px) 46vw, 220px"'));
+    assert.ok(attrs.includes('srcset="/uploads/w/480/1791607091002.webp 480w, /uploads/w/720/1791607091002.webp 720w"'));
+    assert.ok(attrs.includes('sizes="280px"'));
+    assert.strictEqual(v.cardSrc('/uploads/1791607091002.webp'), '/uploads/w/720/1791607091002.webp');
   });
   await ok('the top-rented thumbnail is the 160px copy', async () => {
     assert.strictEqual(v.thumbSrc('/uploads/g1.png'), '/uploads/w/160/g1.png');
@@ -85,6 +86,14 @@ async function main() {
     assert.strictEqual(res.headers['cache-control'], 'public, max-age=31536000, immutable');
     const meta = await sharp(res.body).metadata();
     assert.strictEqual(meta.width, 480);
+    assert.ok(res.body.length < fs.statSync(big).size);
+  });
+  await ok('a 720px copy is the retina card and is still smaller than the source', async () => {
+    const res = await get('/uploads/w/720/big-cover.png');
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['content-type'], 'image/webp');
+    const meta = await sharp(res.body).metadata();
+    assert.strictEqual(meta.width, 720);
     assert.ok(res.body.length < fs.statSync(big).size);
   });
   await ok('the second request reuses the file on disk', async () => {
