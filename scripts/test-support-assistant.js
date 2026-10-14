@@ -131,12 +131,14 @@ async function main() {
     const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 0 }, {}, promo);
     const filGame = await facts.fallbackReply('meron ba Elden Ring', shopFacts(), () => [open]);
     assert.ok(filGame.text.includes('Yes po'), filGame.text);
-    assert.ok(filGame.text.includes('Wala po'), filGame.text);
+    assert.ok(filGame.text.includes('Wala pong available slot'), filGame.text);
     assert.ok(!/\bOo\b/.test(filGame.text));
+    assert.ok(filGame.text.includes('\n\n'));
     const enGame = await facts.fallbackReply('is Elden Ring available', shopFacts(), () => [open]);
-    assert.ok(enGame.text.includes('2 open'), enGame.text);
-    assert.ok(enGame.text.includes('full'), enGame.text);
+    assert.ok(enGame.text.includes('2 slots available'), enGame.text);
+    assert.ok(enGame.text.includes('No slots available'), enGame.text);
     assert.ok(!enGame.text.includes(' po'), enGame.text);
+    assert.ok(!/late return/i.test(enGame.text), enGame.text);
     assert.ok(en.text.includes('Reply ADMIN to talk to a person'), en.text);
     assert.ok(fil.text.includes('Reply ADMIN po'), fil.text);
     assert.ok(!enGame.text.includes('m.me'));
@@ -310,7 +312,7 @@ async function main() {
     let toolBody = '';
     let round = 0;
     const result = await assistant.respond({
-      message: 'meron ba Elden Ring',
+      message: 'how much is Elden Ring',
       facts: shopFacts(),
       history: [{ role: 'user', text: 'hi' }, { role: 'assistant', text: 'Hello!' }],
       invokeTool: async (name, args) => {
@@ -580,9 +582,13 @@ async function main() {
       }
     });
     assert.ok(!result.reply.includes('9 slots'), result.reply);
-    assert.ok(result.reply.includes('Elden Ring'), result.reply);
-    assert.ok(result.reply.includes('2 Non-Trophy'), result.reply);
+    assert.ok(result.reply.includes('Hello! Yes, we have slots available.'), result.reply);
+    assert.ok(result.reply.includes('- Non-Trophy: 2 slots available'), result.reply);
+    assert.ok(result.reply.includes('- Trophy Account: No slots available'), result.reply);
+    assert.ok(!/on the waitlist/i.test(result.reply), result.reply);
+    assert.ok(!/late return/i.test(result.reply), result.reply);
     assert.ok(result.reply.includes('Reply ADMIN'), result.reply);
+    assert.strictEqual(result.source, 'template');
     assert.strictEqual(result.handoff, false);
   });
 
@@ -616,6 +622,88 @@ async function main() {
     const hits = facts.searchCatalog([elden], [{ id: 5, title: 'Elden Ring', comingSoon: false }], 'Elden Ring');
     assert.strictEqual(hits.length, 2);
     assert.strictEqual(hits[1].comingSoon, true);
+  });
+
+  await ok('a slot reply is the fixed layout, line for line', async () => {
+    const wolverine = {
+      id: 9, title: "Marvel's Wolverine", platform: 'PS5',
+      nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799
+    };
+    const shop = shopFacts();
+    shop.siteUrl = 'https://playstation-hub.com';
+    const open = facts.publicGame(wolverine, { ntSlots: 1, trSlots: 1 }, {}, promo);
+    const both = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", shop, () => [open]);
+    assert.strictEqual(both.text, [
+      'Hello po! Yes po, meron pa po. 🎮',
+      '',
+      "Marvel's Wolverine (PS5)",
+      '',
+      '- Non-Trophy: 1 slot available',
+      '  ₱349/week | ₱629/month',
+      '',
+      '- Trophy Account: 1 slot available',
+      '  ₱399/week | ₱719/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      'Mag-order po dito:',
+      'https://playstation-hub.com/game/marvel-s-wolverine',
+      '',
+      'Reply ADMIN po para makausap ang admin.'
+    ].join('\n'));
+    assert.strictEqual(facts.toPlainText(both.text), both.text);
+    assert.ok(!/late/i.test(both.text));
+    assert.ok(!/naka-waitlist/i.test(both.text));
+    assert.ok(!both.text.includes('₱699'));
+
+    const none = facts.publicGame(wolverine, { ntSlots: 0, trSlots: 0 }, {}, promo);
+    const empty = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", shop, () => [none]);
+    assert.strictEqual(empty.text, [
+      'Hello po! Wala na po munang available slot. 🎮',
+      '',
+      "Marvel's Wolverine (PS5)",
+      '',
+      'Libre pong waitlist. Optional na ₱100 priority fee para mauna, at ibabawas iyan sa rent pag may slot.',
+      '',
+      'Mag-order po dito:',
+      'https://playstation-hub.com/game/marvel-s-wolverine',
+      '',
+      'Reply ADMIN po para makausap ang admin.'
+    ].join('\n'));
+
+    const ps4 = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 2 }, {}, promo);
+    const mixed = await facts.fallbackReply('is Hogwarts Legacy available', shopFacts(), () => [ps4]);
+    assert.strictEqual(mixed.text, [
+      'Hello! Yes, we have slots available. 🎮',
+      '',
+      'Hogwarts Legacy (PS4/PS5)',
+      '',
+      '- Non-Trophy: No slots available',
+      '  Free waitlist, or an optional ₱100 priority fee.',
+      '',
+      '- Trophy Account: 1 slot available',
+      '  ₱299/week | ₱539/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      '- PS4 Primary: 2 slots available',
+      '  ₱249/week | ₱449/month',
+      '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      'Order here:',
+      'https://www.playstation-hub.com/game/hogwarts-legacy',
+      '',
+      'Reply ADMIN to talk to a person.'
+    ].join('\n'));
+    assert.ok(!mixed.text.includes('PS4 Primary: No'));
+    assert.ok(!/late return/i.test(mixed.text));
+
+    const viaModel = await assistant.respond({
+      message: "May slot pa ba ang Marvel's Wolverine?",
+      facts: shop,
+      invokeTool: async () => ({ games: [open] }),
+      complete: async () => ({ content: 'Marvel\'s Wolverine: Non-Trophy Yes po, may 1 slot. Trophy Yes po, may 1 slot. 4 po ang naka-waitlist.' })
+    });
+    assert.strictEqual(viaModel.reply, both.text);
+    assert.strictEqual(viaModel.source, 'template');
   });
 
   console.log('\nthreads');
