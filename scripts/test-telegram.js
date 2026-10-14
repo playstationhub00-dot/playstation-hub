@@ -178,7 +178,7 @@ check('every alert kind the owner can switch is named in one list', () => {
   // to the code but not here would be unswitchable and invisible.
   assert.deepStrictEqual(
     tg.ALERT_KINDS,
-    ['signin', 'order_created', 'order_review', 'order_paid', 'request']
+    ['signin', 'order_created', 'order_review', 'order_paid', 'request', 'support_handoff']
   );
 });
 
@@ -214,6 +214,23 @@ check('switching one alert off leaves the others alone', () => {
 
 check('an unknown kind fails open rather than silently muting', () => {
   assert.strictEqual(tg.isAlertEnabled({ alerts: {} }, 'something_new'), true);
+});
+
+check('a support handoff names the channel and not a blank preview', () => {
+  const msg = tg.formatSupportAlert(
+    { channel: 'messenger', reason: 'payment_or_dispute', preview: 'I already paid, here is my receipt' },
+    { adminUrl: 'https://x/admin?tab=messaging' }
+  );
+  assert.ok(msg.includes('Messenger'));
+  assert.ok(msg.includes('Payment or dispute'));
+  assert.ok(msg.includes('I already paid'));
+  assert.ok(msg.includes('https://x/admin?tab=messaging'));
+});
+
+check('a website handoff with no preview still reads cleanly', () => {
+  const msg = tg.formatSupportAlert({ channel: 'web' }, {});
+  assert.ok(msg.includes('Website chat'));
+  assert.ok(!/undefined|null/.test(msg), msg);
 });
 
 console.log('\n' + passed + ' assertions passed');

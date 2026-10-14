@@ -146,7 +146,7 @@
 
     <div class="sidebar-group-label">Set up</div>
     <button class="admin-tab" data-tab="content" onclick="switchTab('content')"><span class="tab-icon">🖥️</span><span class="tab-label">Site content</span></button>
-    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span></button>
+    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span><% if (typeof supportHandoffs !== 'undefined' && supportHandoffs.length) { %><span class="oq-count"><%= supportHandoffs.length %></span><% } %></button>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus</span></button>
     <button class="admin-tab" data-tab="posters" onclick="switchTab('posters')"><span class="tab-icon">📸</span><span class="tab-label">Posters</span></button>
     <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></button>
@@ -404,7 +404,7 @@ function switchTab(name) {
     request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games',
     request_added:'games', request_add_missing:'games', request_add_error:'games',
     voter_renamed:'games', voter_removed:'games', voter_dupe:'games', voter_empty:'games', voter_error:'games',
-    alerts_saved:'settings',
+    alerts_saved:'settings', support_resumed:'messaging', support_missing:'messaging',
     account_added:'accounts', account_updated:'accounts', account_deleted:'accounts', slot_updated:'accounts', account_error:'accounts',
     bg_saved:'posters', bg_removed:'posters', poster_error:'posters',
     // Fallback landing for a rejected game-picture upload when the browser

@@ -411,4 +411,31 @@ ok('it sits below anything on a clock', () => {
   assert.deepStrictEqual(r.items.map(i => i.kind), ['qr_pending', 'rent_mismatch']);
 });
 
+console.log('\nbuild() — support handoff');
+
+ok('a paused support chat is critical and opens Messaging', () => {
+  const r = n.build(Object.assign({}, empty, {
+    supportHandoffs: [{
+      id: 'web_abc', channel: 'web', label: 'Website',
+      handoff_reason: 'asked_for_human', handoff_at: '2026-09-10T11:00:00Z',
+      preview: 'Can I talk to a person?'
+    }]
+  }));
+  assert.strictEqual(r.items.length, 1);
+  assert.strictEqual(r.items[0].kind, 'support_handoff');
+  assert.strictEqual(r.items[0].urgency, 'critical');
+  assert.strictEqual(r.items[0].tab, 'messaging');
+  assert.ok(r.items[0].sub.includes('Website'));
+  assert.ok(r.items[0].sub.includes('Can I talk to a person?'));
+  assert.strictEqual(r.criticalCount, 1);
+});
+
+ok('a handoff does not outrank a sign-in code that is on a clock', () => {
+  const r = n.build(Object.assign({}, empty, {
+    supportHandoffs: [{ id: 'mes_1', label: 'Messenger', handoff_reason: 'cannot_help', preview: 'huh' }],
+    orderQueue: [{ ref: 'PH-1', state: 'qr_pending', qr_expires_at: '2026-09-10T12:05:00Z' }]
+  }));
+  assert.deepStrictEqual(r.items.map(i => i.kind), ['qr_pending', 'support_handoff']);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

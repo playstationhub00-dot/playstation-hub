@@ -1,0 +1,23 @@
+<%# Floating support chat. Posts to /api/support/chat — the same brain as the
+    Messenger bot. Hidden on /admin via showSupportChat. %>
+<link rel="stylesheet" href="/css/support-chat.css?v=<%= assetV %>">
+<button type="button" class="phs-launcher" id="phsLauncher" aria-expanded="false" aria-controls="phsPanel">
+  <span class="phs-launcher-ic" aria-hidden="true">💬</span>
+  <span class="phs-launcher-tx">Chat</span>
+</button>
+<section class="phs-panel" id="phsPanel" hidden aria-label="PlayStation Hub support chat">
+  <header class="phs-head">
+    <div>
+      <div class="phs-title">PlayStation Hub</div>
+      <div class="phs-sub">Prices, slots, how to rent</div>
+    </div>
+    <button type="button" class="phs-x" id="phsClose" aria-label="Close chat">×</button>
+  </header>
+  <div class="phs-log" id="phsLog" role="log" aria-live="polite"></div>
+  <form class="phs-form" id="phsForm">
+    <label class="phs-sr" for="phsInput">Message</label>
+    <input class="phs-input" id="phsInput" name="message" maxlength="1000" autocomplete="off" placeholder="Ask in English or Taglish…">
+    <button class="phs-send" type="submit">Send</button>
+  </form>
+</section>
+<script src="/js/support-chat.js?v=<%= assetV %>" defer></script>
