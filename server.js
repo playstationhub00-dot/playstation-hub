@@ -51,6 +51,9 @@ const buyPricing = require('./lib/buy-pricing');
 const reservations = require('./lib/reservations');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
+const requestBoard = require('./lib/request-board');
+const titleFixes = require('./lib/title-fixes');
+const paymentCopy = require('./lib/payment-copy');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 const mongoConnection = require('./lib/mongo-connection');
@@ -443,6 +446,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // set, so a deploy would otherwise leave visitors on stale styles. Cache keys
 // are per-URL, so views append ?v=<assetV> to bust it. A redeploy rewrites
 // every file's mtime, which is exactly when the version should change.
+// How It Works, game pages and the footer all call this so the local /
+// international split cannot drift. Card and bank stay in the sentence only
+// when that method is actually on (see lib/payment-copy.js).
+app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
+  payViaGateway: gateway != null ? !!gateway : !!process.env.PAYMONGO_SECRET_KEY,
+  payment_methods: settings && settings.payment_methods
+});
+
 app.locals.assetV = (() => {
   try {
     return String(Math.floor(fs.statSync(path.join(__dirname, 'public/css/style.css')).mtimeMs));
@@ -556,7 +567,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -1262,6 +1273,14 @@ app.get('/how-it-works', (req, res) => {
   res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+app.get('/faq', (req, res) => {
+  res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/terms', (req, res) => {
+  res.render('terms', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
 // Public request board. Shows approved and stocked entries ranked by votes;
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
@@ -1271,26 +1290,20 @@ app.get('/requests', async (req, res) => {
   // stocked ones among games that still need votes.
   const stocked = rows.filter(r => r.status === 'stocked');
   const voting = rows.filter(r => r.status !== 'stocked');
-  // Card link target: prefer the linked catalogue row (r.game_id, set by the
-  // owner at /admin/requests/:slug/stock), falling back to a title match for
-  // older entries that were marked stocked before that field existed — the
-  // owner has stocked requests on record with no game_id at all, which used
-  // to leave the "Now available" card with nowhere to click. A title can also
-  // match an upcoming (not-yet-released) row rather than a live catalogue
-  // one — "stocked" here means "the owner is fulfilling this ask", not
-  // necessarily "rentable today" — so upcoming is checked too, pointing at
-  // its own /upcoming/ detail route instead of /game/.
+  // Card link: a title that is still Coming soon points at /upcoming/ and is
+  // labelled as a reservation, even if a catalogue row or game_id also matches.
+  // Otherwise prefer the linked catalogue row (r.game_id, set at
+  // /admin/requests/:slug/stock), then a title match for older stocked
+  // entries that have no game_id. "Stocked" means the owner is fulfilling
+  // the ask, which is not the same as "rentable today".
   const games = getGames();
   const upcoming = getUpcoming();
+  // Coming soon wins over a catalogue row. A stocked request for a game that
+  // has not released yet is a reservation, not a rental — see lib/request-board.js.
   stocked.forEach(r => {
-    const linkedGame = (r.game_id && games.find(g => g.id === r.game_id))
-      || games.find(g => gameSlug(g.title) === gameSlug(r.title));
-    if (linkedGame) {
-      r.linkedUrl = '/game/' + gameSlug(linkedGame.title);
-      return;
-    }
-    const linkedUpcoming = upcoming.find(g => gameSlug(g.title) === gameSlug(r.title));
-    r.linkedUrl = linkedUpcoming ? '/upcoming/' + gameSlug(linkedUpcoming.title) + '-' + linkedUpcoming.id : null;
+    const link = requestBoard.linkStockedRequest(r, games, upcoming);
+    r.linkKind = link.linkKind;
+    r.linkedUrl = link.linkedUrl;
   });
   res.render('requests', Object.assign({
     requests: rows,
@@ -4457,6 +4470,8 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
+  const moved = titleFixes.redirectSlug(param);
+  if (moved && moved !== param) return res.redirect(301, '/game/' + moved);
   // Support both numeric ID (old links) and slug
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
@@ -5335,6 +5350,8 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
+  const moved = titleFixes.redirectSlug(slug);
+  if (moved && moved !== slug) return res.redirect(301, '/upcoming/' + moved);
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
   let game = null;

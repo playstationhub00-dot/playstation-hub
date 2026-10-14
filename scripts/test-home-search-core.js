@@ -10,7 +10,7 @@ const INDEX = [
   { t: 'God of War (2018)', p: 'PS4', y: 'now', s: 0, pr: 199, u: '/game/god-of-war-2018', img: '' },
   { t: 'God of War III Remastered', p: 'Included in PS Plus Deluxe', y: 'psplus', u: '/ps-plus?game=c%3A1', img: '' },
   { t: 'Marvel’s Spider-Man', p: 'PS5', y: 'now', s: 1, pr: 299, u: '/game/spider-man', img: '' },
-  { t: 'Silent Hill Townfall', p: 'PS5', y: 'soon', d: '2026-11-01', u: '/upcoming/silent-hill-townfall-3', img: '' },
+  { t: 'Silent Hill: Townfall', p: 'PS5', y: 'soon', d: '2026-11-01', u: '/upcoming/silent-hill-townfall-3', img: '' },
   { t: 'Hades II', y: 'requested', v: 1, u: '/requests#req-hades-ii', img: '' },
   { t: 'PS Hub Main Account', p: 'PS5', y: 'now', s: 3, pr: 500, k: 'Hogwarts Legacy Elden Ring', u: '/game/ps-hub-main-account', img: '' }
 ];

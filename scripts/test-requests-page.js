@@ -33,7 +33,15 @@ function votingRow(slug, title, voteCount) {
 }
 
 function stockedRow(slug, title, hasGameId) {
-  return { slug, title, cover_image: '', game_id: hasGameId === false ? null : 1 };
+  const upcoming = hasGameId === 'upcoming';
+  const unlinked = hasGameId === false;
+  const linkedUrl = unlinked ? null : (upcoming ? '/upcoming/' + slug + '-2' : '/game/' + slug);
+  return {
+    slug, title, cover_image: '',
+    game_id: unlinked ? null : 1,
+    linkKind: upcoming ? 'upcoming' : (unlinked ? 'stocked' : 'available'),
+    linkedUrl
+  };
 }
 
 function render(voting, stocked) {
@@ -86,12 +94,13 @@ ok('the real 11-voting / 4-stocked shape from the bug report renders every row',
   ];
   const html = render(voting, stocked);
   assert.strictEqual((html.match(/class="req-row"/g) || []).length, 11);
-  assert.strictEqual((html.match(/req-stocked-card/g) || []).length, 4);
+  // class="req-stocked-card" also prefixes req-stocked-card-link, so count the
+  // attribute start rather than the bare substring.
+  assert.strictEqual((html.match(/class="req-stocked-card/g) || []).length, 4);
   assert.ok(html.includes('you asked, we stocked 4'));
-  // The Rent button stays conditional on game_id, same guard as before the
-  // redesign — a stocked request whose game record didn't resolve must not
-  // get a dead link.
-  assert.strictEqual((html.match(/req-btn-rent/g) || []).length, 3, 'exactly the 3 stocked rows with a game_id should get a Rent button');
+  // Rent stays conditional on a catalogue link. A stocked request whose game
+  // record didn't resolve must not get a dead link.
+  assert.strictEqual((html.match(/req-btn-rent/g) || []).length, 3, 'exactly the 3 stocked rows with a catalogue link should get a Rent button');
 });
 
 ok('the voting rows sit inside the two-column grid container', () => {
@@ -111,6 +120,24 @@ ok('no stocked games at all renders no stocked heading and no empty strip shell'
 ok('no voting games but some stocked shows the "all caught up" empty copy', () => {
   const html = render([], [stockedRow('s1', 'Only Stocked')]);
   assert.ok(html.includes('Every requested game has been stocked'));
+});
+
+ok('a stocked request that is still Coming soon is a reservation, not Now available — Rent', () => {
+  const html = render(
+    [votingRow('v1', 'Still Voting', 2)],
+    [stockedRow('pbz', 'Phantom Blade Zero', 'upcoming'), stockedRow('elden', 'Elden Ring Nightreign')]
+  );
+  assert.ok(html.includes('Coming soon — reserve now'));
+  assert.ok(html.includes('href="/upcoming/pbz-2"'));
+  assert.ok(html.includes('Now available'));
+  assert.ok(html.includes('href="/game/elden"'));
+  const soonCard = html.slice(html.indexOf('req-stocked-card-soon'), html.indexOf('req-listhead-stocked'));
+  assert.ok(soonCard.includes('Phantom Blade Zero'));
+  assert.ok(!soonCard.includes('req-btn-rent'));
+  assert.ok(!soonCard.includes('Now available'));
+  const soonHint = html.indexOf("g.y === 'soon'");
+  const nowHint = html.indexOf("g.y === 'now'");
+  assert.ok(soonHint !== -1 && nowHint !== -1 && soonHint < nowHint, 'typing a coming-soon title must not offer to rent it');
 });
 
 console.log('\n' + passed + ' assertions passed\n');

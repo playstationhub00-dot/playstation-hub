@@ -372,7 +372,7 @@
              name field and pay button below. -->
         <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
           Or order here on the website
-          <small>Pay by GCash / Maya / card</small>
+          <small><%- include('partials/pay-note').trim() %></small>
         </button>
         <div id="gdOrderBlock"<%= order_error === '1' ? '' : ' hidden' %>>
         <% } %>
@@ -398,7 +398,7 @@
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
-          <div class="gd-order-sub" id="ctaSub" style="display:none;">Pay via GCash or Maya · no account needed</div>
+          <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
         </form>
         </div><!-- /gdOrderBlock -->
 
@@ -511,7 +511,7 @@
           <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
             <div>♾️ &nbsp;Permanent access — no time limit</div>
             <div>🔓 &nbsp;Play anytime, as many times as you want</div>
-            <div>💳 &nbsp;Pay online via GCash or Maya</div>
+            <div>💳 &nbsp;<%- include('partials/pay-note').trim() %></div>
           </div>
         </div>
 
@@ -527,7 +527,7 @@
           <button type="submit" class="gd-order-btn" id="buyCtaBtn" onclick="return handleBuyClick(event)">
             📘 Buy Permanent Access
           </button>
-          <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
+          <div class="gd-order-sub"><%- include('partials/pay-note').trim() %></div>
         </form>
         <div id="buyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
         <% } else { %>

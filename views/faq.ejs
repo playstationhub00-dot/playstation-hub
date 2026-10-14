@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FAQ — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">Questions</div>
+    <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">FAQ</h1>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:560px;margin:0 auto;">The same rental, in short. The full walkthrough is on <a href="/how-it-works" style="color:var(--ps-blue);">How It Works</a>.</p>
+  </div>
+</section>
+
+<div style="max-width:860px;margin:0 auto;padding:3rem 2rem 4rem;">
+  <div class="faq-list">
+    <details class="faq-item" open>
+      <summary>How long can I rent?</summary>
+      <p>Weekly is 7 days. Monthly is 30 days, and monthly is 10% off. You can also buy a game outright — that one stays yours.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>What are the account types?</summary>
+      <p><strong style="color:#fff;">Non-Trophy</strong> is the cheapest. You play on the shop account. There is no deposit.</p>
+      <p><strong style="color:#fff;">Trophy</strong> uses your own profile, so trophies and saves stay with you. It costs more than Non-Trophy, and it includes a ₱100 refundable deposit.</p>
+      <p><strong style="color:#fff;">PS4 Primary</strong> is Trophy-style — your own profile, trophies and saves — and it is only offered for games that support PS4. The ₱100 refundable deposit applies here too.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>How do I pay?</summary>
+      <p><%- include('partials/pay-note').trim() %>. Local payment is a GCash or Maya QR, and most of those are arranged on Messenger. International customers pay with PayPal.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>How do I get into the game?</summary>
+      <p>Your console shows a sign-in QR code. You send that code and the shop account signs into your console. You never share a password. The steps are on <a href="/how-to-sign-in" style="color:var(--ps-blue);">How to Sign In</a>, and the order itself is on <a href="/how-it-works" style="color:var(--ps-blue);">How It Works</a>.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>When do I get the deposit back?</summary>
+      <p>The ₱100 deposit is refunded when the account is returned with proof. Non-Trophy has no deposit.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>What if I buy instead of rent?</summary>
+      <p>Bought games are permanent. There is nothing to return and no rental end date.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>What if the game is sold out?</summary>
+      <p>Sold-out games have a free waitlist. Join it from the game page and you keep your place until a slot opens.</p>
+    </details>
+
+    <details class="faq-item">
+      <summary>How do I reach you?</summary>
+      <p>Email <a href="mailto:playstationhub00@gmail.com" style="color:var(--ps-blue);">playstationhub00@gmail.com</a>, message us on <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Messenger</a>, or visit the <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Facebook page</a>. We reply fastest on Messenger.</p>
+    </details>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
