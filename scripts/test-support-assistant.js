@@ -792,6 +792,11 @@ async function main() {
     assert.strictEqual(second.changed, false);
     assert.strictEqual(store.listHandoffs().length, 1);
     assert.strictEqual(store.listHandoffs()[0].control_error, 'still bad');
+    const cleared = store.resumeExternal('messenger', 'psid-7');
+    assert.strictEqual(cleared.cleared, true);
+    assert.strictEqual(store.isPaused('messenger', 'psid-7'), false);
+    assert.strictEqual(store.listHandoffs().length, 0);
+    assert.strictEqual(store.resumeExternal('messenger', 'missing'), null);
 
     const fresh = store.noteControlFailure('messenger', 'psid-new', 'x'.repeat(400));
     assert.strictEqual(fresh.changed, true);
@@ -919,17 +924,21 @@ async function main() {
     assert.strictEqual(events[2].standby, true);
     assert.strictEqual(events[2].previousOwnerAppId, '111');
 
-    assert.strictEqual(messenger.decideInbound(events[1], false), 'take_then_answer');
-    assert.strictEqual(messenger.decideInbound(events[1], true), 'record_only');
+    assert.strictEqual(messenger.decideInbound(events[1], false, true), 'take_then_answer');
+    assert.strictEqual(messenger.decideInbound(events[1], true, true), 'record_only');
+    assert.strictEqual(messenger.decideInbound(events[1], false, false), 'answer_standby');
+    assert.strictEqual(messenger.decideInbound(events[1], true, false), 'answer_standby');
     assert.strictEqual(messenger.decideInbound({ reply: true, standby: false }, true), 'answer');
     assert.strictEqual(messenger.decideInbound(events[0], false), 'note_control');
     assert.strictEqual(messenger.decideInbound({ reply: false, referral: 'PH-1' }, false), 'ignore');
   });
 
   await ok('a failed take_thread_control is the Graph error, and a website resume skips it', async () => {
+    messenger.resetUnsupportedControl();
     let asked = null;
     const okTake = await messenger.resumeMessenger({
       channel: 'messenger',
+      handover: true,
       externalId: 'psid-1',
       take: async (psid) => {
         asked = psid;
@@ -937,7 +946,9 @@ async function main() {
       }
     });
     assert.strictEqual(asked, 'psid-1');
-    assert.deepStrictEqual(okTake, { ok: true });
+    assert.strictEqual(okTake.ok, true);
+    assert.strictEqual(okTake.clear, true);
+    assert.strictEqual(okTake.send, true);
 
     const body = JSON.stringify({
       error: {
@@ -948,13 +959,16 @@ async function main() {
     });
     const failed = await messenger.resumeMessenger({
       channel: 'messenger',
+      handover: true,
       externalId: 'psid-1',
       take: async () => ({ ok: false, status: 400, body })
     });
     assert.strictEqual(failed.ok, false);
+    assert.strictEqual(failed.clear, false);
     assert.ok(failed.error.includes('another app is controlling this thread'), failed.error);
     assert.ok(failed.error.includes('10/2018300'), failed.error);
     assert.ok(!failed.error.includes('SECRET'), failed.error);
+    assert.strictEqual(messenger.handoverUnsupported(failed), false);
     assert.strictEqual(messenger.graphErrorSummary({ reason: 'no_token' }), 'Page token is missing.');
     assert.strictEqual(messenger.graphErrorSummary({ status: 500, body: 'nope' }), 'Messenger returned HTTP 500.');
 
@@ -968,12 +982,89 @@ async function main() {
     assert.strictEqual(called, false);
   });
 
+  await ok('handover is off unless MESSENGER_HANDOVER=on, and error 27 still resumes', async () => {
+    assert.strictEqual(messenger.handoverEnabled({}), false);
+    assert.strictEqual(messenger.handoverEnabled({ MESSENGER_HANDOVER: 'off' }), false);
+    assert.strictEqual(messenger.handoverEnabled({ MESSENGER_HANDOVER: 'on' }), true);
+    assert.strictEqual(messenger.handoverEnabled({ MESSENGER_HANDOVER: ' TRUE ' }), true);
+    assert.strictEqual(messenger.config({}).handover, false);
+    assert.strictEqual(messenger.config({ MESSENGER_HANDOVER: 'on' }).handover, true);
+
+    const production = {
+      error: {
+        message: '(#27) Take thread control is not supported when Conversation Routing is not enabled.',
+        code: 27,
+        error_subcode: 2018464
+      }
+    };
+    assert.strictEqual(messenger.handoverUnsupported({ ok: false, status: 400, body: JSON.stringify(production) }), true);
+    messenger.resetUnsupportedControl();
+    let released = 0;
+    let takes = 0;
+    const soft = await messenger.resumeMessenger({
+      channel: 'messenger',
+      handover: true,
+      externalId: 'psid-27',
+      take: async () => { takes++; return { ok: false, status: 400, body: JSON.stringify(production) }; },
+      release: async (psid) => { released++; assert.strictEqual(psid, 'psid-27'); return { ok: false, status: 400, body: '{"error":{"message":"not owner","code":10}}' }; }
+    });
+    assert.strictEqual(soft.ok, true);
+    assert.strictEqual(soft.clear, true);
+    assert.strictEqual(soft.send, true);
+    assert.strictEqual(soft.unsupported, true);
+    assert.strictEqual(takes, 1);
+    assert.strictEqual(released, 1);
+    assert.ok(soft.error.includes('Conversation Routing is not enabled'), soft.error);
+    assert.ok(soft.error.includes('27/2018464'), soft.error);
+
+    messenger.resetUnsupportedControl();
+    takes = 0;
+    released = 0;
+    const off = await messenger.resumeMessenger({
+      channel: 'messenger',
+      handover: false,
+      externalId: 'psid-off',
+      take: async () => { takes++; return { ok: false, status: 400, body: JSON.stringify(production) }; },
+      release: async () => { released++; return { ok: true, status: 200, body: '{"success":true}' }; }
+    });
+    assert.strictEqual(off.ok, true);
+    assert.strictEqual(off.clear, true);
+    assert.strictEqual(off.send, true);
+    assert.strictEqual(takes, 1);
+    assert.strictEqual(released, 1);
+
+    const again = await messenger.recoverStuckControl({
+      psid: 'psid-off',
+      take: async () => { takes++; return { ok: false }; },
+      release: async () => { released++; return { ok: true }; },
+      forceRelease: true
+    });
+    assert.strictEqual(again.skipped, true);
+    assert.strictEqual(takes, 1);
+    assert.strictEqual(released, 1);
+
+    messenger.resetUnsupportedControl();
+    let code10Release = 0;
+    const hard = await messenger.recoverStuckControl({
+      psid: 'psid-10',
+      take: async () => ({ ok: false, status: 400, body: JSON.stringify({ error: { message: 'another app', code: 10 } }) }),
+      release: async () => { code10Release++; return { ok: true }; }
+    });
+    assert.strictEqual(hard.unsupported, false);
+    assert.strictEqual(hard.released, false);
+    assert.strictEqual(code10Release, 0);
+    messenger.resetUnsupportedControl();
+  });
+
   await ok('pass and take thread control target the inbox app and the PSID', () => {
     const pass = messenger.passThreadControl('psid-1', '263902037430900');
     assert.strictEqual(pass.recipient.id, 'psid-1');
     assert.strictEqual(pass.target_app_id, '263902037430900');
     const take = messenger.takeThreadControl('psid-1');
     assert.strictEqual(take.recipient.id, 'psid-1');
+    const release = messenger.releaseThreadControl('psid-1');
+    assert.strictEqual(release.recipient.id, 'psid-1');
+    assert.ok(release.metadata);
     const sent = messenger.sendText('psid-1', 'x'.repeat(3000));
     assert.strictEqual(sent.message.text.length, 2000);
   });
@@ -1004,6 +1095,11 @@ async function main() {
     assert.ok(server.includes('take_then_answer'));
     assert.ok(server.includes('support_control_failed'));
     assert.ok(server.includes('[messenger take_thread_control] failed'));
+    assert.ok(server.includes('answer_standby'));
+    assert.ok(server.includes('release_thread_control'));
+    assert.ok(server.includes('handoverEnabled'));
+    assert.ok(server.includes('[messenger send] failed'));
+    assert.ok(server.includes('handover off, paused without pass_thread_control'));
   });
 
   await ok('the admin card escapes the transcript and offers resume', () => {
