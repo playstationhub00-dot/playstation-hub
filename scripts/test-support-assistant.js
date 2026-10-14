@@ -103,7 +103,7 @@ async function main() {
     assert.ok(!/^\d+\.\s/m.test(en.text));
 
     const fil = facts.fallbackReply('Magkano ang rental?', shopFacts(), () => []);
-    assert.ok(fil.text.includes('Mag-order dito:'), fil.text);
+    assert.ok(fil.text.includes('Mag-order po dito:'), fil.text);
     assert.ok(fil.text.includes('Kasama na'), fil.text);
     assert.ok(fil.text.includes('₱629'), fil.text);
     assert.ok(!fil.text.includes('Order here:'), fil.text);
@@ -112,18 +112,57 @@ async function main() {
 
     const mix = facts.fallbackReply('how much po ang presyo', shopFacts(), () => []);
     assert.strictEqual(facts.replyLanguage('how much po ang presyo'), 'mix');
-    assert.ok(mix.text.includes('Order dito:'), mix.text);
+    assert.ok(mix.text.includes('Order po dito:'), mix.text);
     assert.ok(mix.text.includes('kasama na'), mix.text);
     assert.ok(mix.text.includes('₱699'));
 
     const filPay = facts.fallbackReply('paano magbayad', shopFacts(), () => []);
     assert.ok(filPay.text.includes('GCash'), filPay.text);
-    assert.ok(filPay.text.includes('Mag-order dito:'), filPay.text);
+    assert.ok(filPay.text.includes('Mag-order po dito:'), filPay.text);
 
     const filHuman = facts.fallbackReply('kausap naman', shopFacts(), () => []);
     assert.strictEqual(filHuman.handoff, true);
     assert.ok(filHuman.text.includes('Michael'));
-    assert.ok(filHuman.text.includes('Sige'), filHuman.text);
+    assert.ok(filHuman.text.includes('Sige po'), filHuman.text);
+    assert.ok(!/\bOo\b/.test(filHuman.text));
+
+    const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 0 }, {}, promo);
+    const filGame = facts.fallbackReply('meron ba Elden Ring', shopFacts(), () => [open]);
+    assert.ok(filGame.text.includes('Yes po'), filGame.text);
+    assert.ok(filGame.text.includes('Wala po'), filGame.text);
+    assert.ok(!/\bOo\b/.test(filGame.text));
+    const enGame = facts.fallbackReply('is Elden Ring available', shopFacts(), () => [open]);
+    assert.ok(enGame.text.includes('2 open'), enGame.text);
+    assert.ok(enGame.text.includes('full'), enGame.text);
+    assert.ok(!enGame.text.includes(' po'), enGame.text);
+  });
+
+  await ok('bare amounts get a peso sign and plain text keeps it', async () => {
+    const bare = 'New Games is 349 weekly. Trophy has a refundable 100 deposit. The 10% promo is already in. Open for 30 days.';
+    const fixed = facts.ensurePeso(bare, shopFacts());
+    assert.ok(fixed.includes('₱349'), fixed);
+    assert.ok(fixed.includes('₱100'), fixed);
+    assert.ok(fixed.includes('10%'), fixed);
+    assert.ok(!/₱10(?!\d)/.test(fixed), fixed);
+    assert.ok(fixed.includes('30 days'), fixed);
+    assert.ok(!/₱30(?!\d)/.test(fixed), fixed);
+    assert.strictEqual(facts.ensurePeso(fixed, shopFacts()), fixed);
+    assert.strictEqual(
+      facts.ensurePeso('PS5 is 349. Order PH-1042 has 2 open slots. Already ₱ 100.', shopFacts()),
+      'PS5 is ₱349. Order PH-1042 has 2 open slots. Already ₱ 100.'
+    );
+    assert.strictEqual(facts.toPlainText('**₱349** a week and ₱100'), '₱349 a week and ₱100');
+    const result = await assistant.respond({
+      message: 'how much for new games',
+      facts: shopFacts(),
+      complete: async () => ({ content: bare })
+    });
+    assert.ok(result.reply.includes('₱349'), result.reply);
+    assert.ok(result.reply.includes('₱100'), result.reply);
+    assert.ok(!/₱10(?!\d)/.test(result.reply), result.reply);
+    const stored = facts.toPlainText(result.reply);
+    assert.ok(stored.includes('₱349'));
+    assert.ok(stored.includes('₱100'));
   });
 
   await ok('a different category price is what gets quoted', () => {
@@ -474,6 +513,9 @@ async function main() {
     assert.ok(prompt.includes('Taglish'));
     assert.ok(prompt.includes('1 to 3'));
     assert.ok(prompt.includes('No markdown'));
+    assert.ok(prompt.includes('Yes po'));
+    assert.ok(prompt.includes('Wala po'));
+    assert.ok(prompt.includes('₱'));
   });
 
   console.log('\nthreads');
