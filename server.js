@@ -7438,8 +7438,15 @@ function graphPost(pathname, payload) {
       let data = '';
       res2.on('data', chunk => { data += chunk; });
       res2.on('end', () => {
-        if (res2.statusCode !== 200) console.error('[messenger]', pathname, res2.statusCode, String(data).slice(0, 300));
-        resolve({ ok: res2.statusCode === 200, status: res2.statusCode, body: data });
+        const result = { ok: res2.statusCode === 200, status: res2.statusCode, body: data };
+        const err = supportMessenger.graphError(data);
+        if (err) result.ok = false;
+        result.error = err;
+        if (!result.ok) {
+          const raw = result.error ? '' : String(data || '').replace(/access_token=[^&\s]+/gi, 'access_token=redacted').slice(0, 300);
+          console.error('[messenger]', pathname, supportMessenger.graphErrorSummary(result), raw);
+        }
+        resolve(result);
       });
     });
     req2.on('error', e => {
@@ -7534,19 +7541,32 @@ app.post('/api/support/chat', asyncRoute(async (req, res) => {
   });
 }));
 
-app.post('/admin/support/:id/resume', requireAuth, (req, res) => {
+app.post('/admin/support/:id/resume', requireAuth, asyncRoute(async (req, res) => {
   const id = String(req.params.id || '');
   if (!/^(web|mes)_[a-z0-9]+$/.test(id)) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const row = supportThreadStore().lookup(id);
+  if (!row) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const taken = await supportMessenger.resumeMessenger({
+    channel: row.channel,
+    externalId: row.external_id,
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid))
+  });
+  if (!taken.ok) {
+    console.error('[messenger take_thread_control] failed', row.external_id, taken.error);
+    supportThreadStore().setControlError(id, taken.error);
+    return res.redirect('/admin?tab=messaging&msg=support_control_failed');
+  }
+  if (row.channel === 'messenger') console.log('[messenger take_thread_control] ok', row.external_id);
   const resumed = supportThreadStore().resume(id);
   if (!resumed) return res.redirect('/admin?tab=messaging&msg=support_missing');
   if (resumed.channel === 'messenger') {
-    const inbox = supportMessenger.config(process.env).inboxAppId;
-    graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(resumed.external_id))
-      .catch(e => console.error('[messenger resume]', e.message));
-    sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
+    const sent = await sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
+    if (!sent || !sent.ok) {
+      console.error('[messenger resume greeting]', resumed.external_id, supportMessenger.graphErrorSummary(sent));
+    }
   }
   res.redirect('/admin?tab=messaging&msg=support_resumed');
-});
+}));
 
 // Meta's webhook. GET is the verify handshake. POST is messages.
 // Signature is required once FB_APP_SECRET (or MESSENGER_APP_SECRET) is set.
@@ -7592,22 +7612,68 @@ app.post('/webhook', (req, res) => {
           .catch(e => console.error('[order psid]', e.message));
       }
     }
-    if (!event.reply) return;
-
-    const existingContact = db.get('messenger_contacts').find({ psid: event.psid }).value();
-    if (!existingContact) {
-      db.get('messenger_contacts').push({
-        psid: event.psid,
-        first_seen: new Date().toISOString(),
-        last_seen: new Date().toISOString()
-      }).write();
-    } else {
-      db.get('messenger_contacts').find({ psid: event.psid }).assign({ last_seen: new Date().toISOString() }).write();
+    const paused = supportThreadStore().isPaused('messenger', event.psid);
+    const action = supportMessenger.decideInbound(event, paused);
+    if (action === 'note_control') {
+      console.log('[messenger ' + event.control + ']', event.standby ? 'standby' : 'messaging', event.psid, event.newOwnerAppId || '');
+      return;
     }
+    if (action === 'record_only') {
+      const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+      if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+      console.log('[messenger standby] paused, not replying', event.psid);
+      return;
+    }
+    if (action === 'take_then_answer') {
+      reclaimMessengerThread(event).catch(e => console.error('[messenger standby]', e && e.message ? e.message : e));
+      return;
+    }
+    if (action !== 'answer') return;
 
+    rememberMessengerContact(event.psid);
     handleSupportMessage(event).catch(e => console.error('[support message]', e));
   });
 });
+
+function rememberMessengerContact(psid) {
+  const existingContact = db.get('messenger_contacts').find({ psid }).value();
+  if (!existingContact) {
+    db.get('messenger_contacts').push({
+      psid,
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString()
+    }).write();
+  } else {
+    db.get('messenger_contacts').find({ psid }).assign({ last_seen: new Date().toISOString() }).write();
+  }
+}
+
+// The pause flag is already clear, but Page Inbox still owns the thread, so
+// the customer's text arrived on standby. Take control, then answer. A failed
+// take puts the chat back on the admin list instead of dropping the message.
+async function reclaimMessengerThread(event) {
+  console.log('[messenger standby] Page Inbox owns this thread and the bot is not paused', event.psid);
+  const taken = await graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(event.psid));
+  if (!taken.ok) {
+    const summary = supportMessenger.graphErrorSummary(taken);
+    console.error('[messenger take_thread_control] failed', event.psid, summary);
+    const flagged = supportThreadStore().noteControlFailure('messenger', event.psid, summary);
+    const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+    if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+    if (flagged.changed) {
+      notifySupportHandoff({
+        newlyHandedOff: true,
+        channel: 'messenger',
+        reason: 'thread_control',
+        preview: text || 'Messenger still has this chat.'
+      });
+    }
+    return;
+  }
+  console.log('[messenger take_thread_control] ok', event.psid);
+  rememberMessengerContact(event.psid);
+  await handleSupportMessage(event);
+}
 
 async function handleSupportMessage(event) {
   const paused = supportThreadStore().isPaused('messenger', event.psid);
@@ -7641,7 +7707,14 @@ async function handleSupportMessage(event) {
   if (result.newlyHandedOff) {
     const inbox = supportMessenger.config(process.env).inboxAppId;
     graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
-      .catch(e => console.error('[messenger handoff]', e.message));
+      .then(result => {
+        if (!result || !result.ok) {
+          console.error('[messenger pass_thread_control] failed', event.psid, supportMessenger.graphErrorSummary(result));
+          return;
+        }
+        console.log('[messenger pass_thread_control] ok', event.psid);
+      })
+      .catch(e => console.error('[messenger pass_thread_control]', e && e.message ? e.message : e));
     notifySupportHandoff(result);
   }
 }
