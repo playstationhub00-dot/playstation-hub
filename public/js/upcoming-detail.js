@@ -174,9 +174,12 @@ function updateCta() {
   const deposit = selectedType === 'tr' ? 100 : 0;
   const total   = price + deposit;
   const hasSlot = getSlots() > 0;
+  const payNote = (typeof PAY_NOTE === 'string' && PAY_NOTE)
+    ? PAY_NOTE
+    : 'GCash or Maya for local customers · PayPal for international customers';
   setReady((hasSlot ? '🎮 Reserve now — ₱' : '🎮 Request now — ₱') + total,
     hasSlot
-      ? 'Pay in full via GCash or Maya · nothing more due on release'
+      ? 'Pay in full · ' + payNote + ' · nothing more due on release'
       : 'No slots free right now — pay in full to request one. We refund you if one never opens.');
 }
 

@@ -3750,6 +3750,10 @@ label.buy-tier:hover { border-color: #444; }
 .req-voteform input { width: 110px; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.45rem 0.7rem; color: #fff; font-size: 0.78rem; font-family: inherit; }
 .req-btn { background: #fff; color: #12081f; border: 0; border-radius: 20px; padding: 0.45rem 1rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; display: inline-block; min-height: 36px; line-height: 1.6; }
 .req-btn-rent { background: #22c55e; color: #04120a; }
+.req-btn-reserve { background: #f59e0b; color: #1a1000; white-space: normal; text-align: center; line-height: 1.25; font-size: 0.68rem; padding: 0.4rem 0.45rem; }
+.req-listhead-soon { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #1e1e1e; }
+.req-listhead-soon .req-listtitle { color: #f59e0b; }
+.req-hint-soon { color: #f59e0b; }
 /* Stocked strip: a bonus/payoff row, not the primary list — scrolls
    horizontally instead of growing the page downward, so it stays a glance
    rather than competing with the voting grid for vertical space. */
@@ -3768,6 +3772,9 @@ label.buy-tier:hover { border-color: #444; }
   flex: 1;
 }
 .req-stocked-card .req-btn-rent { width: 100%; text-align: center; }
+.req-stocked-card .req-btn-reserve { width: 100%; }
+.req-stocked-card-soon { flex: 0 0 156px; background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.45); }
+a.req-stocked-card-soon:hover { border-color: rgba(245,158,11,0.85); }
 /* The card itself is the click target once a game is linked; the "Rent" pill
    becomes a plain visual cue inside it rather than a second, nested link. */
 a.req-stocked-card-link { text-decoration: none; cursor: pointer; transition: border-color 0.15s; }

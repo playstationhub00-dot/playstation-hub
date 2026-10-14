@@ -252,7 +252,7 @@ console.log('\nbuild() — orphaned orders');
 
 ok('an order with no customer record is a warning, tab orders', () => {
   const r = n.build(Object.assign({}, empty, {
-    orphanedOrders: [{ ref: 'PH-0080', fb_name: 'Luis Mallari', game_title: 'NBA2K27', amount_due: 399, deposit_due: 0, state: 'active' }]
+    orphanedOrders: [{ ref: 'PH-0080', fb_name: 'Luis Mallari', game_title: 'NBA 2K27', amount_due: 399, deposit_due: 0, state: 'active' }]
   }));
   assert.strictEqual(r.items.length, 1);
   const it = r.items[0];

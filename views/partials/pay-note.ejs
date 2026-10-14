@@ -1,0 +1,8 @@
+<%#
+  The one payment sentence. How It Works, game pages and the footer include
+  this so they cannot drift. Card checkout and bank transfer are appended
+  only when that method is actually on. paymentNote is app.locals; a direct
+  EJS render (tests) falls back to the same default sentence.
+%><%= (typeof paymentNote === 'function'
+  ? paymentNote(typeof settings !== 'undefined' ? settings : null, typeof payViaGateway !== 'undefined' && payViaGateway)
+  : 'GCash or Maya for local customers · PayPal for international customers') %>
