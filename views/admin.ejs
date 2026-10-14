@@ -409,7 +409,7 @@ function switchTab(name) {
     request_approved:'games', request_rejected:'games', request_stocked:'games', request_deleted:'games', request_image:'games',
     request_added:'games', request_add_missing:'games', request_add_error:'games',
     voter_renamed:'games', voter_removed:'games', voter_dupe:'games', voter_empty:'games', voter_error:'games',
-    alerts_saved:'settings', reminders_saved:'settings', support_resumed:'messaging', support_missing:'messaging',
+    alerts_saved:'settings', reminders_saved:'settings', support_resumed:'messaging', support_missing:'messaging', support_control_failed:'messaging',
     account_added:'accounts', account_updated:'accounts', account_deleted:'accounts', slot_updated:'accounts', account_error:'accounts',
     bg_saved:'posters', bg_removed:'posters', poster_error:'posters',
     // Fallback landing for a rejected game-picture upload when the browser
@@ -456,10 +456,13 @@ function switchTab(name) {
     messages.loyalty_link_saved = '🔗 Names linked';
     messages.loyalty_link_rejected = 'Could not link those names';
     messages.loyalty_link_removed = '🔗 Link removed';
+    messages.support_resumed = '✅ Bot resumed. It will answer the next message in that chat.';
+    messages.support_missing = '❌ That chat is no longer in the list.';
+    messages.support_control_failed = '❌ Messenger still has this chat. The bot was not resumed — the reason is on the card.';
     const text = (messages[msg] || '').replace('{summary}', psnSummary.charAt(0).toUpperCase() + psnSummary.slice(1));
     if (text) {
       const toast = document.createElement('div');
-      toast.className = 'toast success';
+      toast.className = 'toast ' + (msg === 'support_control_failed' || msg === 'support_missing' ? 'error' : 'success');
       toast.textContent = text;
       document.body.appendChild(toast);
       setTimeout(() => toast.classList.add('show'), 100);

@@ -1,13 +1,14 @@
 <%# Chats the bot stopped answering. Website and Messenger share the list.
-    Resuming clears the pause flag; Messenger also asks Meta to hand the
-    thread back. The PSID stays on the server — this card shows the conversation. %>
+    Messenger resume waits for take_thread_control. A refusal keeps the card
+    and shows control_error. The PSID stays on the server. %>
 <% const handoffs = (typeof supportHandoffs !== 'undefined' && supportHandoffs) || []; %>
 <%
   const handoffWhy = {
     asked_for_human: 'Asked for a person',
     payment_or_dispute: 'Payment proof or dispute',
     attachment: 'Sent a photo',
-    cannot_help: 'Bot could not answer'
+    cannot_help: 'Bot could not answer',
+    thread_control: 'Messenger still has the chat'
   };
 %>
 <div class="adm-card" id="sec-support-handoffs">
@@ -39,6 +40,9 @@
             </div>
           <% }); %>
         </div>
+        <% if (h.control_error) { %>
+          <div style="font-size:0.75rem;line-height:1.4;color:#e74c3c;margin-bottom:0.65rem;">Messenger did not hand this chat back: <%= h.control_error %></div>
+        <% } %>
         <form method="POST" action="/admin/support/<%= h.id %>/resume" style="margin:0;">
           <button type="submit" style="background:#f0a500;color:#111;border:none;border-radius:8px;padding:0.45rem 0.9rem;font-weight:800;font-size:0.78rem;cursor:pointer;">Resume bot</button>
         </form>

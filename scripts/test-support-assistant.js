@@ -767,6 +767,37 @@ async function main() {
     assert.strictEqual(result.newlyHandedOff, true);
   });
 
+  await ok('a refused take keeps the Messenger chat visible and a second failure does not re-alert', () => {
+    const store = threads.createStore(threads.memory());
+    store.handoff('messenger', 'psid-7', 'asked_for_human');
+    const id = store.listHandoffs()[0].id;
+    const kept = store.setControlError(id, '(#10) Only Main Receiver can take thread control');
+    assert.strictEqual(kept.handed_off, true);
+    assert.strictEqual(kept.handoff_reason, 'asked_for_human');
+    assert.strictEqual(kept.control_error, '(#10) Only Main Receiver can take thread control');
+    assert.strictEqual(kept.external_id, undefined);
+    assert.strictEqual(store.lookup(id).external_id, 'psid-7');
+    assert.ok(!JSON.stringify(store.listHandoffs()).includes('psid-7'));
+
+    store.resume(id);
+    assert.strictEqual(store.isPaused('messenger', 'psid-7'), false);
+    assert.strictEqual(store.lookup(id).control_error, null);
+
+    const again = store.noteControlFailure('messenger', 'psid-7', 'Messenger returned HTTP 400.');
+    assert.strictEqual(again.changed, true);
+    assert.strictEqual(store.isPaused('messenger', 'psid-7'), true);
+    assert.strictEqual(store.listHandoffs()[0].handoff_reason, 'thread_control');
+    assert.strictEqual(store.listHandoffs()[0].control_error, 'Messenger returned HTTP 400.');
+    const second = store.noteControlFailure('messenger', 'psid-7', 'still bad');
+    assert.strictEqual(second.changed, false);
+    assert.strictEqual(store.listHandoffs().length, 1);
+    assert.strictEqual(store.listHandoffs()[0].control_error, 'still bad');
+
+    const fresh = store.noteControlFailure('messenger', 'psid-new', 'x'.repeat(400));
+    assert.strictEqual(fresh.changed, true);
+    assert.strictEqual(fresh.thread.control_error.length, 180);
+  });
+
   console.log('\nabuse and rate limit');
 
   await ok('empty, huge, and spam messages are refused', () => {
@@ -860,6 +891,83 @@ async function main() {
     assert.strictEqual(events[2].reply, false);
   });
 
+  await ok('standby messages and handover events are not dropped', () => {
+    const events = messenger.inboundEvents({
+      object: 'page',
+      entry: [{
+        messaging: [
+          { sender: { id: '9' }, pass_thread_control: { new_owner_app_id: '111', metadata: 'back' } }
+        ],
+        standby: [
+          { sender: { id: '2' }, message: { text: "May slot pa ba ang Marvel's Wolverine?" } },
+          { sender: { id: '8' }, message: { is_echo: true, text: 'page reply' } },
+          { sender: { id: '7' }, take_thread_control: { previous_owner_app_id: '111', metadata: 'inbox' } }
+        ]
+      }]
+    });
+    assert.strictEqual(events.length, 3);
+    assert.strictEqual(events[0].control, 'pass_thread_control');
+    assert.strictEqual(events[0].standby, false);
+    assert.strictEqual(events[0].reply, false);
+    assert.strictEqual(events[0].newOwnerAppId, '111');
+    assert.strictEqual(events[0].metadata, 'back');
+    assert.strictEqual(events[1].standby, true);
+    assert.strictEqual(events[1].reply, true);
+    assert.strictEqual(events[1].text, "May slot pa ba ang Marvel's Wolverine?");
+    assert.strictEqual(events[1].control, null);
+    assert.strictEqual(events[2].control, 'take_thread_control');
+    assert.strictEqual(events[2].standby, true);
+    assert.strictEqual(events[2].previousOwnerAppId, '111');
+
+    assert.strictEqual(messenger.decideInbound(events[1], false), 'take_then_answer');
+    assert.strictEqual(messenger.decideInbound(events[1], true), 'record_only');
+    assert.strictEqual(messenger.decideInbound({ reply: true, standby: false }, true), 'answer');
+    assert.strictEqual(messenger.decideInbound(events[0], false), 'note_control');
+    assert.strictEqual(messenger.decideInbound({ reply: false, referral: 'PH-1' }, false), 'ignore');
+  });
+
+  await ok('a failed take_thread_control is the Graph error, and a website resume skips it', async () => {
+    let asked = null;
+    const okTake = await messenger.resumeMessenger({
+      channel: 'messenger',
+      externalId: 'psid-1',
+      take: async (psid) => {
+        asked = psid;
+        return { ok: true, status: 200, body: '{"success":true}' };
+      }
+    });
+    assert.strictEqual(asked, 'psid-1');
+    assert.deepStrictEqual(okTake, { ok: true });
+
+    const body = JSON.stringify({
+      error: {
+        message: '(#10) Message failed to send because another app is controlling this thread now. access_token=SECRET',
+        code: 10,
+        error_subcode: 2018300
+      }
+    });
+    const failed = await messenger.resumeMessenger({
+      channel: 'messenger',
+      externalId: 'psid-1',
+      take: async () => ({ ok: false, status: 400, body })
+    });
+    assert.strictEqual(failed.ok, false);
+    assert.ok(failed.error.includes('another app is controlling this thread'), failed.error);
+    assert.ok(failed.error.includes('10/2018300'), failed.error);
+    assert.ok(!failed.error.includes('SECRET'), failed.error);
+    assert.strictEqual(messenger.graphErrorSummary({ reason: 'no_token' }), 'Page token is missing.');
+    assert.strictEqual(messenger.graphErrorSummary({ status: 500, body: 'nope' }), 'Messenger returned HTTP 500.');
+
+    let called = false;
+    const web = await messenger.resumeMessenger({
+      channel: 'web',
+      externalId: 'sess',
+      take: async () => { called = true; return { ok: false }; }
+    });
+    assert.strictEqual(web.ok, true);
+    assert.strictEqual(called, false);
+  });
+
   await ok('pass and take thread control target the inbox app and the PSID', () => {
     const pass = messenger.passThreadControl('psid-1', '263902037430900');
     assert.strictEqual(pass.recipient.id, 'psid-1');
@@ -892,6 +1000,10 @@ async function main() {
     assert.strictEqual(assistant.SUPPORT_CHAT_WINDOW_MS, 10 * 60 * 1000);
     assert.ok(server.includes('x-hub-signature-256'));
     assert.ok(server.includes("app.post('/admin/support/:id/resume'"));
+    assert.ok(server.includes('resumeMessenger'));
+    assert.ok(server.includes('take_then_answer'));
+    assert.ok(server.includes('support_control_failed'));
+    assert.ok(server.includes('[messenger take_thread_control] failed'));
   });
 
   await ok('the admin card escapes the transcript and offers resume', () => {
@@ -903,6 +1015,7 @@ async function main() {
         channel: 'web',
         handoff_reason: 'asked_for_human',
         handoff_at: '2026-10-13T19:00:00.000Z',
+        control_error: '<b>bad</b>',
         messages: [
           { role: 'user', text: '<script>alert(1)</script>' },
           { role: 'assistant', text: 'Flagged.' }
@@ -913,6 +1026,9 @@ async function main() {
     assert.ok(html.includes('/admin/support/web_abc123/resume'));
     assert.ok(html.includes('&lt;script&gt;'));
     assert.ok(!html.includes('<script>alert'));
+    assert.ok(html.includes('Messenger did not hand this chat back'));
+    assert.ok(html.includes('&lt;b&gt;bad&lt;/b&gt;'));
+    assert.ok(!html.includes('<b>bad</b>'));
     const empty = ejs.render(fs.readFileSync(file, 'utf8'), { supportHandoffs: [] }, { filename: file });
     assert.ok(empty.includes('No chats waiting'));
   });
