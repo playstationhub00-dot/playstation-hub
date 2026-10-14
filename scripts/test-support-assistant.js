@@ -258,6 +258,122 @@ async function main() {
     assert.ok(result.reply.includes('10%'), result.reply);
   });
 
+  function jsonResponse(status, body) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => JSON.stringify(body)
+    };
+  }
+
+  await ok('Claude is used when ANTHROPIC_API_KEY is set, and thinking blocks go back with the tool result', async () => {
+    const seen = [];
+    const fetchImpl = async (url, opts) => {
+      seen.push({ url, opts, body: JSON.parse(opts.body) });
+      if (seen.length === 1) {
+        return jsonResponse(200, {
+          content: [
+            { type: 'thinking', thinking: 'look up the live sheet', signature: 'sig-1' },
+            { type: 'tool_use', id: 'toolu_1', name: 'get_pricing', input: {} }
+          ]
+        });
+      }
+      return jsonResponse(200, {
+        content: [{ type: 'text', text: 'New Games is ₱349 for a week.' }]
+      });
+    };
+    const env = {
+      ANTHROPIC_API_KEY: 'sk-ant-test',
+      OPENAI_API_KEY: 'sk-openai-also',
+      ANTHROPIC_MODEL: 'claude-haiku-5-5'
+    };
+    const cfg = assistant.llmConfig(env);
+    assert.strictEqual(cfg.provider, 'anthropic');
+    assert.strictEqual(cfg.model, 'claude-haiku-5-5');
+    assert.strictEqual(cfg.apiKey, 'sk-ant-test');
+    const result = await assistant.respond({
+      message: 'how much for new games please',
+      facts: shopFacts(),
+      complete: assistant.createComplete(env, fetchImpl),
+      invokeTool: async (name) => {
+        assert.strictEqual(name, 'get_pricing');
+        return { tiers: [{ name: 'New Games' }] };
+      }
+    });
+    assert.strictEqual(result.source, 'llm');
+    assert.ok(result.reply.includes('₱349'));
+    assert.strictEqual(seen.length, 2);
+    assert.strictEqual(seen[0].url, 'https://api.anthropic.com/v1/messages');
+    assert.strictEqual(seen[0].opts.headers['x-api-key'], 'sk-ant-test');
+    assert.strictEqual(seen[0].opts.headers['anthropic-version'], '2023-06-01');
+    assert.strictEqual(seen[0].body.model, 'claude-haiku-5-5');
+    assert.strictEqual(seen[0].body.temperature, undefined);
+    assert.ok(seen[0].body.system.includes('PlayStation Hub'));
+    assert.ok(seen[0].body.messages.every(m => m.role !== 'system'));
+    const pricing = seen[0].body.tools.find(t => t.name === 'get_pricing');
+    assert.strictEqual(pricing.input_schema.type, 'object');
+    assert.strictEqual(pricing.parameters, undefined);
+    assert.deepStrictEqual(seen[0].body.tool_choice, { type: 'auto' });
+    const echoed = seen[1].body.messages.find(m => m.role === 'assistant');
+    assert.ok(echoed.content.some(b => b.type === 'thinking' && b.signature === 'sig-1'));
+    assert.ok(echoed.content.some(b => b.type === 'tool_use' && b.id === 'toolu_1' && b.name === 'get_pricing'));
+    const toolMsg = seen[1].body.messages.filter(m => m.role === 'user').pop();
+    assert.ok(toolMsg.content.some(b => b.type === 'tool_result' && b.tool_use_id === 'toolu_1'));
+    assert.ok(!JSON.stringify(seen).includes('sk-openai-also'));
+  });
+
+  await ok('ANTHROPIC_MODEL overrides the default, and a blank key does not win', () => {
+    const custom = assistant.llmConfig({ ANTHROPIC_API_KEY: 'sk-ant', ANTHROPIC_MODEL: 'claude-sonnet-5' });
+    assert.strictEqual(custom.model, 'claude-sonnet-5');
+    const blank = assistant.llmConfig({ ANTHROPIC_API_KEY: '   ', OPENAI_API_KEY: 'sk-o' });
+    assert.strictEqual(blank.provider, 'openai');
+    assert.strictEqual(assistant.llmConfig({}).provider, null);
+    assert.strictEqual(assistant.createComplete({}), null);
+    assert.strictEqual(assistant.createComplete({ ANTHROPIC_API_KEY: '  ' }), null);
+  });
+
+  await ok('OpenAI is the fallback only when the Anthropic key is absent', async () => {
+    let seen;
+    const fetchImpl = async (url, opts) => {
+      seen = { url, body: JSON.parse(opts.body), auth: opts.headers.Authorization };
+      return jsonResponse(200, { choices: [{ message: { content: 'OpenAI reply', tool_calls: [] } }] });
+    };
+    const cfg = assistant.llmConfig({ OPENAI_API_KEY: 'sk-openai', OPENAI_MODEL: 'gpt-4o-mini' });
+    assert.strictEqual(cfg.provider, 'openai');
+    const result = await assistant.respond({
+      message: 'hello there',
+      facts: shopFacts(),
+      complete: assistant.createComplete({ OPENAI_API_KEY: 'sk-openai' }, fetchImpl)
+    });
+    assert.strictEqual(result.reply, 'OpenAI reply');
+    assert.strictEqual(seen.url, 'https://api.openai.com/v1/chat/completions');
+    assert.strictEqual(seen.auth, 'Bearer sk-openai');
+    assert.strictEqual(seen.body.model, 'gpt-4o-mini');
+    assert.strictEqual(seen.body.temperature, 0.4);
+    assert.strictEqual(seen.body.tool_choice, 'auto');
+  });
+
+  await ok('an Anthropic HTTP error falls back without the response body or the key', async () => {
+    const fetchImpl = async () => jsonResponse(401, { error: { message: 'bad key sk-ant-secret leaked' } });
+    const complete = assistant.createComplete({ ANTHROPIC_API_KEY: 'sk-ant-secret' }, fetchImpl);
+    let thrown;
+    try {
+      await complete({ messages: [{ role: 'user', content: 'hi' }], tools: assistant.TOOLS });
+    } catch (e) { thrown = e; }
+    assert.ok(thrown);
+    assert.strictEqual(thrown.message, 'llm_http_401');
+    assert.ok(!thrown.message.includes('sk-ant-secret'));
+    assert.ok(!thrown.message.includes('leaked'));
+    const result = await assistant.respond({
+      message: 'how much for new games',
+      facts: shopFacts(),
+      complete
+    });
+    assert.strictEqual(result.source, 'fallback');
+    assert.strictEqual(result.llmError, true);
+    assert.ok(result.reply.includes('₱349'));
+  });
+
   await ok('the system prompt carries the live tier, not a fixed 349', () => {
     const prompt = assistant.systemPrompt(facts.faqBundle({
       categories: [{ name: 'Regular', nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 1, tr_price_30d: 2 }],
@@ -369,6 +485,23 @@ async function main() {
     assert.strictEqual(env.pageToken, 'page-tok');
     assert.strictEqual(env.appSecret, 'app-secret');
     assert.strictEqual(env.inboxAppId, '263902037430900');
+  });
+
+  await ok('production MESSENGER_VERIFY_TOKEN and MESSENGER_PAGE_TOKEN are what the webhook reads', () => {
+    const env = messenger.config({
+      MESSENGER_VERIFY_TOKEN: 'prod-verify',
+      MESSENGER_PAGE_TOKEN: 'prod-page'
+    });
+    assert.strictEqual(env.verifyToken, 'prod-verify');
+    assert.strictEqual(env.pageToken, 'prod-page');
+    const handshake = messenger.verifyChallenge({
+      mode: 'subscribe', token: 'prod-verify', challenge: '12345', expected: env.verifyToken
+    });
+    assert.deepStrictEqual(handshake, { ok: true, challenge: '12345' });
+    const wrong = messenger.verifyChallenge({
+      mode: 'subscribe', token: 'playstation_hub_verify', challenge: '12345', expected: env.verifyToken
+    });
+    assert.strictEqual(wrong.ok, false);
   });
 
   await ok('signature matches the raw body and rejects a tampered one', () => {
