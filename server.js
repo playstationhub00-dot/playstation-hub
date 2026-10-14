@@ -58,6 +58,7 @@ const supportFacts = require('./lib/support-facts');
 const supportThreads = require('./lib/support-threads');
 const supportAssistant = require('./lib/support-assistant');
 const supportMessenger = require('./lib/messenger-webhook');
+const loyalty = require('./lib/loyalty');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -220,7 +221,10 @@ db.defaults({
   accounts: [],
   nextAccountId: 1,
   month_logs: [],
-  support_threads: []
+  support_threads: [],
+  loyalty_redemptions: [],
+  loyalty_identity: { aliases: {}, rows: {} },
+  loyalty_next_id: 1
 }).write();
 
 // Seed default sign-in steps on first run only — an owner who has already
@@ -248,6 +252,9 @@ if (!db.get('signin_steps').value().length) {
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
 if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
 if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
+if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
+if (db.get('loyalty_identity').value() === undefined) db.set('loyalty_identity', { aliases: {}, rows: {} }).write();
+if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
 (function migrateVisitorPaths() {
@@ -802,6 +809,27 @@ function newCustomerId() {
   return id;
 }
 
+function ensureLoyaltyStore() {
+  if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
+  if (db.get('loyalty_identity').value() === undefined) db.set('loyalty_identity', { aliases: {}, rows: {} }).write();
+  if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1).write();
+}
+
+// One pass over the ledger for the Loyalty tab, the reward badges, and the
+// customer's own order page. Dates are Manila calendar days, same as orders.
+function loyaltySnapshot() {
+  ensureLoyaltyStore();
+  const built = loyalty.build(getCustomers(), {
+    settings: (getSiteSettings() || {}).loyalty,
+    identity: db.get('loyalty_identity').value(),
+    redemptions: db.get('loyalty_redemptions').value() || [],
+    today: orders.manilaDate()
+  });
+  built.formatYmd = loyalty.formatYmd;
+  built.formatManila = loyalty.formatManila;
+  return built;
+}
+
 // ── Accounts (per-account slot inventory) ──────────────────────────────────
 const ACCOUNT_SLOT_TYPES = ['trophy', 'non_trophy', 'ps4_primary'];
 const ACCOUNT_STATUSES = ['open', 'rented', 'buyed', 'na', 'maintenance'];
@@ -948,6 +976,14 @@ function getAnnouncements() {
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
+  // Seeded once, the first time this process reads settings that predate
+  // loyalty. A later save from the form replaces the object; this does not
+  // run again, and it does not touch anything else on the settings document.
+  if (s && s.loyalty === undefined) {
+    const seeded = loyalty.normalizeSettings(null);
+    db.set('site_settings.loyalty', seeded).write();
+    s.loyalty = seeded;
+  }
   if (!s.hero_text) {
     db.set('site_settings.hero_text', {
       line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games',
@@ -2802,6 +2838,7 @@ app.get('/order/:ref', asyncRoute(async (req, res) => {
     queueRows, queuePos, queueAhead, queueExpired,
     queueRules,
     canReview, myReview, fbReviewsLink,
+    loyaltyProgress: loyalty.customerCopy(loyaltySnapshot().profileFor({ name: order.fb_name, rowId: order.customer_id })),
     // For the "reassurance" panel on the payment step: real reviews and a
     // real median approval time, not invented urgency.
     approvalEtaMinutes: getApprovalEtaMinutes(),
@@ -4727,6 +4764,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     const bd = b.end_date || b.created_at || '';
     return bd.localeCompare(ad);
   });
+  res.locals.loyaltyIndex = loyaltySnapshot();
   // Live rentals that never took an account slot, on games where the accounts
   // system governs availability. Each one is a slot the site still advertises
   // as free while somebody is in it — the Onimusha trophy case. Surfaced here
@@ -7639,6 +7677,53 @@ app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
   if (!customer) return res.status(404).json({ ok: false });
   db.get('customers').find({ id }).assign({ review_asked_at: null }).write();
   res.json({ ok: true });
+});
+
+app.post('/admin/loyalty/settings', requireAuth, (req, res) => {
+  const tab = req.body.return_tab === 'settings' ? 'settings' : 'loyalty';
+  db.set('site_settings.loyalty', loyalty.settingsFromForm(req.body)).write();
+  res.redirect('/admin?tab=' + tab + '&msg=loyalty_saved');
+});
+
+app.post('/admin/loyalty/redeem', requireAuth, (req, res) => {
+  const snap = loyaltySnapshot();
+  const profile = snap.profiles.find(p => p.key === String(req.body.profile_key || ''));
+  const plan = loyalty.planRedemption(profile, req.body, new Date().toISOString());
+  if (!plan.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_redeem_rejected');
+  const id = db.get('loyalty_next_id').value() || 1;
+  db.set('loyalty_next_id', id + 1).write();
+  db.get('loyalty_redemptions').push(Object.assign({ id }, plan.record)).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_redeemed');
+});
+
+app.post('/admin/loyalty/merge', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.mergeNames(db.get('loyalty_identity').value(), req.body.from_name, req.body.into_name);
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/link-name', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.linkNameToRow(db.get('loyalty_identity').value(), req.body.name, req.body.row_id, getCustomers());
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/link-row', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.linkRowToName(db.get('loyalty_identity').value(), req.body.row_id, req.body.name);
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/unlink', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  db.set('loyalty_identity', loyalty.removeLink(db.get('loyalty_identity').value(), req.body)).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_removed');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

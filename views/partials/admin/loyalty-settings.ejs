@@ -1,0 +1,66 @@
+<%
+  const ly = (settings && settings.loyalty) || {};
+  const lyPunch = ly.punch_enabled !== false;
+  const lyRebook = ly.rebook_enabled !== false;
+  const lyTrophy = ly.trophy_double === true;
+  const lyEvery = ly.punch_every || 5;
+  const lyDays = ly.reward_days || 7;
+  const lyAmount = (ly.rebook_amount === 0 || ly.rebook_amount) ? ly.rebook_amount : 50;
+  const lyWithin = (ly.rebook_within_days === 0 || ly.rebook_within_days) ? ly.rebook_within_days : 7;
+  const lyReturn = (typeof loyaltyReturnTab !== 'undefined' && loyaltyReturnTab) ? loyaltyReturnTab : 'loyalty';
+%>
+<div class="adm-card" id="<%= (typeof loyaltySectionId !== 'undefined' && loyaltySectionId) ? loyaltySectionId : 'sec-loyalty' %>">
+  <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎁</div>
+      <div>
+        <div class="sa-title">Loyalty offers</div>
+        <div class="sa-desc">Each offer can be on or off. Changing a number here changes who qualifies. Marking a reward redeemed records who used it; it does not change the rental price.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body">
+    <form method="POST" action="/admin/loyalty/settings">
+      <input type="hidden" name="return_tab" value="<%= lyReturn %>">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+            <input type="checkbox" name="punch_enabled" <%= lyPunch ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#f0a500;">
+            <span>Punch card — every Nth paid rental earns a free rental</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Paid rentals per reward</label>
+          <input type="number" name="punch_every" min="1" max="100" value="<%= lyEvery %>">
+        </div>
+        <div class="form-group">
+          <label>Free rental length (days)</label>
+          <input type="number" name="reward_days" min="1" max="365" value="<%= lyDays %>">
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+            <input type="checkbox" name="trophy_double" <%= lyTrophy ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#f0a500;">
+            <span>Trophy rentals count as two punches</span>
+          </label>
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
+            <input type="checkbox" name="rebook_enabled" <%= lyRebook ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#22c55e;">
+            <span>Rebook discount — off when a new rental starts within N days of the last one ending</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Discount (₱)</label>
+          <input type="number" name="rebook_amount" min="0" max="100000" value="<%= lyAmount %>">
+        </div>
+        <div class="form-group">
+          <label>Within (days)</label>
+          <input type="number" name="rebook_within_days" min="0" max="365" value="<%= lyWithin %>">
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save loyalty offers</button>
+      </div>
+    </form>
+  </div>
+</div>

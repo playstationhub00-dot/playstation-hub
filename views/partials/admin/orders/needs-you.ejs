@@ -97,6 +97,7 @@
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
+        <%- include('../loyalty-badge', { name: o.fb_name, rowId: o.customer_id }) %>
         <% if (o.psid) { %>
           <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a>
         <% } %>

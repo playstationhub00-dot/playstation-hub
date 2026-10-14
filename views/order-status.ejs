@@ -137,6 +137,15 @@
     <% } %>
   </div>
 
+  <% if (typeof loyaltyProgress !== 'undefined' && loyaltyProgress && loyaltyProgress.show) { %>
+  <div class="ord-card" id="ordLoyalty">
+    <div class="ord-row"><span>Loyalty</span><span><%= loyaltyProgress.headline %></span></div>
+    <% if (loyaltyProgress.punchLine) { %><div class="ord-refund-note"><%= loyaltyProgress.punchLine %></div><% } %>
+    <% if (loyaltyProgress.rewardLine) { %><div class="ord-refund-note"><%= loyaltyProgress.rewardLine %></div><% } %>
+    <% if (loyaltyProgress.rebookLine) { %><div class="ord-refund-note"><%= loyaltyProgress.rebookLine %></div><% } %>
+  </div>
+  <% } %>
+
   <% if (queueRows && queueRows.length && queuePos && !queueExpired) { %>
   <%- include('partials/queue-line', { queues: { nt: order.account_type === 'nt' ? queueRows : [], tr: order.account_type === 'tr' ? queueRows : [], ps4: order.account_type === 'ps4' ? queueRows : [] }, activeType: order.account_type, selfRef: order.ref, selfSession: null, suffix: '' }) %>
   <% } %>

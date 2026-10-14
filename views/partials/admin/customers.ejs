@@ -282,7 +282,7 @@
             %>
             <tr class="cust-row" data-status="<%= c.status %>" data-name="<%= c.customer_name.toLowerCase() %>" data-game="<%= c.game_title.toLowerCase() %>" style="<%= isOverdue ? 'background:rgba(239,68,68,0.06);' : '' %>">
               <td>
-                <div style="font-weight:700;"><%= c.customer_name %></div>
+                <div style="font-weight:700;"><%= c.customer_name %> <%- include('loyalty-badge', { name: c.customer_name, rowId: c.id }) %></div>
                 <% if (c.notes) { %><div style="font-size:0.7rem;color:#555;margin-top:0.15rem;"><%= c.notes %></div><% } %>
               </td>
               <td style="font-size:0.85rem;">

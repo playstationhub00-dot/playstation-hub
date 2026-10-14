@@ -141,6 +141,7 @@
     <button class="admin-tab" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="tab-icon">📊</span><span class="tab-label">Dashboard</span></button>
     <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span><% const oqBadge = orderQueue.length + (typeof refundsOwed !== 'undefined' ? refundsOwed : []).length; %><% if (oqBadge) { %><span class="oq-count"><%= oqBadge %></span><% } %></button>
     <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')"><span class="tab-icon">👥</span><span class="tab-label">Customers</span></button>
+    <button class="admin-tab" data-tab="loyalty" onclick="switchTab('loyalty')"><span class="tab-icon">🎁</span><span class="tab-label">Loyalty</span><% const loyaltyWaiting = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex && loyaltyIndex.profiles) ? loyaltyIndex.profiles.filter(p => p.hasReward).length : 0; %><% if (loyaltyWaiting) { %><span class="oq-count"><%= loyaltyWaiting %></span><% } %></button>
     <button class="admin-tab" data-tab="games" onclick="switchTab('games')"><span class="tab-icon">🎮</span><span class="tab-label">Games</span></button>
     <button class="admin-tab" data-tab="accounts" onclick="switchTab('accounts')"><span class="tab-icon">🗂️</span><span class="tab-label">Accounts</span></button>
 
@@ -235,6 +236,9 @@
       <!-- ═══════════════ CUSTOMERS TAB ═══════════════ -->
       <%- include('partials/admin/customers') %>
 
+      <!-- ═══════════════ LOYALTY TAB ═══════════════ -->
+      <%- include('partials/admin/loyalty') %>
+
       <!-- ═══════════════ ORDERS TAB ═══════════════ -->
       <%- include('partials/admin/orders') %>
 
@@ -264,7 +268,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['dashboard','orders','customers','games','accounts','content','messaging','psplus','posters','settings'];
+const tabs = ['dashboard','orders','customers','loyalty','games','accounts','content','messaging','psplus','posters','settings'];
 // Tab ids retired in later phases of the admin reorganisation. A browser that
 // still has one of these in localStorage, or a bookmark carrying one in
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
@@ -396,6 +400,7 @@ function switchTab(name) {
     psplus_prices:'psplus', popular_added:'psplus', popular_updated:'psplus', popular_deleted:'psplus',
     payment_confirmed:'customers', payment_confirm_stale:'customers',
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers', swap_waived:'customers', swap_waive_none:'customers', purchase_fixed:'customers', end_date_synced:'customers', extended:'customers',
+    loyalty_saved:'loyalty', loyalty_redeemed:'loyalty', loyalty_redeem_rejected:'loyalty', loyalty_link_saved:'loyalty', loyalty_link_rejected:'loyalty', loyalty_link_removed:'loyalty',
     month_log_saved:'dashboard', month_log_deleted:'dashboard',
     settings_saved:'settings', promo_saved:'settings', game_discounts_saved:'settings', price_bands_saved:'settings', price_bands_invalid:'settings', popup_saved:'content', home_banner_saved:'content', password_changed:'settings',
     wrong_password:'settings', password_mismatch:'settings', password_too_short:'settings',
@@ -445,6 +450,12 @@ function switchTab(name) {
       psnCount('dates') ? 'updated ' + psnPlural(psnCount('dates'), 'date') : '',
       psnCount('info') ? 'got info for ' + psnPlural(psnCount('info'), 'game') : ''
     ].filter(Boolean).join(' · ') || 'nothing changed';
+    messages.loyalty_saved = '🎁 Loyalty offers saved';
+    messages.loyalty_redeemed = '🎁 Reward marked redeemed';
+    messages.loyalty_redeem_rejected = 'Could not redeem that — check the reward is still available and name a rental or an order';
+    messages.loyalty_link_saved = '🔗 Names linked';
+    messages.loyalty_link_rejected = 'Could not link those names';
+    messages.loyalty_link_removed = '🔗 Link removed';
     const text = (messages[msg] || '').replace('{summary}', psnSummary.charAt(0).toUpperCase() + psnSummary.slice(1));
     if (text) {
       const toast = document.createElement('div');

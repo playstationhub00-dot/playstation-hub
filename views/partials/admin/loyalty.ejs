@@ -1,0 +1,231 @@
+<div class="tab-panel" id="tab-loyalty">
+  <%- include('loyalty-settings', { settings: settings, loyaltyReturnTab: 'loyalty', loyaltySectionId: 'sec-loyalty-tab' }) %>
+
+  <%
+    const lyIndex = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex) ? loyaltyIndex : { profiles: [], links: [], today: '', formatYmd: function () { return ''; }, formatManila: function () { return ''; } };
+    const lyProfiles = lyIndex.profiles || [];
+    const lyWaiting = lyProfiles.filter(p => p.hasReward).length;
+    const lyDate = lyIndex.formatYmd || function (d) { return d || ''; };
+    const lyWhen = lyIndex.formatManila || function (d) { return d || ''; };
+  %>
+
+  <div class="adm-card" id="sec-loyalty-list">
+    <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+      <div class="sa-left">
+        <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎁</div>
+        <div>
+          <div class="sa-title">Customers</div>
+          <div class="sa-desc"><%= lyProfiles.length %> with a paid rental<% if (lyWaiting) { %> · <%= lyWaiting %> with a reward available<% } %><% if (lyIndex.today) { %> · today <%= lyDate(lyIndex.today) %> Manila<% } %></div>
+        </div>
+      </div>
+    </div>
+    <div class="adm-card-body">
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-bottom:0.9rem;">
+        <input type="search" id="loyaltySearch" placeholder="Search name or game" autocomplete="off" style="flex:1;min-width:180px;padding:0.45rem 0.75rem;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;">
+        <label style="display:flex;align-items:center;gap:0.45rem;font-size:0.82rem;color:#ccc;cursor:pointer;">
+          <input type="checkbox" id="loyaltyRewardOnly" style="accent-color:#f0a500;"> Has reward available
+        </label>
+      </div>
+      <% if (!lyProfiles.length) { %>
+        <div style="padding:1.5rem;text-align:center;color:#666;">No paid rentals yet.</div>
+      <% } else { %>
+      <div style="overflow-x:auto;">
+        <table class="games-table" id="loyaltyTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Rentals</th>
+              <th>Punches</th>
+              <th>Next reward</th>
+              <th>Earned</th>
+              <th>Available</th>
+              <th>Redeemed</th>
+              <th>Rebook</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% lyProfiles.forEach(p => {
+                 const choices = [];
+                 if (p.settings.punch_enabled) {
+                   for (let i = 1; i <= p.earned; i++) {
+                     if (!p.redemptions.some(r => r.kind === 'punch' && r.reward_index === i)) {
+                       choices.push({ value: 'punch:' + i, label: 'Free ' + p.settings.reward_days + '-day rental #' + i });
+                     }
+                   }
+                 }
+                 (p.rebook.opportunities || []).forEach(o => {
+                   if (!o.available) return;
+                   const label = String(o.key).indexOf('open:') === 0
+                     ? ('₱' + o.amount + ' off, open until ' + lyDate(o.expires))
+                     : ('₱' + o.amount + ' off on ' + (o.game_title || ('rental #' + o.rental_id)));
+                   choices.push({ value: 'rebook:' + o.key, label: label });
+                 });
+            %>
+            <tr class="loyalty-row" data-reward="<%= p.hasReward ? '1' : '0' %>" data-search="<%= p.search %>">
+              <td>
+                <div style="font-weight:700;"><%= p.name %> <%- include('loyalty-badge', { name: p.name }) %></div>
+                <% if (p.names.length > 1) { %><div style="font-size:0.7rem;color:#777;"><%= p.names.join(' · ') %></div><% } %>
+              </td>
+              <td><%= p.rentalCount %></td>
+              <td>
+                <%= p.punches %>
+                <% if (p.settings.trophy_double && p.rentals.some(r => r.account_type === 'tr')) { %><div style="font-size:0.68rem;color:#f0a500;">trophy ×2</div><% } %>
+              </td>
+              <td>
+                <% if (p.settings.punch_enabled) { %>
+                  <%= p.progress %>/<%= p.every %> · <%= p.toNext %> to go
+                <% } else { %>
+                  <span style="color:#777;">Punch card off</span>
+                <% } %>
+              </td>
+              <td><%= p.earned %></td>
+              <td><%= p.availablePunch %></td>
+              <td><%= p.redeemedPunch %></td>
+              <td>
+                <% if (p.rebook.eligible) { %>
+                  ₱<%= p.rebook.amount %> until <%= lyDate(p.rebook.expires) %>
+                <% } else if (p.settings.rebook_enabled && p.rebook.unredeemed > 0) { %>
+                  ₱<%= p.rebook.amount %> ready to redeem
+                <% } else if (!p.settings.rebook_enabled) { %>
+                  <span style="color:#777;">Off</span>
+                <% } else { %>—<% } %>
+              </td>
+              <td>
+                <details>
+                  <summary style="cursor:pointer;color:#f0a500;font-size:0.8rem;">Redeem / history</summary>
+                  <div style="min-width:280px;padding-top:0.6rem;">
+                    <% if (choices.length) { %>
+                    <form method="POST" action="/admin/loyalty/redeem" style="display:grid;gap:0.4rem;margin-bottom:0.8rem;">
+                      <input type="hidden" name="profile_key" value="<%= p.key %>">
+                      <select name="choice" required style="background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.35rem;">
+                        <% choices.forEach(c => { %><option value="<%= c.value %>"><%= c.label %></option><% }) %>
+                      </select>
+                      <select name="rental_id" style="background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.35rem;">
+                        <option value="">Rental record…</option>
+                        <% p.rows.forEach(r => { %>
+                        <option value="<%= r.id %>">#<%= r.id %> <%= r.game_title || '' %> <%= r.start_date || '' %><%= r.order_ref ? ' · ' + r.order_ref : '' %></option>
+                        <% }) %>
+                      </select>
+                      <input type="text" name="order_ref" placeholder="Order ref, e.g. PH-0042" maxlength="40" style="background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.35rem;">
+                      <input type="number" name="amount" min="0" placeholder="Amount ₱ (blank uses the offer)" style="background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.35rem;">
+                      <input type="text" name="note" maxlength="200" placeholder="Note" style="background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.35rem;">
+                      <button type="submit" class="btn btn-primary" style="background:#f0a500;color:#111;">Mark redeemed</button>
+                    </form>
+                    <% } else { %>
+                    <div style="font-size:0.78rem;color:#777;margin-bottom:0.6rem;">Nothing waiting to redeem.</div>
+                    <% } %>
+                    <% if (p.redemptions.length) { %>
+                    <div style="font-size:0.72rem;color:#aaa;line-height:1.45;">
+                      <% p.redemptions.forEach(r => {
+                           const row = p.rows.find(x => Number(x.id) === Number(r.rental_id));
+                      %>
+                      <div>
+                        <%= r.by || 'admin' %> · <%= lyWhen(r.at) %>
+                        · <%= r.kind === 'punch' ? ('free ' + (r.days || '') + '-day #' + r.reward_index) : ('₱' + (r.amount || 0) + ' rebook') %>
+                        <% if (r.rental_id) { %> · rental #<%= r.rental_id %><% if (row) { %> <%= row.game_title %><% } %><% } %>
+                        <% if (r.order_ref) { %> · <%= r.order_ref %><% } %>
+                        <% if (r.kind === 'punch' && r.amount) { %> · ₱<%= r.amount %><% } %>
+                        <% if (r.note) { %> · <%= r.note %><% } %>
+                      </div>
+                      <% }) %>
+                    </div>
+                    <% } %>
+                    <div style="font-size:0.68rem;color:#555;margin-top:0.45rem;">Paid rentals, oldest first:</div>
+                    <% p.rentals.forEach(r => { %>
+                    <div style="font-size:0.72rem;color:#888;">#<%= r.id %> <%= r.game_title %> · <%= r.account_type === 'tr' ? 'Trophy' : r.account_type === 'ps4' ? 'PS4' : 'Non-Trophy' %> · <%= r.start_date || '—' %> → <%= r.end_date || '—' %><%= r.order_ref ? ' · ' + r.order_ref : '' %></div>
+                    <% }) %>
+                  </div>
+                </details>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <div id="loyaltyNoMatch" hidden style="padding:1rem;color:#777;">No customers match.</div>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="adm-card" id="sec-loyalty-links">
+    <div class="adm-card-head" style="border-left:3px solid #60a5fa;">
+      <div class="sa-left">
+        <div class="sa-icon" style="background:rgba(96,165,250,0.15);">🔗</div>
+        <div>
+          <div class="sa-title">Same person, different names</div>
+          <div class="sa-desc">Names already match when only capitalization or extra spaces differ. Use this when the ledger says "Ana C." and an order says "Ana Cruz", or when one record was filed under the wrong person.</div>
+        </div>
+      </div>
+    </div>
+    <div class="adm-card-body">
+      <form method="POST" action="/admin/loyalty/merge" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:end;margin-bottom:0.9rem;">
+        <label style="font-size:0.75rem;color:#888;">This name
+          <input type="text" name="from_name" required placeholder="Ana C." style="display:block;margin-top:0.25rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <label style="font-size:0.75rem;color:#888;">is the same person as
+          <input type="text" name="into_name" required placeholder="Ana Cruz" style="display:block;margin-top:0.25rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <button type="submit" class="btn btn-outline">Merge names</button>
+      </form>
+      <form method="POST" action="/admin/loyalty/link-name" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:end;margin-bottom:0.9rem;">
+        <label style="font-size:0.75rem;color:#888;">This name
+          <input type="text" name="name" required placeholder="Ana Cruz PH" style="display:block;margin-top:0.25rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <label style="font-size:0.75rem;color:#888;">belongs to record #
+          <input type="number" name="row_id" required min="1" placeholder="12" style="display:block;margin-top:0.25rem;width:7rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <button type="submit" class="btn btn-outline">Link name to record</button>
+      </form>
+      <form method="POST" action="/admin/loyalty/link-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:end;margin-bottom:0.9rem;">
+        <label style="font-size:0.75rem;color:#888;">Only record #
+          <input type="number" name="row_id" required min="1" placeholder="45" style="display:block;margin-top:0.25rem;width:7rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <label style="font-size:0.75rem;color:#888;">belongs with
+          <input type="text" name="name" required placeholder="Juan Dela Cruz" style="display:block;margin-top:0.25rem;background:#141414;color:#fff;border:1px solid #333;border-radius:6px;padding:0.4rem 0.55rem;">
+        </label>
+        <button type="submit" class="btn btn-outline">Move one record</button>
+      </form>
+      <% const lyLinks = lyIndex.links || []; %>
+      <% if (lyLinks.length) { %>
+      <div style="font-size:0.8rem;color:#aaa;">
+        <% lyLinks.forEach(link => { %>
+        <form method="POST" action="/admin/loyalty/unlink" style="display:flex;gap:0.5rem;align-items:center;margin:0.25rem 0;">
+          <% if (link.type === 'alias') { %>
+          <input type="hidden" name="alias" value="<%= link.from %>">
+          <span><%= link.from %> → <%= link.into %></span>
+          <% } else { %>
+          <input type="hidden" name="row_id" value="<%= link.rowId %>">
+          <span>Record #<%= link.rowId %> → <%= link.into %></span>
+          <% } %>
+          <button type="submit" class="btn btn-outline" style="padding:0.15rem 0.5rem;font-size:0.72rem;">Undo</button>
+        </form>
+        <% }) %>
+      </div>
+      <% } %>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    var q = document.getElementById('loyaltySearch');
+    var only = document.getElementById('loyaltyRewardOnly');
+    var rows = document.querySelectorAll('#loyaltyTable .loyalty-row');
+    var empty = document.getElementById('loyaltyNoMatch');
+    if (!q || !only) return;
+    function apply() {
+      var s = (q.value || '').trim().toLowerCase();
+      var shown = 0;
+      rows.forEach(function (tr) {
+        var ok = (!only.checked || tr.getAttribute('data-reward') === '1')
+          && (!s || (tr.getAttribute('data-search') || '').indexOf(s) !== -1);
+        tr.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+      if (empty) empty.hidden = shown !== 0;
+    }
+    q.addEventListener('input', apply);
+    only.addEventListener('change', apply);
+  })();
+  </script>
+</div>
