@@ -519,6 +519,7 @@
     order_review:  { name: 'Payment to approve', note: 'Blocks the order until you act' },
     order_paid:    { name: 'Paid online',       note: 'Money landed; already advanced itself' },
     request:       { name: 'Game request',      note: 'New titles only, never repeat votes' },
+    support_handoff: { name: 'Support handoff', note: 'A chat the bot paused for you' },
     payment_reminder: { name: 'Unpaid reminder', note: 'When we could not message the customer ourselves' }
   };
   const alertsOn = (settings && settings.alerts) || {};
@@ -556,7 +557,7 @@
       <div class="adm-card-body">
     <div style="border-color:rgba(34,197,94,0.3);background:linear-gradient(135deg,#041008,#071a0a);">
       <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;line-height:1.6;">
-        New uploads are already auto-resized to WebP. This button re-processes every existing cover, gallery, popup, and promo image the same way — safe to run more than once, already-optimized files are skipped.
+        New uploads are already resized to WebP (max 900px). Catalog cards request a 480px copy on a normal screen and a 720px copy on a retina screen — generated the first time someone views one and kept on the volume. The cards themselves are a little smaller than before so that 720px file stays sharp. Game pages still use the full image. This button only converts older PNG/JPG uploads that predate that; WebP files are skipped, and it is safe to run more than once. To build the smaller copies before traffic hits them, run <code>scripts/warm-image-variants.js</code> against a copy of the volume (see the script header). Do not point it at the live disk unless you mean to.
       </p>
       <button type="button" class="btn btn-primary" style="background:#22c55e;" onclick="runImageBackfill(this)">🗜️ Optimize All Images Now</button>
       <div id="backfillResult" style="margin-top:1rem;font-size:0.85rem;"></div>

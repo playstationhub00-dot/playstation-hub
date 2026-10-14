@@ -25,7 +25,7 @@
     <% items.forEach((m, i) => { %>
     <button type="button" class="gpm-thumb<%= i === 0 ? ' on' : '' %><%= m.type === 'video' ? ' gpm-thumb-v' : '' %>" aria-label="<%= m.type === 'video' ? 'Trailer' : 'Screenshot' %> <%= i + 1 %>">
       <% const th = m.type === 'video' ? m.poster : m.src; %>
-      <% if (th) { %><img src="<%= th %>" alt="" loading="lazy" decoding="async"><% } %>
+      <% if (th) { %><img <%- imgThumb(th) %> alt="" loading="lazy" decoding="async"><% } %>
     </button>
     <% }) %>
   </div>

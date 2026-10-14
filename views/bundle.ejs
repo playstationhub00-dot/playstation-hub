@@ -38,7 +38,7 @@
       <div class="bundle-game-grid">
         <% bundle.games.forEach(g => { %>
         <div class="bundle-game-tile">
-          <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
+          <% if (g.cover_image) { %><img <%- imgCard(g.cover_image) %> alt="<%= g.title %>" class="bundle-game-cover" loading="lazy">
           <% } else { %><div class="bundle-game-cover buy-cover-placeholder"></div><% } %>
           <div class="bundle-game-title"><%= g.title %></div>
           <% if (bundleTilePrice) { %><div class="bundle-game-price">Buy ₱<%= bundleTilePrice %></div><% } %>

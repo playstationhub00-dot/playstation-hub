@@ -178,7 +178,7 @@
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn" id="ctaBtn">Rent PS Plus Deluxe</button>
-          <div class="gd-order-sub">Pay via GCash or Maya · no account needed</div>
+          <div class="gd-order-sub"><%- include('partials/pay-note').trim() %></div>
         </form>
         <a href="#" class="gd-cta-link" id="ctaMsgLink" onclick="return handleMessageUs(event)">or message us on Facebook instead</a>
         <div class="gd-cta-hint" id="ctaHint" style="display:none;">Send us: <strong>PS Plus Deluxe · Days · Trophy or Non-Trophy</strong></div>
