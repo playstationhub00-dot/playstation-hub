@@ -56,6 +56,7 @@ const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
 const requestBoard = require('./lib/request-board');
 const titleFixes = require('./lib/title-fixes');
+const genreMigration = require('./lib/genre-migration');
 const paymentCopy = require('./lib/payment-copy');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
@@ -782,6 +783,19 @@ db.write = function() {
   syncToMongo();
   return r;
 };
+
+// One-time genre list. After the write hook, so games.json and the MongoDB
+// state blob get the new genres and the marker in the same save. The marker
+// stops a later boot from putting these values back over an admin edit.
+// A missing slug is logged and skipped.
+try {
+  const genreFix = genreMigration.apply(db.getState(), console.log);
+  if (genreFix.write) {
+    db.set('games', genreFix.games).set('migrations', genreFix.migrations).write();
+  }
+} catch (e) {
+  console.log('[genre] migration failed:', e.message);
+}
 
 // Orders persist as their own MongoDB documents, reusing the connection the
 // blob sync already maintains rather than opening a second pool.
