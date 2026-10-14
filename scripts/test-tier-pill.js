@@ -128,6 +128,11 @@ async function main() {
     assert.ok(css.includes('.gc2-badges {') && css.includes('flex-direction: column'), 'badges stack instead of sharing one line');
     const split = css.slice(css.indexOf('.gc2-split .gc2-body'));
     assert.ok(/position:\s*static/.test(split) && /text-shadow:\s*none/.test(split), 'the caption sits under the cover');
+    assert.ok(!partial.includes('gc2-cta'), 'the card does not carry a Rent button');
+    assert.ok(!partial.includes('gc2-plat') && !partial.includes('gc2-status'), 'platform and slots are not on the card');
+    const soon = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'upcoming-card.ejs'), 'utf8');
+    assert.ok(!soon.includes('cs-cta') && !soon.includes('cs-meta'), 'Coming soon cards do not unfold extra lines');
+    assert.ok(/\.gc2-split \.gc2-cta[\s\S]{0,120}display:\s*none/.test(css), 'hover cannot put Rent back into the card');
   });
 
   console.log('\nadmin');

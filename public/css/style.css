@@ -2606,50 +2606,53 @@ footer {
         rgba(0,0,0,0.98) 100%);
   }
 
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta,
-  .upcoming-card .cs-cta {
+  /* Buy and PS Plus most-played cards still tuck platform and the button
+     away until hover. Rental and Coming soon cards (.gc2-split) do not:
+     opening those rows would change the card's height and shove the grid. */
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     position: absolute;
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
   }
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta {
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta {
     left: 0.85rem;
     right: 0.85rem;
   }
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-cta {
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     right: 0.85rem;
     width: auto;
   }
-  .gc2-card:hover .gc2-plat,
-  .gc2-card:hover .gc2-status,
-  .gc2-card:hover .gc2-buy-price,
-  .gc2-card:hover .gc2-bundle-note,
-  .gc2-card:hover .gc2-cta,
-  .gc2-card:focus .gc2-plat,
-  .gc2-card:focus .gc2-status,
-  .gc2-card:focus .gc2-buy-price,
-  .gc2-card:focus .gc2-bundle-note,
-  .gc2-card:focus .gc2-cta,
-  .upcoming-card:hover .cs-plat,
-  .upcoming-card:hover .cs-meta,
-  .upcoming-card:hover .cs-cta,
-  .upcoming-card:focus .cs-plat,
-  .upcoming-card:focus .cs-meta,
-  .upcoming-card:focus .cs-cta {
+  .gc2-card:not(.gc2-split):hover .gc2-plat,
+  .gc2-card:not(.gc2-split):hover .gc2-status,
+  .gc2-card:not(.gc2-split):hover .gc2-buy-price,
+  .gc2-card:not(.gc2-split):hover .gc2-bundle-note,
+  .gc2-card:not(.gc2-split):hover .gc2-cta,
+  .gc2-card:not(.gc2-split):focus .gc2-plat,
+  .gc2-card:not(.gc2-split):focus .gc2-status,
+  .gc2-card:not(.gc2-split):focus .gc2-buy-price,
+  .gc2-card:not(.gc2-split):focus .gc2-bundle-note,
+  .gc2-card:not(.gc2-split):focus .gc2-cta,
+  .upcoming-card:not(.gc2-split):hover .cs-plat,
+  .upcoming-card:not(.gc2-split):hover .cs-meta,
+  .upcoming-card:not(.gc2-split):hover .cs-cta,
+  .upcoming-card:not(.gc2-split):focus .cs-plat,
+  .upcoming-card:not(.gc2-split):focus .cs-meta,
+  .upcoming-card:not(.gc2-split):focus .cs-cta {
     position: static;
     opacity: 1;
     transform: translateY(0);
@@ -2658,14 +2661,14 @@ footer {
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta,
-  .upcoming-card .cs-cta {
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     transition: none;
   }
 }
@@ -2849,10 +2852,17 @@ footer {
   font-weight: 800;
 }
 .gc2-split .gc2-price-was { color: var(--text-secondary); }
+/* Platform, slots, buy price and Rent used to unfold on hover (and sat in
+   the flow on touch). Either way the card changed height. They stay off
+   these cards; the game page has the details and the Rent button. */
+.gc2-split .gc2-plat,
+.gc2-split .gc2-status,
+.gc2-split .gc2-buy-price,
+.gc2-split .gc2-bundle-note,
 .gc2-split .gc2-cta,
-.gc2-split .cs-cta { align-self: flex-start; }
-.gc2-split .gc2-cta-reserve,
-.gc2-split .cs-cta.cs-cta-ghost { text-shadow: none; }
+.gc2-split .cs-plat,
+.gc2-split .cs-meta,
+.gc2-split .cs-cta { display: none; }
 .gc2-split.cs-full .cs-price,
 .gc2-split.gc2-full .gc2-price { color: var(--text-secondary); }
 .gc2-split.cs-full .cs-price b,
@@ -2868,11 +2878,6 @@ footer {
   white-space: normal;
   line-height: 1.2;
 }
-body.light-mode .gc2-split .gc2-cta,
-body.light-mode .gc2-split .cs-cta { background: #111; color: #fff; }
-body.light-mode .gc2-split .gc2-cta-reserve { color: #6d28d9; border-color: #6d28d9; background: transparent; }
-body.light-mode .gc2-split .cs-cta.cs-cta-ghost { background: transparent; color: #111; border-color: #111; }
-
 /* HOW IT WORKS PAGE */
 .hiw-step {
   display: grid;

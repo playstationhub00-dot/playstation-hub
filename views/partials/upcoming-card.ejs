@@ -1,7 +1,8 @@
 <%#
-  One Coming soon card (poster art, countdown or FULL ribbon, price, Reserve).
+  One Coming soon card (cover, countdown or FULL ribbon, name, price).
   Used by the Browse page's Coming soon tab (views/browse.ejs) and the
   homepage's Coming soon row (partials/home/upcoming-row). Locals: game.
+  The release date and Reserve live on the upcoming page, not on the card.
 %>
 <%
   const csIsTba = !game.release_date || game.release_date === 'TBA';
@@ -11,17 +12,8 @@
     const csToday0 = new Date(); csToday0.setHours(0,0,0,0);
     csDaysLeft = Math.ceil((csReleaseDate - csToday0) / 86400000);
   }
-  let csDisplayDate = 'TBA';
-  if (!csIsTba) {
-    csDisplayDate = new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-  }
   const csSlotsLeft = (game.non_trophy_slots||0) + (game.trophy_slots||0);
   const csFull = csSlotsLeft === 0;
-  // A full card gives its top-right corner to the FULL ribbon, so the
-  // countdown badge that normally sits there moves into the meta line as
-  // text. The release date still matters to someone waiting for a slot —
-  // it just stops being the loudest thing on the card.
-  const csCountdownText = csIsTba ? '' : (csDaysLeft > 0 ? csDaysLeft + ' day' + (csDaysLeft !== 1 ? 's' : '') : 'Any day now');
   // Cheapest configured price across every duration/type, for the "from ₱X" line.
   const csPrices = [game.nt_price_7d, game.nt_price_30d, game.tr_price_7d, game.tr_price_30d].filter(p => p > 0);
   const csFromPrice = csPrices.length ? Math.min(...csPrices) : null;
@@ -57,19 +49,5 @@
     <div class="gc2-tags">
       <% if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
     </div>
-    <div class="cs-plat"><%= game.platform %><%= game.genre ? ' · ' + game.genre : '' %></div>
-    <div class="cs-meta">
-      <span><%= csDisplayDate %></span>
-      <%# When full, the ribbon already says so — repeating it here in red
-          would state the same thing twice and crowd a three-line card. The
-          countdown takes the slot instead, since it lost its badge. %>
-      <% if (csFull) { %>
-        <% if (csCountdownText) { %><span>·</span><span><%= csCountdownText %></span><% } %>
-      <% } else { %>
-        <span>·</span>
-        <span class="cs-slots-ok"><%= csSlotsLeft %> slot<%= csSlotsLeft !== 1 ? 's' : '' %> left</span>
-      <% } %>
-    </div>
-    <div class="cs-cta<%= csFull ? ' cs-cta-ghost' : '' %>"><%= csFull ? 'Notify Me' : 'Reserve →' %></div>
   </div>
 </a>
