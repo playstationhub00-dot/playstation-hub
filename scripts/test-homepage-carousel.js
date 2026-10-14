@@ -134,17 +134,18 @@ ok('the wrap distance follows the copy count', () => {
   assert.ok(/function period\(\)/.test(drift), 'the wrap distance is derived from copies');
 });
 
-console.log('\nthe homepage rows are trimmed to six');
+console.log('\nthe homepage rows fill one line');
 
-ok('Coming Soon renders six', () => {
+ok('Coming Soon renders ten, one full desktop row', () => {
   assert.ok(/include\('partials\/home\/upcoming-row', \{ upcoming \}\)/.test(src), 'the homepage uses the still shelf');
   const row = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'home', 'upcoming-row.ejs'), 'utf8');
-  assert.ok(/upcoming\.slice\(0, 6\)/.test(row), 'and it takes six');
+  assert.ok(/upcoming\.slice\(0, 10\)/.test(row), 'and it takes ten');
 });
 
-ok('New releases shows at most six a row on computers', () => {
+ok('New releases shows at most ten a row on a wide screen', () => {
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'home.css'), 'utf8');
-  assert.ok(css.includes('.hm-row > .hm-cell:nth-child(n+7) { display: none; }'), 'shelves cap at six');
+  assert.ok(css.includes('.hm-row > .hm-cell:nth-child(n+11) { display: none; }'), 'shelves cap at ten');
+  assert.ok(css.includes('repeat(10, minmax(0, 1fr))'), 'ten columns from 1280px');
 });
 
 ok('but the banner draws its own covered games from the whole list', () => {

@@ -1611,11 +1611,13 @@ nav {
   .hero-v2 .hero-actions .btn { min-height: 44px; display: inline-flex; align-items: center; }
 }
 
-/* GAME GRID */
+/* GAME GRID
+   Column counts are set at the bottom of this file so a card stays near
+   100–135px wide. These covers are landscape, and a taller card upscales them. */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
   /* Grid items stretch to the row's tallest cell by default — this keeps each card
      sized to its own content instead of matching its tallest row-mate. */
   align-items: start;
@@ -2898,7 +2900,6 @@ footer {
   nav { padding: 0 1rem; }
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
-  .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
   .psplus-months-grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .psplus-month-cover { aspect-ratio: 16/9; }
   .psplus-month-cover-placeholder { aspect-ratio: 16/9; }
@@ -3685,7 +3686,7 @@ label.buy-tier:hover { border-color: #444; }
 .buy-price-section-count { font-size: 0.78rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.2rem 0.65rem; }
 .buy-badge-pending { left: 9px; background: rgba(240,165,0,0.15); color: #f0a500; border: 1px solid rgba(240,165,0,0.35); }
 .buy-empty-filtered { text-align: center; color: #888; font-size: 0.85rem; padding: 2.5rem 0; }
-.buy-single-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.buy-single-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 2rem; }
 .buy-placeholder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
 .buy-placeholder-card { background: #10141c; border: 1px solid #24304a; border-radius: 12px; padding: 1rem; }
 .buy-placeholder-amber { background: #1a1206; border-color: #4a3410; }
@@ -4221,3 +4222,26 @@ body.light-mode .acc-search, body.light-mode .acc-filters select, body.light-mod
 body.light-mode .acc-stat-total .val { color:#14171a; }
 body.light-mode .acc-name, body.light-mode .acc-s-acc b { color:#b45309; }
 body.light-mode .acc-act { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
+
+/* Catalog cards (browse, buy, PS Plus most-played). Kept near 100–135px wide
+   so a 720px landscape cover still covers the card on a 2x screen. Each
+   breakpoint is one more column, which fills the row instead of stretching
+   the cards. Homepage shelves repeat these counts in home.css. */
+@media (min-width: 452px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 629px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (min-width: 773px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (min-width: 917px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+@media (min-width: 1061px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+}
