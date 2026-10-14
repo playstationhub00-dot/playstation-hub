@@ -31,8 +31,10 @@ let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
 
 ok('the tag never inherits the card body\'s text glow', () => {
-  assert.ok(/text-shadow:\s*0 1px 3px/.test(rule('.gc2-body')), 'the card body still has its glow');
+  assert.ok(/text-shadow:\s*0 1px 3px/.test(rule('.gc2-body')), 'overlay cards still glow against the art');
   assert.strictEqual(prop('.tier-pill', 'text-shadow'), 'none');
+  const split = css.slice(css.indexOf('.gc2-split .gc2-body'));
+  assert.ok(split.length > 0 && /text-shadow:\s*none/.test(split.slice(0, 600)), 'the caption under the cover does not glow');
 });
 ok('white capitals with a little spacing and a lift off bright covers', () => {
   assert.strictEqual(prop('.tier-pill', 'color'), '#fff');
