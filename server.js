@@ -19,6 +19,7 @@ const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
+const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
@@ -31,6 +32,8 @@ const psplusCatalogStore = require('./lib/psplus-catalog-store');
 const upcomingPsn = require('./lib/upcoming-psn');
 const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
+const imageVariants = require('./lib/image-variants');
+const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
@@ -51,6 +54,9 @@ const buyPricing = require('./lib/buy-pricing');
 const reservations = require('./lib/reservations');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
+const requestBoard = require('./lib/request-board');
+const titleFixes = require('./lib/title-fixes');
+const paymentCopy = require('./lib/payment-copy');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 const mongoConnection = require('./lib/mongo-connection');
@@ -62,6 +68,10 @@ const loyalty = require('./lib/loyalty');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Text responses only. HTML is fetched from here on every visit (the session
+// cookie keeps it out of the edge cache), so the uncompressed page was
+// Railway egress even when Cloudflare compressed it again for the browser.
+app.use(textCompress());
 
 // Guards against a double-click or retry on /admin/upcoming/release/:id
 // starting a second release for the same Coming Soon id while the first is
@@ -96,6 +106,10 @@ const RENTAL_DURATIONS = [
 ];
 const PROMO_DURATIONS = RENTAL_DURATIONS.map(d => d.days); // [7, 30]
 app.locals.RENTAL_DURATIONS = RENTAL_DURATIONS;
+// src / srcset strings for catalog cards and tiny thumbnails. Game-page
+// posters keep the original file — see lib/image-variants.js.
+app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
+app.locals.imgThumb = (url) => imageVariants.thumbAttrs(url);
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -450,6 +464,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // set, so a deploy would otherwise leave visitors on stale styles. Cache keys
 // are per-URL, so views append ?v=<assetV> to bust it. A redeploy rewrites
 // every file's mtime, which is exactly when the version should change.
+// How It Works, game pages and the footer all call this so the local /
+// international split cannot drift. Card and bank stay in the sentence only
+// when that method is actually on (see lib/payment-copy.js).
+app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
+  payViaGateway: gateway != null ? !!gateway : !!process.env.PAYMONGO_SECRET_KEY,
+  payment_methods: settings && settings.payment_methods
+});
+
 app.locals.assetV = (() => {
   try {
     return String(Math.floor(fs.statSync(path.join(__dirname, 'public/css/style.css')).mtimeMs));
@@ -498,8 +520,6 @@ app.get('/uploads/jpg/:name', async (req, res) => {
   }
 });
 
-// Serve uploads from persistent data directory
-//
 // Every /uploads file EXCEPT these four fixed names is written by multer
 // with a Date.now()+ext filename (see the diskStorage config above), so its
 // URL changes whenever its content does — safe to cache forever. These four
@@ -508,6 +528,28 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 // an admin updates branding, so the URL a browser already cached would
 // silently go stale for up to a year if these got the long cache too.
 const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|hero-bg-video)\./;
+
+// Width-capped copies of /uploads images (lib/image-variants.js). Registered
+// before the static handler so /uploads/w/… is not a directory lookup.
+app.get('/uploads/w/:width/:name', async (req, res) => {
+  try {
+    const result = await imageVariants.ensureVariant({
+      uploadsDir, width: req.params.width, name: req.params.name
+    });
+    if (!result) return res.status(404).send('Not found');
+    if (result.redirect) return res.redirect(result.redirect);
+    const branding = UNVERSIONED_UPLOAD_NAMES.test(req.params.name);
+    res.set('Cache-Control', branding ? CACHE_SHORT : CACHE_IMMUTABLE);
+    res.type(result.type);
+    res.sendFile(result.file);
+  } catch (e) {
+    console.error('[image-variant]', req.params.name, e.message);
+    if (!res.headersSent) res.status(500).send('Image failed');
+  }
+});
+
+// Serve uploads from persistent data directory. The four branding names above
+// stay on the short cache; everything else is immutable.
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
     const isBranding = UNVERSIONED_UPLOAD_NAMES.test(path.basename(filePath));
@@ -563,7 +605,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -1174,6 +1216,13 @@ function getSiteSettings() {
   // kind added later starts working instead of being muted by an older blob,
   // and this seed never has to be edited again.
   if (s.alerts === undefined) { db.set('site_settings.alerts', {}).write(); s.alerts = {}; }
+  // Reminders start on; auto-cancel does not. An old settings blob with no
+  // payment_reminders key keeps that, and a later save is left alone.
+  if (s.payment_reminders === undefined) {
+    const seeded = { enabled: true, hold_hours: 24, auto_cancel: false };
+    db.set('site_settings.payment_reminders', seeded).write();
+    s.payment_reminders = seeded;
+  }
   // The m.me handle is a setting rather than a constant because the whole
   // referral link depends on it, and getting it wrong silently breaks PSID
   // capture with no visible symptom on the page.
@@ -1298,6 +1347,14 @@ app.get('/how-it-works', (req, res) => {
   res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+app.get('/faq', (req, res) => {
+  res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/terms', (req, res) => {
+  res.render('terms', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
 // Public request board. Shows approved and stocked entries ranked by votes;
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
@@ -1307,26 +1364,20 @@ app.get('/requests', async (req, res) => {
   // stocked ones among games that still need votes.
   const stocked = rows.filter(r => r.status === 'stocked');
   const voting = rows.filter(r => r.status !== 'stocked');
-  // Card link target: prefer the linked catalogue row (r.game_id, set by the
-  // owner at /admin/requests/:slug/stock), falling back to a title match for
-  // older entries that were marked stocked before that field existed — the
-  // owner has stocked requests on record with no game_id at all, which used
-  // to leave the "Now available" card with nowhere to click. A title can also
-  // match an upcoming (not-yet-released) row rather than a live catalogue
-  // one — "stocked" here means "the owner is fulfilling this ask", not
-  // necessarily "rentable today" — so upcoming is checked too, pointing at
-  // its own /upcoming/ detail route instead of /game/.
+  // Card link: a title that is still Coming soon points at /upcoming/ and is
+  // labelled as a reservation, even if a catalogue row or game_id also matches.
+  // Otherwise prefer the linked catalogue row (r.game_id, set at
+  // /admin/requests/:slug/stock), then a title match for older stocked
+  // entries that have no game_id. "Stocked" means the owner is fulfilling
+  // the ask, which is not the same as "rentable today".
   const games = getGames();
   const upcoming = getUpcoming();
+  // Coming soon wins over a catalogue row. A stocked request for a game that
+  // has not released yet is a reservation, not a rental — see lib/request-board.js.
   stocked.forEach(r => {
-    const linkedGame = (r.game_id && games.find(g => g.id === r.game_id))
-      || games.find(g => gameSlug(g.title) === gameSlug(r.title));
-    if (linkedGame) {
-      r.linkedUrl = '/game/' + gameSlug(linkedGame.title);
-      return;
-    }
-    const linkedUpcoming = upcoming.find(g => gameSlug(g.title) === gameSlug(r.title));
-    r.linkedUrl = linkedUpcoming ? '/upcoming/' + gameSlug(linkedUpcoming.title) + '-' + linkedUpcoming.id : null;
+    const link = requestBoard.linkStockedRequest(r, games, upcoming);
+    r.linkKind = link.linkKind;
+    r.linkedUrl = link.linkedUrl;
   });
   res.render('requests', Object.assign({
     requests: rows,
@@ -2230,7 +2281,7 @@ function browsePsplusData(accountSummaryMap) {
       games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
     items = catalog.items.map(it => ({
-      k: it.k, n: it.n, c: it.c || (it.i ? it.i + '?w=240' : ''),
+      k: it.k, n: it.n, c: it.c ? imageVariants.cardSrc(it.c) : (it.i ? it.i + '?w=720' : ''),
       ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || ''
     }));
   } catch (e) {
@@ -2842,6 +2893,7 @@ app.get('/order/:ref', asyncRoute(async (req, res) => {
     // For the "reassurance" panel on the payment step: real reviews and a
     // real median approval time, not invented urgency.
     approvalEtaMinutes: getApprovalEtaMinutes(),
+    holdState: paymentReminders.holdDisplay(order, new Date()),
   }, reviewBlockLocals('')));
 }));
 
@@ -3114,6 +3166,14 @@ function notifyOwnerRequest(request) {
 async function createOrderNotified(fields) {
   const order = await orders.create(fields);
   notifyOwnerOrder(order, 'created');
+  // The customer's page reads hold_expires_at on the next request. A failure
+  // here must not lose the order they just placed.
+  try {
+    const plan = paymentReminders.holdPlan(order, getSiteSettings().payment_reminders);
+    if (plan) await orders.setHoldExpiry(order.ref, plan.expires, plan.anchor);
+  } catch (e) {
+    console.error('[payment reminder hold]', e.message);
+  }
   return order;
 }
 
@@ -4431,21 +4491,21 @@ app.get('/api/search-index', async (req, res) => {
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       bpr: buyPrices.length ? Math.min(...buyPrices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || '',
+      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
     };
   });
   const soon = sortUpcoming(getUpcoming()).map(g => ({
     t: g.title, p: g.platform, d: g.release_date || 'TBA',
-    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: g.cover_image || ''
+    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // "Most Played in PS Plus" titles aren't individually rentable — they're all played
   // through the one PS Plus Deluxe subscription game, same as the homepage cards.
   const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
   const psplus = getPsplusPopular().map(g => ({
-    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: g.cover_image || ''
+    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // Titles inside each month's free-text games_list (e.g. "Call of Duty: Modern
   // Warfare III") aren't their own catalog entries — they only exist as lines in that
@@ -4468,7 +4528,7 @@ app.get('/api/search-index', async (req, res) => {
       if (catalogKeys.has(psplusCatalog.matchKey(title))) return;
       seenTitles.add(key);
       psplusMonthly.push({
-        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: entry.cover_image || ''
+        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: imageVariants.thumbSrc(entry.cover_image || '')
       });
     });
   });
@@ -4483,7 +4543,7 @@ app.get('/api/search-index', async (req, res) => {
     const approvedRequests = (await gameRequests.listPublic()).filter(r => r.status === 'approved');
     requested = approvedRequests.map(r => ({
       t: r.title, v: (r.voters || []).length, u: '/requests#req-' + r.slug,
-      y: 'requested', img: r.cover_image || ''
+      y: 'requested', img: imageVariants.thumbSrc(r.cover_image || '')
     }));
   } catch (e) {
     console.error('[search-index] requests lookup failed', e.message);
@@ -4494,6 +4554,8 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
+  const moved = titleFixes.redirectSlug(param);
+  if (moved && moved !== param) return res.redirect(301, '/game/' + moved);
   // Support both numeric ID (old links) and slug
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
@@ -5162,7 +5224,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     reviews: dashboard.reviewStats(reviews),
     // Drives the count on the "Now" pill, so the badge and the cards below it
     // can never disagree about how much is waiting.
-    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length
+    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length,
+    reminders: paymentReminders.recoveryStats(allOrders, dashPeriod)
   };
 
   // Prices for Quick Add's game picker, promo already applied. The form used to
@@ -5342,7 +5405,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -5373,6 +5436,8 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
+  const moved = titleFixes.redirectSlug(slug);
+  if (moved && moved !== slug) return res.redirect(301, '/upcoming/' + moved);
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
   let game = null;
@@ -7294,7 +7359,7 @@ function graphPost(pathname, payload) {
       res2.on('data', chunk => { data += chunk; });
       res2.on('end', () => {
         if (res2.statusCode !== 200) console.error('[messenger]', pathname, res2.statusCode, String(data).slice(0, 300));
-        resolve({ ok: res2.statusCode === 200, status: res2.statusCode });
+        resolve({ ok: res2.statusCode === 200, status: res2.statusCode, body: data });
       });
     });
     req2.on('error', e => {
@@ -7314,6 +7379,29 @@ function sendMessage(recipientId, messageData, cb) {
 function sendText(recipientId, text) {
   const body = supportMessenger.sendText(recipientId, text);
   return graphPost('/v19.0/me/messages', body);
+}
+
+// A payment reminder, not a reply to something the customer just typed.
+// messaging_type RESPONSE is the standard window. No message tag: a tag would
+// keep sending after the customer has gone quiet, which this shop does not do.
+// The page token is the same one support chat uses (FB_PAGE_ACCESS_TOKEN, or
+// MESSENGER_PAGE_TOKEN). The response body is kept so Graph errors 10 and 551
+// fall back to the owner instead of being retried.
+function sendMessengerResponse(recipientId, text) {
+  if (!recipientId) return Promise.resolve({ ok: false, reason: 'no_psid', code: null });
+  if (!supportMessenger.config(process.env).pageToken) {
+    return Promise.resolve({ ok: false, reason: 'not_configured', code: null });
+  }
+  return graphPost('/v19.0/me/messages', {
+    recipient: { id: String(recipientId) },
+    messaging_type: 'RESPONSE',
+    message: { text: String(text || '') }
+  }).then(result => {
+    if (result && result.ok) return { ok: true };
+    if (result && result.reason === 'network') return { ok: false, code: null, reason: 'network' };
+    if (result && result.reason === 'no_token') return { ok: false, reason: 'not_configured', code: null };
+    return { ok: false, code: paymentReminders.graphErrorCode(result && result.body), reason: 'api' };
+  });
 }
 
 // A browser on another origin cannot read this, and a JSON POST from one
@@ -7492,6 +7580,17 @@ app.post('/admin/settings/alerts', requireAuth, (req, res) => {
   telegram.ALERT_KINDS.forEach(k => { next[k] = req.body['alert_' + k] === 'on'; });
   db.set('site_settings.alerts', next).write();
   res.redirect('/admin?tab=orders&msg=alerts_saved');
+});
+
+app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
+  const hours = Math.round(Number(req.body.hold_hours));
+  const hold = Number.isFinite(hours) ? Math.max(0, Math.min(168, hours)) : 24;
+  db.set('site_settings.payment_reminders', {
+    enabled: req.body.enabled === 'on',
+    hold_hours: hold,
+    auto_cancel: req.body.auto_cancel === 'on'
+  }).write();
+  res.redirect('/admin?tab=settings&msg=reminders_saved');
 });
 
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
@@ -7770,6 +7869,38 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err && err.stack ? err.stack : err);
 });
+
+// About every five minutes, in this process. unref so a test that required
+// the server is not kept alive by the timer after it closes the listener.
+// Mongo claims are what stop two overlapping runs from sending twice.
+const paymentReminderTimer = setInterval(() => {
+  const settings = getSiteSettings();
+  paymentReminders.runSweep({
+    now: new Date(),
+    settings: settings.payment_reminders,
+    alertEnabled: telegram.isAlertEnabled(settings, 'payment_reminder'),
+    adminUrl: SITE_URL + '/admin?tab=orders',
+    listAwaiting: () => orders.listByStates(['awaiting_payment']),
+    get: (ref) => orders.getByRef(ref),
+    claim: (ref, stage) => orders.claimPaymentReminder(ref, stage),
+    release: (ref, stage) => orders.releasePaymentReminder(ref, stage),
+    complete: (ref, stage, result) => orders.completePaymentReminder(ref, stage, result),
+    setHold: (ref, plan) => orders.setHoldExpiry(ref, plan.expires, plan.anchor),
+    cancel: async (ref) => !!(await orders.transition(ref, 'cancelled', { cancel_reason: 'hold_expired' })),
+    contactFor: (psid) => {
+      try { return db.get('messenger_contacts').find({ psid: String(psid) }).value() || null; }
+      catch (e) { return null; }
+    },
+    orderLink: (order) => SITE_URL + '/order/' + order.ref + '?k=' + order.url_key,
+    sendMessenger: (psid, text) => sendMessengerResponse(psid, text),
+    sendTelegram: (text) => sendTelegramMessage(text)
+  }).then(summary => {
+    if (summary && (summary.messenger || summary.telegram || summary.cancelled)) {
+      console.log('[payment reminder]', summary.messenger, 'messenger,', summary.telegram, 'telegram,', summary.cancelled, 'cancelled');
+    }
+  }).catch(e => console.error('[payment reminder]', e && e.message ? e.message : e));
+}, paymentReminders.SWEEP_INTERVAL_MS);
+if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);

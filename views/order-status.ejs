@@ -176,12 +176,44 @@
   <% } %>
 
   <% if (order.state === 'awaiting_payment' || order.state === 'payment_rejected') { %>
+  <%# holdState is hold_expires_at, written when the order started waiting.
+      It is a deadline on this order, not a lock on the catalog — a slot is
+      only taken once the order is signed in. With no expiry set, nothing
+      here counts down. %>
+  <% if (typeof holdState !== 'undefined' && holdState === 'expired') { %>
+  <div class="ord-expired" id="ordHoldExpired">
+    <div class="ord-expired-t">Hold ended</div>
+    <p class="ord-expired-p">The hold on this order has run out. You can still pay below — we'll set you up if a slot is free.</p>
+  </div>
+  <% } else if (typeof holdState !== 'undefined' && holdState === 'countdown') { %>
+  <div class="ord-step">
+    <div class="ord-step-label">Slot held</div>
+    <div class="ord-countdown" id="ordHoldCountdown" data-expires="<%= order.hold_expires_at %>">--:--</div>
+    <p class="ord-help">Pay before this runs out and we'll get you set up.</p>
+  </div>
+  <script>
+  (function(){
+    var el = document.getElementById('ordHoldCountdown');
+    if (!el) return;
+    var expires = new Date(el.dataset.expires).getTime();
+    function tick() {
+      var left = expires - Date.now();
+      if (left <= 0) { el.textContent = 'Expired'; el.classList.add('ord-countdown-done'); location.reload(); return; }
+      var h = Math.floor(left / 3600000);
+      var m = Math.floor((left % 3600000) / 60000);
+      var s = Math.floor((left % 60000) / 1000);
+      el.textContent = (h > 0 ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+    tick();
+    setInterval(tick, 1000);
+  })();
+  </script>
+  <% } %>
   <%# Reassurance, not pressure: this is the point where a first-time customer
       decides whether a small shop online is real. Every line here is a real
       number — the online flag, real reviews, a measured median approval time —
-      never an invented countdown. See docs/superpowers/specs for why a fake
-      "slot held for you" timer was rejected: slots aren't actually reserved
-      until an order is activated, so a countdown here would be a lie. %>
+      never an invented countdown. A countdown with no hold_expires_at behind
+      it would be a lie, because slots aren't reserved until an order is activated. %>
   <div class="ord-confidence">
     <% if (ownerOnline) { %>
     <div class="ord-online">🟢 We're online right now — payments are usually confirmed within minutes.</div>

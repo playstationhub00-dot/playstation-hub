@@ -112,8 +112,27 @@ async function main() {
     assert.ok(!(await call('GET', '/game/zzyzx-plain')).body.includes('usd-tier-pill'));
   });
   await okAsync('the 11-day corner badge reads "Just added"', async () => {
-    assert.ok(cardFor(browse, 'zzyzx-deluxe').includes('<div class="gc2-badge gc2-badge-new">Just added</div>'));
+    const card = cardFor(browse, 'zzyzx-deluxe');
+    assert.ok(card.includes('<div class="gc2-badge gc2-badge-new">Just added</div>'));
+    assert.ok(card.includes('<div class="gc2-badges">'));
     assert.ok(!cardFor(browse, 'zzyzx-special').includes('gc2-badge-new'));
+    const partial = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'game-card.ejs'), 'utf8');
+    const stack = partial.slice(partial.indexOf('class="gc2-badges"'), partial.indexOf('class="gc2-body"'));
+    assert.ok(stack.includes('gc2-badge-last') && stack.includes('gc2-badge-new'), 'both corner badges sit in the same stack');
+    assert.ok(partial.indexOf('class="gc2-art"') > 0 && partial.indexOf('class="gc2-art"') < partial.indexOf('class="gc2-badges"'), 'badges sit on the cover frame');
+    const titleAt = partial.indexOf('class="gc2-title');
+    const tierAt = partial.indexOf('tier-pill');
+    const priceAt = partial.indexOf('class="gc2-price"');
+    assert.ok(titleAt > 0 && titleAt < tierAt && tierAt < priceAt, 'name, then tier tag, then price');
+    const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
+    assert.ok(css.includes('.gc2-badges {') && css.includes('flex-direction: column'), 'badges stack instead of sharing one line');
+    const split = css.slice(css.indexOf('.gc2-split .gc2-body'));
+    assert.ok(/position:\s*static/.test(split) && /text-shadow:\s*none/.test(split), 'the caption sits under the cover');
+    assert.ok(!partial.includes('gc2-cta'), 'the card does not carry a Rent button');
+    assert.ok(!partial.includes('gc2-plat') && !partial.includes('gc2-status'), 'platform and slots are not on the card');
+    const soon = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'upcoming-card.ejs'), 'utf8');
+    assert.ok(!soon.includes('cs-cta') && !soon.includes('cs-meta'), 'Coming soon cards do not unfold extra lines');
+    assert.ok(/\.gc2-split \.gc2-cta[\s\S]{0,120}display:\s*none/.test(css), 'hover cannot put Rent back into the card');
   });
 
   console.log('\nadmin');

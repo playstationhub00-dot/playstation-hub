@@ -178,7 +178,7 @@ check('every alert kind the owner can switch is named in one list', () => {
   // to the code but not here would be unswitchable and invisible.
   assert.deepStrictEqual(
     tg.ALERT_KINDS,
-    ['signin', 'order_created', 'order_review', 'order_paid', 'request', 'support_handoff']
+    ['signin', 'order_created', 'order_review', 'order_paid', 'request', 'support_handoff', 'payment_reminder']
   );
 });
 

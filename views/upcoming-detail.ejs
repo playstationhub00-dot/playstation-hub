@@ -236,7 +236,7 @@
               <input type="hidden" name="days" id="reserveDays" value="">
               <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
               <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve Now →</button>
-              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full via GCash or Maya · nothing more due on release</div>
+              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full · <%- include('partials/pay-note').trim() %> · nothing more due on release</div>
             </form>
             <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
                onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
@@ -322,7 +322,7 @@
               <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
                 <div>♾️ &nbsp;Permanent access — no time limit, once <%= game.title %> releases</div>
                 <div>🔓 &nbsp;Play anytime, as many times as you want</div>
-                <div>💳 &nbsp;Pay online via GCash or Maya</div>
+                <div>💳 &nbsp;<%- include('partials/pay-note').trim() %></div>
               </div>
             </div>
 
@@ -376,7 +376,7 @@
       <% if (gpGallery.length > 1) { %>
       <div class="gd-thumbs" id="gpThumbs">
         <% gpGallery.forEach((img, i) => { %>
-          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img src="<%= img %>" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img <%- imgThumb(img) %> alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
         <% }) %>
       </div>
       <% } %>
@@ -390,6 +390,7 @@
 
 <script>
 const GAME_TITLE = '<%= game.title.replace(/'/g, "\\'").replace(/"/g, "&quot;") %>';
+const PAY_NOTE = <%- JSON.stringify(include('partials/pay-note').trim()) %>;
 const NT_PRICES  = { 7: <%= game.nt_price_7d||0 %>, 30: <%= game.nt_price_30d||0 %> };
 const TR_PRICES  = { 7: <%= game.tr_price_7d||0 %>, 30: <%= game.tr_price_30d||0 %> };
 const NT_SLOTS   = <%= game.non_trophy_slots||0 %>;

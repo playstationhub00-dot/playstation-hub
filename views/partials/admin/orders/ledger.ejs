@@ -119,6 +119,10 @@
         <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %></td>
         <td class="oq-lst">
           <span class="oq-st <%= stCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
+          <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
+          <% if (reminded) { %>
+            <div class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></div>
+          <% } %>
           <% if (paid && (o.deposit_due || 0) > 0) { %>
             <div class="oq-dep <%= o.deposit_refunded ? 'oq-dep-ok' : '' %>">
               <%= o.deposit_refunded ? 'Deposit refunded' : 'Deposit not refunded' %>

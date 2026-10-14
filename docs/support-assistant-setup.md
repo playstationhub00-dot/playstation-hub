@@ -2,24 +2,26 @@
 
 The website chat button and the Facebook Page bot use one assistant. It reads live prices, deposits, and open slots from the shop, and it pauses a chat (and pings you) when someone asks for a person or sends a payment proof.
 
-Nothing here changes production until you set the variables on Railway and point the Page webhook at the site. Do that when you are ready; deploying the code alone keeps the old Page token working and answers from the built-in script until an OpenAI key is set.
+Production already has `ANTHROPIC_API_KEY` set, and no `OPENAI_API_KEY`. After this deploy the assistant calls Claude with that key. The Page webhook already reads `MESSENGER_PAGE_TOKEN` and `MESSENGER_VERIFY_TOKEN`, so those do not need new names. The built-in script answers only when neither an Anthropic key nor an OpenAI key is present.
 
 ## Railway environment variables
 
-In the Railway service for playstation-hub, add:
+In the Railway service for playstation-hub:
 
 | Variable | Required | What it is |
 |---|---|---|
-| `OPENAI_API_KEY` | For model replies | API key from [platform.openai.com](https://platform.openai.com/api-keys). Without it, the assistant still answers prices, how to rent, payments, and game slots from the database. It just does not free-form the wording. |
-| `OPENAI_MODEL` | No | Defaults to `gpt-4o-mini` (tool calling, cheap). |
+| `ANTHROPIC_API_KEY` | For model replies | Already set in production. The assistant calls Claude’s Messages API with tool use when this is present. No other running code reads this variable. |
+| `ANTHROPIC_MODEL` | No | Defaults to `claude-haiku-5-5` (fast, tool calling, low cost). Set this to switch models without a code change. |
+| `OPENAI_API_KEY` | No | Optional. Used only when `ANTHROPIC_API_KEY` is empty. |
+| `OPENAI_MODEL` | No | Defaults to `gpt-4o-mini` when the OpenAI path is the one running. |
 | `OPENAI_BASE_URL` | No | Defaults to `https://api.openai.com/v1`. Set this only if you use another OpenAI-compatible host. |
-| `FB_PAGE_ACCESS_TOKEN` | For Messenger replies | Page access token from the Meta app (step 3 below). If this is empty, the app keeps using the existing `MESSENGER_PAGE_TOKEN`. |
-| `FB_APP_SECRET` | For webhook signatures | App Secret from the Meta app dashboard. Once this is set, posts without a valid `X-Hub-Signature-256` are rejected. Leave it unset only while you are still testing the old token. |
-| `FB_VERIFY_TOKEN` | For the webhook handshake | Any long random string you invent. The same value goes in Meta’s webhook form. If empty, the app uses `MESSENGER_VERIFY_TOKEN`, then `playstation_hub_verify`. |
+| `MESSENGER_PAGE_TOKEN` | Already set | Page access token the webhook uses to send replies. `FB_PAGE_ACCESS_TOKEN` overrides it when both are set. |
+| `MESSENGER_VERIFY_TOKEN` | Already set | Verify token the webhook handshake checks. Put this same value in Meta’s webhook form. `FB_VERIFY_TOKEN` overrides it when both are set. |
+| `FB_APP_SECRET` | For webhook signatures | App Secret from the Meta app dashboard. `MESSENGER_APP_SECRET` is the older name and still works. Once a secret is set, posts without a valid `X-Hub-Signature-256` are rejected. |
 | `FB_PAGE_INBOX_APP_ID` | No | Defaults to `263902037430900` (Page Inbox). That is the app id Meta uses so a handoff shows up in Business Suite for you to reply. |
 | `SITE_URL` | Already used | `https://www.playstation-hub.com` so links in replies point at the real site. |
 
-You do not need to rename `MESSENGER_PAGE_TOKEN` or `MESSENGER_VERIFY_TOKEN` if they are already set. The new `FB_*` names win when both exist.
+`ANTHROPIC_API_KEY` wins over `OPENAI_API_KEY` when both exist. With neither key, prices, how to rent, payments, and game slots still come from the database; only the free-form wording is the script.
 
 After saving, Railway redeploys. Check the deploy log for `Messenger webhook verified` the first time Meta calls the site, and for a warning if `FB_APP_SECRET` is still missing.
 
@@ -27,10 +29,10 @@ After saving, Railway redeploys. Check the deploy log for `Messenger webhook ver
 
 1. Open [developers.facebook.com](https://developers.facebook.com/) → **My Apps** → **Create App**. Choose the **Business** type. Name it something you will recognise (for example `PlayStation Hub Support`).
 2. Add the **Messenger** product to the app.
-3. Under Messenger → **Access Tokens**, connect the PlayStation Hub Page and generate a **Page access token**. Put that value in `FB_PAGE_ACCESS_TOKEN`. Under **App settings → Basic**, copy the **App secret** into `FB_APP_SECRET`.
+3. Under Messenger → **Access Tokens**, connect the PlayStation Hub Page and generate a **Page access token**. Production already sends replies with `MESSENGER_PAGE_TOKEN`; put a new token there (or in `FB_PAGE_ACCESS_TOKEN` if you set that name). Under **App settings → Basic**, copy the **App secret** into `FB_APP_SECRET`.
 4. Messenger → **Webhooks** → **Add callback URL**.
    - Callback URL: `https://www.playstation-hub.com/webhook`
-   - Verify token: the same string as `FB_VERIFY_TOKEN`
+   - Verify token: the value already in `MESSENGER_VERIFY_TOKEN` (or `FB_VERIFY_TOKEN` if you set that name). The GET handshake accepts that value.
    - Meta sends a GET to that URL. The site answers only when the token matches.
 5. Subscribe the Page to these fields: **messages**, **messaging_postbacks**, **messaging_referrals**, **messaging_handovers**.
 6. Handover, so a flagged chat lands in your inbox instead of the bot keeping it:
@@ -63,7 +65,8 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 ## If replies do not show up
 
 - Webhook log says `bad signature`: `FB_APP_SECRET` does not match the app whose token you are using.
-- Verify GET returns 403: the verify token in Meta and `FB_VERIFY_TOKEN` differ.
-- The bot never sends: `FB_PAGE_ACCESS_TOKEN` / `MESSENGER_PAGE_TOKEN` is empty or expired. Generate a new Page token.
+- Verify GET returns 403: the verify token in Meta and `MESSENGER_VERIFY_TOKEN` (or `FB_VERIFY_TOKEN`, if set) differ.
+- The bot never sends: `MESSENGER_PAGE_TOKEN` (or `FB_PAGE_ACCESS_TOKEN`, if set) is empty or expired. Generate a new Page token.
+- Replies stay on the short scripted lines: `ANTHROPIC_API_KEY` is missing or Claude returned an error. Prices and slots still come from the shop data.
 - Two replies arrive: Meta Business Agent or Inbox → Automations is still on.
 - Handoff does not appear in the inbox: the app is not the Primary receiver, or `messaging_handovers` is not subscribed. The admin card still lists the chat, because the pause flag does not depend on Meta accepting the handover.
