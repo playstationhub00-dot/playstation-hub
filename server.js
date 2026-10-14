@@ -31,6 +31,8 @@ const psplusCatalogStore = require('./lib/psplus-catalog-store');
 const upcomingPsn = require('./lib/upcoming-psn');
 const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
+const imageVariants = require('./lib/image-variants');
+const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
@@ -61,6 +63,10 @@ const supportMessenger = require('./lib/messenger-webhook');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Text responses only. HTML is fetched from here on every visit (the session
+// cookie keeps it out of the edge cache), so the uncompressed page was
+// Railway egress even when Cloudflare compressed it again for the browser.
+app.use(textCompress());
 
 // Guards against a double-click or retry on /admin/upcoming/release/:id
 // starting a second release for the same Coming Soon id while the first is
@@ -95,6 +101,10 @@ const RENTAL_DURATIONS = [
 ];
 const PROMO_DURATIONS = RENTAL_DURATIONS.map(d => d.days); // [7, 30]
 app.locals.RENTAL_DURATIONS = RENTAL_DURATIONS;
+// src / srcset strings for catalog cards and tiny thumbnails. Game-page
+// posters keep the original file — see lib/image-variants.js.
+app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
+app.locals.imgThumb = (url) => imageVariants.thumbAttrs(url);
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -491,8 +501,6 @@ app.get('/uploads/jpg/:name', async (req, res) => {
   }
 });
 
-// Serve uploads from persistent data directory
-//
 // Every /uploads file EXCEPT these four fixed names is written by multer
 // with a Date.now()+ext filename (see the diskStorage config above), so its
 // URL changes whenever its content does — safe to cache forever. These four
@@ -501,6 +509,28 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 // an admin updates branding, so the URL a browser already cached would
 // silently go stale for up to a year if these got the long cache too.
 const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|hero-bg-video)\./;
+
+// Width-capped copies of /uploads images (lib/image-variants.js). Registered
+// before the static handler so /uploads/w/… is not a directory lookup.
+app.get('/uploads/w/:width/:name', async (req, res) => {
+  try {
+    const result = await imageVariants.ensureVariant({
+      uploadsDir, width: req.params.width, name: req.params.name
+    });
+    if (!result) return res.status(404).send('Not found');
+    if (result.redirect) return res.redirect(result.redirect);
+    const branding = UNVERSIONED_UPLOAD_NAMES.test(req.params.name);
+    res.set('Cache-Control', branding ? CACHE_SHORT : CACHE_IMMUTABLE);
+    res.type(result.type);
+    res.sendFile(result.file);
+  } catch (e) {
+    console.error('[image-variant]', req.params.name, e.message);
+    if (!res.headersSent) res.status(500).send('Image failed');
+  }
+});
+
+// Serve uploads from persistent data directory. The four branding names above
+// stay on the short cache; everything else is immutable.
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
     const isBranding = UNVERSIONED_UPLOAD_NAMES.test(path.basename(filePath));
@@ -2194,7 +2224,7 @@ function browsePsplusData(accountSummaryMap) {
       games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
     items = catalog.items.map(it => ({
-      k: it.k, n: it.n, c: it.c || (it.i ? it.i + '?w=240' : ''),
+      k: it.k, n: it.n, c: it.c ? imageVariants.cardSrc(it.c) : (it.i ? it.i + '?w=240' : ''),
       ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || ''
     }));
   } catch (e) {
@@ -4394,21 +4424,21 @@ app.get('/api/search-index', async (req, res) => {
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       bpr: buyPrices.length ? Math.min(...buyPrices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || '',
+      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
     };
   });
   const soon = sortUpcoming(getUpcoming()).map(g => ({
     t: g.title, p: g.platform, d: g.release_date || 'TBA',
-    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: g.cover_image || ''
+    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // "Most Played in PS Plus" titles aren't individually rentable — they're all played
   // through the one PS Plus Deluxe subscription game, same as the homepage cards.
   const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
   const psplus = getPsplusPopular().map(g => ({
-    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: g.cover_image || ''
+    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // Titles inside each month's free-text games_list (e.g. "Call of Duty: Modern
   // Warfare III") aren't their own catalog entries — they only exist as lines in that
@@ -4431,7 +4461,7 @@ app.get('/api/search-index', async (req, res) => {
       if (catalogKeys.has(psplusCatalog.matchKey(title))) return;
       seenTitles.add(key);
       psplusMonthly.push({
-        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: entry.cover_image || ''
+        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: imageVariants.thumbSrc(entry.cover_image || '')
       });
     });
   });
@@ -4446,7 +4476,7 @@ app.get('/api/search-index', async (req, res) => {
     const approvedRequests = (await gameRequests.listPublic()).filter(r => r.status === 'approved');
     requested = approvedRequests.map(r => ({
       t: r.title, v: (r.voters || []).length, u: '/requests#req-' + r.slug,
-      y: 'requested', img: r.cover_image || ''
+      y: 'requested', img: imageVariants.thumbSrc(r.cover_image || '')
     }));
   } catch (e) {
     console.error('[search-index] requests lookup failed', e.message);

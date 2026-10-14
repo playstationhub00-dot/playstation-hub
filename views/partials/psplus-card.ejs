@@ -10,7 +10,7 @@
 %>
 <a href="<%= href %>" class="game-card gc2-card">
   <% if (game.cover_image) { %>
-    <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
+    <img <%- imgCard(game.cover_image) %> alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
   <% } else { %>
     <div class="gc2-cover-placeholder">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
