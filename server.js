@@ -673,6 +673,7 @@ app.use((req, res, next) => {
     res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
     res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
     res.locals.promoCheckoutLines = (gameId, copy) => promos.checkoutLines(ctx.live, gameId, copy);
+    res.locals.promoLoyaltyItems = (copy) => promos.loyaltyItems(copy);
     res.locals.promoFormat = loyalty.formatYmd;
   }
   next();

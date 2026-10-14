@@ -145,17 +145,20 @@
       : [];
   %>
   <% if (ordPromoLines.length) { %>
-  <div class="ord-card" id="ordPromo">
-    <% ordPromoLines.forEach(function (line) { %><div class="ord-refund-note"><%= line %></div><% }) %>
+  <div class="gd-promo-note ord-promo-stack" id="ordPromo">
+    <%- include('partials/promo-lines', { items: ordPromoLines }) %>
   </div>
   <% } %>
 
   <% if (typeof loyaltyProgress !== 'undefined' && loyaltyProgress && loyaltyProgress.show) { %>
+  <% const loyaltyItems = (typeof promoLoyaltyItems === 'function') ? promoLoyaltyItems(loyaltyProgress) : []; %>
   <div class="ord-card" id="ordLoyalty">
     <div class="ord-row"><span>Loyalty</span><span><%= loyaltyProgress.headline %></span></div>
-    <% if (loyaltyProgress.punchLine) { %><div class="ord-refund-note"><%= loyaltyProgress.punchLine %></div><% } %>
-    <% if (loyaltyProgress.rewardLine) { %><div class="ord-refund-note"><%= loyaltyProgress.rewardLine %></div><% } %>
-    <% if (loyaltyProgress.rebookLine) { %><div class="ord-refund-note"><%= loyaltyProgress.rebookLine %></div><% } %>
+    <% if (loyaltyItems.length) { %>
+    <div class="gd-promo-note">
+      <%- include('partials/promo-lines', { items: loyaltyItems }) %>
+    </div>
+    <% } %>
   </div>
   <% } %>
 

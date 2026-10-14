@@ -1,0 +1,6 @@
+<% (items || []).forEach(function (item) { %>
+<div class="gd-promo-item">
+  <span class="gd-promo-label" data-kind="<%= item.kind || 'promo' %>"><%= item.label %></span>
+  <span class="gd-promo-text"><%= item.text %></span>
+</div>
+<% }) %>

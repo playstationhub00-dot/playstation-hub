@@ -127,18 +127,21 @@ ok('a badge is only on the linked game, and a site-wide promo badges every game'
 ok('checkout names the game promo, and a known customer gets the loyalty lines', () => {
   const rows = live([custom()], loyaltyOn, '2026-10-14');
   const generic = promos.checkoutLines(rows, 7, null);
-  assert.ok(generic.some(line => line.includes('₱50 off Elden Ring')));
-  assert.ok(generic.some(line => line.includes('free 7-day')));
-  assert.ok(!promos.checkoutLines(rows, 8, null).some(line => line.includes('Elden Ring')));
+  assert.ok(generic.some(line => line.text.includes('₱50 off Elden Ring') && line.label === 'Elden week'));
+  assert.ok(generic.some(line => line.text.includes('free 7-day') && line.label === 'Free rental'));
+  assert.ok(generic.some(line => line.label === 'Rebook'));
+  assert.ok(new Set(generic.map(line => line.label)).size === generic.length);
+  assert.ok(!promos.checkoutLines(rows, 8, null).some(line => line.text.includes('Elden Ring')));
   const personal = promos.checkoutLines(rows, 8, {
     show: true,
     punchLine: "You're 2 rentals away from a free 7-day rental",
-    rewardLine: '',
+    rewardLine: 'You have 1 free 7-day rental waiting — message us to use it.',
     rebookLine: 'Rebook by Oct 20, 2026 for ₱50 off.'
   });
-  assert.ok(personal.includes("You're 2 rentals away from a free 7-day rental"));
-  assert.ok(personal.includes('Rebook by Oct 20, 2026 for ₱50 off.'));
-  assert.ok(!personal.some(line => line.includes('Every 5')));
+  assert.ok(personal.some(line => line.text === "You're 2 rentals away from a free 7-day rental" && line.label === 'Free rental'));
+  assert.ok(personal.some(line => line.label === 'Reward' && line.kind === 'reward'));
+  assert.ok(personal.some(line => line.text.includes('Rebook by Oct 20, 2026 for ₱50 off.') && line.label === 'Rebook'));
+  assert.ok(!personal.some(line => line.text.includes('Every 5')));
 });
 
 ok('an order uses a promo only when that promo applies', () => {

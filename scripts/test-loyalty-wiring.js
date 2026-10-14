@@ -40,8 +40,8 @@ ok('redeem, merge, and link routes exist and stay on the loyalty tab', () => {
 ok('the order page is given the same progress copy', () => {
   assert.ok(server.includes('loyaltyProgress: loyalty.customerCopy(loyaltySnapshot().profileFor({ name: order.fb_name, rowId: order.customer_id }))'));
   assert.ok(orderPage.includes('id="ordLoyalty"'));
-  assert.ok(orderPage.includes('loyaltyProgress.punchLine'));
-  assert.ok(orderPage.includes('loyaltyProgress.rebookLine'));
+  assert.ok(orderPage.includes('promoLoyaltyItems(loyaltyProgress)'));
+  assert.ok(orderPage.includes("include('partials/promo-lines'"));
 });
 
 ok('the admin has a Loyalty tab, and settings can edit the offers', () => {

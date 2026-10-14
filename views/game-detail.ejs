@@ -393,7 +393,7 @@
           <% const gdHasPromos = typeof livePromos !== 'undefined' && livePromos && livePromos.length; %>
           <% if (gdHasPromos) { %>
           <div class="gd-promo-note" id="gdPromoNote" data-game-id="<%= game.id %>"<% if (!gdPromoLines.length) { %> hidden<% } %>>
-            <% gdPromoLines.forEach(function (line) { %><p><%= line %></p><% }) %>
+            <%- include('partials/promo-lines', { items: gdPromoLines }) %>
           </div>
           <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
           <% } %>

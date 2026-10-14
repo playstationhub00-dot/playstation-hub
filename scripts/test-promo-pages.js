@@ -25,6 +25,11 @@ function addDays(ymd, n) {
 }
 const today = manilaToday();
 
+function lineBlob(body) {
+  const lines = JSON.parse(body).lines || [];
+  return lines.map(line => (line && typeof line === 'object') ? (line.label + ' ' + line.text) : String(line)).join('\n');
+}
+
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: TEST_PASSWORD,
   games: [{
@@ -122,15 +127,21 @@ async function main() {
     const game = await call('GET', '/game/elden-ring', { headers: { Cookie: sid } });
     assert.strictEqual(game.status, 200, game.status + ' ' + game.body.slice(0, 180));
     assert.ok(game.body.includes('gd-promo-note'));
+    assert.ok(game.body.includes('gd-promo-item'));
+    assert.ok((game.body.match(/class="gd-promo-item"/g) || []).length >= 2);
     assert.ok(game.body.includes('Every 5th paid rental'));
+    assert.ok(game.body.includes('Free rental'));
+    assert.ok(game.body.includes('Rebook'));
     assert.ok(!game.body.includes('gc2-badge-promo'));
     assert.ok(!game.body.includes('usd-badge-promo'));
     const faq = await call('GET', '/faq');
     assert.ok(faq.body.includes('Are there any promos right now?'));
     assert.ok(faq.body.includes('href="/promos"'));
     const named = await call('GET', '/api/promo-line?name=' + encodeURIComponent('Ana Cruz') + '&game=7', { headers: { Cookie: sid } });
-    const lines = JSON.parse(named.body).lines.join('\n');
+    const lines = lineBlob(named.body);
     assert.ok(lines.includes("You're 2 rentals away from a free 7-day rental"), lines);
+    assert.ok(lines.includes('Free rental'));
+    assert.ok(lines.includes('Rebook'));
     assert.ok(lines.includes('Rebook by '), lines);
     assert.ok(lines.includes('₱50 off'), lines);
   });
@@ -232,14 +243,14 @@ async function main() {
 
     const named = await call('GET', '/api/promo-line?name=' + encodeURIComponent('Ana Cruz') + '&game=7');
     assert.strictEqual(named.status, 200);
-    const lines = JSON.parse(named.body).lines.join(' ');
+    const lines = lineBlob(named.body);
     assert.ok(lines.includes('₱50 off Elden Ring'), lines);
     assert.ok(!lines.includes('away from a free'), lines);
   });
 
   await okAsync('loyalty stays hidden while its toggles are off, even if the customer is known', async () => {
     const named = await call('GET', '/api/promo-line?name=' + encodeURIComponent('Ana Cruz') + '&game=8');
-    const lines = JSON.parse(named.body).lines.join(' ');
+    const lines = lineBlob(named.body);
     assert.ok(!lines.includes('away from a free'));
     assert.ok(!lines.includes('Elden week'));
   });
