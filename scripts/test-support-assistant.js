@@ -84,6 +84,46 @@ async function main() {
     assert.ok(blurb.text.includes('₱719'), blurb.text);
     assert.ok(blurb.text.includes('₱799'), blurb.text);
     assert.ok(blurb.text.includes('already taken off'), blurb.text);
+    assert.strictEqual(facts.replyLanguage('how much for new games'), 'en');
+    assert.ok(!blurb.text.includes('**'), blurb.text);
+    const emoji = (blurb.text.match(/\p{Extended_Pictographic}/gu) || []).length;
+    assert.ok(emoji >= 1 && emoji <= 3, 'emoji ' + emoji + ' in ' + blurb.text);
+  });
+
+  await ok('the scripted fallback matches English, Filipino, and Taglish', () => {
+    assert.strictEqual(facts.replyLanguage('What is the difference between the accounts?'), 'en');
+    assert.strictEqual(facts.replyLanguage('Magkano ang rental?'), 'fil');
+    assert.strictEqual(facts.replyLanguage('How much po ang presyo?'), 'mix');
+    assert.strictEqual(facts.replyLanguage('Elden Ring'), 'en');
+
+    const en = facts.fallbackReply('how much for a week', shopFacts(), () => []);
+    assert.ok(en.text.includes('Order here:'), en.text);
+    assert.ok(en.text.includes('₱349'));
+    assert.ok(!en.text.includes('Mag-order'));
+    assert.ok(!/^\d+\.\s/m.test(en.text));
+
+    const fil = facts.fallbackReply('Magkano ang rental?', shopFacts(), () => []);
+    assert.ok(fil.text.includes('Mag-order dito:'), fil.text);
+    assert.ok(fil.text.includes('Kasama na'), fil.text);
+    assert.ok(fil.text.includes('₱629'), fil.text);
+    assert.ok(!fil.text.includes('Order here:'), fil.text);
+    const filEmoji = (fil.text.match(/\p{Extended_Pictographic}/gu) || []).length;
+    assert.ok(filEmoji >= 1 && filEmoji <= 3, fil.text);
+
+    const mix = facts.fallbackReply('how much po ang presyo', shopFacts(), () => []);
+    assert.strictEqual(facts.replyLanguage('how much po ang presyo'), 'mix');
+    assert.ok(mix.text.includes('Order dito:'), mix.text);
+    assert.ok(mix.text.includes('kasama na'), mix.text);
+    assert.ok(mix.text.includes('₱699'));
+
+    const filPay = facts.fallbackReply('paano magbayad', shopFacts(), () => []);
+    assert.ok(filPay.text.includes('GCash'), filPay.text);
+    assert.ok(filPay.text.includes('Mag-order dito:'), filPay.text);
+
+    const filHuman = facts.fallbackReply('kausap naman', shopFacts(), () => []);
+    assert.strictEqual(filHuman.handoff, true);
+    assert.ok(filHuman.text.includes('Michael'));
+    assert.ok(filHuman.text.includes('Sige'), filHuman.text);
   });
 
   await ok('a different category price is what gets quoted', () => {
@@ -430,6 +470,10 @@ async function main() {
     assert.ok(prompt.includes('lookup_game'));
     assert.ok(prompt.includes('already included'));
     assert.ok(prompt.includes('Never subtract the percent'));
+    assert.ok(prompt.includes('Filipino'));
+    assert.ok(prompt.includes('Taglish'));
+    assert.ok(prompt.includes('1 to 3'));
+    assert.ok(prompt.includes('No markdown'));
   });
 
   console.log('\nthreads');
