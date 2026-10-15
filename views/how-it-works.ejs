@@ -20,7 +20,7 @@
   <div style="position:relative;z-index:1;">
     <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">🎮 Order online in minutes</div>
     <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">How It <span style="color:var(--ps-blue);">Works</span></h1>
-    <p style="color:var(--text-secondary);font-size:1rem;max-width:520px;margin:0 auto;">Rent a game for a week or a month, or buy it permanently. Everything happens right here on the site — pay with GCash or Maya and we'll set you up.</p>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:560px;margin:0 auto;">Rent a game for a week or a month, or buy it permanently. Everything happens right here on the site — <%- include('partials/pay-note').trim() %>.</p>
   </div>
 </section>
 
@@ -112,7 +112,7 @@
       <div class="hiw-icon">💳</div>
       <div class="hiw-body">
         <h2>Pay, Then Tell Us</h2>
-        <p>Your order page shows the exact amount and a <strong style="color:#fff;">GCash</strong> or <strong style="color:#fff;">Maya</strong> QR code to scan. Once you've paid, confirm it in one of two ways:</p>
+        <p>Your order page shows the exact amount. <%- include('partials/pay-note').trim() %>. Local customers usually pay with a GCash or Maya QR, mostly arranged on Messenger. Once you've paid, confirm it in one of two ways:</p>
         <div class="hiw-details">
           <div class="hiw-detail-item">
             <span class="hiw-detail-icon">📤</span>
@@ -247,6 +247,7 @@
   <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
     <a href="/browse" class="btn btn-primary">Browse Games</a>
     <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="btn btn-outline">📘 Message Us on Facebook</a>
+    <a href="/faq" class="btn btn-outline">FAQ</a>
   </div>
 </section>
 

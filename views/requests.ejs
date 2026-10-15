@@ -64,18 +64,52 @@
     that mattered ("you asked, we stocked it") moved to the section heading
     so it isn't repeated on every narrow card in the strip.
   %>
-  <% if (stockedRequests.length) { %>
+  <%
+    // linkKind is set by lib/request-board.js. An upcoming link is a
+    // reservation even when the row also has a catalogue game_id. Rows rendered
+    // without linkKind (older callers) are treated as upcoming when the URL
+    // itself points at /upcoming/.
+    function reqKind(r) {
+      if (r.linkKind === 'upcoming' || (r.linkedUrl && String(r.linkedUrl).indexOf('/upcoming/') === 0)) return 'upcoming';
+      return 'available';
+    }
+    const reqSoon = stockedRequests.filter(r => reqKind(r) === 'upcoming');
+    const reqAvailable = stockedRequests.filter(r => reqKind(r) !== 'upcoming');
+  %>
+  <% if (reqSoon.length) { %>
+  <div class="req-listhead req-listhead-soon">
+    <span class="req-listtitle">Coming soon</span>
+    <span class="req-count"><%= reqSoon.length %> to reserve</span>
+  </div>
+  <div class="req-stocked-strip">
+    <% reqSoon.forEach(r => { %>
+    <a class="req-stocked-card req-stocked-card-soon req-stocked-card-link" id="req-<%= r.slug %>" href="<%= r.linkedUrl %>">
+      <% if (r.cover_image) { %>
+        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
+      <% } else { %>
+        <div class="req-stocked-cover req-cover-empty">🎮</div>
+      <% } %>
+      <div class="req-stocked-body">
+        <div class="req-stocked-title"><%= r.title %></div>
+        <span class="req-btn req-btn-reserve">Coming soon — reserve now</span>
+      </div>
+    </a>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (reqAvailable.length) { %>
   <div class="req-listhead req-listhead-stocked">
     <span class="req-listtitle">✓ Now available</span>
-    <span class="req-count">you asked, we stocked <%= stockedRequests.length %></span>
+    <span class="req-count">you asked, we stocked <%= reqAvailable.length %></span>
   </div>
 
   <div class="req-stocked-strip">
-    <% stockedRequests.forEach(r => { %>
+    <% reqAvailable.forEach(r => { %>
     <% const stockedTag = r.linkedUrl ? 'a' : 'div'; %>
     <<%= stockedTag %> class="req-stocked-card<%= r.linkedUrl ? ' req-stocked-card-link' : '' %>" id="req-<%= r.slug %>"<% if (r.linkedUrl) { %> href="<%= r.linkedUrl %>"<% } %>>
       <% if (r.cover_image) { %>
-        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
+        <img class="req-stocked-cover" <%- imgCard(r.cover_image) %> alt="">
       <% } else { %>
         <div class="req-stocked-cover req-cover-empty">🎮</div>
       <% } %>
@@ -115,7 +149,7 @@
     <div class="req-row" id="req-<%= r.slug %>">
       <span class="req-votes"><%= votes %></span>
       <% if (r.cover_image) { %>
-        <img class="req-cover" src="<%= r.cover_image %>" alt="">
+        <img class="req-cover" <%- imgThumb(r.cover_image) %> alt="">
       <% } else { %>
         <div class="req-cover req-cover-empty">🎮</div>
       <% } %>
@@ -170,6 +204,12 @@
     if (v.length < 3) { hint.textContent = ''; hint.className = 'req-hint'; return; }
     var slug = slugify(v);
 
+    var soon = (catalog || []).find(function (g) { return g.y === 'soon' && slugify(g.t) === slug; });
+    if (soon) {
+      hint.innerHTML = 'Coming soon — <a href="' + soon.u + '">reserve it here</a>.';
+      hint.className = 'req-hint req-hint-soon';
+      return;
+    }
     var owned = (catalog || []).find(function (g) { return g.y === 'now' && slugify(g.t) === slug; });
     if (owned) {
       hint.innerHTML = 'We already have this — <a href="' + owned.u + '">rent it here</a>.';

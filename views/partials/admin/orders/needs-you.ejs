@@ -67,6 +67,9 @@
     : '';
 %>
 <div class="oq-zone oq-zone-act">Needs you <span class="oq-zone-n"><%= nyCount %></span></div>
+<% if (typeof promoWeek !== 'undefined' && promoWeek) { %>
+<p class="oq-group-sub" id="promoWeekLine">Promos this week: <%= promoWeek.banner %> banner views · <%= promoWeek.page %> promos page views · <%= promoWeek.orders %> orders used a promo</p>
+<% } %>
 
 <% if (!nyDoNow.length && !nyReleased.length && !nyRefunds.length && !nyFollowUps.length && !nyWaitlist.length) { %>
 <div class="oq-empty">Nothing waiting on you right now.</div>
@@ -97,6 +100,7 @@
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
+        <%- include('../loyalty-badge', { name: o.fb_name, rowId: o.customer_id }) %>
         <% if (o.psid) { %>
           <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a>
         <% } %>
@@ -217,6 +221,8 @@
     <div class="oq-main">
       <div class="oq-top">
         <span class="oq-ref"><%= o.ref %></span>
+        <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
+        <% if (reminded) { %><span class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span><% } %>
         <span class="oq-ab-name"><%= o.fb_name %></span>
         <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       </div>

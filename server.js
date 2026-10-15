@@ -19,6 +19,7 @@ const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
+const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
@@ -31,6 +32,8 @@ const psplusCatalogStore = require('./lib/psplus-catalog-store');
 const upcomingPsn = require('./lib/upcoming-psn');
 const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
+const imageVariants = require('./lib/image-variants');
+const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
@@ -53,12 +56,26 @@ const buyCatalogCore = require('./public/js/buy-catalog-core');
 const reservations = require('./lib/reservations');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
+const requestBoard = require('./lib/request-board');
+const titleFixes = require('./lib/title-fixes');
+const genreMigration = require('./lib/genre-migration');
+const paymentCopy = require('./lib/payment-copy');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
 const mongoConnection = require('./lib/mongo-connection');
+const supportFacts = require('./lib/support-facts');
+const supportThreads = require('./lib/support-threads');
+const supportAssistant = require('./lib/support-assistant');
+const supportMessenger = require('./lib/messenger-webhook');
+const loyalty = require('./lib/loyalty');
+const promos = require('./lib/promos');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Text responses only. HTML is fetched from here on every visit (the session
+// cookie keeps it out of the edge cache), so the uncompressed page was
+// Railway egress even when Cloudflare compressed it again for the browser.
+app.use(textCompress());
 
 // Guards against a double-click or retry on /admin/upcoming/release/:id
 // starting a second release for the same Coming Soon id while the first is
@@ -93,6 +110,10 @@ const RENTAL_DURATIONS = [
 ];
 const PROMO_DURATIONS = RENTAL_DURATIONS.map(d => d.days); // [7, 30]
 app.locals.RENTAL_DURATIONS = RENTAL_DURATIONS;
+// src / srcset strings for catalog cards and tiny thumbnails. Game-page
+// posters keep the original file — see lib/image-variants.js.
+app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
+app.locals.imgThumb = (url) => imageVariants.thumbAttrs(url);
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -217,7 +238,11 @@ db.defaults({
   nextSigninStepId: 1,
   accounts: [],
   nextAccountId: 1,
-  month_logs: []
+  month_logs: [],
+  support_threads: [],
+  loyalty_redemptions: [],
+  loyalty_identity: { aliases: {}, rows: {} },
+  loyalty_next_id: 1
 }).write();
 
 // Seed default sign-in steps on first run only — an owner who has already
@@ -245,6 +270,9 @@ if (!db.get('signin_steps').value().length) {
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
 if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
 if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
+if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
+if (db.get('loyalty_identity').value() === undefined) db.set('loyalty_identity', { aliases: {}, rows: {} }).write();
+if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1).write();
 
 // Migrate visitor paths: /game/NUMBER → /game/slug
 (function migrateVisitorPaths() {
@@ -440,6 +468,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // set, so a deploy would otherwise leave visitors on stale styles. Cache keys
 // are per-URL, so views append ?v=<assetV> to bust it. A redeploy rewrites
 // every file's mtime, which is exactly when the version should change.
+// How It Works, game pages and the footer all call this so the local /
+// international split cannot drift. Card and bank stay in the sentence only
+// when that method is actually on (see lib/payment-copy.js).
+app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
+  payViaGateway: gateway != null ? !!gateway : !!process.env.PAYMONGO_SECRET_KEY,
+  payment_methods: settings && settings.payment_methods
+});
+
 app.locals.assetV = (() => {
   try {
     return String(Math.floor(fs.statSync(path.join(__dirname, 'public/css/style.css')).mtimeMs));
@@ -488,8 +524,6 @@ app.get('/uploads/jpg/:name', async (req, res) => {
   }
 });
 
-// Serve uploads from persistent data directory
-//
 // Every /uploads file EXCEPT these four fixed names is written by multer
 // with a Date.now()+ext filename (see the diskStorage config above), so its
 // URL changes whenever its content does — safe to cache forever. These four
@@ -498,6 +532,28 @@ app.get('/uploads/jpg/:name', async (req, res) => {
 // an admin updates branding, so the URL a browser already cached would
 // silently go stale for up to a year if these got the long cache too.
 const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|hero-bg-video)\./;
+
+// Width-capped copies of /uploads images (lib/image-variants.js). Registered
+// before the static handler so /uploads/w/… is not a directory lookup.
+app.get('/uploads/w/:width/:name', async (req, res) => {
+  try {
+    const result = await imageVariants.ensureVariant({
+      uploadsDir, width: req.params.width, name: req.params.name
+    });
+    if (!result) return res.status(404).send('Not found');
+    if (result.redirect) return res.redirect(result.redirect);
+    const branding = UNVERSIONED_UPLOAD_NAMES.test(req.params.name);
+    res.set('Cache-Control', branding ? CACHE_SHORT : CACHE_IMMUTABLE);
+    res.type(result.type);
+    res.sendFile(result.file);
+  } catch (e) {
+    console.error('[image-variant]', req.params.name, e.message);
+    if (!res.headersSent) res.status(500).send('Image failed');
+  }
+});
+
+// Serve uploads from persistent data directory. The four branding names above
+// stay on the short cache; everything else is immutable.
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
     const isBranding = UNVERSIONED_UPLOAD_NAMES.test(path.basename(filePath));
@@ -512,7 +568,9 @@ app.use(express.urlencoded({ extended: true }));
 // webhook paths, so ordinary requests don't each hold a spare copy of their body.
 app.use(express.json({
   verify: (req, res, buf) => {
-    if (req.originalUrl && req.originalUrl.startsWith('/webhooks/')) {
+    // /webhook is the Messenger bot. Signature verification needs the exact
+    // bytes, same as PayMongo under /webhooks/.
+    if (req.originalUrl && (req.originalUrl.startsWith('/webhooks/') || req.originalUrl === '/webhook' || req.originalUrl.startsWith('/webhook?'))) {
       req.rawBody = buf.toString('utf8');
     }
   }
@@ -551,7 +609,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms', '/promos': 'Promos' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -607,6 +665,19 @@ app.use((req, res, next) => {
 // cluttered with staff tooling customers can't use.
 app.use((req, res, next) => {
   res.locals.isAdmin = !!(req.session && req.session.isAdmin);
+  // The floating support chat is for customers. Admin pages include the
+  // public footer on a few edit screens, and the widget does not belong there.
+  res.locals.showSupportChat = !req.path.startsWith('/admin');
+  if (!req.path.startsWith('/admin') && !req.path.startsWith('/css') && !req.path.startsWith('/js') && !req.path.startsWith('/uploads')) {
+    const ctx = promoContext();
+    res.locals.livePromos = ctx.live;
+    res.locals.bannerPromo = ctx.banner;
+    res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
+    res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
+    res.locals.promoCheckoutLines = (gameId, copy) => promos.checkoutLines(ctx.live, gameId, copy);
+    res.locals.promoLoyaltyItems = (copy) => promos.loyaltyItems(copy);
+    res.locals.promoFormat = loyalty.formatYmd;
+  }
   next();
 });
 
@@ -726,6 +797,19 @@ db.write = function() {
   return r;
 };
 
+// One-time genre list. After the write hook, so games.json and the MongoDB
+// state blob get the new genres and the marker in the same save. The marker
+// stops a later boot from putting these values back over an admin edit.
+// A missing slug is logged and skipped.
+try {
+  const genreFix = genreMigration.apply(db.getState(), console.log);
+  if (genreFix.write) {
+    db.set('games', genreFix.games).set('migrations', genreFix.migrations).write();
+  }
+} catch (e) {
+  console.log('[genre] migration failed:', e.message);
+}
+
 // Orders persist as their own MongoDB documents, reusing the connection the
 // blob sync already maintains rather than opening a second pool.
 orders.init(_getMongoDb);
@@ -792,6 +876,68 @@ function newCustomerId() {
   const id = db.get('nextCustomerId').value();
   db.set('nextCustomerId', id + 1).write();
   return id;
+}
+
+function ensureLoyaltyStore() {
+  if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
+  if (db.get('loyalty_identity').value() === undefined) db.set('loyalty_identity', { aliases: {}, rows: {} }).write();
+  if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1).write();
+}
+
+// One pass over the ledger for the Loyalty tab, the reward badges, and the
+// customer's own order page. Dates are Manila calendar days, same as orders.
+function ensurePromoStore() {
+  if (!Array.isArray(db.get('promo_events').value())) db.set('promo_events', []).write();
+  const s = db.get('site_settings').value();
+  if (!s) return;
+  if (!Array.isArray(s.promos)) db.set('site_settings.promos', []).write();
+  if (!s.promo_next_id) db.set('site_settings.promo_next_id', 1).write();
+}
+
+function promoContext() {
+  ensurePromoStore();
+  const settings = getSiteSettings() || {};
+  const today = loyalty.manilaToday();
+  const live = promos.liveOffers({
+    stored: settings.promos,
+    loyaltySettings: settings.loyalty,
+    games: getGames() || [],
+    today
+  });
+  return { today, live, banner: promos.bannerOffer(live), settings };
+}
+
+function recordPromoEvent(row) {
+  ensurePromoStore();
+  const result = promos.record(db.get('promo_events').value() || [], Object.assign({ date: loyalty.manilaToday() }, row || {}));
+  if (!result.recorded) return false;
+  const capped = result.events.length > 50000 ? result.events.slice(-50000) : result.events;
+  db.set('promo_events', capped).write();
+  return true;
+}
+
+function loyaltyNoteFor(name) {
+  if (!name) return '';
+  try {
+    const copy = loyalty.customerCopy(loyaltySnapshot().profileFor({ name }));
+    if (!copy || !copy.show) return '';
+    return [copy.punchLine, copy.rewardLine, copy.rebookLine].filter(Boolean).join(' ');
+  } catch (e) {
+    return '';
+  }
+}
+
+function loyaltySnapshot() {
+  ensureLoyaltyStore();
+  const built = loyalty.build(getCustomers(), {
+    settings: (getSiteSettings() || {}).loyalty,
+    identity: db.get('loyalty_identity').value(),
+    redemptions: db.get('loyalty_redemptions').value() || [],
+    today: orders.manilaDate()
+  });
+  built.formatYmd = loyalty.formatYmd;
+  built.formatManila = loyalty.formatManila;
+  return built;
 }
 
 // ── Accounts (per-account slot inventory) ──────────────────────────────────
@@ -940,6 +1086,14 @@ function getAnnouncements() {
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
   const s = db.get('site_settings').value();
+  // Seeded once, the first time this process reads settings that predate
+  // loyalty. A later save from the form replaces the object; this does not
+  // run again, and it does not touch anything else on the settings document.
+  if (s && s.loyalty === undefined) {
+    const seeded = loyalty.normalizeSettings(null);
+    db.set('site_settings.loyalty', seeded).write();
+    s.loyalty = seeded;
+  }
   if (!s.hero_text) {
     db.set('site_settings.hero_text', {
       line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games',
@@ -1130,6 +1284,13 @@ function getSiteSettings() {
   // kind added later starts working instead of being muted by an older blob,
   // and this seed never has to be edited again.
   if (s.alerts === undefined) { db.set('site_settings.alerts', {}).write(); s.alerts = {}; }
+  // Reminders start on; auto-cancel does not. An old settings blob with no
+  // payment_reminders key keeps that, and a later save is left alone.
+  if (s.payment_reminders === undefined) {
+    const seeded = { enabled: true, hold_hours: 24, auto_cancel: false };
+    db.set('site_settings.payment_reminders', seeded).write();
+    s.payment_reminders = seeded;
+  }
   // The m.me handle is a setting rather than a constant because the whole
   // referral link depends on it, and getting it wrong silently breaks PSID
   // capture with no visible symptom on the page.
@@ -1254,6 +1415,34 @@ app.get('/how-it-works', (req, res) => {
   res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
+app.get('/faq', (req, res) => {
+  res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/promos', (req, res) => {
+  const ctx = promoContext();
+  if (req.sessionId) recordPromoEvent({ kind: 'page', promo_id: '', session_id: req.sessionId });
+  res.render('promos', {
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings(),
+    offers: ctx.live
+  });
+});
+
+app.get('/api/promo-line', (req, res) => {
+  if (rateLimited('promo_line', clientIp(req), 40, 10 * 60 * 1000)) return res.status(429).json({ lines: [] });
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  const ctx = promoContext();
+  let copy = null;
+  if (name.length >= 2) copy = loyalty.customerCopy(loyaltySnapshot().profileFor({ name }));
+  res.json({ lines: promos.checkoutLines(ctx.live, req.query.game, copy && copy.show ? copy : null) });
+});
+
+app.get('/terms', (req, res) => {
+  res.render('terms', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
 // Public request board. Shows approved and stocked entries ranked by votes;
 // pending entries stay hidden until the owner approves them.
 app.get('/requests', async (req, res) => {
@@ -1263,26 +1452,20 @@ app.get('/requests', async (req, res) => {
   // stocked ones among games that still need votes.
   const stocked = rows.filter(r => r.status === 'stocked');
   const voting = rows.filter(r => r.status !== 'stocked');
-  // Card link target: prefer the linked catalogue row (r.game_id, set by the
-  // owner at /admin/requests/:slug/stock), falling back to a title match for
-  // older entries that were marked stocked before that field existed — the
-  // owner has stocked requests on record with no game_id at all, which used
-  // to leave the "Now available" card with nowhere to click. A title can also
-  // match an upcoming (not-yet-released) row rather than a live catalogue
-  // one — "stocked" here means "the owner is fulfilling this ask", not
-  // necessarily "rentable today" — so upcoming is checked too, pointing at
-  // its own /upcoming/ detail route instead of /game/.
+  // Card link: a title that is still Coming soon points at /upcoming/ and is
+  // labelled as a reservation, even if a catalogue row or game_id also matches.
+  // Otherwise prefer the linked catalogue row (r.game_id, set at
+  // /admin/requests/:slug/stock), then a title match for older stocked
+  // entries that have no game_id. "Stocked" means the owner is fulfilling
+  // the ask, which is not the same as "rentable today".
   const games = getGames();
   const upcoming = getUpcoming();
+  // Coming soon wins over a catalogue row. A stocked request for a game that
+  // has not released yet is a reservation, not a rental — see lib/request-board.js.
   stocked.forEach(r => {
-    const linkedGame = (r.game_id && games.find(g => g.id === r.game_id))
-      || games.find(g => gameSlug(g.title) === gameSlug(r.title));
-    if (linkedGame) {
-      r.linkedUrl = '/game/' + gameSlug(linkedGame.title);
-      return;
-    }
-    const linkedUpcoming = upcoming.find(g => gameSlug(g.title) === gameSlug(r.title));
-    r.linkedUrl = linkedUpcoming ? '/upcoming/' + gameSlug(linkedUpcoming.title) + '-' + linkedUpcoming.id : null;
+    const link = requestBoard.linkStockedRequest(r, games, upcoming);
+    r.linkKind = link.linkKind;
+    r.linkedUrl = link.linkedUrl;
   });
   res.render('requests', Object.assign({
     requests: rows,
@@ -2197,7 +2380,7 @@ function browsePsplusData(accountSummaryMap) {
       games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
     });
     items = catalog.items.map(it => ({
-      k: it.k, n: it.n, c: it.c || (it.i ? it.i + '?w=240' : ''),
+      k: it.k, n: it.n, c: it.c ? imageVariants.cardSrc(it.c) : (it.i ? it.i + '?w=720' : ''),
       ps4: (it.p || []).includes('PS4'), ps5: (it.p || []).includes('PS5'), g: it.g || ''
     }));
   } catch (e) {
@@ -2805,9 +2988,11 @@ app.get('/order/:ref', asyncRoute(async (req, res) => {
     queueRows, queuePos, queueAhead, queueExpired,
     queueRules,
     canReview, myReview, fbReviewsLink,
+    loyaltyProgress: loyalty.customerCopy(loyaltySnapshot().profileFor({ name: order.fb_name, rowId: order.customer_id })),
     // For the "reassurance" panel on the payment step: real reviews and a
     // real median approval time, not invented urgency.
     approvalEtaMinutes: getApprovalEtaMinutes(),
+    holdState: paymentReminders.holdDisplay(order, new Date()),
   }, reviewBlockLocals('')));
 }));
 
@@ -3078,8 +3263,28 @@ function notifyOwnerRequest(request) {
 // deliberately does NOT use it, because alerting the owner about an order they
 // just typed themselves is pure noise.
 async function createOrderNotified(fields) {
+  try {
+    const ctx = promoContext();
+    const profile = fields && fields.fb_name ? loyaltySnapshot().profileFor({ name: fields.fb_name }) : null;
+    const ids = promos.usedIds(ctx.live, fields && fields.game_id, profile);
+    if (ids.length) fields.promo_ids = ids;
+  } catch (e) {
+    console.error('[promo order]', e.message);
+  }
   const order = await orders.create(fields);
+  if (order && Array.isArray(order.promo_ids) && order.promo_ids.length) {
+    try { recordPromoEvent({ kind: 'order', promo_id: order.promo_ids[0], session_id: order.session_id || '' }); }
+    catch (e) { console.error('[promo order]', e.message); }
+  }
   notifyOwnerOrder(order, 'created');
+  // The customer's page reads hold_expires_at on the next request. A failure
+  // here must not lose the order they just placed.
+  try {
+    const plan = paymentReminders.holdPlan(order, getSiteSettings().payment_reminders);
+    if (plan) await orders.setHoldExpiry(order.ref, plan.expires, plan.anchor);
+  } catch (e) {
+    console.error('[payment reminder hold]', e.message);
+  }
   return order;
 }
 
@@ -3449,7 +3654,7 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
   // tracks amount_due and deposit_due as two fields added back together for
   // display, so amount_due must be the base alone or the deposit is charged
   // twice (see POST /order/reserve, which has the same split).
-  const amountDue = override != null && override >= 0 ? override
+  let amountDue = override != null && override >= 0 ? override
     : upcomingReservation ? pricing.base
     : pricing.amountDue;
   // A reservation's deposit is carried on the order the way the web flow
@@ -3493,6 +3698,51 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     : b.signed_in === 'no' ? 'awaiting_qr'
     : 'active';
   const initialState = paid ? settleState : 'awaiting_payment';
+
+  // A reward chosen on this form changes the rent and is recorded against the
+  // new row, using the same offers the Loyalty tab would show for this name.
+  // Checked before anything is written: a refused reward must not leave a
+  // half-priced rental behind.
+  let loyaltyApply = null;
+  const loyaltyChoice = String(b.loyalty_choice || '').trim();
+  if (loyaltyChoice) {
+    const snap = loyaltySnapshot();
+    const profile = snap.profileFor({ name });
+    const offer = loyalty.offerByChoice(profile, loyaltyChoice);
+    let weekValue = 0;
+    if (offer && offer.kind === 'punch' && mode === 'rent' && !upcomingGame && days !== offer.days) {
+      const week = computeRentPricing(game, type, offer.days, promoForPricing);
+      weekValue = week ? week.amountDue : 0;
+    }
+    const prepared = loyalty.prepareApply(profile, loyaltyChoice, {
+      amountDue,
+      days,
+      mode: (mode === 'rent' && !upcomingGame) ? 'rent' : 'buy',
+      weekValue
+    });
+    if (!prepared.ok) {
+      const message = prepared.error === 'not_rental'
+        ? 'A loyalty reward applies to a rental with dates, not a purchase or a reservation. Choose Don\'t apply, or switch back to Renting.'
+        : prepared.error === 'no_credit'
+          ? 'That game has no price for the free rental, so it cannot be credited against this one.'
+          : 'That loyalty reward is not available for this customer.';
+      return res.status(400).json({ ok: false, reason: 'loyalty_' + prepared.error, message });
+    }
+    const plan = loyalty.planRedemption(profile, {
+      choice: prepared.offer.choice,
+      order_ref: 'NEW',
+      amount: String(prepared.credited),
+      note: 'Applied on the new rental'
+    }, new Date().toISOString());
+    if (!plan.ok) {
+      return res.status(400).json({
+        ok: false, reason: 'loyalty_' + plan.error,
+        message: 'That loyalty reward is not available for this customer.'
+      });
+    }
+    amountDue = prepared.amountDue;
+    loyaltyApply = { offer: prepared.offer, credited: prepared.credited, record: plan.record };
+  }
 
   try {
     const order = await orders.create(Object.assign({
@@ -3567,6 +3817,16 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
     }).write();
     await orders.setCustomerId(order.ref, customerId).catch(() => {});
 
+    if (loyaltyApply) {
+      ensureLoyaltyStore();
+      const redemptionId = db.get('loyalty_next_id').value() || 1;
+      db.set('loyalty_next_id', redemptionId + 1).write();
+      db.get('loyalty_redemptions').push(Object.assign({ id: redemptionId }, loyaltyApply.record, {
+        rental_id: customerId,
+        order_ref: order.ref
+      })).write();
+    }
+
     // An unreleased game has no account slots to assign yet.
     if (b.account_assign && !upcomingGame) {
       applyAccountAssignment(b.account_assign, {
@@ -3599,7 +3859,8 @@ app.post('/admin/quick-add', requireAuth, asyncRoute(async (req, res) => {
       summary: [name, game.title, TYPE_LABELS_SHORT[type] || type,
         mode === 'buy' ? 'Purchase' : days + ' days',
         '\u20b1' + (amountDue + depositDue)].join(' \u00b7 '),
-      message
+      message,
+      loyalty: loyaltyApply ? loyaltyApply.offer.label : ''
     });
   } catch (e) {
     console.error('[quick-add]', e.message);
@@ -4334,6 +4595,21 @@ function trackingSession(req) {
 }
 
 // A tap on any Message Us / m.me link.
+app.post('/api/track/promo', (req, res) => {
+  try {
+    if (rateLimited('track_promo', clientIp(req), 60, 10 * 60 * 1000)) return res.status(204).end();
+    const sid = trackingSession(req);
+    const id = String((req.body && req.body.id) || '').slice(0, 40);
+    const ctx = promoContext();
+    if (sid && ctx.banner && ctx.banner.id === id) {
+      recordPromoEvent({ kind: 'banner', promo_id: id, session_id: sid });
+    }
+  } catch (e) {
+    console.error('[track] promo failed', e.message);
+  }
+  res.status(204).end();
+});
+
 app.post('/api/track/message', (req, res) => {
   try {
     if (rateLimited('track_message', clientIp(req), 300, 10 * 60 * 1000)) return res.status(204).end();
@@ -4397,21 +4673,21 @@ app.get('/api/search-index', async (req, res) => {
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       bpr: buyPrices.length ? Math.min(...buyPrices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: g.cover_image || '',
+      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
     };
   });
   const soon = sortUpcoming(getUpcoming()).map(g => ({
     t: g.title, p: g.platform, d: g.release_date || 'TBA',
-    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: g.cover_image || ''
+    u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // "Most Played in PS Plus" titles aren't individually rentable — they're all played
   // through the one PS Plus Deluxe subscription game, same as the homepage cards.
   const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
   const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
   const psplus = getPsplusPopular().map(g => ({
-    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: g.cover_image || ''
+    t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // Titles inside each month's free-text games_list (e.g. "Call of Duty: Modern
   // Warfare III") aren't their own catalog entries — they only exist as lines in that
@@ -4434,7 +4710,7 @@ app.get('/api/search-index', async (req, res) => {
       if (catalogKeys.has(psplusCatalog.matchKey(title))) return;
       seenTitles.add(key);
       psplusMonthly.push({
-        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: entry.cover_image || ''
+        t: title, p: 'PS Plus', u: '/ps-plus?month=' + entry.id, y: 'psplus', img: imageVariants.thumbSrc(entry.cover_image || '')
       });
     });
   });
@@ -4449,7 +4725,7 @@ app.get('/api/search-index', async (req, res) => {
     const approvedRequests = (await gameRequests.listPublic()).filter(r => r.status === 'approved');
     requested = approvedRequests.map(r => ({
       t: r.title, v: (r.voters || []).length, u: '/requests#req-' + r.slug,
-      y: 'requested', img: r.cover_image || ''
+      y: 'requested', img: imageVariants.thumbSrc(r.cover_image || '')
     }));
   } catch (e) {
     console.error('[search-index] requests lookup failed', e.message);
@@ -4460,6 +4736,8 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
+  const moved = titleFixes.redirectSlug(param);
+  if (moved && moved !== param) return res.redirect(301, '/game/' + moved);
   // Support both numeric ID (old links) and slug
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
@@ -4730,6 +5008,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     const bd = b.end_date || b.created_at || '';
     return bd.localeCompare(ad);
   });
+  res.locals.loyaltyIndex = loyaltySnapshot();
   // Live rentals that never took an account slot, on games where the accounts
   // system governs availability. Each one is a slot the site still advertises
   // as free while somebody is in it — the Onimusha trophy case. Surfaced here
@@ -5127,7 +5406,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     reviews: dashboard.reviewStats(reviews),
     // Drives the count on the "Now" pill, so the badge and the cards below it
     // can never disagree about how much is waiting.
-    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length
+    needsNowTotal: orderQueue.length + needsReminder.length + unlinkedRentals.length,
+    reminders: paymentReminders.recoveryStats(allOrders, dashPeriod)
   };
 
   // Prices for Quick Add's game picker, promo already applied. The form used to
@@ -5266,10 +5546,13 @@ app.get('/admin', requireAuth, async (req, res) => {
 
   const rentIgnored = rentAudit.dismissedRows(customers);
 
+  const supportThreadRows = supportThreads.createStore(supportThreads.bind(db));
+  const supportHandoffs = supportThreadRows.listHandoffs();
+  const supportInboxNotes = supportThreadRows.listInboxNotes();
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
     negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
-    rentMismatches, paymongoHealth, now: dashNowDate
+    rentMismatches, paymongoHealth, supportHandoffs, now: dashNowDate
   });
 
   // Paid reservations per Coming Soon game, for the "N reserved" line and the
@@ -5298,6 +5581,17 @@ app.get('/admin', requireAuth, async (req, res) => {
   res.locals.psnLastRun = db.get('psn_last_run').value() || null;
   // Settings → Game discounts table: every game with its own Weekly/Monthly %
   // ('' = follows the site promo) and the monthly base price the preview uses.
+  const promoNow = promoContext();
+  const promoEvents = db.get('promo_events').value() || [];
+  res.locals.promoWeek = promos.stats(promoEvents, loyalty.addDays(promoNow.today, -6));
+  res.locals.promoAdmin = {
+    stored: promos.normalizeList((promoNow.settings && promoNow.settings.promos) || []),
+    live: promoNow.live,
+    banner: promoNow.banner,
+    week: res.locals.promoWeek,
+    all: promos.stats(promoEvents, ''),
+    games: (getGames() || []).map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title))
+  };
   res.locals.gameDiscountRows = getGames().map(resolveGamePrices).map(g => ({
     id: g.id,
     title: g.title,
@@ -5306,7 +5600,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps() });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -5337,6 +5631,8 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
+  const moved = titleFixes.redirectSlug(slug);
+  if (moved && moved !== slug) return res.redirect(301, '/upcoming/' + moved);
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
   let game = null;
@@ -7187,356 +7483,435 @@ app.get('/feed/meta.csv', (req, res) => {
   res.send(csv);
 });
 // ═══════════════════════════════════════════════════════════════════════════
-// MESSENGER WEBHOOK
+// SUPPORT ASSISTANT — website widget and Messenger share one brain
 // ═══════════════════════════════════════════════════════════════════════════
 
-const VERIFY_TOKEN    = process.env.MESSENGER_VERIFY_TOKEN || 'playstation_hub_verify';
-const PAGE_ACCESS_TOKEN = process.env.MESSENGER_PAGE_TOKEN || '';
+const supportChatLimiter = supportAssistant.createLimiter(
+  supportAssistant.SUPPORT_CHAT_LIMIT,
+  supportAssistant.SUPPORT_CHAT_WINDOW_MS
+);
 
-// Webhook verification (Meta calls this when you set up the webhook)
-app.get('/webhook', (req, res) => {
-  if (
-    req.query['hub.mode']       === 'subscribe' &&
-    req.query['hub.verify_token'] === VERIFY_TOKEN
-  ) {
-    console.log('✅ Messenger webhook verified');
-    return res.status(200).send(req.query['hub.challenge']);
-  }
-  res.sendStatus(403);
-});
+function supportThreadStore() {
+  return supportThreads.createStore(supportThreads.bind(db));
+}
 
-// Receive messages
-app.post('/webhook', express.json(), (req, res) => {
-  res.sendStatus(200); // ack immediately
-
-  const body = req.body;
-  if (body.object !== 'page') return;
-
-  body.entry?.forEach(entry => {
-    entry.messaging?.forEach(event => {
-      if (event.message && event.message.is_echo) return;
-      const senderId = event.sender?.id;
-      if (!senderId) return;
-
-      // A customer arriving from m.me/<page>?ref=PH-1234 produces a referral —
-      // either a standalone `referral` event on an existing thread, or one
-      // nested in the `postback` when they tap Get Started on a new thread.
-      // This pairing of ref and PSID is the only way the app ever learns which
-      // Facebook thread belongs to which order, and it cannot be recovered
-      // afterwards, so it is recorded even though nothing sends messages yet.
-      const rawRef = event.referral?.ref || event.postback?.referral?.ref;
-      if (rawRef) {
-        const orderRef = orders.parseOrderRef(rawRef);
-        if (orderRef) {
-          orders.linkPsid(orderRef, senderId)
-            .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
-            .catch(e => console.error('[order psid]', e.message));
-        }
-      }
-
-      // Everything below this point is the existing chat bot, which only
-      // handles real inbound text.
-      if (!event.message) return;
-
-      // Save/update PSID. Runs for every inbound message — used to identify
-      // which Facebook thread a customer's messages come from.
-      const existingContact = db.get('messenger_contacts').find({ psid: senderId }).value();
-      if (!existingContact) {
-        db.get('messenger_contacts').push({ psid: senderId, first_seen: new Date().toISOString(), last_seen: new Date().toISOString() }).write();
-      } else {
-        db.get('messenger_contacts').find({ psid: senderId }).assign({ last_seen: new Date().toISOString() }).write();
-      }
-
-      const text = (event.message.text || '').toLowerCase().trim();
-      handleMessage(senderId, text).catch(e => console.error('[handleMessage]', e));
-    });
+function supportFactsNow(loyaltyNote) {
+  const settings = getSiteSettings();
+  const ctx = promoContext();
+  return supportFacts.faqBundle({
+    categories: getPriceCategories(),
+    promo: settings.promo || {},
+    paymentMethods: settings.payment_methods || [],
+    siteUrl: process.env.SITE_URL || 'https://www.playstation-hub.com',
+    pageUsername: settings.fb_page_username || 'PlaystationHub00',
+    psplusPrices: getPsplusPrices(),
+    psplusSlots: getPsplusSlots(),
+    offers: promos.publicFacts(ctx.live),
+    loyaltyNote: loyaltyNote || ''
   });
-});
+}
+
+async function supportGameCards(query) {
+  const promo = (getSiteSettings().promo) || {};
+  const games = getGames().map(resolveGamePrices);
+  const upcoming = getUpcoming().map(g => Object.assign({}, g, { comingSoon: true }));
+  const hits = supportFacts.searchCatalog(games, upcoming, query);
+  const cards = [];
+  for (const g of hits) {
+    if (g.comingSoon) {
+      const avail = computeAvailability(g, null);
+      cards.push(supportFacts.publicGame(g, avail, null, promo));
+      continue;
+    }
+    const avail = computeAvailability(g, gameAccountSummary(g.id));
+    let summary = null;
+    try {
+      const candidates = await orders.listQueueCandidates(g.id);
+      summary = supportFacts.waitlistSummary(queueRules.buildQueue(candidates || []));
+    } catch (e) {
+      // Slot counts still come from the game record. A failed queue read is
+      // not reported as zero people waiting.
+      summary = null;
+    }
+    cards.push(supportFacts.publicGame(g, avail, summary, promo));
+  }
+  return { query: String(query || ''), games: cards };
+}
+
+async function supportInvokeTool(name, args) {
+  if (name === 'get_pricing') return supportFactsNow();
+  if (name !== 'lookup_game') return { error: 'unknown_tool' };
+  return supportGameCards(args && args.query);
+}
+
+async function supportLookup(query) {
+  const result = await supportGameCards(query);
+  return result.games;
+}
+
+function notifySupportHandoff(result) {
+  if (!result || !result.newlyHandedOff) return;
+  if (!telegram.isAlertEnabled(getSiteSettings(), 'support_handoff')) return;
+  const site = process.env.SITE_URL || 'https://www.playstation-hub.com';
+  const text = telegram.formatSupportAlert(
+    { channel: result.channel, reason: result.reason, preview: result.preview },
+    { adminUrl: site + '/admin?tab=messaging' }
+  );
+  sendTelegramMessage(text).catch(e => console.error('[support handoff alert]', e.message));
+}
+
+function graphPost(pathname, payload) {
+  const token = supportMessenger.config(process.env).pageToken;
+  if (!token) return Promise.resolve({ ok: false, reason: 'no_token' });
+  const https = require('https');
+  const body = JSON.stringify(payload);
+  const pathWithToken = pathname + (pathname.includes('?') ? '&' : '?') + 'access_token=' + encodeURIComponent(token);
+  return new Promise(resolve => {
+    const req2 = https.request({
+      hostname: 'graph.facebook.com',
+      path: pathWithToken,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res2 => {
+      let data = '';
+      res2.on('data', chunk => { data += chunk; });
+      res2.on('end', () => {
+        const result = { ok: res2.statusCode === 200, status: res2.statusCode, body: data };
+        const err = supportMessenger.graphError(data);
+        if (err) result.ok = false;
+        result.error = err;
+        if (!result.ok) {
+          const raw = result.error ? '' : String(data || '').replace(/access_token=[^&\s]+/gi, 'access_token=redacted').slice(0, 300);
+          console.error('[messenger]', pathname, supportMessenger.graphErrorSummary(result), raw);
+        }
+        resolve(result);
+      });
+    });
+    req2.on('error', e => {
+      console.error('[messenger]', e.message);
+      resolve({ ok: false, reason: 'network' });
+    });
+    req2.write(body);
+    req2.end();
+  });
+}
 
 function sendMessage(recipientId, messageData, cb) {
-  if (!PAGE_ACCESS_TOKEN) return;
-  const https = require('https');
-  const payload = JSON.stringify({ recipient: { id: recipientId }, message: messageData });
-  const options = {
-    hostname: 'graph.facebook.com',
-    path: '/v19.0/me/messages?access_token=' + PAGE_ACCESS_TOKEN,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
-  };
-  const req2 = https.request(options, (res2) => {
-    let data = '';
-    res2.on('data', chunk => { data += chunk; });
-    res2.on('end', () => {
-      if (res2.statusCode !== 200) console.error('Messenger API error:', res2.statusCode, data);
-      if (cb) cb();
-    });
-  });
-  req2.on('error', e => console.error('Messenger send error:', e));
-  req2.write(payload);
-  req2.end();
+  graphPost('/v19.0/me/messages', { recipient: { id: recipientId }, message: messageData })
+    .then(() => { if (cb) cb(); });
 }
 
 function sendText(recipientId, text) {
-  sendMessage(recipientId, { text });
+  const body = supportMessenger.sendText(recipientId, text);
+  return graphPost('/v19.0/me/messages', body);
 }
 
-function sendImage(recipientId, imageUrl) {
-  sendMessage(recipientId, {
-    attachment: { type: 'image', payload: { url: imageUrl, is_reusable: true } }
+// Support replies. Graph errors are already logged by graphPost; this line
+// names the PSID so a failed send on a standby thread is easy to find.
+async function deliverMessengerText(psid, text) {
+  const sent = await sendText(psid, text);
+  if (!sent || sent.ok !== true) {
+    console.error('[messenger send] failed', psid, supportMessenger.graphErrorSummary(sent));
+    // A failed send is not a handoff. Do not pause the chat.
+    if (supportMessenger.inboxOwnsThread(sent)) {
+      console.warn('[messenger] Page Inbox owns thread ' + psid + '. Move the conversation to Done in Meta Business Suite, or set this app as the Messenger default in Conversation Routing.');
+      supportThreadStore().noteInboxOwner('messenger', psid);
+    }
+    return sent;
+  }
+  supportThreadStore().clearInboxOwner('messenger', psid);
+  return sent;
+}
+
+function logThreadControl(psid, outcome) {
+  if (!outcome) return;
+  const recovery = outcome.recovery || outcome;
+  if (recovery.takeOk || outcome.takeOk) {
+    console.log('[messenger take_thread_control] ok', psid);
+  } else if (recovery.skipped) {
+    console.log('[messenger standby] thread control unsupported, sending anyway', psid);
+  } else if (outcome.unsupported || recovery.unsupported) {
+    console.error('[messenger take_thread_control] unsupported, resuming anyway', psid, outcome.error || recovery.error);
+  } else if (recovery.error || outcome.error) {
+    console.error('[messenger take_thread_control] failed', psid, recovery.error || outcome.error);
+    if (outcome.ok) console.error('[messenger take_thread_control] resuming anyway', psid);
+  }
+  const released = outcome.released || recovery.released;
+  if (!released) return;
+  const releaseOk = outcome.releaseOk != null ? outcome.releaseOk : recovery.releaseOk;
+  if (releaseOk) console.log('[messenger release_thread_control] ok', psid);
+  else console.error('[messenger release_thread_control] failed', psid, outcome.releaseError || recovery.releaseError);
+}
+
+// A payment reminder, not a reply to something the customer just typed.
+// messaging_type RESPONSE is the standard window. No message tag: a tag would
+// keep sending after the customer has gone quiet, which this shop does not do.
+// The page token is the same one support chat uses (FB_PAGE_ACCESS_TOKEN, or
+// MESSENGER_PAGE_TOKEN). The response body is kept so Graph errors 10 and 551
+// fall back to the owner instead of being retried.
+function sendMessengerResponse(recipientId, text) {
+  if (!recipientId) return Promise.resolve({ ok: false, reason: 'no_psid', code: null });
+  if (!supportMessenger.config(process.env).pageToken) {
+    return Promise.resolve({ ok: false, reason: 'not_configured', code: null });
+  }
+  return graphPost('/v19.0/me/messages', {
+    recipient: { id: String(recipientId) },
+    messaging_type: 'RESPONSE',
+    message: { text: String(text || '') }
+  }).then(result => {
+    if (result && result.ok) return { ok: true };
+    if (result && result.reason === 'network') return { ok: false, code: null, reason: 'network' };
+    if (result && result.reason === 'no_token') return { ok: false, reason: 'not_configured', code: null };
+    return { ok: false, code: paymentReminders.graphErrorCode(result && result.body), reason: 'api' };
   });
 }
 
-async function handleMessage(senderId, text) {
-  const games = getGames();
-  const upcoming = getUpcoming();
-  const SITE = process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app';
-
-  // ── HELP / GREETING ──────────────────────────────────────────────────────
-  if (!text || /^(hi|hello|hey|uy|oi|sup|start|help|menu|kamusta|good morning|good afternoon|good evening|musta|helo|hellow|helow)/.test(text)) {
-    return sendText(senderId,
-      '👋 Hi! Welcome to PlayStation Hub!\n\n' +
-      'Here\'s what I can help you with:\n\n' +
-      '🎮 Type "games" — see all available games\n' +
-      '🔜 Type "coming soon" — see upcoming games\n' +
-      '🔍 Type a game name — check price & availability\n' +
-      '💰 Type "prices" — see pricing guide\n' +
-      '📋 Type "how to rent" — step-by-step rental guide\n' +
-      '♾️ Type "buy" — permanent access info\n' +
-      '📞 Type "contact" — talk to a human\n\n' +
-      'Browse all games 👉 ' + SITE + '/browse'
-    );
-  }
-
-  // ── HOW TO RENT / PROCESS ────────────────────────────────────────────────
-  if (/how.*(rent|order|borrow|get|kumuha|mag|process|works?|start|begin)|pano|paano|step|guide|tutorial|procedure/.test(text)) {
-    return sendText(senderId,
-      '📋 How to Rent at PlayStation Hub\n\n' +
-      '𝟭. Choose a game\n' +
-      '   Browse our games 👉 ' + SITE + '/browse\n\n' +
-      '𝟮. Pick your account type\n' +
-      '   🎮 Non-Trophy — play on our account\n' +
-      '   🏆 Trophy — earn trophies on your own PSN\n\n' +
-      '𝟯. Choose rental duration\n' +
-      '   ⏱ Weekly | Monthly\n\n' +
-      '𝟰. Message us here to confirm\n' +
-      '   We\'ll set up your account access!\n\n' +
-      '𝟱. Pay via GCash & enjoy! 🎉\n\n' +
-      '✨ BONUS: 3 hours FREE trial before you commit!\n\n' +
-      '💬 Ready to rent? Just tell me which game you want! 😊'
-    );
-  }
-
-  // ── SELL GAMES / BUY PERMANENT ───────────────────────────────────────────
-  if (/sell|nagbebenta|ibebenta|nabibili|pabili|for sale/.test(text)) {
-    const buyGames = games.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
-    const s = getSiteSettings();
-    const promo = s.promo || {};
-    let msg = '✅ Yes! We offer Permanent Access (Buy) on select games!\n\n';
-    msg += '♾️ PERMANENT ACCESS — One-time payment, play forever!\n\n';
-    if (buyGames.length > 0) {
-      msg += '🎮 Games available for purchase:\n';
-      buyGames.slice(0, 8).forEach(g => {
-        msg += `• ${g.title}`;
-        if (g.buy_nt_price) msg += ` — NT: ₱${g.buy_nt_price}`;
-        if (g.buy_tr_price) msg += ` / TR: ₱${g.buy_tr_price}`;
-        msg += '\n';
-      });
-      if (buyGames.length > 8) msg += `  ...and ${buyGames.length - 8} more\n`;
-    } else {
-      msg += '🎮 Select games available — message us for current titles!\n';
-    }
-    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
-      msg += `\n🔥 BUY PROMO: ${promo.buy_promo_pct}% OFF right now!\n`;
-    }
-    msg += '\n✨ FREE 3-hour trial before you buy!\n';
-    msg += '\n👉 See all: ' + SITE + '/browse\n';
-    msg += '💬 Tell me which game you want to buy!';
-    return sendText(senderId, msg);
-  }
-
-  // ── BUY PERMANENT ────────────────────────────────────────────────────────
-  if (/^buy|permanent|lifetime|forever|kahit kailan|sarili|own/.test(text)) {
-    return sendText(senderId,
-      '♾️ Buy Permanent Access — PlayStation Hub\n\n' +
-      'Own a game slot forever with a one-time payment!\n\n' +
-      '🎮 Non-Trophy Permanent\n' +
-      '   Play on our account, no time limit\n\n' +
-      '🏆 Trophy Permanent\n' +
-      '   Earn trophies on YOUR own PSN account\n\n' +
-      '✨ Benefits:\n' +
-      '• One-time payment, play forever\n' +
-      '• No monthly fees\n' +
-      '• 3 hours FREE trial before you buy\n' +
-      '• Message us to set it up anytime\n\n' +
-      '👉 Check buy prices: ' + SITE + '/browse\n\n' +
-      '💬 Which game are you interested in buying?'
-    );
-  }
-
-  // ── TRIAL ────────────────────────────────────────────────────────────────
-  if (/trial|libre|free|try|subukan|test/.test(text)) {
-    return sendText(senderId,
-      '🎮 FREE 3-Hour Trial!\n\n' +
-      'Yes! We offer a 3-hour FREE trial on our account before you rent or buy. 🎉\n\n' +
-      'Just tell us which game you want to try and we\'ll set it up for you!\n\n' +
-      '💬 Which game would you like to try?'
-    );
-  }
-
-  // ── PAYMENT ──────────────────────────────────────────────────────────────
-  if (/pay|gcash|payment|bayad|bayaran|how.*pay|magbayad/.test(text)) {
-    return sendText(senderId,
-      '💳 Payment at PlayStation Hub\n\n' +
-      'We accept payment via:\n\n' +
-      '📱 GCash — send to our GCash number\n\n' +
-      'Once you\'ve chosen a game and duration, message us and we\'ll give you the payment details. Payment first before we set up access. 😊\n\n' +
-      '💬 Ready to rent? Tell me which game!'
-    );
-  }
-
-  // ── CONTACT / HUMAN ───────────────────────────────────────────────────────
-  if (/contact|human|agent|tao|admin|owner|staff|ikaw|sino/.test(text)) {
-    return sendText(senderId,
-      '📞 Talk to our team!\n\n' +
-      'Just send your message here on Messenger and we\'ll reply as soon as possible. 😊\n\n' +
-      'We\'re usually available during the day. For urgent concerns, message us directly!'
-    );
-  }
-
-  // ── PRICES GUIDE ─────────────────────────────────────────────────────────
-  if (/price|magkano|how much|pricelist|presyo|halaga|cost/.test(text)) {
-    const sample = games.filter(g => g.nt_price_7d).slice(0, 4);
-    let msg = '💰 PlayStation Hub Pricing\n\n';
-    msg += '━━━━━━━━━━━━━━━━━━━\n';
-    msg += '🎮 NON-TROPHY ACCOUNT\n';
-    msg += '  Weekly / Monthly\n';
-    if (sample.length) {
-      sample.forEach(g => {
-        msg += `  ${g.title.slice(0,18)}: ₱${g.nt_price_7d}/₱${g.nt_price_30d}\n`;
-      });
-    }
-    msg += '\n🏆 TROPHY ACCOUNT (+₱50)\n';
-    if (sample.length) {
-      sample.forEach(g => {
-        if (g.tr_price_7d) msg += `  ${g.title.slice(0,18)}: ₱${g.tr_price_7d}/₱${g.tr_price_30d}\n`;
-      });
-    }
-    msg += '\n✨ FREE 3-hour trial available!\n';
-    msg += '📖 See all prices: ' + SITE + '/browse';
-    return sendText(senderId, msg);
-  }
-
-  // ── PROMO / DISCOUNT ─────────────────────────────────────────────────────
-  if (/promo|discount|sale|diskaunto|bawas|may promo|meron.*promo|promo.*meron|special/.test(text)) {
-    const s = getSiteSettings();
-    const promo = s.promo || {};
-    let msg = '🎉 PlayStation Hub Promos!\n\n';
-    let hasPromo = false;
-    const activeDurations = promo.enabled ? PROMO_DURATIONS.filter(d => getPromoDiscountPct(promo, d) > 0) : [];
-    if (activeDurations.length > 0) {
-      hasPromo = true;
-      msg += `⏱️ RENT PROMO!\n`;
-      activeDurations.forEach(d => { msg += `   ${getPromoDiscountPct(promo, d)}% OFF on ${d}-day rentals\n`; });
-      if (promo.deposit) msg += `   +₱${promo.deposit} refundable deposit (Trophy accounts)\n`;
-      msg += '\n';
-    }
-    if (promo.buy_promo_enabled && promo.buy_promo_pct > 0) {
-      hasPromo = true;
-      msg += `♾️ BUY PERMANENT PROMO — ${promo.buy_promo_pct}% OFF!\n`;
-      msg += `   Discounted one-time permanent access\n\n`;
-    }
-    if (!hasPromo) {
-      msg += '😊 Wala pang active promo ngayon, pero meron kaming:\n\n';
-    }
-    msg += '✨ FREE 3-hour trial bago mag-rent o bumili!\n';
-    msg += '🎮 Malawak na game selection — PS5 & PS4\n\n';
-    msg += '👉 Check our games: ' + SITE + '/browse\n';
-    msg += '💬 Message us para sa pinakabagong deals!';
-    return sendText(senderId, msg);
-  }
-
-  // ── COMING SOON ───────────────────────────────────────────────────────────
-  if (/coming soon|upcoming|reserve|reservation/.test(text)) {
-    if (!upcoming.length) return sendText(senderId, '📭 No upcoming games right now. Check back soon!');
-    let msg = '🔜 Coming Soon Games — Open for Reservation!\n\n';
-    upcoming.slice(0, 8).forEach(g => {
-      const date = g.release_date === 'TBA' ? 'TBA' : g.release_date;
-      msg += `📌 ${g.title} (${g.platform})\n   Expected: ${date}\n`;
-      if (g.nt_price_30d) msg += `   From ₱${g.nt_price_30d} (30 days)\n`;
-      msg += '\n';
-    });
-    msg += '📩 Reserve now: ' + SITE + '/browse';
-    return sendText(senderId, msg);
-  }
-
-  // ── ALL GAMES LIST ────────────────────────────────────────────────────────
-  if (/^(games?|list|lahat|all games?|available|ano.*games?|anong games?|meron.*games?)/.test(text)) {
-    const avail = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) > 0);
-    const full  = games.filter(g => (g.non_trophy_slots || 0) + (g.trophy_slots || 0) === 0);
-    let msg = `🎮 PlayStation Hub — ${games.length} Games\n\n`;
-    if (avail.length) {
-      msg += `✅ AVAILABLE NOW (${avail.length}):\n`;
-      avail.slice(0, 12).forEach(g => { msg += `• ${g.title} (${g.platform})\n`; });
-      if (avail.length > 12) msg += `  ...and ${avail.length - 12} more\n`;
-    }
-    if (full.length) {
-      msg += `\n🔴 FULLY RENTED (${full.length} games)\n`;
-      full.slice(0, 4).forEach(g => { msg += `• ${g.title}\n`; });
-      if (full.length > 4) msg += `  ...and ${full.length - 4} more\n`;
-    }
-    msg += '\n🔍 See all: ' + SITE + '/browse';
-    return sendText(senderId, msg);
-  }
-
-  // ── GAME SEARCH ───────────────────────────────────────────────────────────
-  const matches = games.filter(g => g.title.toLowerCase().includes(text));
-  const upMatches = upcoming.filter(g => g.title.toLowerCase().includes(text));
-
-  if (matches.length > 0) {
-    const g = matches[0];
-    const ntSlots = g.non_trophy_slots || 0;
-    const trSlots = g.trophy_slots || 0;
-    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    let msg = `🎮 ${g.title} (${g.platform})\n\n`;
-    msg += ntSlots > 0 ? `✅ Non-Trophy: ${ntSlots} slot(s) available\n` : `🔴 Non-Trophy: Fully rented\n`;
-    if (g.tr_price_7d) msg += trSlots > 0 ? `✅ Trophy: ${trSlots} slot(s) available\n` : `🔴 Trophy: Fully rented\n`;
-    msg += `\n💰 PRICING:\n`;
-    msg += `🎮 Non-Trophy: ₱${g.nt_price_7d} / ₱${g.nt_price_30d}\n`;
-    if (g.tr_price_7d) msg += `🏆 Trophy: ₱${g.tr_price_7d} / ₱${g.tr_price_30d}\n`;
-    msg += `(Weekly / Monthly)\n`;
-    msg += `\n✨ FREE 3-hour trial available!\n`;
-    msg += `\n📄 View game: ${SITE}/game/${slug}`;
-    if (matches.length > 1) msg += `\n\nAlso found: ${matches.slice(1,3).map(x=>x.title).join(', ')}`;
-    if (g.cover_image) {
-      return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
-    }
-    return sendText(senderId, msg);
-  }
-
-  if (upMatches.length > 0) {
-    const g = upMatches[0];
-    const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + g.id;
-    let msg = `🔜 ${g.title} (${g.platform})\nCOMING SOON — Open for Reservation!\n`;
-    msg += `📅 Expected: ${g.release_date === 'TBA' ? 'TBA' : g.release_date}\n`;
-    if (g.nt_price_30d) msg += `\n💰 Non-Trophy: ₱${g.nt_price_30d} (30 days)\n`;
-    if (g.tr_price_30d) msg += `🏆 Trophy: ₱${g.tr_price_30d} (30 days)\n`;
-    msg += `\n📄 Reserve: ${SITE}/upcoming/${slug}`;
-    if (g.cover_image) {
-      return sendMessage(senderId, { attachment: { type: 'image', payload: { url: SITE + g.cover_image, is_reusable: true } } }, () => sendText(senderId, msg));
-    }
-    return sendText(senderId, msg);
-  }
-
-  // ── FINAL FALLBACK ────────────────────────────────────────────────────────
-  return sendText(senderId,
-    '😊 Hindi ko sure kung ano ang ibig mong sabihin, pero nandito kami para tumulong!\n\n' +
-    '🎮 Type "games" — available games\n' +
-    '💰 Type "prices" — pricing guide\n' +
-    '📋 Type "how to rent" — rental steps\n' +
-    '🔍 Or type a game name to search!\n\n' +
-    'Browse: ' + SITE + '/browse'
-  );
+// A browser on another origin cannot read this, and a JSON POST from one
+// does not pass the preflight. When Origin is present and does not match
+// the host, reject it anyway so a misconfigured proxy cannot spend the
+// model budget on someone else's page.
+function supportSameOrigin(req) {
+  const origin = req.get('origin');
+  if (!origin) return true;
+  try { return new URL(origin).host === req.get('host'); }
+  catch (e) { return false; }
 }
+
+app.post('/api/support/chat', asyncRoute(async (req, res) => {
+  if (!supportSameOrigin(req)) return res.status(403).json({ ok: false, error: 'forbidden' });
+  const ip = clientIp(req) || 'unknown';
+  if (rateLimited('support_chat', ip, supportAssistant.SUPPORT_CHAT_LIMIT, supportAssistant.SUPPORT_CHAT_WINDOW_MS)) {
+    return res.status(429).json({
+      ok: false,
+      error: 'slow_down',
+      reply: 'Sandali lang — too many messages. Try again in a few minutes.'
+    });
+  }
+  const message = req.body && typeof req.body.message === 'string' ? req.body.message : '';
+  const abuse = supportFacts.abuseReason(message);
+  if (abuse) {
+    const reply = abuse === 'empty'
+      ? 'Type a question and I’ll take a look.'
+      : 'That message is too long to send. Keep it to a sentence or two.';
+    return res.status(400).json({ ok: false, error: abuse, reply });
+  }
+  const sid = sessionId(req, res);
+  let loyaltyNote = '';
+  try { loyaltyNote = loyaltyNoteFor(await orders.latestName({ sessionId: sid })); }
+  catch (e) { console.error('[promo loyalty]', e.message); }
+  const result = await supportAssistant.runTurn({
+    store: supportThreadStore(),
+    channel: 'web',
+    externalId: sid,
+    message,
+    complete: supportAssistant.createComplete(process.env),
+    invokeTool: supportInvokeTool,
+    facts: supportFactsNow(loyaltyNote),
+    lookup: supportLookup
+  });
+  if (!result.ok) return res.status(400).json({ ok: false, error: result.error || 'bad_message' });
+  notifySupportHandoff(result);
+  res.json({
+    ok: true,
+    reply: result.reply,
+    paused: !!result.paused,
+    handedOff: !!result.handoff
+  });
+}));
+
+app.post('/admin/support/:id/resume', requireAuth, asyncRoute(async (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^(web|mes)_[a-z0-9]+$/.test(id)) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const row = supportThreadStore().lookup(id);
+  if (!row) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const handover = supportMessenger.handoverEnabled(process.env);
+  const taken = await supportMessenger.resumeMessenger({
+    channel: row.channel,
+    handover,
+    externalId: row.external_id,
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid)),
+    release: (psid) => graphPost('/v19.0/me/release_thread_control', supportMessenger.releaseThreadControl(psid))
+  });
+  if (row.channel === 'messenger') logThreadControl(row.external_id, taken);
+  if (!taken.ok) {
+    supportThreadStore().setControlError(id, taken.error);
+    return res.redirect('/admin?tab=messaging&msg=support_control_failed');
+  }
+  const resumed = supportThreadStore().resume(id);
+  if (!resumed) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  if (taken.send) {
+    await deliverMessengerText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
+  }
+  res.redirect('/admin?tab=messaging&msg=support_resumed');
+}));
+
+// Meta's webhook. GET is the verify handshake. POST is messages.
+// Signature is required once FB_APP_SECRET (or MESSENGER_APP_SECRET) is set.
+// Until then the route still accepts posts, matching the bot that was already
+// live, and logs that signatures are not being checked.
+let _messengerSecretWarned = false;
+
+app.get('/webhook', (req, res) => {
+  const check = supportMessenger.verifyChallenge({
+    mode: req.query['hub.mode'],
+    token: req.query['hub.verify_token'],
+    challenge: req.query['hub.challenge'],
+    expected: supportMessenger.config(process.env).verifyToken
+  });
+  if (!check.ok) return res.sendStatus(403);
+  console.log('✅ Messenger webhook verified');
+  res.status(200).send(check.challenge);
+});
+
+app.post('/webhook', (req, res) => {
+  const secret = supportMessenger.config(process.env).appSecret;
+  if (!secret) {
+    if (!_messengerSecretWarned) {
+      console.warn('[messenger] FB_APP_SECRET is not set — webhook signatures are not being checked');
+      _messengerSecretWarned = true;
+    }
+  } else {
+    const sig = supportMessenger.verifySignature(secret, req.rawBody, req.get('x-hub-signature-256'));
+    if (!sig.ok) {
+      console.error('[messenger] bad signature');
+      return res.sendStatus(403);
+    }
+  }
+  res.sendStatus(200);
+
+  const events = supportMessenger.inboundEvents(req.body);
+  events.forEach(event => {
+    if (event.referral) {
+      const orderRef = orders.parseOrderRef(event.referral);
+      if (orderRef) {
+        orders.linkPsid(orderRef, event.psid)
+          .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
+          .catch(e => console.error('[order psid]', e.message));
+      }
+    }
+    const paused = supportThreadStore().isPaused('messenger', event.psid);
+    const handover = supportMessenger.handoverEnabled(process.env);
+    const action = supportMessenger.decideInbound(event, paused, handover);
+    if (action === 'note_control') {
+      console.log('[messenger ' + event.control + ']', event.standby ? 'standby' : 'messaging', event.psid, event.newOwnerAppId || '');
+      return;
+    }
+    if (action === 'record_only') {
+      const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+      if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+      console.log('[messenger standby] paused, not replying', event.psid);
+      return;
+    }
+    if (action === 'take_then_answer' || action === 'answer_standby') {
+      reclaimMessengerThread(event, handover).catch(e => console.error('[messenger standby]', e && e.message ? e.message : e));
+      return;
+    }
+    if (action !== 'answer') return;
+
+    rememberMessengerContact(event.psid);
+    handleSupportMessage(event).catch(e => console.error('[support message]', e));
+  });
+});
+
+function rememberMessengerContact(psid) {
+  const existingContact = db.get('messenger_contacts').find({ psid }).value();
+  if (!existingContact) {
+    db.get('messenger_contacts').push({
+      psid,
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString()
+    }).write();
+  } else {
+    db.get('messenger_contacts').find({ psid }).assign({ last_seen: new Date().toISOString() }).write();
+  }
+}
+
+// Standby means Page Inbox still owns the thread after an earlier
+// pass_thread_control. Handover off, or take_thread_control refused as
+// unsupported (#27), still answers and clears a stuck pause. A real refusal
+// while handover is on puts the chat back on the admin list.
+async function reclaimMessengerThread(event, handover) {
+  console.log('[messenger standby]', handover ? 'handover on' : 'handover off', event.psid);
+  const recovery = await supportMessenger.recoverStuckControl({
+    psid: event.psid,
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid)),
+    release: (psid) => graphPost('/v19.0/me/release_thread_control', supportMessenger.releaseThreadControl(psid)),
+    forceRelease: !handover
+  });
+  logThreadControl(event.psid, recovery);
+  if (handover && !recovery.takeOk && !recovery.unsupported) {
+    const summary = recovery.error || 'Messenger did not return this chat.';
+    const flagged = supportThreadStore().noteControlFailure('messenger', event.psid, summary);
+    const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
+    if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
+    if (flagged.changed) {
+      notifySupportHandoff({
+        newlyHandedOff: true,
+        channel: 'messenger',
+        reason: 'thread_control',
+        preview: text || 'Messenger still has this chat.'
+      });
+    }
+    return;
+  }
+  if (supportThreadStore().isPaused('messenger', event.psid)) {
+    supportThreadStore().resumeExternal('messenger', event.psid);
+  }
+  rememberMessengerContact(event.psid);
+  await handleSupportMessage(event);
+}
+
+async function handleSupportMessage(event) {
+  const paused = supportThreadStore().isPaused('messenger', event.psid);
+  // Over the limit: tell them once if the bot is still the one answering.
+  // A paused thread stays silent — the slow-down line would be an auto-reply
+  // after Michael took the chat.
+  if (supportChatLimiter('m:' + event.psid)) {
+    if (!paused) return deliverMessengerText(event.psid, 'Sandali lang — too many messages. Try again in a few minutes.');
+    return;
+  }
+  const photoOnly = event.attachments && !String(event.text || '').trim();
+  let loyaltyNote = '';
+  try { loyaltyNote = loyaltyNoteFor(await orders.latestName({ psid: event.psid })); }
+  catch (e) { console.error('[promo loyalty]', e.message); }
+  const result = await supportAssistant.runTurn({
+    store: supportThreadStore(),
+    channel: 'messenger',
+    externalId: event.psid,
+    message: photoOnly ? '[attachment]' : event.text,
+    forceReason: photoOnly ? 'attachment' : null,
+    complete: supportAssistant.createComplete(process.env),
+    invokeTool: supportInvokeTool,
+    facts: supportFactsNow(loyaltyNote),
+    lookup: supportLookup
+  });
+  if (!result.ok) {
+    if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
+      return deliverMessengerText(event.psid, 'That message is too long. Send a sentence or two.\n\nWant to chat with an admin? Reply ADMIN.');
+    }
+    return;
+  }
+  if (result.paused || !result.reply) return;
+  await deliverMessengerText(event.psid, supportFacts.toPlainText(result.reply));
+  if (result.newlyHandedOff) {
+    if (supportMessenger.handoverEnabled(process.env)) {
+      const inbox = supportMessenger.config(process.env).inboxAppId;
+      graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
+        .then(passed => {
+          if (!passed || !passed.ok) {
+            console.error('[messenger pass_thread_control] failed', event.psid, supportMessenger.graphErrorSummary(passed));
+            return;
+          }
+          console.log('[messenger pass_thread_control] ok', event.psid);
+        })
+        .catch(e => console.error('[messenger pass_thread_control]', e && e.message ? e.message : e));
+    } else {
+      console.log('[messenger] handover off, paused without pass_thread_control', event.psid);
+    }
+    notifySupportHandoff(result);
+  }
+}
+
 
 // Proves the Telegram alert path end to end, on demand. Without this the first
 // real test is a customer's sign-in — and a wrong variable is discovered by
@@ -7551,6 +7926,17 @@ app.post('/admin/settings/alerts', requireAuth, (req, res) => {
   telegram.ALERT_KINDS.forEach(k => { next[k] = req.body['alert_' + k] === 'on'; });
   db.set('site_settings.alerts', next).write();
   res.redirect('/admin?tab=orders&msg=alerts_saved');
+});
+
+app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
+  const hours = Math.round(Number(req.body.hold_hours));
+  const hold = Number.isFinite(hours) ? Math.max(0, Math.min(168, hours)) : 24;
+  db.set('site_settings.payment_reminders', {
+    enabled: req.body.enabled === 'on',
+    hold_hours: hold,
+    auto_cancel: req.body.auto_cancel === 'on'
+  }).write();
+  res.redirect('/admin?tab=settings&msg=reminders_saved');
 });
 
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
@@ -7738,6 +8124,77 @@ app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/admin/promos/save', requireAuth, (req, res) => {
+  ensurePromoStore();
+  const settings = getSiteSettings();
+  const result = promos.saveOffer(settings.promos, req.body, { nextId: settings.promo_next_id || 1 });
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=offers_invalid');
+  db.set('site_settings.promos', result.offers).write();
+  db.set('site_settings.promo_next_id', result.nextId).write();
+  res.redirect('/admin?tab=loyalty&msg=offers_saved');
+});
+
+app.post('/admin/promos/delete', requireAuth, (req, res) => {
+  ensurePromoStore();
+  const settings = getSiteSettings();
+  db.set('site_settings.promos', promos.deleteOffer(settings.promos, req.body && req.body.id)).write();
+  res.redirect('/admin?tab=loyalty&msg=offers_deleted');
+});
+
+app.get('/admin/loyalty/for-name', requireAuth, (req, res) => {
+  const name = String(req.query.name || '');
+  if (!name.trim()) return res.json({ blank: true, lines: [], offers: [] });
+  const snap = loyaltySnapshot();
+  res.json(loyalty.addFormStatus(snap.profileFor({ name }), snap.settings));
+});
+
+app.post('/admin/loyalty/settings', requireAuth, (req, res) => {
+  const tab = req.body.return_tab === 'settings' ? 'settings' : 'loyalty';
+  db.set('site_settings.loyalty', loyalty.settingsFromForm(req.body)).write();
+  res.redirect('/admin?tab=' + tab + '&msg=loyalty_saved');
+});
+
+app.post('/admin/loyalty/redeem', requireAuth, (req, res) => {
+  const snap = loyaltySnapshot();
+  const profile = snap.profiles.find(p => p.key === String(req.body.profile_key || ''));
+  const plan = loyalty.planRedemption(profile, req.body, new Date().toISOString());
+  if (!plan.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_redeem_rejected');
+  const id = db.get('loyalty_next_id').value() || 1;
+  db.set('loyalty_next_id', id + 1).write();
+  db.get('loyalty_redemptions').push(Object.assign({ id }, plan.record)).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_redeemed');
+});
+
+app.post('/admin/loyalty/merge', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.mergeNames(db.get('loyalty_identity').value(), req.body.from_name, req.body.into_name);
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/link-name', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.linkNameToRow(db.get('loyalty_identity').value(), req.body.name, req.body.row_id, getCustomers());
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/link-row', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  const result = loyalty.linkRowToName(db.get('loyalty_identity').value(), req.body.row_id, req.body.name);
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=loyalty_link_rejected');
+  db.set('loyalty_identity', result.identity).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_saved');
+});
+
+app.post('/admin/loyalty/unlink', requireAuth, (req, res) => {
+  ensureLoyaltyStore();
+  db.set('loyalty_identity', loyalty.removeLink(db.get('loyalty_identity').value(), req.body)).write();
+  res.redirect('/admin?tab=loyalty&msg=loyalty_link_removed');
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Catches errors thrown/passed in any route above (e.g. multer file-size limit,
@@ -7782,6 +8239,38 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (err) => {
   console.error('[uncaughtException]', err && err.stack ? err.stack : err);
 });
+
+// About every five minutes, in this process. unref so a test that required
+// the server is not kept alive by the timer after it closes the listener.
+// Mongo claims are what stop two overlapping runs from sending twice.
+const paymentReminderTimer = setInterval(() => {
+  const settings = getSiteSettings();
+  paymentReminders.runSweep({
+    now: new Date(),
+    settings: settings.payment_reminders,
+    alertEnabled: telegram.isAlertEnabled(settings, 'payment_reminder'),
+    adminUrl: SITE_URL + '/admin?tab=orders',
+    listAwaiting: () => orders.listByStates(['awaiting_payment']),
+    get: (ref) => orders.getByRef(ref),
+    claim: (ref, stage) => orders.claimPaymentReminder(ref, stage),
+    release: (ref, stage) => orders.releasePaymentReminder(ref, stage),
+    complete: (ref, stage, result) => orders.completePaymentReminder(ref, stage, result),
+    setHold: (ref, plan) => orders.setHoldExpiry(ref, plan.expires, plan.anchor),
+    cancel: async (ref) => !!(await orders.transition(ref, 'cancelled', { cancel_reason: 'hold_expired' })),
+    contactFor: (psid) => {
+      try { return db.get('messenger_contacts').find({ psid: String(psid) }).value() || null; }
+      catch (e) { return null; }
+    },
+    orderLink: (order) => SITE_URL + '/order/' + order.ref + '?k=' + order.url_key,
+    sendMessenger: (psid, text) => sendMessengerResponse(psid, text),
+    sendTelegram: (text) => sendTelegramMessage(text)
+  }).then(summary => {
+    if (summary && (summary.messenger || summary.telegram || summary.cancelled)) {
+      console.log('[payment reminder]', summary.messenger, 'messenger,', summary.telegram, 'telegram,', summary.cancelled, 'cancelled');
+    }
+  }).catch(e => console.error('[payment reminder]', e && e.message ? e.message : e));
+}, paymentReminders.SWEEP_INTERVAL_MS);
+if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
 app.listen(PORT, () => {
   console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);

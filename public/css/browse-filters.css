@@ -98,7 +98,5 @@ body.bf-lock { overflow: hidden; }
 .bf-ps-all { margin-top: 1rem; }
 .bf-ps-card .gc2-cover-placeholder span { padding: 0 0.75rem; text-align: center; opacity: 0.8; }
 
-/* At most 6 cards a row; phones keep style.css's 2 columns (≤ 600px). */
-@media (min-width: 601px) {
-  .browse-page .games-grid { grid-template-columns: repeat(auto-fill, minmax(max(200px, calc((100% - 5rem) / 6)), 1fr)); }
-}
+/* Column count lives with .games-grid in style.css (3 up to 10). A second
+   rule here used to cap browse at 6 wider cards, which upscaled the covers. */

@@ -1,0 +1,72 @@
+<%# Chats the bot stopped answering. Website and Messenger share the list.
+    Resume clears the pause. Thread control runs only when handover is on,
+    and an unsupported take still clears the card. The PSID stays on the server. %>
+<% const handoffs = (typeof supportHandoffs !== 'undefined' && supportHandoffs) || []; %>
+<% const inboxNotes = (typeof supportInboxNotes !== 'undefined' && supportInboxNotes) || []; %>
+<%
+  const handoffWhy = {
+    asked_for_human: 'Asked for a person',
+    payment_or_dispute: 'Payment proof or dispute',
+    attachment: 'Sent a photo',
+    cannot_help: 'Bot could not answer',
+    thread_control: 'Messenger still has the chat'
+  };
+%>
+<div class="adm-card" id="sec-support-handoffs">
+  <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(240,165,0,0.15);">💬</div>
+      <div>
+        <div class="sa-title">Support handoffs<% if (handoffs.length) { %> (<%= handoffs.length %>)<% } %></div>
+        <div class="sa-desc">The bot is paused on these chats until you resume it. Resume clears the pause even if Messenger will not hand the thread back. Payment proofs and “talk to a human” land here.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body" style="padding:1rem 1.15rem;">
+    <% if (!handoffs.length && !inboxNotes.length) { %>
+      <div style="font-size:0.82rem;color:#777;">No chats waiting. The website widget and Messenger bot are answering on their own.</div>
+    <% } %>
+    <% inboxNotes.forEach(function (h) { %>
+      <div style="border:1px solid #6b2a2a;border-radius:12px;padding:0.85rem 1rem;margin-bottom:0.75rem;background:#101010;">
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.45rem;">
+          <strong style="color:#fff;font-size:0.82rem;"><%= h.label || h.channel %></strong>
+          <span style="font-size:0.72rem;color:#e74c3c;font-weight:700;">Meta Inbox owns this thread, bot can't reply</span>
+        </div>
+        <div style="font-size:0.75rem;line-height:1.4;color:#e74c3c;margin-bottom:0.55rem;">Meta Inbox owns this thread, bot can't reply. The bot is not paused. In Meta Business Suite, move the conversation to Done, or set this app as the Messenger default in Conversation Routing.</div>
+        <% if ((h.messages || []).length) { %>
+          <div style="max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:0.35rem;">
+            <% (h.messages || []).slice(-8).forEach(function (m) { %>
+              <div style="font-size:0.78rem;line-height:1.4;color:<%= m.role === 'user' ? '#eee' : '#9ad' %>;">
+                <span style="color:#666;font-weight:700;"><%= m.role === 'user' ? 'Customer' : 'Bot' %>:</span>
+                <%= m.text %>
+              </div>
+            <% }); %>
+          </div>
+        <% } %>
+      </div>
+    <% }); %>
+    <% handoffs.forEach(function (h) { %>
+      <div style="border:1px solid #2a2a2a;border-radius:12px;padding:0.85rem 1rem;margin-bottom:0.75rem;background:#101010;">
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.45rem;">
+          <strong style="color:#fff;font-size:0.82rem;"><%= h.label || h.channel %></strong>
+          <span style="font-size:0.72rem;color:#f0a500;font-weight:700;"><%= handoffWhy[h.handoff_reason] || 'Needs you' %></span>
+          <% if (h.handoff_at) { %><span style="font-size:0.7rem;color:#666;margin-left:auto;"><%= h.handoff_at.replace('T', ' ').slice(0, 16) %> UTC</span><% } %>
+        </div>
+        <div style="max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.7rem;">
+          <% (h.messages || []).slice(-8).forEach(function (m) { %>
+            <div style="font-size:0.78rem;line-height:1.4;color:<%= m.role === 'user' ? '#eee' : '#9ad' %>;">
+              <span style="color:#666;font-weight:700;"><%= m.role === 'user' ? 'Customer' : 'Bot' %>:</span>
+              <%= m.text %>
+            </div>
+          <% }); %>
+        </div>
+        <% if (h.control_error) { %>
+          <div style="font-size:0.75rem;line-height:1.4;color:#e74c3c;margin-bottom:0.65rem;">Messenger did not hand this chat back: <%= h.control_error %></div>
+        <% } %>
+        <form method="POST" action="/admin/support/<%= h.id %>/resume" style="margin:0;">
+          <button type="submit" style="background:#f0a500;color:#111;border:none;border-radius:8px;padding:0.45rem 0.9rem;font-weight:800;font-size:0.78rem;cursor:pointer;">Resume bot</button>
+        </form>
+      </div>
+    <% }); %>
+  </div>
+</div>

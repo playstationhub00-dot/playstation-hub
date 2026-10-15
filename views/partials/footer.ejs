@@ -56,12 +56,16 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
         <a href="/browse">Browse Games</a>
         <a href="/ps-plus">PS Plus Deluxe</a>
         <a href="/how-it-works">How It Works</a>
+        <a href="/faq">FAQ</a>
+        <% if (typeof livePromos !== 'undefined' && livePromos && livePromos.length) { %><a href="/promos">Promos</a><% } %>
+        <a href="/terms">Terms</a>
         <a href="/#how">Rental Steps</a>
       </div>
 
       <div class="footer-col">
         <div class="footer-col-title">Get In Touch</div>
         <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" data-track-source="footer">Message Us on Messenger</a>
+        <a href="mailto:playstationhub00@gmail.com">playstationhub00@gmail.com</a>
         <a href="/how-to-sign-in">How to Sign In</a>
         <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener">Facebook Page</a>
         <span class="footer-note">We reply fastest on Messenger.</span>
@@ -89,6 +93,7 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
           <span class="footer-note">Payment details are sent with every order.</span>
           <% } %>
         </div>
+        <span class="footer-note"><%- include('pay-note').trim() %></span>
         <span class="footer-note">Refundable deposit on Trophy accounts only.</span>
       </div>
     </div>
@@ -99,3 +104,6 @@ src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
     </div>
   </div>
 </footer>
+<% if (typeof showSupportChat === 'undefined' || showSupportChat) { %>
+<%- include('support-chat') %>
+<% } %>

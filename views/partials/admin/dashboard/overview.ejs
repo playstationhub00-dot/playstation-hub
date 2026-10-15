@@ -213,6 +213,18 @@
 
     </div>
 
+    <div class="dash-section" style="margin-top:0.7rem;">
+      <div class="dash-section-head">
+        <span class="dash-section-title">💬 Payment reminders</span>
+        <span style="font-size:0.7rem;color:#555;"><%= dashPeriod.label %></span>
+      </div>
+      <% const prStats = dashMetrics.reminders || { reminded: 0, recovered: 0, pesos: 0 }; %>
+      <div class="dm-row"><span class="dm-row-n">Reminded</span><span class="dm-row-v"><%= prStats.reminded %></span></div>
+      <div class="dm-row"><span class="dm-row-n">Paid after a reminder</span><span class="dm-row-v g"><%= prStats.recovered %></span></div>
+      <div class="dm-row"><span class="dm-row-n">₱ recovered</span><span class="dm-row-v g">₱<%= (prStats.pesos || 0).toLocaleString() %></span></div>
+      <div class="dm-note">Orders nudged about an unpaid payment, and the ones that paid afterwards. Counted on Manila dates.</div>
+    </div>
+
     <div class="ov-deeper">
       <span style="font-size:1.5rem;">📊</span>
       <div>

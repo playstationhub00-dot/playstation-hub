@@ -107,6 +107,65 @@ body {
 .announcement-close:hover { color: #fff; background: rgba(255,255,255,0.15); }
 @keyframes shimmer { 0%{background-position:0%} 100%{background-position:200%} }
 
+.promo-banner {
+  background: #003791;
+  color: #fff;
+  text-align: center;
+  padding: 0.55rem 2.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  position: relative;
+  line-height: 1.35;
+}
+.promo-banner a { color: #fff; text-decoration: none; }
+.promo-banner a:hover { text-decoration: underline; }
+.promo-banner-close {
+  position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: rgba(255,255,255,0.75);
+  font-size: 1.1rem; cursor: pointer; width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: center;
+}
+.promo-banner-close:hover { color: #fff; }
+.promo-page { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem 4rem; display: flex; flex-direction: column; gap: 1rem; }
+.promo-empty { color: var(--text-secondary); text-align: center; padding: 2rem 0; }
+.promo-card { background: #111; border: 1px solid #222; border-radius: 14px; padding: 1.1rem 1.2rem; }
+.promo-card h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
+.promo-card-text { margin: 0 0 0.45rem; color: #eee; }
+.promo-card-game { margin: 0 0 0.35rem; }
+.promo-card-game a { color: var(--ps-blue); font-weight: 700; }
+.promo-card-when { margin: 0 0 0.35rem; color: var(--text-secondary); font-size: 0.85rem; }
+.promo-card-terms { margin: 0.4rem 0 0; color: var(--text-secondary); font-size: 0.88rem; }
+.gd-promo-note { margin-top: 0.75rem; padding: 0; border: none; background: transparent; display: flex; flex-direction: column; gap: 0.4rem; }
+.gd-promo-item { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.48rem 0.65rem; border-radius: 10px; background: rgba(0,55,145,0.22); border: 1px solid rgba(0,112,209,0.5); }
+.gd-promo-label {
+  flex: 0 1 auto; max-width: 46%;
+  display: inline-flex; align-items: center; gap: 0.28rem;
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  line-height: 1.2; color: #fff; background: #003791; border-radius: 999px;
+  padding: 0.16rem 0.42rem; margin-top: 0.08rem;
+}
+.gd-promo-label::before {
+  content: ""; width: 0.72rem; height: 0.72rem; flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: var(--promo-icon) center / contain no-repeat;
+  mask: var(--promo-icon) center / contain no-repeat;
+}
+.gd-promo-label,
+.gd-promo-label[data-kind="promo"] { --promo-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' d='M1.8 8.4 7.6 2.6h5.2v5.2L7.2 13.4a1.4 1.4 0 0 1-2 0L1.8 10.4a1.4 1.4 0 0 1 0-2z'/%3E%3Ccircle cx='10.6' cy='5.4' r='1' fill='white'/%3E%3C/svg%3E"); }
+.gd-promo-label[data-kind="punch"],
+.gd-promo-label[data-kind="reward"] { --promo-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' d='M2.2 7.2h11.6v2.1H2.2zM3 9.3h4.2V14H3zM8.8 9.3H13V14H8.8zM4.2 4.6c0-1.3 1.1-2.2 2.3-1.6.5.3.9.8 1.1 1.4.2-.6.6-1.1 1.1-1.4 1.2-.6 2.3.3 2.3 1.6 0 1.5-2.2 2.8-3.4 3.4-1.2-.6-3.4-1.9-3.4-3.4z'/%3E%3C/svg%3E"); }
+.gd-promo-label[data-kind="rebook"] { --promo-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='black' d='M8 2.2a5.8 5.8 0 0 1 4.9 2.7l1.3-1.3v4H10L11.6 6A4.2 4.2 0 1 0 12.2 10h1.7A5.8 5.8 0 1 1 8 2.2z'/%3E%3C/svg%3E"); }
+.gd-promo-text { flex: 1 1 auto; min-width: 0; color: #d6e6ff; font-size: 0.82rem; font-weight: 650; line-height: 1.35; }
+.ord-promo-stack { margin: 0 0 1.5rem; }
+.ord-card .gd-promo-note { margin-top: 0.75rem; }
+.gc2-badges .gc2-badge-promo, .usd-badge-promo {
+  background: #003791; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.promo-admin-live { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.promo-admin-live li { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #ddd; }
+.promo-admin-live span { font-size: 0.72rem; font-weight: 700; color: #9ecbff; background: #102038; border-radius: 99px; padding: 0.1rem 0.45rem; }
+.promo-admin-form { border-top: 1px solid #222; padding-top: 1rem; margin-top: 0.5rem; }
+
 /* NAV */
 nav {
   background: #000;
@@ -1611,11 +1670,13 @@ nav {
   .hero-v2 .hero-actions .btn { min-height: 44px; display: inline-flex; align-items: center; }
 }
 
-/* GAME GRID */
+/* GAME GRID
+   Column counts are set at the bottom of this file so a card stays near
+   100–135px wide. These covers are landscape, and a taller card upscales them. */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
   /* Grid items stretch to the row's tallest cell by default — this keeps each card
      sized to its own content instead of matching its tallest row-mate. */
   align-items: start;
@@ -2604,50 +2665,53 @@ footer {
         rgba(0,0,0,0.98) 100%);
   }
 
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta,
-  .upcoming-card .cs-cta {
+  /* Buy and PS Plus most-played cards still tuck platform and the button
+     away until hover. Rental and Coming soon cards (.gc2-split) do not:
+     opening those rows would change the card's height and shove the grid. */
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     position: absolute;
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 0.2s ease, transform 0.2s ease;
     pointer-events: none;
   }
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta {
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta {
     left: 0.85rem;
     right: 0.85rem;
   }
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-cta {
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     right: 0.85rem;
     width: auto;
   }
-  .gc2-card:hover .gc2-plat,
-  .gc2-card:hover .gc2-status,
-  .gc2-card:hover .gc2-buy-price,
-  .gc2-card:hover .gc2-bundle-note,
-  .gc2-card:hover .gc2-cta,
-  .gc2-card:focus .gc2-plat,
-  .gc2-card:focus .gc2-status,
-  .gc2-card:focus .gc2-buy-price,
-  .gc2-card:focus .gc2-bundle-note,
-  .gc2-card:focus .gc2-cta,
-  .upcoming-card:hover .cs-plat,
-  .upcoming-card:hover .cs-meta,
-  .upcoming-card:hover .cs-cta,
-  .upcoming-card:focus .cs-plat,
-  .upcoming-card:focus .cs-meta,
-  .upcoming-card:focus .cs-cta {
+  .gc2-card:not(.gc2-split):hover .gc2-plat,
+  .gc2-card:not(.gc2-split):hover .gc2-status,
+  .gc2-card:not(.gc2-split):hover .gc2-buy-price,
+  .gc2-card:not(.gc2-split):hover .gc2-bundle-note,
+  .gc2-card:not(.gc2-split):hover .gc2-cta,
+  .gc2-card:not(.gc2-split):focus .gc2-plat,
+  .gc2-card:not(.gc2-split):focus .gc2-status,
+  .gc2-card:not(.gc2-split):focus .gc2-buy-price,
+  .gc2-card:not(.gc2-split):focus .gc2-bundle-note,
+  .gc2-card:not(.gc2-split):focus .gc2-cta,
+  .upcoming-card:not(.gc2-split):hover .cs-plat,
+  .upcoming-card:not(.gc2-split):hover .cs-meta,
+  .upcoming-card:not(.gc2-split):hover .cs-cta,
+  .upcoming-card:not(.gc2-split):focus .cs-plat,
+  .upcoming-card:not(.gc2-split):focus .cs-meta,
+  .upcoming-card:not(.gc2-split):focus .cs-cta {
     position: static;
     opacity: 1;
     transform: translateY(0);
@@ -2656,14 +2720,14 @@ footer {
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
-  .gc2-card .gc2-plat,
-  .gc2-card .gc2-status,
-  .gc2-card .gc2-buy-price,
-  .gc2-card .gc2-bundle-note,
-  .gc2-card .gc2-cta,
-  .upcoming-card .cs-plat,
-  .upcoming-card .cs-meta,
-  .upcoming-card .cs-cta {
+  .gc2-card:not(.gc2-split) .gc2-plat,
+  .gc2-card:not(.gc2-split) .gc2-status,
+  .gc2-card:not(.gc2-split) .gc2-buy-price,
+  .gc2-card:not(.gc2-split) .gc2-bundle-note,
+  .gc2-card:not(.gc2-split) .gc2-cta,
+  .upcoming-card:not(.gc2-split) .cs-plat,
+  .upcoming-card:not(.gc2-split) .cs-meta,
+  .upcoming-card:not(.gc2-split) .cs-cta {
     transition: none;
   }
 }
@@ -2679,6 +2743,23 @@ footer {
    moves left rather than sitting under a diagonal band. (A new game selling
    out immediately is exactly the case where both need to be readable.) */
 .gc2-full .gc2-badge-new { right: auto; left: 9px; }
+/* Narrow cards cannot hold "Last slot" and "Just added" on one line — the
+   card clips the overflow, which left only "LA" showing. Stack them down the
+   left side instead, and let a long label wrap inside its own pill. A lone
+   "Just added" stays in the top-right corner, except on a sold-out card,
+   where that corner belongs to the Full ribbon. */
+.gc2-badges {
+  position: absolute; z-index: 2; top: 8px; left: 8px; right: 8px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem;
+}
+.gc2-badges .gc2-badge {
+  position: static; left: auto; right: auto; top: auto;
+  width: max-content; max-width: 100%; box-sizing: border-box;
+  white-space: normal; line-height: 1.25; text-align: left;
+}
+.gc2-badges .gc2-badge-new:only-child { align-self: flex-end; }
+.gc2-full .gc2-badges { right: 2.5rem; }
+.gc2-full .gc2-badges .gc2-badge-new:only-child { align-self: flex-start; }
 /* The one signal the sold-out card was missing: .gc2-scrim-dim only washed the
    card darker, leaving the artwork fully saturated, so a full game still read
    as available while scrolling. Same values as the Coming Soon treatment. */
@@ -2770,6 +2851,92 @@ footer {
 .gc2-cta-reserve { background: transparent; color: #a78bfa; border: 1px solid #4a2a8a; text-shadow: 0 1px 3px rgba(0,0,0,0.9); }
 .gc2-bundle-note { font-size: 0.62rem; color: #7fc7e8; margin-top: 0.3rem; }
 
+/* Rental and Coming soon cards (homepage shelves and /browse). The cover is
+   only the picture; the name, tier and price sit underneath it, the way the
+   PS Plus strip reads. Buy and PS Plus most-played cards stay poster overlays.
+   Badges, the FULL ribbon and the day countdown stay inside the cover frame
+   so they cannot land on the caption. */
+.gc2-split,
+.upcoming-card.gc2-split {
+  aspect-ratio: auto;
+  display: flex;
+  flex-direction: column;
+}
+.gc2-art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  flex: none;
+  background: #111;
+}
+.gc2-split .gc2-body,
+.gc2-split .cs-body {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  padding: 0.4rem 0.35rem 0.5rem;
+  gap: 0.22rem;
+  text-shadow: none;
+}
+.gc2-split .gc2-title,
+.gc2-split .cs-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: var(--text-primary);
+  min-height: calc(1.25em * 2);
+  overflow-wrap: break-word;
+}
+.gc2-split .gc2-title-muted { color: var(--text-secondary); }
+.gc2-split .gc2-tags {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.18rem;
+}
+.gc2-split .gc2-price,
+.gc2-split .cs-price {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  line-height: 1.25;
+}
+.gc2-split .gc2-price b,
+.gc2-split .cs-price b {
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.gc2-split .gc2-price-was { color: var(--text-secondary); }
+/* Platform, slots, buy price and Rent used to unfold on hover (and sat in
+   the flow on touch). Either way the card changed height. They stay off
+   these cards; the game page has the details and the Rent button. */
+.gc2-split .gc2-plat,
+.gc2-split .gc2-status,
+.gc2-split .gc2-buy-price,
+.gc2-split .gc2-bundle-note,
+.gc2-split .gc2-cta,
+.gc2-split .cs-plat,
+.gc2-split .cs-meta,
+.gc2-split .cs-cta { display: none; }
+.gc2-split.cs-full .cs-price,
+.gc2-split.gc2-full .gc2-price { color: var(--text-secondary); }
+.gc2-split.cs-full .cs-price b,
+.gc2-split.gc2-full .gc2-price b { color: var(--text-primary); font-weight: 800; }
+/* The Coming Soon pill used to share the top edge with the countdown. On a
+   narrow cover those two overlap, so the pill sits along the bottom of the
+   art and the countdown keeps the top-right corner. */
+.gc2-split .cs-badge {
+  top: auto;
+  bottom: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  white-space: normal;
+  line-height: 1.2;
+}
 /* HOW IT WORKS PAGE */
 .hiw-step {
   display: grid;
@@ -2898,7 +3065,6 @@ footer {
   nav { padding: 0 1rem; }
   .stats-bar { gap: 2rem; }
   .section { padding: 2rem 1rem; }
-  .games-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
   .psplus-months-grid { grid-template-columns: 1fr; gap: 0.75rem; }
   .psplus-month-cover { aspect-ratio: 16/9; }
   .psplus-month-cover-placeholder { aspect-ratio: 16/9; }
@@ -3724,6 +3890,10 @@ label.buy-tier:hover { border-color: #444; }
 .req-voteform input { width: 110px; background: #141414; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.45rem 0.7rem; color: #fff; font-size: 0.78rem; font-family: inherit; }
 .req-btn { background: #fff; color: #12081f; border: 0; border-radius: 20px; padding: 0.45rem 1rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; text-decoration: none; display: inline-block; min-height: 36px; line-height: 1.6; }
 .req-btn-rent { background: #22c55e; color: #04120a; }
+.req-btn-reserve { background: #f59e0b; color: #1a1000; white-space: normal; text-align: center; line-height: 1.25; font-size: 0.68rem; padding: 0.4rem 0.45rem; }
+.req-listhead-soon { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid #1e1e1e; }
+.req-listhead-soon .req-listtitle { color: #f59e0b; }
+.req-hint-soon { color: #f59e0b; }
 /* Stocked strip: a bonus/payoff row, not the primary list — scrolls
    horizontally instead of growing the page downward, so it stays a glance
    rather than competing with the voting grid for vertical space. */
@@ -3742,6 +3912,9 @@ label.buy-tier:hover { border-color: #444; }
   flex: 1;
 }
 .req-stocked-card .req-btn-rent { width: 100%; text-align: center; }
+.req-stocked-card .req-btn-reserve { width: 100%; }
+.req-stocked-card-soon { flex: 0 0 156px; background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.45); }
+a.req-stocked-card-soon:hover { border-color: rgba(245,158,11,0.85); }
 /* The card itself is the click target once a game is linked; the "Rent" pill
    becomes a plain visual cue inside it rather than a second, nested link. */
 a.req-stocked-card-link { text-decoration: none; cursor: pointer; transition: border-color 0.15s; }
@@ -4010,6 +4183,10 @@ body.light-mode .qa-nodur { border-color:#d7dce1; color:#8b939c; }
 .qa-price { margin-top:0.5rem; background:#0a1a0a; border:1px solid #1a3a1a; border-radius:9px; padding:0.55rem 0.8rem; font-size:0.8rem; color:#9fd8ae; }
 .qa-price b { color:#22c55e; font-size:1rem; }
 .qa-price.qa-price-empty { background:#0d0d0d; border-color:#1e1e1e; color:#555; }
+.qa-loyalty { margin-top:0.45rem; background:#141006; border:1px solid #3a2a00; border-radius:9px; padding:0.55rem 0.7rem; font-size:0.75rem; color:#e8c06a; line-height:1.45; }
+.qa-loyalty-offers { display:flex; flex-direction:column; gap:0.28rem; margin-top:0.4rem; }
+.qa-loyalty-opt { display:flex; gap:0.4rem; align-items:flex-start; cursor:pointer; color:#f3e6c4; }
+.qa-loyalty-opt input { margin-top:0.15rem; }
 .qa-radios { display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center; }
 .qa-radio { flex:0 0 auto; background:#0a0a0a; border:1px solid #2a2a2a; border-radius:9px; padding:0.5rem 0.8rem; font-size:0.82rem; font-weight:700; color:#999; cursor:pointer; }
 .qa-radio input { display:none; }
@@ -4188,3 +4365,26 @@ body.light-mode .acc-search, body.light-mode .acc-filters select, body.light-mod
 body.light-mode .acc-stat-total .val { color:#14171a; }
 body.light-mode .acc-name, body.light-mode .acc-s-acc b { color:#b45309; }
 body.light-mode .acc-act { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
+
+/* Catalog cards (browse, buy, PS Plus most-played). Kept near 100–135px wide
+   so a 720px landscape cover still covers the card on a 2x screen. Each
+   breakpoint is one more column, which fills the row instead of stretching
+   the cards. Homepage shelves repeat these counts in home.css. */
+@media (min-width: 452px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 629px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (min-width: 773px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (min-width: 917px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+@media (min-width: 1061px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .games-grid, .buy-single-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+}

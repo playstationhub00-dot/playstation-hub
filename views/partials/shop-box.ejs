@@ -5,7 +5,7 @@
     Locals: b (a box set from server.js buyShopData). %>
 <a href="/bundle/<%= b.slug %>" class="shop-box">
   <span class="shop-box-covers">
-    <% b.covers.forEach(c => { %><% if (c.cover) { %><img src="<%= c.cover %>" alt="<%= c.title %>" loading="lazy" decoding="async"><% } else { %><span class="shop-box-blank"></span><% } %><% }) %>
+    <% b.covers.forEach(c => { %><% if (c.cover) { %><img <%- imgThumb(c.cover) %> alt="<%= c.title %>" loading="lazy" decoding="async"><% } else { %><span class="shop-box-blank"></span><% } %><% }) %>
     <% if (b.more) { %><span class="shop-box-more">+<%= b.more %></span><% } %>
   </span>
   <span class="shop-box-name"><%= b.name %></span>

@@ -1,0 +1,8 @@
+<%
+  const _lbName = (typeof name !== 'undefined') ? name : '';
+  const _lbRow = (typeof rowId !== 'undefined') ? rowId : null;
+  const _lb = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex && typeof loyaltyIndex.rewardFor === 'function')
+    ? loyaltyIndex.rewardFor({ name: _lbName, rowId: _lbRow })
+    : null;
+%>
+<% if (_lb) { %><span class="rem-badge loyalty-badge" style="background:#3a2a00;color:#f0a500;border:1px solid #6a4a00;" title="<%= _lb.title %>">Reward</span><% } %>

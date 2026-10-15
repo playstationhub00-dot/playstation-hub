@@ -1,7 +1,7 @@
 // Run: node scripts/test-home-coming-soon-row.js
 //
 // The homepage's Coming soon games sit still, like New releases: one shelf
-// (.hm-row) of at most 6 cards, owner-ranked first then soonest release, no
+// (.hm-row) of at most 10 cards, owner-ranked first then soonest release, no
 // arrows and no drifting. Browse lists them all on its Coming soon tab, and
 // both pages draw the same card (views/partials/upcoming-card.ejs). Boots a throwaway instance
 // (temp DATA_DIR, blank MONGODB_URI, in-memory sessions, a made-up admin
@@ -96,10 +96,10 @@ async function main() {
   ok('a still shelf like New releases, with the Coming soon heading and View all', () => {
     assert.ok(soon.includes('<h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse?tab=coming-soon">View all ›</a></h2>'));
     assert.ok(soon.includes('<div class="hm-row">'));
-    assert.strictEqual((soon.match(/<div class="hm-cell">\s*<a href="\/upcoming\//g) || []).length, 6);
+    assert.strictEqual((soon.match(/<div class="hm-cell">\s*<a href="\/upcoming\//g) || []).length, 7);
   });
-  ok('six games: the ranked one first, then soonest release; TBA and the 7th left out', () => {
-    assert.deepStrictEqual(upcomingIds(soon), [1, 2, 3, 5, 6, 7]);
+  ok('the ranked one first, then soonest release, TBA last', () => {
+    assert.deepStrictEqual(upcomingIds(soon), [1, 2, 3, 5, 6, 7, 4]);
   });
   ok('no arrows, no slider, nothing to drift', () => {
     ['upcomingSlider', 'upcoming-slider', 'slider-arrow', 'slideUpcoming', 'upcomingBody'].forEach(t => assert.ok(!soon.includes(t), t));
