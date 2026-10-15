@@ -147,7 +147,8 @@
 
     <div class="sidebar-group-label">Set up</div>
     <button class="admin-tab" data-tab="content" onclick="switchTab('content')"><span class="tab-icon">🖥️</span><span class="tab-label">Site content</span></button>
-    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span><% if (typeof supportHandoffs !== 'undefined' && supportHandoffs.length) { %><span class="oq-count"><%= supportHandoffs.length %></span><% } %></button>
+    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span><% var supportWaiting = ((typeof supportHandoffs !== 'undefined' && supportHandoffs) || []).length + ((typeof supportInboxNotes !== 'undefined' && supportInboxNotes) || []).length; %>
+<% if (supportWaiting) { %><span class="oq-count"><%= supportWaiting %></span><% } %></button>
     <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus</span></button>
     <button class="admin-tab" data-tab="posters" onclick="switchTab('posters')"><span class="tab-icon">📸</span><span class="tab-label">Posters</span></button>
     <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></button>

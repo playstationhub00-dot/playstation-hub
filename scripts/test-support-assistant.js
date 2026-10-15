@@ -342,7 +342,7 @@ async function main() {
     assert.ok(result.reply.includes('2 Non-Trophy'));
   });
 
-  await ok('request_human from the model pauses the bot', async () => {
+  await ok('request_human from the model does not pause unless the customer asked', async () => {
     const result = await assistant.respond({
       message: 'my rental end date looks wrong',
       facts: shopFacts(),
@@ -351,9 +351,15 @@ async function main() {
         tool_calls: [{ id: 'c2', type: 'function', function: { name: 'request_human', arguments: '{"reason":"cannot_help"}' } }]
       })
     });
-    assert.strictEqual(result.handoff, true);
-    assert.strictEqual(result.reason, 'cannot_help');
-    assert.strictEqual(result.source, 'llm');
+    assert.strictEqual(result.handoff, false);
+    assert.strictEqual(result.reason, null);
+    assert.ok(result.reply && result.reply.length > 0, result.reply);
+    const cta = facts.handoffReason('Hello! Yes, we have slots.\n\nWant to chat with an admin? Reply ADMIN.');
+    assert.strictEqual(cta, null);
+    const filCta = facts.handoffReason('Gusto mo po bang makausap ang admin? Reply ADMIN.');
+    assert.strictEqual(filCta, null);
+    assert.strictEqual(facts.handoffReason('ADMIN'), 'asked_for_human');
+    assert.strictEqual(facts.handoffReason('Reply ADMIN'), 'asked_for_human');
   });
 
   await ok('a model failure falls back to the scripted price answer', async () => {
@@ -798,6 +804,20 @@ async function main() {
     assert.strictEqual(store.listHandoffs().length, 0);
     assert.strictEqual(store.resumeExternal('messenger', 'missing'), null);
 
+    store.append('messenger', 'psid-10', 'user', "May slot pa ba ang Marvel's Wolverine?");
+    const noted = store.noteInboxOwner('messenger', 'psid-10');
+    assert.strictEqual(noted.changed, true);
+    assert.strictEqual(store.isPaused('messenger', 'psid-10'), false);
+    assert.strictEqual(store.listHandoffs().some(h => h.preview && h.preview.includes('Wolverine')), false);
+    const visible = store.listInboxNotes();
+    assert.strictEqual(visible.length, 1);
+    assert.strictEqual(visible[0].inbox_note, "Meta Inbox owns this thread, bot can't reply");
+    assert.strictEqual(visible[0].handed_off, false);
+    assert.strictEqual(store.noteInboxOwner('messenger', 'psid-10').changed, false);
+    store.clearInboxOwner('messenger', 'psid-10');
+    assert.strictEqual(store.listInboxNotes().length, 0);
+    assert.strictEqual(store.isPaused('messenger', 'psid-10'), false);
+
     const fresh = store.noteControlFailure('messenger', 'psid-new', 'x'.repeat(400));
     assert.strictEqual(fresh.changed, true);
     assert.strictEqual(fresh.thread.control_error.length, 180);
@@ -969,6 +989,15 @@ async function main() {
     assert.ok(failed.error.includes('10/2018300'), failed.error);
     assert.ok(!failed.error.includes('SECRET'), failed.error);
     assert.strictEqual(messenger.handoverUnsupported(failed), false);
+    const owned = {
+      error: {
+        message: '(#10) Message failed to send because another app is controlling this thread now.',
+        code: 10,
+        error_subcode: 2018300
+      }
+    };
+    assert.strictEqual(messenger.inboxOwnsThread({ ok: false, status: 400, body: JSON.stringify(owned) }), true);
+    assert.strictEqual(messenger.inboxOwnsThread({ ok: false, status: 400, body: JSON.stringify({ error: { message: 'not supported', code: 27, error_subcode: 2018464 } }) }), false);
     assert.strictEqual(messenger.graphErrorSummary({ reason: 'no_token' }), 'Page token is missing.');
     assert.strictEqual(messenger.graphErrorSummary({ status: 500, body: 'nope' }), 'Messenger returned HTTP 500.');
 
@@ -1099,6 +1128,10 @@ async function main() {
     assert.ok(server.includes('release_thread_control'));
     assert.ok(server.includes('handoverEnabled'));
     assert.ok(server.includes('[messenger send] failed'));
+    assert.ok(server.includes('A failed send is not a handoff'));
+    assert.ok(server.includes('noteInboxOwner'));
+    assert.ok(server.includes('Page Inbox owns thread'));
+    assert.ok(server.includes('Move the conversation to Done in Meta Business Suite'));
     assert.ok(server.includes('handover off, paused without pass_thread_control'));
   });
 
@@ -1127,6 +1160,19 @@ async function main() {
     assert.ok(!html.includes('<b>bad</b>'));
     const empty = ejs.render(fs.readFileSync(file, 'utf8'), { supportHandoffs: [] }, { filename: file });
     assert.ok(empty.includes('No chats waiting'));
+    const owned = ejs.render(fs.readFileSync(file, 'utf8'), {
+      supportHandoffs: [],
+      supportInboxNotes: [{
+        label: 'Messenger',
+        channel: 'messenger',
+        inbox_note: "Meta Inbox owns this thread, bot can't reply",
+        messages: [{ role: 'user', text: 'May slot pa ba' }]
+      }]
+    }, { filename: file });
+    assert.ok(owned.includes("Meta Inbox owns this thread, bot can't reply"));
+    assert.ok(owned.includes('May slot pa ba'));
+    assert.ok(!owned.includes('/admin/support/'));
+    assert.ok(!owned.includes('No chats waiting'));
   });
 
   await ok('expired and disabled promos never reach the assistant', async () => {
