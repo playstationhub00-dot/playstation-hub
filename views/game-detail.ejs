@@ -109,6 +109,8 @@
         <span class="usd-badge <%= gdhStatus.cls %>"><%= gdhStatus.label %></span>
         <% const gdTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null; %>
         <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
+        <% const gdPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null; %>
+        <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
         <span class="usd-plat-chip"><%= game.platform %></span>
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
@@ -387,6 +389,14 @@
           </div>
           <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
           <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
+          <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
+          <% const gdHasPromos = typeof livePromos !== 'undefined' && livePromos && livePromos.length; %>
+          <% if (gdHasPromos) { %>
+          <div class="gd-promo-note" id="gdPromoNote" data-game-id="<%= game.id %>"<% if (!gdPromoLines.length) { %> hidden<% } %>>
+            <%- include('partials/promo-lines', { items: gdPromoLines }) %>
+          </div>
+          <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
+          <% } %>
         </div>
 
         <% if (!allUnavail) { %>

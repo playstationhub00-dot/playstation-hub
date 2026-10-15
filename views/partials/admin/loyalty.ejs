@@ -1,5 +1,6 @@
 <div class="tab-panel" id="tab-loyalty">
   <%- include('loyalty-settings', { settings: settings, loyaltyReturnTab: 'loyalty', loyaltySectionId: 'sec-loyalty-tab' }) %>
+  <%- include('promos') %>
 
   <%
     const lyIndex = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex) ? loyaltyIndex : { profiles: [], links: [], today: '', formatYmd: function () { return ''; }, formatManila: function () { return ''; } };

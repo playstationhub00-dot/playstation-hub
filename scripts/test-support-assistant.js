@@ -1129,6 +1129,65 @@ async function main() {
     assert.ok(empty.includes('No chats waiting'));
   });
 
+  await ok('expired and disabled promos never reach the assistant', async () => {
+    const promos = require('../lib/promos');
+    const stored = [
+      { id: 'p1', title: 'Elden week', text: '₱50 off Elden Ring this week.', terms: 'One rental per customer.', starts_on: '2026-10-01', ends_on: '2026-10-20', enabled: true, game_id: 7, badge: 'Promo', featured: true },
+      { id: 'old', title: 'Ghost sale', text: 'This ended.', terms: 'Expired terms.', starts_on: '2026-01-01', ends_on: '2026-01-02', enabled: true, game_id: null, badge: '', featured: false },
+      { id: 'off', title: 'Secret off', text: 'Disabled offer.', terms: 'Off terms.', starts_on: '', ends_on: '', enabled: false, game_id: null, badge: '', featured: false }
+    ];
+    const live = promos.liveOffers({
+      stored,
+      loyaltySettings: { punch_enabled: false, rebook_enabled: true, rebook_amount: 50, rebook_within_days: 7 },
+      games: [{ id: 7, title: 'Elden Ring' }],
+      today: '2026-10-14'
+    });
+    const bundle = facts.faqBundle({
+      categories, promo,
+      offers: promos.publicFacts(live),
+      loyaltyNote: "You're 2 rentals away from a free 7-day rental"
+    });
+    const dumped = JSON.stringify(assistant.systemPrompt(bundle));
+    assert.ok(dumped.includes('Elden week'));
+    assert.ok(dumped.includes('One rental per customer'));
+    assert.ok(dumped.includes('2026-10-20'));
+    assert.ok(dumped.includes('₱50 rebook') || dumped.includes('rebook'));
+    assert.ok(!dumped.includes('Ghost sale'));
+    assert.ok(!dumped.includes('Expired terms'));
+    assert.ok(!dumped.includes('Secret off'));
+    assert.ok(!dumped.includes('Off terms'));
+    assert.ok(dumped.includes('no promo'));
+
+    const asked = await facts.fallbackReply('may promo ba?', bundle, () => []);
+    assert.ok(asked.text.includes('Elden week'), asked.text);
+    assert.ok(asked.text.includes('One rental per customer'), asked.text);
+    assert.ok(asked.text.includes('Oct 20, 2026'), asked.text);
+    assert.ok(asked.text.includes("You're 2 rentals away"), asked.text);
+    assert.ok(!asked.text.includes('Ghost'));
+    assert.ok(!asked.text.includes('Secret'));
+
+    const quietFacts = facts.faqBundle({ categories, promo, offers: [], loyaltyNote: '' });
+    const quiet = await facts.fallbackReply('may promo ba?', quietFacts, () => []);
+    assert.ok(quiet.text.includes('Wala pong promo'), quiet.text);
+    assert.ok(!quiet.text.includes('Elden'));
+    assert.ok(!quiet.text.includes('Ghost'));
+
+    const price = await facts.fallbackReply('how much for a week', bundle, () => []);
+    assert.ok(price.text.includes('rebook'), price.text);
+    assert.ok(price.text.includes("You're 2 rentals away"), price.text);
+    assert.ok(!price.text.includes('Elden week'), price.text);
+    assert.ok(!price.text.includes('Ghost'));
+
+    const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 1, ps4Slots: 0 }, {}, promo);
+    const other = facts.publicGame(hogwarts, { ntSlots: 1, trSlots: 1, ps4Slots: 1 }, {}, promo);
+    const onGame = await facts.fallbackReply('is Elden Ring available', bundle, () => [open]);
+    assert.ok(onGame.text.includes('Elden week'), onGame.text);
+    assert.ok(onGame.text.includes("You're 2 rentals away"), onGame.text);
+    const elsewhere = await facts.fallbackReply('is Hogwarts Legacy available', bundle, () => [other]);
+    assert.ok(!elsewhere.text.includes('Elden week'), elsewhere.text);
+    assert.ok(elsewhere.text.includes('rebook') || elsewhere.text.includes('₱50'), elsewhere.text);
+  });
+
   console.log('\n' + passed + ' assertions passed\n');
 }
 

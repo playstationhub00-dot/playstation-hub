@@ -384,8 +384,7 @@ ok('a reward is found by record id or by the name on an order', () => {
 ok('the order page says how close they are, and the expiry when the rebook window is open', () => {
   const punch = L.customerCopy(L.build(five().slice(0, 4), { today: '2026-10-14' }).profiles[0]);
   assert.strictEqual(punch.show, true);
-  assert.ok(punch.punchLine.includes('4/5'));
-  assert.ok(punch.punchLine.includes('free 7-day'));
+  assert.ok(punch.punchLine.includes("You're 1 rental away from a free 7-day rental"), punch.punchLine);
   assert.strictEqual(punch.rewardLine, '');
   const ready = L.customerCopy(L.build(five(), { today: '2026-10-14' }).profiles[0]);
   assert.ok(/free 7-day rental waiting/.test(ready.rewardLine));

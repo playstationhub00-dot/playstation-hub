@@ -451,6 +451,9 @@ function switchTab(name) {
       psnCount('info') ? 'got info for ' + psnPlural(psnCount('info'), 'game') : ''
     ].filter(Boolean).join(' · ') || 'nothing changed';
     messages.loyalty_saved = '🎁 Loyalty offers saved';
+    messages.offers_saved = '📣 Promo saved';
+    messages.offers_deleted = '🗑 Promo deleted';
+    messages.offers_invalid = 'Promo not saved — add a title and short text, and keep the end date on or after the start';
     messages.loyalty_redeemed = '🎁 Reward marked redeemed';
     messages.loyalty_redeem_rejected = 'Could not redeem that — check the reward is still available and name a rental or an order';
     messages.loyalty_link_saved = '🔗 Names linked';

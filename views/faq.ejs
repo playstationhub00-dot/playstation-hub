@@ -22,6 +22,13 @@
 
 <div style="max-width:860px;margin:0 auto;padding:3rem 2rem 4rem;">
   <div class="faq-list">
+    <% if (typeof livePromos !== 'undefined' && livePromos && livePromos.length) { %>
+    <details class="faq-item">
+      <summary>Are there any promos right now?</summary>
+      <p>Yes. <a href="/promos" style="color:var(--ps-blue);">Current promos</a> lists what’s on, with the dates and the terms.</p>
+    </details>
+    <% } %>
+
     <details class="faq-item" open>
       <summary>How long can I rent?</summary>
       <p>Weekly is 7 days. Monthly is 30 days, and monthly is 10% off. You can also buy a game outright — that one stays yours.</p>

@@ -1,0 +1,151 @@
+<%
+  const pa = (typeof promoAdmin !== 'undefined' && promoAdmin) ? promoAdmin : { stored: [], live: [], week: { banner: 0, page: 0, orders: 0 }, all: { banner: 0, page: 0, orders: 0 }, games: [] };
+  const paGames = pa.games || [];
+  const paStored = pa.stored || [];
+  const paLive = pa.live || [];
+  const paWeek = pa.week || { banner: 0, page: 0, orders: 0 };
+  const paAll = pa.all || { banner: 0, page: 0, orders: 0 };
+  function paDate(offer, key) { return (offer && offer[key]) || ''; }
+%>
+<div class="adm-card" id="sec-promos">
+  <div class="adm-card-head" style="border-left:3px solid #0070d1;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(0,112,209,0.15);">📣</div>
+      <div>
+        <div class="sa-title">Promos</div>
+        <div class="sa-desc">What customers see on the banner, the Promos page, game badges, checkout, and the support assistant. Loyalty offers follow the toggles above — turning one off hides it everywhere.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body">
+    <p class="gdt-note">Last 7 days (Philippines): <%= paWeek.banner %> banner views · <%= paWeek.page %> promos page views · <%= paWeek.orders %> orders used a promo. All time: <%= paAll.banner %> · <%= paAll.page %> · <%= paAll.orders %>.</p>
+
+    <% if (!paLive.length) { %>
+    <p class="gdt-note">Nothing is live. Customers do not see a banner, a badge, or a promo line.</p>
+    <% } else { %>
+    <ul class="promo-admin-live">
+      <% paLive.forEach(function (offer) { %>
+      <li>
+        <strong><%= offer.title %></strong>
+        <% if (offer.source === 'loyalty') { %><span>From loyalty</span><% } else { %><span>Custom</span><% } %>
+        <% if (offer.id === (pa.banner && pa.banner.id)) { %><span>Banner</span><% } %>
+      </li>
+      <% }) %>
+    </ul>
+    <% } %>
+
+    <% paStored.forEach(function (offer) { %>
+    <form method="POST" action="/admin/promos/save" class="promo-admin-form">
+      <input type="hidden" name="id" value="<%= offer.id %>">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" name="title" maxlength="80" required value="<%= offer.title %>">
+        </div>
+        <div class="form-group">
+          <label>Badge text</label>
+          <input type="text" name="badge" maxlength="24" value="<%= offer.badge %>" placeholder="Promo">
+        </div>
+        <div class="form-group full">
+          <label>Short text</label>
+          <input type="text" name="text" maxlength="180" required value="<%= offer.text %>">
+        </div>
+        <div class="form-group full">
+          <label>Terms</label>
+          <textarea name="terms" maxlength="600" rows="2"><%= offer.terms %></textarea>
+        </div>
+        <div class="form-group">
+          <label>Starts (Philippines)</label>
+          <input type="date" name="starts_on" value="<%= paDate(offer, 'starts_on') %>">
+        </div>
+        <div class="form-group">
+          <label>Ends (Philippines)</label>
+          <input type="date" name="ends_on" value="<%= paDate(offer, 'ends_on') %>">
+        </div>
+        <div class="form-group">
+          <label>Linked game</label>
+          <select name="game_id">
+            <option value="">All games</option>
+            <% paGames.forEach(function (g) { %>
+            <option value="<%= g.id %>" <%= Number(offer.game_id) === Number(g.id) ? 'selected' : '' %>><%= g.title %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-top:1.4rem;">
+            <input type="checkbox" name="enabled" <%= offer.enabled ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#0070d1;">
+            <span>On</span>
+          </label>
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+            <input type="checkbox" name="featured" <%= offer.featured ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#0070d1;">
+            <span>Show this as the top banner while it is live</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Save promo</button>
+      </div>
+    </form>
+    <form method="POST" action="/admin/promos/delete" style="margin:-0.5rem 0 1.25rem;">
+      <input type="hidden" name="id" value="<%= offer.id %>">
+      <button type="submit" class="btn btn-outline">Delete</button>
+    </form>
+    <% }) %>
+
+    <h3 style="margin:0.5rem 0 0.75rem;font-size:0.95rem;">Add a promo</h3>
+    <form method="POST" action="/admin/promos/save" class="promo-admin-form">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" name="title" maxlength="80" required placeholder="Elden Ring week">
+        </div>
+        <div class="form-group">
+          <label>Badge text</label>
+          <input type="text" name="badge" maxlength="24" placeholder="Promo">
+        </div>
+        <div class="form-group full">
+          <label>Short text</label>
+          <input type="text" name="text" maxlength="180" required placeholder="₱50 off Elden Ring this week.">
+        </div>
+        <div class="form-group full">
+          <label>Terms</label>
+          <textarea name="terms" maxlength="600" rows="2" placeholder="One rental per customer. New orders only."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Starts (Philippines)</label>
+          <input type="date" name="starts_on">
+        </div>
+        <div class="form-group">
+          <label>Ends (Philippines)</label>
+          <input type="date" name="ends_on">
+        </div>
+        <div class="form-group">
+          <label>Linked game</label>
+          <select name="game_id">
+            <option value="">All games</option>
+            <% paGames.forEach(function (g) { %>
+            <option value="<%= g.id %>"><%= g.title %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-top:1.4rem;">
+            <input type="checkbox" name="enabled" checked style="width:18px;height:18px;accent-color:#0070d1;">
+            <span>On</span>
+          </label>
+        </div>
+        <div class="form-group full">
+          <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+            <input type="checkbox" name="featured" style="width:18px;height:18px;accent-color:#0070d1;">
+            <span>Show this as the top banner while it is live</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:0.75rem;">
+        <button type="submit" class="btn btn-primary" style="background:var(--ps-blue);">Add promo</button>
+      </div>
+    </form>
+  </div>
+</div>

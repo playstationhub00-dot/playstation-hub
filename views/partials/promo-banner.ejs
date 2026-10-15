@@ -1,0 +1,8 @@
+<% const promoBar = (typeof bannerPromo !== 'undefined' && bannerPromo && bannerPromo.title) ? bannerPromo : null; %>
+<% if (promoBar) { %>
+<div class="promo-banner" id="promoBanner" data-promo-id="<%= promoBar.id %>">
+  <a href="/promos"><strong><%= promoBar.title %></strong><% if (promoBar.text) { %> — <%= promoBar.text %><% } %></a>
+  <button type="button" class="promo-banner-close" id="promoBannerClose" aria-label="Dismiss promo">✕</button>
+</div>
+<script src="/js/promo-banner.js?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>" defer></script>
+<% } %>

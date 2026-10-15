@@ -66,6 +66,7 @@ const supportThreads = require('./lib/support-threads');
 const supportAssistant = require('./lib/support-assistant');
 const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
+const promos = require('./lib/promos');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -606,7 +607,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms', '/promos': 'Promos' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -665,6 +666,16 @@ app.use((req, res, next) => {
   // The floating support chat is for customers. Admin pages include the
   // public footer on a few edit screens, and the widget does not belong there.
   res.locals.showSupportChat = !req.path.startsWith('/admin');
+  if (!req.path.startsWith('/admin') && !req.path.startsWith('/css') && !req.path.startsWith('/js') && !req.path.startsWith('/uploads')) {
+    const ctx = promoContext();
+    res.locals.livePromos = ctx.live;
+    res.locals.bannerPromo = ctx.banner;
+    res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
+    res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
+    res.locals.promoCheckoutLines = (gameId, copy) => promos.checkoutLines(ctx.live, gameId, copy);
+    res.locals.promoLoyaltyItems = (copy) => promos.loyaltyItems(copy);
+    res.locals.promoFormat = loyalty.formatYmd;
+  }
   next();
 });
 
@@ -873,6 +884,47 @@ function ensureLoyaltyStore() {
 
 // One pass over the ledger for the Loyalty tab, the reward badges, and the
 // customer's own order page. Dates are Manila calendar days, same as orders.
+function ensurePromoStore() {
+  if (!Array.isArray(db.get('promo_events').value())) db.set('promo_events', []).write();
+  const s = db.get('site_settings').value();
+  if (!s) return;
+  if (!Array.isArray(s.promos)) db.set('site_settings.promos', []).write();
+  if (!s.promo_next_id) db.set('site_settings.promo_next_id', 1).write();
+}
+
+function promoContext() {
+  ensurePromoStore();
+  const settings = getSiteSettings() || {};
+  const today = loyalty.manilaToday();
+  const live = promos.liveOffers({
+    stored: settings.promos,
+    loyaltySettings: settings.loyalty,
+    games: getGames() || [],
+    today
+  });
+  return { today, live, banner: promos.bannerOffer(live), settings };
+}
+
+function recordPromoEvent(row) {
+  ensurePromoStore();
+  const result = promos.record(db.get('promo_events').value() || [], Object.assign({ date: loyalty.manilaToday() }, row || {}));
+  if (!result.recorded) return false;
+  const capped = result.events.length > 50000 ? result.events.slice(-50000) : result.events;
+  db.set('promo_events', capped).write();
+  return true;
+}
+
+function loyaltyNoteFor(name) {
+  if (!name) return '';
+  try {
+    const copy = loyalty.customerCopy(loyaltySnapshot().profileFor({ name }));
+    if (!copy || !copy.show) return '';
+    return [copy.punchLine, copy.rewardLine, copy.rebookLine].filter(Boolean).join(' ');
+  } catch (e) {
+    return '';
+  }
+}
+
 function loyaltySnapshot() {
   ensureLoyaltyStore();
   const built = loyalty.build(getCustomers(), {
@@ -1363,6 +1415,26 @@ app.get('/how-it-works', (req, res) => {
 
 app.get('/faq', (req, res) => {
   res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/promos', (req, res) => {
+  const ctx = promoContext();
+  if (req.sessionId) recordPromoEvent({ kind: 'page', promo_id: '', session_id: req.sessionId });
+  res.render('promos', {
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings(),
+    offers: ctx.live
+  });
+});
+
+app.get('/api/promo-line', (req, res) => {
+  if (rateLimited('promo_line', clientIp(req), 40, 10 * 60 * 1000)) return res.status(429).json({ lines: [] });
+  const name = String(req.query.name || '').trim().slice(0, 80);
+  const ctx = promoContext();
+  let copy = null;
+  if (name.length >= 2) copy = loyalty.customerCopy(loyaltySnapshot().profileFor({ name }));
+  res.json({ lines: promos.checkoutLines(ctx.live, req.query.game, copy && copy.show ? copy : null) });
 });
 
 app.get('/terms', (req, res) => {
@@ -3178,7 +3250,19 @@ function notifyOwnerRequest(request) {
 // deliberately does NOT use it, because alerting the owner about an order they
 // just typed themselves is pure noise.
 async function createOrderNotified(fields) {
+  try {
+    const ctx = promoContext();
+    const profile = fields && fields.fb_name ? loyaltySnapshot().profileFor({ name: fields.fb_name }) : null;
+    const ids = promos.usedIds(ctx.live, fields && fields.game_id, profile);
+    if (ids.length) fields.promo_ids = ids;
+  } catch (e) {
+    console.error('[promo order]', e.message);
+  }
   const order = await orders.create(fields);
+  if (order && Array.isArray(order.promo_ids) && order.promo_ids.length) {
+    try { recordPromoEvent({ kind: 'order', promo_id: order.promo_ids[0], session_id: order.session_id || '' }); }
+    catch (e) { console.error('[promo order]', e.message); }
+  }
   notifyOwnerOrder(order, 'created');
   // The customer's page reads hold_expires_at on the next request. A failure
   // here must not lose the order they just placed.
@@ -4498,6 +4582,21 @@ function trackingSession(req) {
 }
 
 // A tap on any Message Us / m.me link.
+app.post('/api/track/promo', (req, res) => {
+  try {
+    if (rateLimited('track_promo', clientIp(req), 60, 10 * 60 * 1000)) return res.status(204).end();
+    const sid = trackingSession(req);
+    const id = String((req.body && req.body.id) || '').slice(0, 40);
+    const ctx = promoContext();
+    if (sid && ctx.banner && ctx.banner.id === id) {
+      recordPromoEvent({ kind: 'banner', promo_id: id, session_id: sid });
+    }
+  } catch (e) {
+    console.error('[track] promo failed', e.message);
+  }
+  res.status(204).end();
+});
+
 app.post('/api/track/message', (req, res) => {
   try {
     if (rateLimited('track_message', clientIp(req), 300, 10 * 60 * 1000)) return res.status(204).end();
@@ -5467,6 +5566,17 @@ app.get('/admin', requireAuth, async (req, res) => {
   res.locals.psnLastRun = db.get('psn_last_run').value() || null;
   // Settings → Game discounts table: every game with its own Weekly/Monthly %
   // ('' = follows the site promo) and the monthly base price the preview uses.
+  const promoNow = promoContext();
+  const promoEvents = db.get('promo_events').value() || [];
+  res.locals.promoWeek = promos.stats(promoEvents, loyalty.addDays(promoNow.today, -6));
+  res.locals.promoAdmin = {
+    stored: promos.normalizeList((promoNow.settings && promoNow.settings.promos) || []),
+    live: promoNow.live,
+    banner: promoNow.banner,
+    week: res.locals.promoWeek,
+    all: promos.stats(promoEvents, ''),
+    games: (getGames() || []).map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title))
+  };
   res.locals.gameDiscountRows = getGames().map(resolveGamePrices).map(g => ({
     id: g.id,
     title: g.title,
@@ -7360,8 +7470,9 @@ function supportThreadStore() {
   return supportThreads.createStore(supportThreads.bind(db));
 }
 
-function supportFactsNow() {
+function supportFactsNow(loyaltyNote) {
   const settings = getSiteSettings();
+  const ctx = promoContext();
   return supportFacts.faqBundle({
     categories: getPriceCategories(),
     promo: settings.promo || {},
@@ -7369,7 +7480,9 @@ function supportFactsNow() {
     siteUrl: process.env.SITE_URL || 'https://www.playstation-hub.com',
     pageUsername: settings.fb_page_username || 'PlaystationHub00',
     psplusPrices: getPsplusPrices(),
-    psplusSlots: getPsplusSlots()
+    psplusSlots: getPsplusSlots(),
+    offers: promos.publicFacts(ctx.live),
+    loyaltyNote: loyaltyNote || ''
   });
 }
 
@@ -7551,6 +7664,9 @@ app.post('/api/support/chat', asyncRoute(async (req, res) => {
     return res.status(400).json({ ok: false, error: abuse, reply });
   }
   const sid = sessionId(req, res);
+  let loyaltyNote = '';
+  try { loyaltyNote = loyaltyNoteFor(await orders.latestName({ sessionId: sid })); }
+  catch (e) { console.error('[promo loyalty]', e.message); }
   const result = await supportAssistant.runTurn({
     store: supportThreadStore(),
     channel: 'web',
@@ -7558,7 +7674,7 @@ app.post('/api/support/chat', asyncRoute(async (req, res) => {
     message,
     complete: supportAssistant.createComplete(process.env),
     invokeTool: supportInvokeTool,
-    facts: supportFactsNow(),
+    facts: supportFactsNow(loyaltyNote),
     lookup: supportLookup
   });
   if (!result.ok) return res.status(400).json({ ok: false, error: result.error || 'bad_message' });
@@ -7723,6 +7839,9 @@ async function handleSupportMessage(event) {
     return;
   }
   const photoOnly = event.attachments && !String(event.text || '').trim();
+  let loyaltyNote = '';
+  try { loyaltyNote = loyaltyNoteFor(await orders.latestName({ psid: event.psid })); }
+  catch (e) { console.error('[promo loyalty]', e.message); }
   const result = await supportAssistant.runTurn({
     store: supportThreadStore(),
     channel: 'messenger',
@@ -7731,7 +7850,7 @@ async function handleSupportMessage(event) {
     forceReason: photoOnly ? 'attachment' : null,
     complete: supportAssistant.createComplete(process.env),
     invokeTool: supportInvokeTool,
-    facts: supportFactsNow(),
+    facts: supportFactsNow(loyaltyNote),
     lookup: supportLookup
   });
   if (!result.ok) {
@@ -7971,6 +8090,23 @@ app.post('/admin/customers/:id/review-unask', requireAuth, (req, res) => {
   if (!customer) return res.status(404).json({ ok: false });
   db.get('customers').find({ id }).assign({ review_asked_at: null }).write();
   res.json({ ok: true });
+});
+
+app.post('/admin/promos/save', requireAuth, (req, res) => {
+  ensurePromoStore();
+  const settings = getSiteSettings();
+  const result = promos.saveOffer(settings.promos, req.body, { nextId: settings.promo_next_id || 1 });
+  if (!result.ok) return res.redirect('/admin?tab=loyalty&msg=offers_invalid');
+  db.set('site_settings.promos', result.offers).write();
+  db.set('site_settings.promo_next_id', result.nextId).write();
+  res.redirect('/admin?tab=loyalty&msg=offers_saved');
+});
+
+app.post('/admin/promos/delete', requireAuth, (req, res) => {
+  ensurePromoStore();
+  const settings = getSiteSettings();
+  db.set('site_settings.promos', promos.deleteOffer(settings.promos, req.body && req.body.id)).write();
+  res.redirect('/admin?tab=loyalty&msg=offers_deleted');
 });
 
 app.get('/admin/loyalty/for-name', requireAuth, (req, res) => {

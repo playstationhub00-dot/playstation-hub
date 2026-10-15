@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Promos — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<% const promoOffers = (typeof offers !== 'undefined' && offers) ? offers : ((typeof livePromos !== 'undefined' && livePromos) ? livePromos : []); %>
+
+<section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">Offers</div>
+    <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">Promos</h1>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:560px;margin:0 auto;">What’s on right now. Dates are Philippines time.</p>
+  </div>
+</section>
+
+<div class="promo-page">
+  <% if (!promoOffers.length) { %>
+  <p class="promo-empty">There are no promos running right now.</p>
+  <% } else { %>
+  <% promoOffers.forEach(function (offer) { %>
+  <article class="promo-card">
+    <h2><%= offer.title %></h2>
+    <% if (offer.text) { %><p class="promo-card-text"><%= offer.text %></p><% } %>
+    <% if (offer.game_title) { %>
+    <p class="promo-card-game"><a href="/game/<%= offer.game_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>"><%= offer.game_title %></a></p>
+    <% } %>
+    <% const promoWhen = (typeof promoFormat === 'function') ? promoFormat : function (d) { return d; }; %>
+    <% if (offer.starts_on || offer.ends_on) { %>
+    <p class="promo-card-when">
+      <% if (offer.starts_on && offer.ends_on) { %><%= promoWhen(offer.starts_on) %> to <%= promoWhen(offer.ends_on) %><% } %>
+      <% if (offer.starts_on && !offer.ends_on) { %>From <%= promoWhen(offer.starts_on) %><% } %>
+      <% if (!offer.starts_on && offer.ends_on) { %>Until <%= promoWhen(offer.ends_on) %><% } %>
+    </p>
+    <% } %>
+    <% if (offer.terms) { %><p class="promo-card-terms"><%= offer.terms %></p><% } %>
+  </article>
+  <% }) %>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
