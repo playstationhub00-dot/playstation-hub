@@ -1,6 +1,6 @@
 # Buy — a game shop storefront and a full catalog — Design
 
-Date: 2026-10-11 · Status: approved by owner
+Date: 2026-10-11 · Status: approved by owner; amended after the plan's dry run (2026-10-15)
 
 Builds on the Rent catalog (`2026-10-11-browse-catalog-tabs-design.md`) and the
 Buy page's earlier specs (`2026-08-16-buy-catalog-design.md`,
@@ -38,8 +38,13 @@ The current `GET /buy` rules carry over as they are:
   with the game's legacy availability (exactly as `server.js` GET /buy does today).
 - **Price shown:** the lowest of its sellable types' final prices. When the site buy
   promo is on (`promo.buy_promo_enabled` and `buy_promo_pct` > 0), the final price is
-  `round(base × (1 − pct/100))` and the base is shown struck through. *(Change: today
-  the card shows the Non-Trophy price first even when Trophy is cheaper.)*
+  `round(base × (1 − pct/100))` and the base is shown struck through — worked out by
+  `lib/buy-pricing.js` `priceFor`, the same helper the checkout charges with.
+  *(Change: today the card shows the Non-Trophy price first even when Trophy is
+  cheaper.)*
+- A game that sits in an account whose slot of that type is sold (e.g. inside a sold-out
+  box set) cannot be bought on its own either — `buyTypeSellable` reads the account
+  summary first (unchanged rule; noted because it decides what the shelves show).
 - **"Set up on order"** (amber tag): a game never rented and not stocked
   (`!g.renters && !g.stocked`). Every other for-sale game is **"In stock"** (green tag).
 - A **box set** is an account `for_sale` with a Trophy or Non-Trophy slot enabled that
@@ -70,14 +75,16 @@ Top to bottom (`views/buy.ejs`, rewritten):
      FOREVER", name, platform · genre (box set: "N games"), the stock tag (games),
      a tilted yellow price sticker (game: its price; box set: its cheapest open tier),
      and a "Buy now" button (game → `/game/<slug>?mode=buy`, box set → `/bundle/<slug>`);
-   - slides scroll natively (swipe on phones), with dots, arrows and auto-advance like
-     the homepage banner;
+   - slides scroll natively (swipe on phones), with dots, arrows and auto-advance: the
+     homepage banner's own script (`public/js/home.js`) runs it, so the spotlight uses
+     that banner's ids (`hmBanner`, `hmSlides`, `hmPrev`, `hmNext`, `.hm-dot`);
    - which slides: the owner's picks that are still for sale (a game with a sellable
      type; a box set with an open tier), in their order; when none are left, the top 3
      best sellers. No slides → no spotlight.
 4. **Shelves**, in this order, each one wooden row of up to **10** items with a title,
    a short grey note and "See all ›" (to its catalog tab); a shelf with nothing on it is
-   left out; phones swipe the row sideways:
+   left out; phones swipe the row sideways and computers get ‹ › buttons that scroll it
+   (greyed at each end, hidden when the row fits):
 
    | Shelf | Note | Items | See all → |
    |---|---|---|---|
@@ -91,8 +98,9 @@ Top to bottom (`views/buy.ejs`, rewritten):
 5. **Kept at the bottom:** the "📦 Build your own" and "🛒 Don't see it? Request a game"
    cards and the reviews strip (`partials/review-block`), unchanged.
 
-Removed: the 8 price-point sections, `groupSingleGamesByPrice`, and the "Available
-today only" tick box (the Ready today shelf/tab replaces it).
+Removed: the 8 price-point sections, `groupSingleGamesByPrice`, the "Available today
+only" tick box (the Ready today shelf/tab replaces it), and the old page's `.buy-*`
+styles in `style.css` that nothing else uses (the bundle page's `.buy-*` styles stay).
 
 ### Cards
 
@@ -111,8 +119,11 @@ today only" tick box (the Ready today shelf/tab replaces it).
 
 1. **Pinned top** (like Rent: on computers the whole block stays under the menu; on
    phones the search box slides under the menu and the tabs and results bar stay):
-   "‹ Back to the shop" (→ `/buy`), the search box, the tab row, and the results bar
-   "<Tab> · N games", Sort, Filters, and the applied filter chips.
+   "‹ Back to the shop" (→ `/buy`) over the title "All games to own", the search box,
+   the tab row, and the results bar "<Tab> · N games" ("Box sets · N box sets"), Sort,
+   Filters, and the applied filter chips. The pinned block and the filter panel reuse
+   the Rent catalog's styles (`public/css/browse-filters.css`) and its tick-box row
+   (`partials/browse-filter-option`); only the colours change (yellow active tab).
 2. **Tabs** (`?tab=`), each with its count for the current search and filters; the
    active tab is yellow; a tab with nothing in it at all is hidden (All games always
    shows):
@@ -140,8 +151,11 @@ today only" tick box (the Ready today shelf/tab replaces it).
    Account (Non-Trophy / Trophy = that type can still be bought). A filter panel with
    counts and a "Show N games" button, as on Rent; applied filters show as removable
    chips.
-6. **Grid:** game cards (or box-set cards on Box sets), 6 a row on computers, 2 on
-   phones, each row on the wooden shelf.
+6. **Grid:** game cards (or box-set cards on Box sets): 6 a row from 1000px wide, 4
+   from 601px, 2 on phones (box sets 3 / 2 / 1), each row on the wooden shelf. Every
+   card is on the page once; the active tab's matches come first and the rest wait
+   hidden, so switching tabs needs no reload. The #1–#3 stickers are the games' places
+   in the best-selling order.
 7. **Behaviour:** tabs, search, Sort and Filters update the grid at once (no reload)
    and keep the address in step (`history.replaceState`). Unknown `tab` → All games;
    unknown `sort` → the tab's default. Nothing matches → "No games match." and "Clear
@@ -158,13 +172,15 @@ today only" tick box (the Ready today shelf/tab replaces it).
 
 ## How it is built
 
-- **`lib/buy-view.js`** (new, pure): `bestSellerOrder(games, customers, rentalOrder)`
-  (sales per game, then rental order, then title), `bestSellers(order, saleCounts)`
-  (sold games, topped up to 10) and `spotlight(picks, items, fallback)` (picks still for
-  sale, else the top 3 best sellers).
+- **`lib/buy-view.js`** (new, pure): `saleCounts(customers)`, `bestSellingOrder(games,
+  counts, rentalOrder)` (sales, then rental order, then title), `readSpotlightForm(body,
+  choices)` (the admin form → picks) and `spotlight(picks, shop, bestIds)` (picks still
+  for sale, else the top 3 best sellers).
 - **`public/js/buy-catalog-core.js`** (new, pure, shared by server and browser, like
   Rent's `browse-filter-core.js`): tabs, sorts, search, filters, the address
-  (`parseState` / `toQuery` / `href`) and one `view(data, state, ctx)`.
+  (`parseState` / `toQuery` / `href`), the best sellers' top-up to 10
+  (`bestSellerIds`), one `view(data, state)`, and `shelves(data)` — the storefront's
+  shelves are each tab's first 10.
 - **`server.js`:** one builder for Buy's data (the for-sale games and box sets with their
   facts: id, slug, title, search text, cover, platform, PS4/PS5, genres, price, base
   price, Non-Trophy/Trophy sellable, ready, sales, best-seller rank, release date; box
@@ -174,10 +190,11 @@ today only" tick box (the Ready today shelf/tab replaces it).
 - **Views:** `views/buy.ejs` (rewritten), `views/buy-catalog.ejs` (new),
   `views/partials/shop-card.ejs` and `views/partials/shop-box.ejs` (new),
   `views/partials/admin/content.ejs` (spotlight card).
-- **Browser:** `public/js/buy-catalog.js` (catalog clicks, filter panel, chips) and a
-  small storefront script (spotlight dots/arrows/auto-advance, shelf arrows).
+- **Browser:** `public/js/buy-catalog.js` (catalog clicks, filter panel, chips) and
+  `public/js/shop.js` (shelf arrows); the spotlight runs on `public/js/home.js` (its
+  comment now says so).
 - **Styles:** `public/css/shop.css` (new): wooden shelves, stickers, stock tags,
-  spotlight, pinned catalog top, at most 6 a row on computers, 2 on phones.
+  spotlight, the catalog's grid; phones get a 1rem side margin on the storefront.
 
 ## Error handling
 
