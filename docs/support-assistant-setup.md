@@ -18,7 +18,8 @@ In the Railway service for playstation-hub:
 | `MESSENGER_PAGE_TOKEN` | Already set | Page access token the webhook uses to send replies. `FB_PAGE_ACCESS_TOKEN` overrides it when both are set. |
 | `MESSENGER_VERIFY_TOKEN` | Already set | Verify token the webhook handshake checks. Put this same value in Meta’s webhook form. `FB_VERIFY_TOKEN` overrides it when both are set. |
 | `FB_APP_SECRET` | For webhook signatures | App Secret from the Meta app dashboard. `MESSENGER_APP_SECRET` is the older name and still works. Once a secret is set, posts without a valid `X-Hub-Signature-256` are rejected. |
-| `FB_PAGE_INBOX_APP_ID` | No | Defaults to `263902037430900` (Page Inbox). That is the app id Meta uses so a handoff shows up in Business Suite for you to reply. |
+| `FB_PAGE_INBOX_APP_ID` | No | Defaults to `263902037430900` (Page Inbox). Used only when `MESSENGER_HANDOVER=on`. |
+| `MESSENGER_HANDOVER` | No | Default **off**. Leave it unset. Set to `on` only after Conversation Routing is enabled for the Page in Meta Business Suite. Off means a handoff is the pause flag only: the bot stays quiet, you reply from Page Inbox yourself, and **Resume bot** clears the pause. It does not pass the thread to Inbox. |
 | `SITE_URL` | Already used | `https://www.playstation-hub.com` so links in replies point at the real site. |
 
 `ANTHROPIC_API_KEY` wins over `OPENAI_API_KEY` when both exist. With neither key, prices, how to rent, payments, and game slots still come from the database; only the free-form wording is the script.
@@ -34,13 +35,12 @@ After saving, Railway redeploys. Check the deploy log for `Messenger webhook ver
    - Callback URL: `https://www.playstation-hub.com/webhook`
    - Verify token: the value already in `MESSENGER_VERIFY_TOKEN` (or `FB_VERIFY_TOKEN` if you set that name). The GET handshake accepts that value.
    - Meta sends a GET to that URL. The site answers only when the token matches.
-5. Subscribe the Page to these fields: **messages**, **messaging_postbacks**, **messaging_referrals**, **messaging_handovers**, **standby**. Standby is required. After a handoff, Meta delivers the customer’s next messages there instead of in messages, until this app owns the thread again.
-6. Handover, so a flagged chat lands in your inbox instead of the bot keeping it:
-   - Page settings → **Advanced messaging** → **Handover protocol**
-   - **Primary receiver:** this app
-   - **Secondary receiver:** Page Inbox
-   - When the assistant flags a chat it calls `pass_thread_control` to the Page Inbox. **Resume bot** in admin calls `take_thread_control` and waits for Meta to accept it before the bot speaks again. If Meta refuses, the chat stays in the list and the card shows the Graph error. A customer message that still arrives on standby while the bot is not paused is taken back and answered.
+5. Subscribe the Page to these fields: **messages**, **messaging_postbacks**, **messaging_referrals**, **messaging_handovers**, **standby**. Standby matters if a thread was already passed to Page Inbox: Meta then delivers the customer’s messages there instead of in messages.
+6. Switch the app to **Live**. While it stays in Development, Meta only delivers webhooks for people who have a role on the app (administrator, developer, or tester). A customer who does not have a role never reaches this bot, so they get no reply. App Review has to grant **pages_messaging** Advanced Access before Live mode will accept those customers.
 7. In the Page’s Messenger settings, the app must be connected to the PlayStation Hub Page (the same Page as `m.me/PlaystationHub00`).
+8. Leave handover off. Conversation Routing (Meta Business Suite → Inbox settings) is required only if you set `MESSENGER_HANDOVER=on`. Without it, `take_thread_control` returns error 27 (`Conversation Routing is not enabled`) and the bot cannot take a thread back. With the flag off, the bot does not call pass or depend on take. You reply to a paused chat from Page Inbox the way you already do. **Resume bot** clears the card and the bot answers again. A thread a previous pass left on standby is still answered: the server tries `release_thread_control`, and if take is refused as unsupported it resumes anyway and attempts the send. Send API errors are logged as `[messenger send] failed`.
+
+To turn handover on later: enable Conversation Routing for the Page, set the app as a receiver, set `MESSENGER_HANDOVER=on`, then a flagged chat is passed to Page Inbox and Resume calls `take_thread_control`. A refusal other than “not supported” keeps the card and shows Meta’s error. Error 27 still clears the card.
 
 The existing order links (`m.me/...?ref=PH-1234`) still record which thread belongs to which order. That part did not move.
 
@@ -52,8 +52,8 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 2. Open **Meta Business Agent** (under All tools, or Inbox). Switch its replies **off**. If you see **Disconnect** or **Pause**, use that.
 3. Open **Inbox → Automations**. Turn **off** Instant reply, Away message, and any FAQ bot that would send a second greeting. Those are Meta’s built-in replies, separate from the agent.
 4. From a personal Facebook account (not the Page), send the Page “how much is a new game for a week?”. You should get one reply, from this app, with the prices currently saved under admin price categories. You should not also get a “Facebook created this reply” message.
-5. Send “ADMIN” (or “I want to talk to a human”). The bot should say it paused the chat for an admin, then go quiet. In `/admin` → **Messaging**, the chat appears under **Support handoffs**, and the bell shows **Support chat needs you**. A Telegram alert fires too, unless you switched **Support handoff** off under Settings → Phone alerts. On Messenger the thread is passed to the Page Inbox. The customer is not sent to an m.me link.
-6. Reply to that person from the Page Inbox if you need to. When you are done, press **Resume bot** on that card. The bot takes the thread back and sends a short hello. If Messenger still has the chat, the card stays up with the reason, and the bot does not pretend it resumed.
+5. Send “ADMIN” (or “I want to talk to a human”). The bot should say it paused the chat for an admin, then go quiet. In `/admin` → **Messaging**, the chat appears under **Support handoffs**, and the bell shows **Support chat needs you**. A Telegram alert fires too, unless you switched **Support handoff** off under Settings → Phone alerts. With handover off, the thread is not passed to Page Inbox. The customer is not sent to an m.me link. You can still reply from Page Inbox.
+6. Reply to that person from the Page Inbox if you need to. When you are done, press **Resume bot**. The card clears and the bot sends a short hello. If Meta refuses to take the thread back (error 27, Conversation Routing off), the card still clears and the send is attempted. A later customer message that arrives on standby is answered the same way.
 
 ## What the assistant will and will not say
 
@@ -72,5 +72,7 @@ Meta’s own agent will answer the Page at the same time as this bot if you leav
 - The bot never sends: `MESSENGER_PAGE_TOKEN` (or `FB_PAGE_ACCESS_TOKEN`, if set) is empty or expired. Generate a new Page token.
 - Replies stay on the short scripted lines: `ANTHROPIC_API_KEY` is missing or Claude returned an error. Prices and slots still come from the shop data.
 - Two replies arrive: Meta Business Agent or Inbox → Automations is still on.
-- Handoff does not appear in the inbox: the app is not the Primary receiver, or `messaging_handovers` is not subscribed. The admin card still lists the chat, because the pause flag does not depend on Meta accepting the handover.
-- Resume looks successful but the customer gets nothing: the Page Inbox still owns the thread. Look for `[messenger take_thread_control] failed` in the server log — the line includes Meta’s error code and message, not the page token. The admin card stays in the list with that same text. Also subscribe **standby**. A message that arrives there while the bot is not paused is taken back and answered; if the take fails, the chat returns to the list.
+- A customer who is not a role on the app gets nothing: the Meta app is still in Development, or `pages_messaging` Advanced Access is missing. Switch the app to Live after that permission is approved.
+- The card says `(#27) Take thread control is not supported when Conversation Routing is not enabled`: leave `MESSENGER_HANDOVER` unset and press Resume bot again. The card clears. The log line `[messenger take_thread_control] unsupported, resuming anyway` includes Meta’s message and not the page token. If the hello does not arrive, look for `[messenger send] failed` on that same PSID.
+- Handover is on and the chat never shows in Inbox: Conversation Routing is off, the app is not a receiver, or `messaging_handovers` is not subscribed. The admin card still lists the chat, because the pause flag does not depend on Meta accepting the pass.
+- Messages keep arriving on standby: the server still runs the bot and calls the Send API. It does not drop them. After the first unsupported take, later messages for that person skip another take and still attempt the send.

@@ -7468,6 +7468,36 @@ function sendText(recipientId, text) {
   return graphPost('/v19.0/me/messages', body);
 }
 
+// Support replies. Graph errors are already logged by graphPost; this line
+// names the PSID so a failed send on a standby thread is easy to find.
+async function deliverMessengerText(psid, text) {
+  const sent = await sendText(psid, text);
+  if (!sent || sent.ok !== true) {
+    console.error('[messenger send] failed', psid, supportMessenger.graphErrorSummary(sent));
+  }
+  return sent;
+}
+
+function logThreadControl(psid, outcome) {
+  if (!outcome) return;
+  const recovery = outcome.recovery || outcome;
+  if (recovery.takeOk || outcome.takeOk) {
+    console.log('[messenger take_thread_control] ok', psid);
+  } else if (recovery.skipped) {
+    console.log('[messenger standby] thread control unsupported, sending anyway', psid);
+  } else if (outcome.unsupported || recovery.unsupported) {
+    console.error('[messenger take_thread_control] unsupported, resuming anyway', psid, outcome.error || recovery.error);
+  } else if (recovery.error || outcome.error) {
+    console.error('[messenger take_thread_control] failed', psid, recovery.error || outcome.error);
+    if (outcome.ok) console.error('[messenger take_thread_control] resuming anyway', psid);
+  }
+  const released = outcome.released || recovery.released;
+  if (!released) return;
+  const releaseOk = outcome.releaseOk != null ? outcome.releaseOk : recovery.releaseOk;
+  if (releaseOk) console.log('[messenger release_thread_control] ok', psid);
+  else console.error('[messenger release_thread_control] failed', psid, outcome.releaseError || recovery.releaseError);
+}
+
 // A payment reminder, not a reply to something the customer just typed.
 // messaging_type RESPONSE is the standard window. No message tag: a tag would
 // keep sending after the customer has gone quiet, which this shop does not do.
@@ -7546,24 +7576,23 @@ app.post('/admin/support/:id/resume', requireAuth, asyncRoute(async (req, res) =
   if (!/^(web|mes)_[a-z0-9]+$/.test(id)) return res.redirect('/admin?tab=messaging&msg=support_missing');
   const row = supportThreadStore().lookup(id);
   if (!row) return res.redirect('/admin?tab=messaging&msg=support_missing');
+  const handover = supportMessenger.handoverEnabled(process.env);
   const taken = await supportMessenger.resumeMessenger({
     channel: row.channel,
+    handover,
     externalId: row.external_id,
-    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid))
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid)),
+    release: (psid) => graphPost('/v19.0/me/release_thread_control', supportMessenger.releaseThreadControl(psid))
   });
+  if (row.channel === 'messenger') logThreadControl(row.external_id, taken);
   if (!taken.ok) {
-    console.error('[messenger take_thread_control] failed', row.external_id, taken.error);
     supportThreadStore().setControlError(id, taken.error);
     return res.redirect('/admin?tab=messaging&msg=support_control_failed');
   }
-  if (row.channel === 'messenger') console.log('[messenger take_thread_control] ok', row.external_id);
   const resumed = supportThreadStore().resume(id);
   if (!resumed) return res.redirect('/admin?tab=messaging&msg=support_missing');
-  if (resumed.channel === 'messenger') {
-    const sent = await sendText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
-    if (!sent || !sent.ok) {
-      console.error('[messenger resume greeting]', resumed.external_id, supportMessenger.graphErrorSummary(sent));
-    }
+  if (taken.send) {
+    await deliverMessengerText(resumed.external_id, 'Hi ulit! Bot na ulit dito — anong game o tanong ang tulungan ko?');
   }
   res.redirect('/admin?tab=messaging&msg=support_resumed');
 }));
@@ -7613,7 +7642,8 @@ app.post('/webhook', (req, res) => {
       }
     }
     const paused = supportThreadStore().isPaused('messenger', event.psid);
-    const action = supportMessenger.decideInbound(event, paused);
+    const handover = supportMessenger.handoverEnabled(process.env);
+    const action = supportMessenger.decideInbound(event, paused, handover);
     if (action === 'note_control') {
       console.log('[messenger ' + event.control + ']', event.standby ? 'standby' : 'messaging', event.psid, event.newOwnerAppId || '');
       return;
@@ -7624,8 +7654,8 @@ app.post('/webhook', (req, res) => {
       console.log('[messenger standby] paused, not replying', event.psid);
       return;
     }
-    if (action === 'take_then_answer') {
-      reclaimMessengerThread(event).catch(e => console.error('[messenger standby]', e && e.message ? e.message : e));
+    if (action === 'take_then_answer' || action === 'answer_standby') {
+      reclaimMessengerThread(event, handover).catch(e => console.error('[messenger standby]', e && e.message ? e.message : e));
       return;
     }
     if (action !== 'answer') return;
@@ -7648,15 +7678,21 @@ function rememberMessengerContact(psid) {
   }
 }
 
-// The pause flag is already clear, but Page Inbox still owns the thread, so
-// the customer's text arrived on standby. Take control, then answer. A failed
-// take puts the chat back on the admin list instead of dropping the message.
-async function reclaimMessengerThread(event) {
-  console.log('[messenger standby] Page Inbox owns this thread and the bot is not paused', event.psid);
-  const taken = await graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(event.psid));
-  if (!taken.ok) {
-    const summary = supportMessenger.graphErrorSummary(taken);
-    console.error('[messenger take_thread_control] failed', event.psid, summary);
+// Standby means Page Inbox still owns the thread after an earlier
+// pass_thread_control. Handover off, or take_thread_control refused as
+// unsupported (#27), still answers and clears a stuck pause. A real refusal
+// while handover is on puts the chat back on the admin list.
+async function reclaimMessengerThread(event, handover) {
+  console.log('[messenger standby]', handover ? 'handover on' : 'handover off', event.psid);
+  const recovery = await supportMessenger.recoverStuckControl({
+    psid: event.psid,
+    take: (psid) => graphPost('/v19.0/me/take_thread_control', supportMessenger.takeThreadControl(psid)),
+    release: (psid) => graphPost('/v19.0/me/release_thread_control', supportMessenger.releaseThreadControl(psid)),
+    forceRelease: !handover
+  });
+  logThreadControl(event.psid, recovery);
+  if (handover && !recovery.takeOk && !recovery.unsupported) {
+    const summary = recovery.error || 'Messenger did not return this chat.';
     const flagged = supportThreadStore().noteControlFailure('messenger', event.psid, summary);
     const text = String(event.text || '').trim() || (event.attachments ? '[attachment]' : '');
     if (text) supportThreadStore().append('messenger', event.psid, 'user', text);
@@ -7670,7 +7706,9 @@ async function reclaimMessengerThread(event) {
     }
     return;
   }
-  console.log('[messenger take_thread_control] ok', event.psid);
+  if (supportThreadStore().isPaused('messenger', event.psid)) {
+    supportThreadStore().resumeExternal('messenger', event.psid);
+  }
   rememberMessengerContact(event.psid);
   await handleSupportMessage(event);
 }
@@ -7681,7 +7719,7 @@ async function handleSupportMessage(event) {
   // A paused thread stays silent — the slow-down line would be an auto-reply
   // after Michael took the chat.
   if (supportChatLimiter('m:' + event.psid)) {
-    if (!paused) return sendText(event.psid, 'Sandali lang — too many messages. Try again in a few minutes.');
+    if (!paused) return deliverMessengerText(event.psid, 'Sandali lang — too many messages. Try again in a few minutes.');
     return;
   }
   const photoOnly = event.attachments && !String(event.text || '').trim();
@@ -7698,23 +7736,27 @@ async function handleSupportMessage(event) {
   });
   if (!result.ok) {
     if (result.error === 'too_long' || result.error === 'spam' || result.error === 'too_many_links') {
-      return sendText(event.psid, 'That message is too long. Send a sentence or two.\n\nWant to chat with an admin? Reply ADMIN.');
+      return deliverMessengerText(event.psid, 'That message is too long. Send a sentence or two.\n\nWant to chat with an admin? Reply ADMIN.');
     }
     return;
   }
   if (result.paused || !result.reply) return;
-  await sendText(event.psid, supportFacts.toPlainText(result.reply));
+  await deliverMessengerText(event.psid, supportFacts.toPlainText(result.reply));
   if (result.newlyHandedOff) {
-    const inbox = supportMessenger.config(process.env).inboxAppId;
-    graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
-      .then(result => {
-        if (!result || !result.ok) {
-          console.error('[messenger pass_thread_control] failed', event.psid, supportMessenger.graphErrorSummary(result));
-          return;
-        }
-        console.log('[messenger pass_thread_control] ok', event.psid);
-      })
-      .catch(e => console.error('[messenger pass_thread_control]', e && e.message ? e.message : e));
+    if (supportMessenger.handoverEnabled(process.env)) {
+      const inbox = supportMessenger.config(process.env).inboxAppId;
+      graphPost('/v19.0/me/pass_thread_control', supportMessenger.passThreadControl(event.psid, inbox))
+        .then(passed => {
+          if (!passed || !passed.ok) {
+            console.error('[messenger pass_thread_control] failed', event.psid, supportMessenger.graphErrorSummary(passed));
+            return;
+          }
+          console.log('[messenger pass_thread_control] ok', event.psid);
+        })
+        .catch(e => console.error('[messenger pass_thread_control]', e && e.message ? e.message : e));
+    } else {
+      console.log('[messenger] handover off, paused without pass_thread_control', event.psid);
+    }
     notifySupportHandoff(result);
   }
 }

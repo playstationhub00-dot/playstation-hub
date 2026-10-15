@@ -1,6 +1,6 @@
 <%# Chats the bot stopped answering. Website and Messenger share the list.
-    Messenger resume waits for take_thread_control. A refusal keeps the card
-    and shows control_error. The PSID stays on the server. %>
+    Resume clears the pause. Thread control runs only when handover is on,
+    and an unsupported take still clears the card. The PSID stays on the server. %>
 <% const handoffs = (typeof supportHandoffs !== 'undefined' && supportHandoffs) || []; %>
 <%
   const handoffWhy = {
@@ -17,7 +17,7 @@
       <div class="sa-icon" style="background:rgba(240,165,0,0.15);">💬</div>
       <div>
         <div class="sa-title">Support handoffs<% if (handoffs.length) { %> (<%= handoffs.length %>)<% } %></div>
-        <div class="sa-desc">The bot is paused on these chats until you resume it. Payment proofs and “talk to a human” land here.</div>
+        <div class="sa-desc">The bot is paused on these chats until you resume it. Resume clears the pause even if Messenger will not hand the thread back. Payment proofs and “talk to a human” land here.</div>
       </div>
     </div>
   </div>
