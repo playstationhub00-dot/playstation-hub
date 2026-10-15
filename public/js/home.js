@@ -1,4 +1,5 @@
-// The homepage "Now playing" banner (views/partials/home/top.ejs). The slides
+// The homepage "Now playing" banner (views/partials/home/top.ejs), and the Buy
+// storefront's spotlight (views/buy.ejs), which uses the same ids. The slides
 // are a native scroll-snap row, so phones swipe them without help; this adds
 // the dots, the arrows and a gentle auto-advance that stops for good once the
 // visitor touches the banner, and never runs for reduced-motion users.

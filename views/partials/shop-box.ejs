@@ -1,0 +1,16 @@
+<%# One box set (an account sold as a bundle) in the Buy shop — on the Box
+    sets shelf, in the catalog's Box sets tab: up to 4 covers (+N), the name,
+    how many games and the price per game, and a yellow sticker per account
+    type (greyed and struck, with why, once taken). Links to its bundle page.
+    Locals: b (a box set from server.js buyShopData). %>
+<a href="/bundle/<%= b.slug %>" class="shop-box">
+  <span class="shop-box-covers">
+    <% b.covers.forEach(c => { %><% if (c.cover) { %><img src="<%= c.cover %>" alt="<%= c.title %>" loading="lazy" decoding="async"><% } else { %><span class="shop-box-blank"></span><% } %><% }) %>
+    <% if (b.more) { %><span class="shop-box-more">+<%= b.more %></span><% } %>
+  </span>
+  <span class="shop-box-name"><%= b.name %></span>
+  <span class="shop-meta"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %><% if (b.perGame) { %> · from ₱<%= b.perGame.toLocaleString('en-US') %> per game<% } %></span>
+  <span class="shop-box-tiers">
+    <% b.tiers.forEach(t => { %><span class="shop-tier<%= t.open ? '' : ' shop-tier-off' %>"><%= t.label %><% if (t.price > 0) { %> ₱<%= Number(t.price).toLocaleString('en-US') %><% } %><% if (!t.open) { %> · <%= t.status === 'rented' ? 'Rented' : t.status === 'buyed' ? 'Sold' : 'Unavailable' %><% } %></span><% }) %>
+  </span>
+</a>

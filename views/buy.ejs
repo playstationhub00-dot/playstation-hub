@@ -6,112 +6,86 @@
   <title>Buy Permanent Access — Playstation Hub</title>
   <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/shop.css?v=<%= assetV %>">
 </head>
-<body>
+<body class="shop-page">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'buy' }) %>
-
-<div class="buy-page">
-  <h1 class="buy-title">Buy permanently</h1>
-  <p class="buy-sub">Own it forever. No return date, no weekly fee.</p>
+<%#
+  The Buy storefront (docs/superpowers/specs/2026-10-11-buy-game-shop-design.md):
+  the shop header and search, the owner's spotlight, then a wooden shelf per
+  catalog tab (its first 10, public/js/buy-catalog-core.js shelves) with "See
+  all ›" into /buy/catalog. The spotlight reuses the homepage banner's script
+  (public/js/home.js: dots, arrows, auto-advance), so it keeps that banner's ids.
+%>
+<%
+  const notes = { 'best-sellers': 'most bought', 'ready-today': 'in stock, yours the same day', 'box-sets': 'many games, one account · best value' };
+  const peso = n => '₱' + Number(n).toLocaleString('en-US');
+%>
+<div class="buy-page shop">
+  <header class="shop-head">
+    <div class="shop-head-title">
+      <span class="shop-kicker">The game shop</span>
+      <h1>Buy games · own them forever</h1>
+    </div>
+    <form class="shop-search" method="get" action="/buy/catalog" role="search">
+      <input type="search" name="search" placeholder="Search <%= shop.games.length %> games to own…" aria-label="Search games to own" autocomplete="off" enterkeyhint="search">
+    </form>
+    <a class="shop-all" href="/buy/catalog">All games ›</a>
+  </header>
 
   <% if (orderError === 'sold') { %><div class="ord-flash ord-flash-warn">That slot just sold — sorry! Pick another below.</div><% } %>
   <% if (orderError === 'rate') { %><div class="ord-flash ord-flash-warn">Too many attempts, please wait a moment and try again.</div><% } %>
   <% if (orderError && orderError !== 'sold' && orderError !== 'rate') { %><div class="ord-flash ord-flash-warn">Something went wrong, please try again.</div><% } %>
 
-  <% if (bundles.length) { %>
-  <div class="buy-section-label">Account bundles — best value</div>
-  <div class="buy-bundle-grid">
-    <% const slotStatusLabel = st => st === 'rented' ? 'Rented' : st === 'buyed' ? 'Sold' : 'Unavailable'; %>
-    <% bundles.forEach(b => { %>
-    <div class="buy-bundle-card">
-      <a href="/bundle/<%= b.slug %>" class="buy-bundle-link">
-        <div class="buy-bundle-head">
-          <span class="buy-bundle-name"><%= b.name %></span>
-          <span class="buy-bundle-count"><%= b.gameCount %> game<%= b.gameCount !== 1 ? 's' : '' %></span>
-        </div>
-        <% if (b.perGame) { %><div class="buy-bundle-each">from ₱<%= b.perGame %> per game</div><% } %>
-        <div class="buy-bundle-covers">
-          <% b.covers.forEach(g => { %>
-            <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="buy-cover-thumb" loading="lazy">
-            <% } else { %><div class="buy-cover-thumb buy-cover-placeholder"></div><% } %>
-          <% }) %>
-          <% if (b.moreCount > 0) { %><div class="buy-cover-thumb buy-cover-more">+<%= b.moreCount %></div><% } %>
-        </div>
-      </a>
-      <%
-        const tiers = [
-          b.nonTrophy ? { key: 'nt', label: 'Non-Trophy', slot: b.nonTrophy } : null,
-          b.trophy ? { key: 'tr', label: 'Trophy', slot: b.trophy } : null
-        ].filter(Boolean);
-        const anyOpen = tiers.some(t => t.slot.open);
-      %>
-      <div class="buy-bundle-foot">
-        <div class="buy-tier-row">
-          <% tiers.forEach(t => { %>
-            <div class="buy-tier<%= t.slot.open ? ' buy-tier-open' : ' buy-tier-off' %>">
-              <span class="buy-tier-label"><%= t.label %></span>
-              <span class="buy-tier-price">₱<%= t.slot.price %></span>
-              <span class="buy-tier-status<%= t.slot.open ? ' buy-tier-status-open' : '' %>"><%= t.slot.open ? 'Available' : slotStatusLabel(t.slot.status) %></span>
-            </div>
-          <% }) %>
-        </div>
-        <% if (anyOpen) { %>
-        <a href="/bundle/<%= b.slug %>" class="buy-tier-buy-btn">Buy</a>
-        <% } else { %>
-        <div class="buy-bundle-none"><%= tiers.length > 1 ? 'Both tiers taken right now' : 'Not available right now' %></div>
-        <% } %>
-      </div>
-    </div>
-    <% }) %>
-  </div>
-  <% } %>
-
-  <% if (priceGroups.length) { %>
-  <div class="buy-filter-row">
-    <div class="buy-section-label buy-section-label-plain">Single games</div>
-    <% if (pendingCount > 0) { %>
-    <label class="buy-avail-toggle">
-      <input type="checkbox" id="buyAvailToggle" onchange="buyToggleAvailability(this.checked)">
-      <span>Available today only</span>
-    </label>
-    <% } %>
-  </div>
-  <% priceGroups.forEach(group => { %>
-  <div class="buy-price-section" data-group-count="<%= group.count %>" data-group-pending="<%= group.games.filter(g => g.pending).length %>">
-    <div class="buy-price-section-head">
-      <span class="buy-price-section-label"><%= group.label %></span>
-      <span class="buy-price-section-count" data-full-count="<%= group.count %>"><%= group.count %> game<%= group.count !== 1 ? 's' : '' %></span>
-    </div>
-    <div class="buy-single-grid">
-      <% group.games.forEach(g => { %>
-      <a href="/game/<%= g.slug %>?mode=buy" class="game-card gc2-card<%= g.pending ? ' buy-card-pending' : '' %>" data-pending="<%= g.pending %>">
-        <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="<%= g.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
-        <% } else { %>
-          <div class="gc2-cover-placeholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-            </svg>
-            <span>No Image</span>
-          </div>
-        <% } %>
-        <div class="gc2-scrim"></div>
-        <% if (g.pending) { %><div class="gc2-badge buy-badge-pending">Set up on order</div><% } %>
-        <div class="gc2-body">
-          <div class="gc2-plat"><%= g.platform %><%= g.genre ? ' · ' + g.genre.split('/')[0].trim() : '' %></div>
-          <div class="gc2-title"><%= g.title %></div>
-          <div class="gc2-foot">
-            <div class="gc2-price">from <b>₱<%= g.price %></b><% if (g.was) { %><s class="gc2-price-was">₱<%= g.was %></s><% } %></div>
-            <div class="gc2-cta">Buy</div>
-          </div>
-        </div>
+  <% if (spotlight.length) { %>
+  <div class="shop-spot" id="hmBanner" role="region" aria-roledescription="carousel" aria-label="Spotlight">
+    <div class="shop-slides" id="hmSlides">
+      <% spotlight.forEach(sl => { const it = sl.item; const isBox = sl.kind === 'box';
+        const cover = isBox ? ((it.covers.find(c => c.cover) || {}).cover || '') : it.cover; %>
+      <a class="shop-slide" href="<%= isBox ? '/bundle/' + it.slug : '/game/' + it.slug + '?mode=buy' %>">
+        <% if (cover) { %><img src="<%= cover %>" alt="" style="object-position: <%= !isBox && it.fx != null ? it.fx : 50 %>% <%= !isBox && it.fy != null ? it.fy : 50 %>%;"><% } %>
+        <span class="shop-slide-shade"></span>
+        <span class="shop-slide-body">
+          <span class="shop-kicker">Spotlight · own it forever</span>
+          <span class="shop-slide-title"><%= isBox ? it.name : it.title %></span>
+          <span class="shop-slide-meta">
+            <% if (isBox) { %><%= it.gameCount %> game<%= it.gameCount !== 1 ? 's' : '' %> on one account<% } else { %><%= it.platform %><%= it.genre ? ' · ' + it.genre : '' %>
+            <span class="shop-stock <%= it.ready ? 'shop-in' : 'shop-wait' %>"><%= it.ready ? 'In stock' : 'Set up on order' %></span><% } %>
+          </span>
+        </span>
+        <% const price = isBox ? it.from : it.price; %>
+        <% if (price) { %><span class="shop-slide-sticker"><%= isBox ? 'from ' : '' %><%= peso(price) %></span><% } %>
+        <span class="shop-slide-go">Buy now</span>
       </a>
       <% }) %>
     </div>
+    <% if (spotlight.length > 1) { %>
+    <button type="button" class="shop-arrow shop-arrow-prev" id="hmPrev" aria-label="Previous slide">&#8249;</button>
+    <button type="button" class="shop-arrow shop-arrow-next" id="hmNext" aria-label="Next slide">&#8250;</button>
+    <div class="shop-dots">
+      <% spotlight.forEach((sl, i) => { %><button type="button" class="hm-dot<%= i === 0 ? ' on' : '' %>" aria-label="Slide <%= i + 1 %>"></button><% }) %>
+    </div>
+    <% } %>
   </div>
-  <% }) %>
-  <div class="buy-empty-filtered" id="buyEmptyFiltered" style="display:none;">Everything is set up on order right now.</div>
   <% } %>
+
+  <% shelves.forEach(sh => { %>
+  <section class="shop-shelf" id="shelf-<%= sh.key %>">
+    <div class="shop-shelf-head">
+      <h2><%= sh.label %></h2>
+      <span class="shop-note"><%= notes[sh.key] || sh.count + ' game' + (sh.count !== 1 ? 's' : '') %></span>
+      <a class="shop-seeall" href="<%= sh.href %>">See all ›</a>
+    </div>
+    <div class="shop-row-wrap">
+      <button type="button" class="shop-row-arrow shop-row-prev" aria-label="Scroll <%= sh.label %> back">&#8249;</button>
+      <div class="shop-row<%= sh.kind === 'boxes' ? ' shop-row-boxes' : '' %>">
+        <% sh.ids.forEach((id, i) => { %><% if (sh.kind === 'boxes') { %><%- include('partials/shop-box', { b: boxesById[id] }) %><% } else { %><%- include('partials/shop-card', { g: gamesById[id], rank: sh.key === 'best-sellers' && i < 3 ? i + 1 : null, hideRank: false }) %><% } %><% }) %>
+      </div>
+      <button type="button" class="shop-row-arrow shop-row-next" aria-label="Scroll <%= sh.label %> on">&#8250;</button>
+    </div>
+  </section>
+  <% }) %>
 
   <div class="buy-placeholder-grid">
     <div class="buy-placeholder-card">
@@ -127,36 +101,9 @@
   </div>
 
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
-
 </div>
-
-<script>
-function buyToggleAvailability(showOnly) {
-  const sections = document.querySelectorAll('.buy-price-section');
-  let anyVisible = false;
-  sections.forEach(function (section) {
-    const cards = section.querySelectorAll('.gc2-card');
-    let visibleInSection = 0;
-    cards.forEach(function (card) {
-      const isPending = card.dataset.pending === 'true';
-      const hide = showOnly && isPending;
-      card.style.display = hide ? 'none' : '';
-      if (!hide) visibleInSection++;
-    });
-    section.style.display = visibleInSection > 0 ? '' : 'none';
-    if (visibleInSection > 0) anyVisible = true;
-    const countEl = section.querySelector('.buy-price-section-count');
-    if (countEl) {
-      const fullCount = parseInt(countEl.dataset.fullCount, 10);
-      const shown = showOnly ? visibleInSection : fullCount;
-      countEl.textContent = shown + (shown !== 1 ? ' games' : ' game');
-    }
-  });
-  const empty = document.getElementById('buyEmptyFiltered');
-  if (empty) empty.style.display = (showOnly && !anyVisible) ? '' : 'none';
-}
-</script>
-
+<script src="/js/home.js?v=<%= assetV %>"></script>
+<script src="/js/shop.js?v=<%= assetV %>"></script>
 <%- include('partials/footer') %>
 </body>
 </html>

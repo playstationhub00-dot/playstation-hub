@@ -1,0 +1,118 @@
+/* The Buy shop — a game shop rather than Rent's arcade: covers standing on
+   wooden shelves, tilted yellow price stickers, round best-seller stickers and
+   green "In stock" / amber "Set up on order" tags (views/buy.ejs, the
+   storefront; views/buy-catalog.ejs, the catalog; partials/shop-card.ejs and
+   shop-box.ejs). The catalog's pinned top block and filter panel come from
+   browse-filters.css; only their colours change here. */
+.shop-page { --shop-yellow: #FFD23F; --shop-wood: #5a3b1e; --shop-wood-dark: #3a2511; }
+
+@media (max-width: 600px) { .buy-page.shop { padding: 1.25rem 1rem 3rem; } }
+
+/* ── Storefront header ── */
+.shop-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin-bottom: 1.25rem; }
+.shop-head-title { flex: 1 1 320px; }
+.shop-kicker { display: block; color: var(--shop-yellow); font-size: 0.72rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+.shop-head h1 { margin: 0.1rem 0 0; font-size: 1.7rem; font-weight: 900; color: #fff; }
+.shop-search { flex: 1 1 260px; max-width: 420px; display: flex; }
+.shop-search input, .shop-page .bf-search input { flex: 1; min-width: 0; height: 44px; background: #161616 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23888' stroke-width='2' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 1rem center; border: 1px solid #2a2a2a; border-radius: 999px; color: #fff; font-size: 0.95rem; padding: 0 1rem 0 2.6rem; }
+.shop-search input:focus, .shop-page .bf-search input:focus { outline: none; border-color: var(--shop-yellow); }
+.shop-all { color: var(--shop-yellow); font-weight: 800; font-size: 0.9rem; text-decoration: none; white-space: nowrap; }
+
+/* ── Spotlight (slides run on public/js/home.js) ── */
+.shop-spot { position: relative; border-radius: 16px; overflow: hidden; background: #141414; margin-bottom: 0.5rem; }
+.shop-slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.shop-slides::-webkit-scrollbar { display: none; }
+.shop-slide { position: relative; flex: 0 0 100%; scroll-snap-align: start; min-height: 220px; display: block; color: #fff; text-decoration: none; overflow: hidden; }
+@media (min-width: 900px) { .shop-slide { min-height: 320px; } }
+.shop-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shop-slide-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.88) 25%, rgba(0,0,0,0.2) 75%), linear-gradient(0deg, rgba(0,0,0,0.6), transparent 60%); }
+.shop-slide-body { position: absolute; left: 1.25rem; right: 1.25rem; bottom: 4.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
+@media (min-width: 900px) { .shop-slide-body { left: 2rem; right: 45%; bottom: 2rem; } }
+.shop-slide-title { font-size: 1.6rem; font-weight: 900; line-height: 1.15; }
+@media (min-width: 900px) { .shop-slide-title { font-size: 2.2rem; } }
+.shop-slide-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; color: #ddd; font-size: 0.88rem; }
+.shop-slide-meta .shop-stock { position: static; }
+.shop-slide-sticker { position: absolute; left: 1.25rem; bottom: 1.2rem; background: var(--shop-yellow); color: #111; font-weight: 900; font-size: 1.1rem; padding: 0.35rem 0.75rem; border-radius: 4px; transform: rotate(-4deg); box-shadow: 0 3px 8px rgba(0,0,0,0.55); }
+.shop-slide-go { position: absolute; right: 1.25rem; bottom: 1.2rem; background: var(--shop-yellow); color: #111; font-weight: 900; padding: 0.55rem 1.3rem; border-radius: 999px; }
+@media (min-width: 900px) {
+  .shop-slide-sticker { left: auto; right: 10.5rem; bottom: 2.1rem; font-size: 1.4rem; }
+  .shop-slide-go { right: 2rem; bottom: 2rem; padding: 0.7rem 1.6rem; }
+}
+.shop-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 1px solid #333; background: rgba(20,20,20,0.8); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer; display: none; }
+.shop-arrow-prev { left: 0.6rem; }
+.shop-arrow-next { right: 0.6rem; }
+@media (hover: hover) and (min-width: 900px) { .shop-arrow { display: flex; align-items: center; justify-content: center; } }
+.shop-dots { position: absolute; left: 50%; transform: translateX(-50%); bottom: 0.5rem; display: flex; gap: 0.35rem; }
+.shop-dots .hm-dot { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: none; background: rgba(255,255,255,0.35); cursor: pointer; }
+.shop-dots .hm-dot.on { background: var(--shop-yellow); width: 20px; border-radius: 4px; }
+
+/* ── Stock tags and stickers (shared by every card) ── */
+.shop-stock { position: absolute; top: 0.45rem; left: 0.45rem; z-index: 2; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; padding: 0.15rem 0.45rem; border-radius: 4px; color: #fff; }
+.shop-in { background: #16a34a; }
+.shop-wait { background: #d97706; }
+.shop-rank { position: absolute; top: -0.5rem; right: -0.45rem; z-index: 3; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; color: #111; background: var(--shop-yellow); transform: rotate(10deg); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+.shop-rank-2 { background: #e5e7eb; }
+.shop-rank-3 { background: #f2a46b; }
+
+/* ── Shelves ── */
+.shop-shelf { margin-top: 2rem; }
+.shop-shelf-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem; }
+.shop-shelf-head h2 { margin: 0; font-size: 1.2rem; font-weight: 900; color: #fff; }
+.shop-note { color: #888; font-size: 0.8rem; }
+.shop-seeall { margin-left: auto; color: var(--shop-yellow); font-weight: 800; font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
+.shop-row-wrap { position: relative; }
+.shop-row { display: flex; gap: 1rem; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; padding: 0.7rem 0.5rem 0.75rem; border-bottom: 10px solid var(--shop-wood); box-shadow: 0 7px 0 var(--shop-wood-dark); }
+.shop-row::-webkit-scrollbar { display: none; }
+.shop-row > * { scroll-snap-align: start; }
+.shop-row .shop-card { flex: 0 0 150px; }
+.shop-row-boxes .shop-box { flex: 0 0 290px; }
+@media (max-width: 600px) {
+  .shop-row { gap: 0.75rem; }
+  .shop-row .shop-card { flex-basis: 40vw; }
+  .shop-row-boxes .shop-box { flex-basis: 78vw; }
+}
+.shop-row-arrow { position: absolute; top: 40%; z-index: 4; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #333; background: rgba(20,20,20,0.85); color: #fff; font-size: 1.5rem; line-height: 1; cursor: pointer; display: none; }
+.shop-row-prev { left: -0.5rem; }
+.shop-row-next { right: -0.5rem; }
+.shop-row-arrow:disabled { opacity: 0.25; cursor: default; }
+@media (hover: hover) and (min-width: 900px) { .shop-row-arrow { display: flex; align-items: center; justify-content: center; } }
+.shop-row-fits .shop-row-arrow { display: none; }
+
+/* ── A game card ── */
+.shop-card { display: flex; flex-direction: column; gap: 0.2rem; color: #fff; text-decoration: none; }
+.shop-cover { position: relative; display: block; aspect-ratio: 3 / 4; border-radius: 6px; background: #1c1c1c; box-shadow: 0 6px 12px rgba(0,0,0,0.45); }
+.shop-cover img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+.shop-nocover { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0.75rem; text-align: center; font-weight: 800; font-size: 0.85rem; color: #bbb; background: linear-gradient(160deg, #2a2a2a, #111); border-radius: 6px; }
+.shop-card:hover .shop-cover { box-shadow: 0 8px 18px rgba(255,210,63,0.18); }
+.shop-meta { color: #888; font-size: 0.7rem; margin-top: 0.35rem; }
+.shop-title { font-size: 0.86rem; font-weight: 800; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-price { align-self: flex-start; margin-top: 0.25rem; background: var(--shop-yellow); color: #111; font-weight: 900; font-size: 0.85rem; padding: 0.12rem 0.5rem; border-radius: 3px; transform: rotate(-3deg); box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+.shop-price s { color: #6b5400; font-weight: 600; font-size: 0.75rem; margin-left: 0.2rem; }
+
+/* ── A box set ── */
+.shop-box { display: flex; flex-direction: column; gap: 0.3rem; background: #181818; border: 1px solid #2c2c2c; border-radius: 12px; padding: 0.75rem; color: #fff; text-decoration: none; }
+.shop-box:hover { border-color: #4a4a4a; }
+.shop-box-covers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; position: relative; }
+.shop-box-covers img, .shop-box-blank { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 4px; background: #222; display: block; }
+.shop-box-more { position: absolute; right: 0.3rem; bottom: 0.3rem; background: rgba(0,0,0,0.75); color: #fff; font-size: 0.72rem; font-weight: 800; padding: 0.1rem 0.4rem; border-radius: 4px; }
+.shop-box-name { font-weight: 900; font-size: 0.95rem; margin-top: 0.3rem; }
+.shop-box .shop-meta { margin-top: 0; }
+.shop-box-tiers { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
+.shop-tier { background: var(--shop-yellow); color: #111; font-weight: 900; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 3px; transform: rotate(-2deg); }
+.shop-tier-off { background: #2a2a2a; color: #888; text-decoration: line-through; transform: none; }
+
+/* ── The catalog ── */
+.shop-cat-head h1 { margin: 0.2rem 0 1rem; }
+.shop-back { color: var(--shop-yellow); font-weight: 800; font-size: 0.85rem; text-decoration: none; }
+.shop-page .bf-tab.on { background: var(--shop-yellow); border-color: var(--shop-yellow); color: #111; }
+.shop-page .bf-open.bf-has { border-color: var(--shop-yellow); color: var(--shop-yellow); }
+.shop-page .bf-go { background: var(--shop-yellow); }
+/* Each row of the grid stands on a wooden shelf: no gap between columns, so
+   the cards' shelf strips join up. */
+.shop-grid { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 0; row-gap: 1.6rem; }
+@media (min-width: 601px) { .shop-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1000px) { .shop-grid { grid-template-columns: repeat(6, 1fr); } }
+.shop-grid-boxes { grid-template-columns: 1fr; }
+@media (min-width: 601px) { .shop-grid-boxes { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .shop-grid-boxes { grid-template-columns: repeat(3, 1fr); } }
+.shop-item { padding: 0.7rem 0.5rem 0.75rem; border-bottom: 10px solid var(--shop-wood); box-shadow: 0 7px 0 var(--shop-wood-dark); }

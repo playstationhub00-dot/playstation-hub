@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Games to Buy — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/browse-filters.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/shop.css?v=<%= assetV %>">
+</head>
+<body class="shop-page">
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'buy' }) %>
+<%#
+  The Buy catalog (docs/superpowers/specs/2026-10-11-buy-game-shop-design.md):
+  "‹ Back to the shop", the search box, the shelf tabs, a results bar with Sort,
+  Filters and the filter chips, then one grid on wooden shelves. The pinned top
+  block and the filter panel reuse the Rent catalog's styles
+  (public/css/browse-filters.css) and its tick-box row partial. The server
+  renders the page for the URL (GET /buy/catalog); public/js/buy-catalog.js then
+  runs every change with the same rules (public/js/buy-catalog-core.js),
+  showing, hiding and ordering these same cards — no reload.
+%>
+<div class="browse-header shop-cat-head">
+  <a class="shop-back" href="/buy">‹ Back to the shop</a>
+  <h1>All games to own</h1>
+</div>
+
+<!-- SEARCH, TABS AND RESULTS BAR — pinned under the menu (on phones the search box scrolls away) -->
+<div class="bf-top" id="scTop">
+  <div class="bf-top-in">
+    <form class="bf-search" id="scSearchForm" method="get" action="/buy/catalog" role="search">
+      <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
+      <input type="search" id="scSearch" name="search" value="<%= state.search %>" placeholder="Search <%= shop.games.length %> games to own…" aria-label="Search games to own" autocomplete="off" enterkeyhint="search">
+    </form>
+    <nav class="bf-tabs" id="scTabs" aria-label="Shelves">
+      <% view.tabs.forEach(t => { %><a class="bf-tab<%= t.on ? ' on' : '' %>" data-tab="<%= t.key %>" href="<%= t.href %>"<%- t.on ? ' aria-current="page"' : '' %>><%= t.label %> <span class="bf-tab-n"><%= t.count %></span></a><% }) %>
+    </nav>
+    <div class="bf-bar" id="scBar">
+      <span class="bf-count" id="scCount"><%= countText %></span>
+      <label class="bf-sort" id="scSortWrap">
+        <span class="bf-sort-l">Sort</span>
+        <select id="scSort" aria-label="Sort">
+          <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
+        </select>
+      </label>
+      <a href="#scPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="scOpen" aria-haspopup="dialog" aria-controls="scPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="scOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
+      <div class="bf-chips" id="scChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
+        <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+        <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FILTER PANEL — full screen on phones, a centred pop-up on computers. A plain
+     GET form, so it also works (with reloads) without the page script. -->
+<div class="bf-panel" id="scPanel" role="dialog" aria-modal="true" aria-labelledby="scPanelTitle">
+  <a href="#" class="bf-backdrop" id="scBackdrop" tabindex="-1" aria-hidden="true"></a>
+  <form class="bf-sheet" id="scForm" method="get" action="/buy/catalog">
+    <div class="bf-head">
+      <a href="#" class="bf-x" id="scClose" aria-label="Close filters">✕</a>
+      <h2 id="scPanelTitle">Filters</h2>
+      <button type="button" class="bf-clear-all" id="scClearAll">Clear all</button>
+    </div>
+    <div class="bf-body">
+      <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
+      <% if (view.sort !== view.sorts[0].key) { %><input type="hidden" name="sort" value="<%= view.sort %>"><% } %>
+      <% if (state.search) { %><input type="hidden" name="search" value="<%= state.search %>"><% } %>
+      <% view.groups.forEach(gr => { const extra = gr.chips.slice(6); %>
+      <section class="bf-sec" data-group="<%= gr.key %>">
+        <div class="bf-sec-head">
+          <h3><%= gr.label %></h3>
+          <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
+        </div>
+        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: null }) %><% }) %>
+        <% if (extra.length) { %>
+        <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
+          <summary>Show all <%= gr.chips.length %></summary>
+          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: null }) %><% }) %>
+        </details>
+        <% } %>
+      </section>
+      <% }) %>
+    </div>
+    <div class="bf-foot">
+      <button type="submit" class="bf-go" id="scGo"<%= applyLabel.disabled ? ' disabled' : '' %>><%= applyLabel.text %></button>
+    </div>
+  </form>
+</div>
+
+<%
+  // Every item is on the page once; the active tab's matches come first, in
+  // order, and the rest wait hidden for another tab.
+  const leadGames = view.kind === 'games' ? view.ids : [];
+  const gameList = leadGames.map(id => gamesById[id]).concat(shop.games.filter(f => !leadGames.includes(f.id)));
+  const leadBoxes = view.kind === 'boxes' ? view.ids : [];
+  const boxList = leadBoxes.map(id => boxesById[id]).concat(shop.boxes.filter(b => !leadBoxes.includes(b.id)));
+%>
+<div class="section bf-results shop" id="scResults">
+  <div class="bf-empty" id="scEmpty"<%= view.count ? ' hidden' : '' %>>
+    <p>No games match.</p>
+    <a class="btn btn-outline" id="scReset" href="<%= resetHref %>">Clear filters</a>
+  </div>
+
+  <div class="shop-grid" id="scGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
+    <% gameList.forEach(f => { %><div class="shop-item" data-id="<%= f.id %>"<%= leadGames.includes(f.id) ? '' : ' hidden' %>><%- include('partials/shop-card', { g: f, rank: f.order <= 3 ? f.order : null, hideRank: !view.ranked }) %></div><% }) %>
+  </div>
+
+  <div class="shop-grid shop-grid-boxes" id="scBoxGrid"<%= view.kind === 'boxes' ? '' : ' hidden' %>>
+    <% boxList.forEach(b => { %><div class="shop-item" data-box="<%= b.id %>"<%= leadBoxes.includes(b.id) ? '' : ' hidden' %>><%- include('partials/shop-box', { b }) %></div><% }) %>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script type="application/json" id="shopData"><%- JSON.stringify(shopData).replace(/</g, '\\u003c') %></script>
+<script src="/js/buy-catalog-core.js?v=<%= assetV %>"></script>
+<script src="/js/buy-catalog.js?v=<%= assetV %>"></script>
+</body>
+</html>

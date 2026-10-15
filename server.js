@@ -48,6 +48,8 @@ const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
 const rentAudit = require('./lib/rent-audit');
 const buyPricing = require('./lib/buy-pricing');
+const buyView = require('./lib/buy-view');
+const buyCatalogCore = require('./public/js/buy-catalog-core');
 const reservations = require('./lib/reservations');
 const funnel = require('./lib/funnel');
 const gameRequests = require('./lib/requests');
@@ -1979,121 +1981,121 @@ function findBundleContaining(game) {
 }
 app.locals.findBundleContaining = (game) => findBundleContaining(game);
 
-// Groups /buy's single-game cards into price-point sections, cheapest first.
-// Price points with fewer than MIN_GROUP games merge into one trailing "and up"
-// group, but only from the top: if the highest price point itself already has
-// MIN_GROUP or more games, nothing merges and every price point stands alone.
-const MIN_GROUP = 3;
-function groupSingleGamesByPrice(games) {
-  const byPrice = new Map();
-  games.forEach(g => {
-    if (!byPrice.has(g.price)) byPrice.set(g.price, []);
-    byPrice.get(g.price).push(g);
-  });
-  const prices = [...byPrice.keys()].sort((a, b) => a - b);
-  if (prices.length === 0) return [];
+// ── Buy: the game shop ───────────────────────────────────────────────────────
+// What GET /buy (the storefront) and GET /buy/catalog show: the games that can
+// still be bought and the box sets (accounts sold as bundles), with the facts
+// the shop rules (public/js/buy-catalog-core.js) read. What counts as for sale
+// is unchanged from the old /buy.
+// See docs/superpowers/specs/2026-10-11-buy-game-shop-design.md.
 
-  let mergeFromIndex = prices.length; // no merge by default
-  for (let i = prices.length - 1; i >= 0; i--) {
-    if (byPrice.get(prices[i]).length < MIN_GROUP && i > 0) {
-      mergeFromIndex = i;
-    } else {
-      break;
-    }
-  }
-
-  const groups = [];
-  for (let i = 0; i < mergeFromIndex; i++) {
-    const price = prices[i];
-    groups.push({ label: '₱' + price.toLocaleString(), minPrice: price, count: byPrice.get(price).length, games: byPrice.get(price) });
-  }
-  if (mergeFromIndex < prices.length) {
-    const mergedPrices = prices.slice(mergeFromIndex);
-    const mergedGames = mergedPrices.flatMap(p => byPrice.get(p));
-    const lowest = mergedPrices[0];
-    groups.push({ label: '₱' + lowest.toLocaleString() + ' and up', minPrice: lowest, count: mergedGames.length, games: mergedGames });
-  }
-  return groups;
-}
-
-app.get('/buy', (req, res) => {
-  const allGames = getGames();
-  const bundles = getAccounts()
+// Box sets: an account for sale with a Trophy or Non-Trophy slot enabled that
+// holds at least one other game. (An account sold on its own — one game
+// permanently — is set up the same way but holds no other game; it already
+// has its game card, so it is not a box set.)
+function buyBoxSets(allGames) {
+  return getAccounts()
     .filter(acc => acc.for_sale && (acc.slots.trophy.enabled || acc.slots.non_trophy.enabled))
     .map(acc => {
-      const games = buildBundleGames(acc, allGames);
+      const inside = buildBundleGames(acc, allGames);
       const { trophy, nonTrophy } = bundleSlotInfo(acc);
-      const prices = [trophy, nonTrophy].filter(x => x && x.price > 0).map(x => x.price);
-      const gameCount = games.length;
+      const tiers = [
+        nonTrophy ? { key: 'nt', label: 'Non-Trophy', price: nonTrophy.price, open: nonTrophy.open, status: nonTrophy.status } : null,
+        trophy ? { key: 'tr', label: 'Trophy', price: trophy.price, open: trophy.open, status: trophy.status } : null
+      ].filter(Boolean);
+      const priced = tiers.filter(t => t.price > 0).map(t => t.price);
+      const openPriced = tiers.filter(t => t.open && t.price > 0).map(t => t.price);
       const name = acc.public_name || acc.label;
       return {
-        id: acc.id,
-        slug: gameSlug(name),
-        name,
-        gameCount,
-        perGame: gameCount > 1 && prices.length ? Math.round(Math.min(...prices) / gameCount) : null,
-        covers: games.slice(0, 4),
-        moreCount: Math.max(0, gameCount - 4),
-        trophy,
-        nonTrophy
+        id: acc.id, slug: gameSlug(name), name,
+        text: [name].concat(inside.map(g => g.title)).join('\n').toLowerCase(),
+        gameCount: inside.length,
+        perGame: inside.length > 1 && priced.length ? Math.round(Math.min(...priced) / inside.length) : null,
+        from: openPriced.length ? Math.min(...openPriced) : (priced.length ? Math.min(...priced) : null),
+        open: tiers.some(t => t.open),
+        covers: inside.slice(0, 4).map(g => ({ title: g.title, cover: g.cover_image || '' })),
+        more: Math.max(0, inside.length - 4),
+        tiers
       };
     })
-    // An account can be for_sale with a slot enabled and still not be a
-    // bundle: selling one game permanently is set up exactly that way. Because
-    // buildBundleGames() drops the game sharing the account's own name (so a
-    // bundle doesn't list itself as its own content), such an account resolves
-    // to zero games and rendered as a "0 games" bundle card — while the same
-    // title already had a normal card in Single Games, so it appeared twice.
-    // Containing at least one other game is what makes an account a bundle.
     .filter(b => b.gameCount > 0);
-  const s = getSiteSettings();
-  const promo = s.promo || {};
-  const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
-  // A tier is only listed if its slot type can still be sold — an account already
-  // bought (or taken offline) must drop off the buy page, the way it already drops
-  // off the rent side.
-  const buySummaryMap = buildAccountSummaryMap();
-  const singleGames = allGames
+}
+
+function buyShopData() {
+  const allGames = getGames();
+  const promo = getSiteSettings().promo || {};
+  const summaryMap = buildAccountSummaryMap();
+  const customers = getCustomers();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const games = allGames
     .map(g => {
-      const sum = buySummaryMap[g.id] || null;
-      // Same legacy-fullness rule game-detail.ejs's buy panel judges each tier
-      // against — a type that has actually been rented before and currently
-      // has no free legacy slot must drop off the list the same way a card
-      // it can no longer sell drops off already, rather than still
-      // advertising a price for it.
+      const sum = summaryMap[g.id] || null;
+      // Same legacy-fullness rule game-detail.ejs's buy panel judges each type
+      // against: a type that has been rented before and has no free legacy
+      // slot now drops off instead of still advertising a price.
       const avail = computeAvailability(g, sum);
       const neverRented = !g.renters && !g.stocked;
-      return {
-        g,
-        ntOk: (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy',
-          { everStocked: !neverRented, avail: avail.ntAvail }),
-        trOk: (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy',
-          { everStocked: !neverRented, avail: avail.trAvail })
-      };
+      const nt = (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy', { everStocked: !neverRented, avail: avail.ntAvail });
+      const tr = (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy', { everStocked: !neverRented, avail: avail.trAvail });
+      return { g, nt, tr, neverRented };
     })
-    .filter(x => x.ntOk || x.trOk)
-    .map(({ g, ntOk }) => {
-      // Same NT-then-TR preference as before, but chosen from sellable tiers only,
-      // so the card never advertises the price of a tier that is no longer for sale.
-      const base = ntOk ? g.buy_nt_price : g.buy_tr_price;
-      const final = buyPromo ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
+    .filter(x => x.nt || x.tr)
+    .map(({ g, nt, tr, neverRented }) => {
+      // The cheapest type that can still be bought, after the buy promo.
+      const offer = [nt ? buyPricing.priceFor(g, 'nt', promo) : null, tr ? buyPricing.priceFor(g, 'tr', promo) : null]
+        .filter(Boolean).sort((a, b) => a.amount - b.amount)[0];
+      const genres = browseCore.genreParts(g.genre);
       return {
-        id: g.id, title: g.title, cover_image: g.cover_image, price: final, was: buyPromo ? base : null, slug: gameSlug(g.title),
-        platform: g.platform, genre: g.genre,
-        cover_focal_x: g.cover_focal_x, cover_focal_y: g.cover_focal_y,
-        pending: !g.renters && !g.stocked
+        id: g.id, slug: gameSlug(g.title), title: g.title, text: g.title.toLowerCase(),
+        cover: g.cover_image || '', fx: g.cover_focal_x != null ? g.cover_focal_x : null, fy: g.cover_focal_y != null ? g.cover_focal_y : null,
+        platform: g.platform || '', ps4: g.platform === 'PS4' || g.platform === 'PS4/PS5', ps5: g.platform === 'PS5' || g.platform === 'PS4/PS5',
+        genres, genre: genres[0] || '',
+        price: offer.amount, was: offer.discounted ? offer.base : null,
+        nt: !!nt, tr: !!tr,
+        // "Set up on order": never rented and not stocked — the account is made on the first sale.
+        ready: !neverRented,
+        released: g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso ? g.release_date : null
       };
     });
-  const priceGroups = groupSingleGamesByPrice(singleGames);
-  const pendingCount = singleGames.filter(g => g.pending).length;
+  const counts = buyView.saleCounts(customers);
+  const order = buyView.bestSellingOrder(games, counts, homeView.rentalRanking(allGames, customers, new Date()));
+  games.forEach(f => {
+    f.sold = counts[f.id] || 0;
+    f.order = order.indexOf(Number(f.id)) + 1;
+  });
+  return { games, boxes: buyBoxSets(allGames) };
+}
+
+const byIdOf = list => { const o = {}; list.forEach(x => { o[x.id] = x; }); return o; };
+
+// The storefront: the spotlight, then a shelf per catalog tab (its first 10).
+app.get('/buy', (req, res) => {
+  const s = getSiteSettings();
+  const shop = buyShopData();
   // A buyer here is committing to a permanent purchase, the highest-trust
   // decision on the site, so the review strip belongs at least as much as on a
   // rental page. No title: this page lists many games at once.
   res.render('buy', Object.assign({
-    bundles, singleGames, priceGroups, pendingCount, buyPromo, buyPromoPct: promo.buy_promo_pct || 0,
+    shop, shelves: buyCatalogCore.shelves(shop),
+    spotlight: buyView.spotlight(s.buy_spotlight, shop, buyCatalogCore.bestSellerIds(shop.games)),
+    gamesById: byIdOf(shop.games), boxesById: byIdOf(shop.boxes),
     announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s,
     orderError: req.query.order_error || null
   }, reviewBlockLocals('')));
+});
+
+// The full catalog: tabs, search, Sort and Filters over the same shop.
+app.get('/buy/catalog', (req, res) => {
+  const shop = buyShopData();
+  const state = buyCatalogCore.cleanState(buyCatalogCore.parseState(req.query), shop);
+  const view = buyCatalogCore.view(shop, state);
+  res.render('buy-catalog', {
+    view, state, shop, gamesById: byIdOf(shop.games), boxesById: byIdOf(shop.boxes),
+    applied: buyCatalogCore.appliedChips(state), countText: buyCatalogCore.countText(view),
+    applyLabel: buyCatalogCore.applyLabel(view),
+    clearHref: buyCatalogCore.href(buyCatalogCore.clearFilters(state)), resetHref: buyCatalogCore.href(buyCatalogCore.resetState(state)),
+    shopData: { games: shop.games, boxes: shop.boxes, state },
+    announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings()
+  });
 });
 
 app.get('/bundle/:slug', (req, res) => {

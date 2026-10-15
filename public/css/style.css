@@ -3643,20 +3643,8 @@ body.light-mode .gmp-warn { color: #92400e; }
 
 /* BUY PAGE */
 .buy-page { max-width: 1400px; margin: 0 auto; padding: 2rem 2rem 4rem; }
-.buy-title { font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 0 0.2rem; }
-.buy-sub { font-size: 0.85rem; color: #888; margin: 0 0 1.75rem; }
-.buy-section-label { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: #F0A500; margin: 0 0 0.75rem; }
-.buy-bundle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.85rem; margin-bottom: 2.25rem; }
-.buy-bundle-card { background: #141414; border: 1px solid #2a2a2a; border-radius: 12px; padding: 0.9rem; display: flex; flex-direction: column; }
-.buy-bundle-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.15rem; }
-.buy-bundle-link { display: block; text-decoration: none; color: inherit; }
-.buy-bundle-name { font-size: 0.92rem; color: #fff; font-weight: 700; }
-.buy-bundle-count { font-size: 0.72rem; color: #888; flex-shrink: 0; }
 .buy-bundle-each { font-size: 0.72rem; color: #F0A500; margin-bottom: 0.6rem; }
-.buy-bundle-covers { display: flex; gap: 5px; margin-bottom: 0.7rem; }
-.buy-cover-thumb { width: 40px; height: 54px; border-radius: 4px; object-fit: cover; background: #1c1c1c; flex-shrink: 0; }
 .buy-cover-placeholder { background: linear-gradient(135deg, #1a1a2e, #111); }
-.buy-cover-more { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #888; }
 .buy-bundle-foot { margin-top: auto; }
 .buy-tier-row { display: flex; gap: 6px; margin-bottom: 0.55rem; }
 .buy-tier { flex: 1; display: flex; flex-direction: column; align-items: flex-start; background: #101010; border: 1px solid #262626; border-radius: 8px; padding: 0.45rem 0.55rem; text-decoration: none; color: inherit; }
@@ -3669,23 +3657,9 @@ label.buy-tier:hover { border-color: #444; }
 .buy-tier-label { display: block; font-size: 0.7rem; color: #9a9a9a; }
 .buy-tier-price { display: block; font-size: 0.85rem; color: #fff; font-weight: 700; }
 .buy-tier-status { display: inline-block; margin-top: 2px; font-size: 0.63rem; font-weight: 700; color: #e0a878; background: #2a1a10; padding: 1px 6px; border-radius: 20px; }
-.buy-tier-status-open { color: #7fd99a; background: #10251a; }
-.buy-tier-buy-btn { display: block; width: 100%; box-sizing: border-box; background: #7b2ff7; color: #fff; font-weight: 700; font-size: 0.8rem; padding: 0.5rem 0; border-radius: 6px; text-align: center; text-decoration: none; }
-.buy-tier-buy-btn:hover { background: #8f45f9; }
 .buy-bundle-none { text-align: center; font-size: 0.72rem; font-weight: 700; color: #e0a878; background: #1a1210; padding: 0.5rem; border-radius: 6px; }
 .buy-slot-name { display: block; width: 100%; box-sizing: border-box; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; padding: 0.45rem 0.6rem; color: #fff; font-size: 0.8rem; margin-bottom: 0.4rem; }
 .buy-slot-btn { display: block; width: 100%; background: #7b2ff7; color: #fff; font-weight: 700; font-size: 0.8rem; padding: 0.55rem 0; border: none; border-radius: 6px; cursor: pointer; }
-.buy-filter-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
-.buy-section-label-plain { margin: 0; }
-.buy-avail-toggle { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #aaa; cursor: pointer; user-select: none; }
-.buy-avail-toggle input { accent-color: var(--ps-blue); width: 15px; height: 15px; cursor: pointer; }
-.buy-price-section { margin-bottom: 1.75rem; }
-.buy-price-section-head { display: flex; align-items: baseline; gap: 0.6rem; margin-bottom: 0.75rem; }
-.buy-price-section-label { font-size: 1.05rem; font-weight: 800; color: #fff; }
-.buy-price-section-count { font-size: 0.78rem; color: var(--text-secondary); background: #111; border: 1px solid #222; border-radius: 20px; padding: 0.2rem 0.65rem; }
-.buy-badge-pending { left: 9px; background: rgba(240,165,0,0.15); color: #f0a500; border: 1px solid rgba(240,165,0,0.35); }
-.buy-empty-filtered { text-align: center; color: #888; font-size: 0.85rem; padding: 2.5rem 0; }
-.buy-single-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
 .buy-placeholder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
 .buy-placeholder-card { background: #10141c; border: 1px solid #24304a; border-radius: 12px; padding: 1rem; }
 .buy-placeholder-amber { background: #1a1206; border-color: #4a3410; }

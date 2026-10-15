@@ -1,0 +1,16 @@
+<%# One game in the Buy shop — on a storefront shelf, in the catalog grid: its
+    cover standing on the shelf, the stock tag, a best-seller sticker when
+    ranked, platform · genre, the title and the yellow price sticker (the
+    base price struck when the buy promo cuts it). Locals: g (a game from
+    server.js buyShopData), rank (1–3 or null), hideRank (the catalog shows
+    the sticker only on Best sellers in best-selling order). %>
+<a href="/game/<%= g.slug %>?mode=buy" class="shop-card">
+  <span class="shop-cover">
+    <% if (g.cover) { %><img src="<%= g.cover %>" alt="<%= g.title %>" loading="lazy" decoding="async" style="object-position: <%= g.fx != null ? g.fx : 50 %>% <%= g.fy != null ? g.fy : 50 %>%;"><% } else { %><span class="shop-nocover"><%= g.title %></span><% } %>
+    <span class="shop-stock <%= g.ready ? 'shop-in' : 'shop-wait' %>"><%= g.ready ? 'In stock' : 'Set up on order' %></span>
+    <% if (rank) { %><span class="shop-rank shop-rank-<%= rank %>"<%= hideRank ? ' hidden' : '' %>>#<%= rank %></span><% } %>
+  </span>
+  <span class="shop-meta"><%= g.platform %><%= g.genre ? ' · ' + g.genre : '' %></span>
+  <span class="shop-title"><%= g.title %></span>
+  <span class="shop-price">₱<%= g.price.toLocaleString('en-US') %><% if (g.was) { %> <s>₱<%= g.was.toLocaleString('en-US') %></s><% } %></span>
+</a>
