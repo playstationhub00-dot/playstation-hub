@@ -5,6 +5,7 @@
       <a href="#sec-signin-guide">Sign-in guide</a>
       <a href="#sec-popup">Popup</a>
       <a href="#sec-home-banner">Homepage banner</a>
+      <a href="#sec-buy-spotlight">Buy spotlight</a>
       <a href="#sec-hero-text">Hero text</a>
       <a href="#sec-reviews">Reviews</a>
       <a href="#sec-ask-reviews">Ask for reviews</a>
@@ -260,6 +261,39 @@
           </label>
           <% } %>
           <div><button type="submit" class="btn btn-primary">Save banner</button></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- BUY PAGE SPOTLIGHT — games or box sets shown first on the Buy storefront -->
+    <% const bsPicks = settings.buy_spotlight || []; const bsChoices = buySpotlightChoices(); %>
+    <div class="adm-card" id="sec-buy-spotlight">
+      <div class="adm-card-head" style="border-left:3px solid #ffd23f;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(255,210,63,0.15);">🛒</div>
+          <div>
+            <div class="sa-title">Buy page spotlight</div>
+            <div class="sa-desc">Games or box sets shown first in the Buy page's spotlight</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <p class="gdt-note">Pick up to 5, in order. Anything sold out or no longer for sale is skipped on the page. With nothing picked, the spotlight shows the top 3 best sellers.</p>
+        <form method="POST" action="/admin/buy-spotlight" class="hb-form">
+          <% for (let i = 0; i < 5; i++) { const p = bsPicks[i]; const cur = p ? p.kind + ':' + p.id : ''; %>
+          <label class="hb-row"><span>Slide <%= i + 1 %></span>
+            <select name="slide_<%= i + 1 %>">
+              <option value="">— Best sellers —</option>
+              <% if (bsChoices.boxes.length) { %><optgroup label="Box sets">
+                <% bsChoices.boxes.forEach(b => { %><option value="box:<%= b.id %>"<%= cur === 'box:' + b.id ? ' selected' : '' %>><%= b.name %></option><% }) %>
+              </optgroup><% } %>
+              <optgroup label="Games">
+                <% bsChoices.games.forEach(g => { %><option value="game:<%= g.id %>"<%= cur === 'game:' + g.id ? ' selected' : '' %>><%= g.title %></option><% }) %>
+              </optgroup>
+            </select>
+          </label>
+          <% } %>
+          <div><button type="submit" class="btn btn-primary">Save spotlight</button></div>
         </form>
       </div>
     </div>

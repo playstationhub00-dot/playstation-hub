@@ -2098,6 +2098,17 @@ app.get('/buy/catalog', (req, res) => {
   });
 });
 
+// What Admin → Content → Buy page spotlight can pick: box sets for sale and
+// games with a buy price, A–Z.
+function buySpotlightChoices() {
+  return {
+    boxes: buyBoxSets(getGames()).map(b => ({ id: b.id, name: b.name })).sort((a, b) => a.name.localeCompare(b.name)),
+    games: getGames().filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0)
+      .map(g => ({ id: g.id, title: g.title })).sort((a, b) => a.title.localeCompare(b.title))
+  };
+}
+app.locals.buySpotlightChoices = buySpotlightChoices;
+
 app.get('/bundle/:slug', (req, res) => {
   const allGames = getGames();
   const acc = getAccounts().find(a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled) && gameSlug(a.public_name || a.label) === req.params.slug);
@@ -5913,6 +5924,16 @@ app.post('/admin/home-banner', requireAuth, (req, res) => {
   }
   db.set('site_settings.home_banner_ids', ids).write();
   res.redirect('/admin?tab=content&msg=home_banner_saved');
+});
+
+// Admin → Content → Buy page spotlight: up to 5 games or box sets shown first
+// on the Buy storefront (lib/buy-view.js). Fields slide_1..slide_5 hold
+// "game:<id>" / "box:<id>"; blanks, unknown picks and repeats are dropped.
+app.post('/admin/buy-spotlight', requireAuth, (req, res) => {
+  const choices = buySpotlightChoices();
+  const picks = buyView.readSpotlightForm(req.body, { games: choices.games.map(g => g.id), boxes: choices.boxes.map(b => b.id) });
+  db.set('site_settings.buy_spotlight', picks).write();
+  res.redirect('/admin?tab=content&msg=buy_spotlight_saved');
 });
 
 app.post('/admin/hero-text', requireAuth, (req, res) => {
