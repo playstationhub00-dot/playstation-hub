@@ -103,7 +103,7 @@ const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
 ok('the routes exist', () => {
   assert.ok(server.includes("app.get('/faq'"));
   assert.ok(server.includes("app.get('/terms'"));
-  assert.ok(server.includes('titleFixes.redirectSlug'));
+  assert.ok(server.includes('titleFixes.findBySlug'));
   assert.ok(server.includes('requestBoard.linkStockedRequest'));
 });
 
