@@ -99,4 +99,33 @@ ok('an upcoming url keeps its id suffix', () => {
   assert.strictEqual(fixes.redirectSlug('elden-ring-2'), null);
 });
 
+ok('slugMatches accepts the live slug and the pre-rename slug, either way around', () => {
+  assert.strictEqual(fixes.slugMatches('nba2k27', 'nba2k27'), true);
+  assert.strictEqual(fixes.slugMatches('nba2k27', 'nba-2k27'), true);
+  assert.strictEqual(fixes.slugMatches('nba-2k27', 'nba2k27'), true);
+  assert.strictEqual(fixes.slugMatches('resident-evil-remake-triology', 'resident-evil-remake-trilogy'), true);
+  assert.strictEqual(fixes.slugMatches('khazan-the-first-berseker-12', 'khazan-the-first-berserker-12'), true);
+  assert.strictEqual(fixes.slugMatches('silent-hill-townfall', 'silent-hill-townfall'), true);
+  assert.strictEqual(fixes.slugMatches('silent-hill-townfall', 'silent-hill-town-fall'), false);
+  assert.strictEqual(fixes.slugMatches('wwe-2k25', 'wwe2k25'), false);
+  assert.strictEqual(fixes.slugMatches('tekken-8', 'tekken8'), false);
+  assert.strictEqual(fixes.slugMatches('elden-ring-2', 'elden-ring'), false);
+  assert.strictEqual(fixes.slugMatches('', 'nba2k27'), false);
+});
+
+ok('findBySlug prefers the title that already uses the requested slug', () => {
+  const games = [
+    { id: 80, slug: 'nba2k27' },
+    { id: 2, slug: 'resident-evil-remake-trilogy' }
+  ];
+  assert.strictEqual(fixes.findBySlug(games, 'nba2k27', g => g.slug).id, 80);
+  assert.strictEqual(fixes.findBySlug(games, 'nba-2k27', g => g.slug).id, 80);
+  assert.strictEqual(fixes.findBySlug(games, 'resident-evil-remake-triology', g => g.slug).id, 2);
+  assert.strictEqual(fixes.findBySlug(games, 'resident-evil-remake-trilogy', g => g.slug).id, 2);
+  assert.strictEqual(fixes.findBySlug(games, 'tekken-8', g => g.slug), null);
+  const both = [{ id: 80, slug: 'nba2k27' }, { id: 81, slug: 'nba-2k27' }];
+  assert.strictEqual(fixes.findBySlug(both, 'nba2k27', g => g.slug).id, 80);
+  assert.strictEqual(fixes.findBySlug(both, 'nba-2k27', g => g.slug).id, 81);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

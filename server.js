@@ -4736,15 +4736,24 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
-  const moved = titleFixes.redirectSlug(param);
-  if (moved && moved !== param) return res.redirect(301, '/game/' + moved);
-  // Support both numeric ID (old links) and slug
+  // Card links, the search index and the homepage all use gameSlug(title).
+  // redirectSlug rewrites a few of those (nba2k27 → nba-2k27, and the typo
+  // tokens triology / berseker / assasins) toward the spelling the rename
+  // script would produce. That script is not part of boot, so the live title
+  // often still slugs to the pre-rename form. Redirecting before lookup sent
+  // /game/nba2k27 to /game/nba-2k27, which matched nothing and 302'd to
+  // /browse. Resolve either form first. The canonical URL is always the
+  // current title's slug — the same string the card href uses — and only a
+  // slug that does not name a game falls through to /browse.
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
-    : getGames().find(g => gameSlug(g.title) === param);
+    : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
   if (!game) return res.redirect('/browse');
-  // Redirect numeric URLs to slug URL
-  if (/^\d+$/.test(param)) return res.redirect(301, '/game/' + gameSlug(game.title));
+  const canonical = gameSlug(game.title);
+  if (param !== canonical) {
+    const q = req.originalUrl.indexOf('?');
+    return res.redirect(301, '/game/' + canonical + (q === -1 ? '' : req.originalUrl.slice(q)));
+  }
   const resolved = resolveGamePrices(resolveSlotDays(game));
   const gdSettings = getSiteSettings();
   // Who is waiting for each account type. A database outage returns [] rather
@@ -5631,20 +5640,21 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
-  const moved = titleFixes.redirectSlug(slug);
-  if (moved && moved !== slug) return res.redirect(301, '/upcoming/' + moved);
+  // Same rule as /game/:slug. The card href is gameSlug(title) + '-' + id.
+  // A typo redirect that runs before lookup would 301 that href at a slug
+  // the title does not have, whenever the rename script has not been applied.
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
-  let game = null;
-  if (idMatch) {
-    game = getUpcomingGame(idMatch[1]);
-  }
+  let game = idMatch ? getUpcomingGame(idMatch[1]) : null;
   if (!game) {
-    // fallback: match by title slug
-    game = getUpcoming().find(g => {
-      const s = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      return slug === s || slug.startsWith(s + '-');
-    });
+    game = (getUpcoming() || []).find(g => {
+      const stored = gameSlug(g && g.title);
+      if (!stored) return false;
+      if (slug === stored || slug.startsWith(stored + '-')) return true;
+      if (titleFixes.slugMatches(stored, slug)) return true;
+      const alt = titleFixes.redirectSlug(stored);
+      return !!(alt && (slug === alt || slug.startsWith(alt + '-')));
+    }) || null;
   }
   if (!game && idMatch) {
     // Released since: the Coming Soon record is gone, but reservation order
@@ -5653,6 +5663,11 @@ app.get('/upcoming/:slug', (req, res) => {
     if (released) return res.redirect(301, '/game/' + gameSlug(released.title));
   }
   if (!game) return res.redirect('/browse');
+  const canonical = gameSlug(game.title) + '-' + game.id;
+  if (slug !== canonical) {
+    const q = req.originalUrl.indexOf('?');
+    return res.redirect(301, '/upcoming/' + canonical + (q === -1 ? '' : req.originalUrl.slice(q)));
+  }
 
   const resolvedGame = resolveUpcomingSlots(game);
 
