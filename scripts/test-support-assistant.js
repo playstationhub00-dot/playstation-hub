@@ -657,6 +657,9 @@ async function main() {
       '  ₱399/week | ₱719/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
+      'Promos po ngayon:',
+      '- 10% OFF sa monthly (30-day) rentals',
+      '',
       'Mag-order po dito:',
       'https://playstation-hub.com/game/marvel-s-wolverine',
       '',
@@ -675,6 +678,9 @@ async function main() {
       "Marvel's Wolverine (PS5)",
       '',
       'Libre pong waitlist. Optional na ₱100 priority fee para mauna, at ibabawas iyan sa rent pag may slot.',
+      '',
+      'Promos po ngayon:',
+      '- 10% OFF sa monthly (30-day) rentals',
       '',
       'Mag-order po dito:',
       'https://playstation-hub.com/game/marvel-s-wolverine',
@@ -699,6 +705,9 @@ async function main() {
       '- PS4 Primary: 2 slots available',
       '  ₱249/week | ₱449/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
+      '',
+      'Promos:',
+      '- 10% OFF monthly (30-day) rentals',
       '',
       'Order here:',
       'https://www.playstation-hub.com/game/hogwarts-legacy',
@@ -1205,23 +1214,35 @@ async function main() {
     assert.ok(dumped.includes('no promo'));
 
     const asked = await facts.fallbackReply('may promo ba?', bundle, () => []);
-    assert.ok(asked.text.includes('Elden week'), asked.text);
-    assert.ok(asked.text.includes('One rental per customer'), asked.text);
-    assert.ok(asked.text.includes('Oct 20, 2026'), asked.text);
+    assert.ok(asked.text.includes('Promos po ngayon:'), asked.text);
+    assert.ok(asked.text.includes('- Elden week: ₱50 off Elden Ring this week. Oct 1, 2026 to Oct 20, 2026. One rental per customer.'), asked.text);
+    assert.ok(asked.text.includes('- ₱50 OFF kapag nag-rent ulit within 7 days'), asked.text);
+    assert.ok(asked.text.includes('- 10% OFF sa monthly (30-day) rentals'), asked.text);
     assert.ok(asked.text.includes("You're 2 rentals away"), asked.text);
+    assert.ok(!asked.text.includes('Message us'), asked.text);
+    assert.ok(!asked.text.includes('Asia/Manila'), asked.text);
+    assert.ok(!asked.text.includes('Counted in'), asked.text);
     assert.ok(!asked.text.includes('Ghost'));
     assert.ok(!asked.text.includes('Secret'));
+    assert.ok(asked.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), asked.text);
 
-    const quietFacts = facts.faqBundle({ categories, promo, offers: [], loyaltyNote: '' });
+    const quietPromo = { enabled: true, discounts: { 7: 0, 30: 0 }, deposit: 100, late_fee_per_day: 20 };
+    const quietFacts = facts.faqBundle({ categories, promo: quietPromo, offers: [], loyaltyNote: '' });
     const quiet = await facts.fallbackReply('may promo ba?', quietFacts, () => []);
     assert.ok(quiet.text.includes('Wala pong promo'), quiet.text);
+    assert.ok(!quiet.text.includes('Promos po'), quiet.text);
     assert.ok(!quiet.text.includes('Elden'));
     assert.ok(!quiet.text.includes('Ghost'));
 
     const price = await facts.fallbackReply('how much for a week', bundle, () => []);
-    assert.ok(price.text.includes('rebook'), price.text);
+    assert.ok(price.text.includes('Promos:'), price.text);
+    assert.ok(price.text.includes('- ₱50 OFF when you rent again within 7 days'), price.text);
+    assert.ok(price.text.includes('- 10% OFF monthly (30-day) rentals'), price.text);
     assert.ok(price.text.includes("You're 2 rentals away"), price.text);
+    assert.ok(!price.text.includes(' po'), price.text);
     assert.ok(!price.text.includes('Elden week'), price.text);
+    assert.ok(!price.text.includes('Message us'), price.text);
+    assert.ok(!price.text.includes('Asia/Manila'), price.text);
     assert.ok(!price.text.includes('Ghost'));
 
     const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 1, ps4Slots: 0 }, {}, promo);
@@ -1229,9 +1250,85 @@ async function main() {
     const onGame = await facts.fallbackReply('is Elden Ring available', bundle, () => [open]);
     assert.ok(onGame.text.includes('Elden week'), onGame.text);
     assert.ok(onGame.text.includes("You're 2 rentals away"), onGame.text);
+    assert.ok(!onGame.text.includes('Message us'), onGame.text);
     const elsewhere = await facts.fallbackReply('is Hogwarts Legacy available', bundle, () => [other]);
     assert.ok(!elsewhere.text.includes('Elden week'), elsewhere.text);
-    assert.ok(elsewhere.text.includes('rebook') || elsewhere.text.includes('₱50'), elsewhere.text);
+    assert.ok(elsewhere.text.includes('- ₱50 OFF when you rent again within 7 days'), elsewhere.text);
+  });
+
+  await ok('a Filipino slot reply lists promos as short lines, then the admin question', async () => {
+    const promos = require('../lib/promos');
+    const live = promos.liveOffers({
+      stored: [],
+      loyaltySettings: {
+        punch_enabled: true, punch_every: 5, reward_days: 7, trophy_double: true,
+        rebook_enabled: true, rebook_amount: 50, rebook_within_days: 7
+      },
+      games: [],
+      today: '2026-10-18'
+    });
+    const wolverine = {
+      id: 9, title: "Marvel's Wolverine", platform: 'PS5',
+      nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799
+    };
+    const bundle = facts.faqBundle({
+      categories, promo,
+      offers: promos.publicFacts(live),
+      siteUrl: 'https://playstation-hub.com'
+    });
+    const open = facts.publicGame(wolverine, { ntSlots: 1, trSlots: 1 }, {}, promo);
+    const fil = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", bundle, () => [open]);
+    const promoAt = fil.text.indexOf('Promos po ngayon:');
+    const orderAt = fil.text.indexOf('Mag-order po dito:');
+    const adminAt = fil.text.lastIndexOf('Gusto mo po bang makausap ang admin? Reply ADMIN.');
+    assert.ok(promoAt > fil.text.indexOf('- Non-Trophy: 1 slot available'), fil.text);
+    assert.ok(orderAt > promoAt, fil.text);
+    assert.ok(adminAt > orderAt, fil.text);
+    assert.ok(fil.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), fil.text);
+    assert.ok(fil.text.includes([
+      'Promos po ngayon:',
+      '- 10% OFF sa monthly (30-day) rentals',
+      '- ₱50 OFF kapag nag-rent ulit within 7 days',
+      '- FREE 7-day rental sa bawat 5th paid rental'
+    ].join('\n')), fil.text);
+    assert.ok(fil.text.includes('  ₱349/week | ₱629/month'), fil.text);
+    assert.ok(fil.text.includes('  + ₱100 security deposit (refundable upon returning the account)'), fil.text);
+    assert.ok(!fil.text.includes('Message us'), fil.text);
+    assert.ok(!fil.text.includes('Asia/Manila'), fil.text);
+    assert.ok(!fil.text.includes('Counted in'), fil.text);
+    assert.ok(!fil.text.includes('Paid rentals only'), fil.text);
+    assert.ok(!fil.text.includes('does not count'), fil.text);
+    assert.ok(!fil.text.includes('Trophy rentals count'), fil.text);
+    assert.strictEqual(facts.toPlainText(fil.text), fil.text);
+
+    const mix = await facts.fallbackReply("May slot pa ba for Marvel's Wolverine?", bundle, () => [open]);
+    assert.strictEqual(facts.replyLanguage("May slot pa ba for Marvel's Wolverine?"), 'mix');
+    assert.ok(mix.text.includes('Promos po ngayon:\n- 10% OFF sa monthly (30-day) rentals'), mix.text);
+    assert.ok(mix.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), mix.text);
+
+    const en = await facts.fallbackReply("Do you have a slot for Marvel's Wolverine?", bundle, () => [open]);
+    assert.ok(en.text.includes([
+      'Promos:',
+      '- 10% OFF monthly (30-day) rentals',
+      '- ₱50 OFF when you rent again within 7 days',
+      '- FREE 7-day rental every 5th paid rental'
+    ].join('\n')), en.text);
+    assert.ok(!en.text.includes(' po'), en.text);
+    assert.ok(en.text.endsWith('Want to chat with an admin? Reply ADMIN.'), en.text);
+
+    const off = facts.faqBundle({
+      categories,
+      promo: { enabled: false, discounts: { 7: 0, 30: 10 }, deposit: 100 },
+      offers: promos.publicFacts(promos.liveOffers({
+        stored: [],
+        loyaltySettings: { punch_enabled: false, rebook_enabled: false },
+        today: '2026-10-18'
+      }))
+    });
+    const bare = await facts.fallbackReply("May slot pa ba ang Marvel's Wolverine?", off, () => [open]);
+    assert.ok(!bare.text.includes('Promos'), bare.text);
+    assert.ok(!bare.text.includes('10% OFF'), bare.text);
+    assert.ok(!bare.text.includes('FREE'), bare.text);
   });
 
   console.log('\n' + passed + ' assertions passed\n');
