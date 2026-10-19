@@ -73,11 +73,40 @@ ok('both pages render and the footer links them, with the contact email beside M
   assert.ok(faq.includes('mailto:playstationhub00@gmail.com'));
 });
 
-ok('terms stay plain language and do not add policies the owner did not state', () => {
+ok('terms state the rental rules and do not add court clauses', () => {
   const terms = render('terms.ejs').toLowerCase();
-  ['governing law', 'liability', 'chargeback', 'late fee', 'free trial', 'priority fee', 'jurisdiction'].forEach(word => {
+  assert.ok(terms.includes('terms of service'));
+  assert.ok(terms.includes('late fee'));
+  assert.ok(terms.includes('₱20'));
+  assert.ok(terms.includes('psn password'));
+  ['governing law', 'liability', 'chargeback', 'free trial', 'priority fee', 'jurisdiction'].forEach(word => {
     assert.ok(!terms.includes(word), 'invented policy: ' + word);
   });
+});
+
+ok('privacy and data deletion are public pages linked from the footer', () => {
+  const privacy = render('privacy.ejs');
+  const deletion = render('data-deletion.ejs');
+  const footer = fs.readFileSync(path.join(ROOT, 'views/partials/footer.ejs'), 'utf8');
+  assert.ok(privacy.includes('Privacy Policy'));
+  assert.ok(privacy.includes('Messenger PSID'));
+  assert.ok(privacy.includes('Anthropic Claude'));
+  assert.ok(privacy.includes('MongoDB'));
+  assert.ok(privacy.includes('Railway'));
+  assert.ok(privacy.includes('PayMongo'));
+  assert.ok(privacy.includes('GCash'));
+  assert.ok(privacy.includes('Maya'));
+  assert.ok(privacy.includes('PayPal'));
+  assert.ok(privacy.includes('playstationhub00@gmail.com'));
+  assert.ok(privacy.includes('within 30 days'));
+  assert.ok(deletion.includes('User Data Deletion'));
+  assert.ok(deletion.includes('http://m.me/PlaystationHub00'));
+  assert.ok(deletion.includes('mailto:playstationhub00@gmail.com'));
+  assert.ok(deletion.includes('Within 30 days'));
+  assert.ok(deletion.includes('PSID'));
+  assert.ok(footer.includes('href="/privacy"'));
+  assert.ok(footer.includes('href="/data-deletion"'));
+  assert.ok(footer.includes('href="/terms"'));
 });
 
 ok('the shared payment sentence matches the helper, including card and bank only when on', () => {
@@ -103,6 +132,8 @@ const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
 ok('the routes exist', () => {
   assert.ok(server.includes("app.get('/faq'"));
   assert.ok(server.includes("app.get('/terms'"));
+  assert.ok(server.includes("app.get('/privacy'"));
+  assert.ok(server.includes("app.get('/data-deletion'"));
   assert.ok(server.includes('titleFixes.findBySlug'));
   assert.ok(server.includes('requestBoard.linkStockedRequest'));
 });

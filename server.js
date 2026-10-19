@@ -609,7 +609,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms', '/promos': 'Promos' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -1441,6 +1441,14 @@ app.get('/api/promo-line', (req, res) => {
 
 app.get('/terms', (req, res) => {
   res.render('terms', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/privacy', (req, res) => {
+  res.render('privacy', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/data-deletion', (req, res) => {
+  res.render('data-deletion', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
 });
 
 // Public request board. Shows approved and stocked entries ranked by votes;
