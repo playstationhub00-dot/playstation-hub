@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">PlayStation Hub · Philippines</div>
+    <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">Privacy Policy</h1>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:620px;margin:0 auto;">What playstation-hub.com stores when you order, wait, or message us. Effective 19 October 2026. Rental rules are on the <a href="/terms" style="color:var(--ps-blue);">Terms of Service</a>.</p>
+  </div>
+</section>
+
+<div style="max-width:860px;margin:0 auto;padding:3rem 2rem 4rem;display:flex;flex-direction:column;gap:1rem;">
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Who we are</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">PlayStation Hub is a PS4 and PS5 digital game rental shop in the Philippines. The website is playstation-hub.com. The app is hosted on Railway. Orders and the shop database are stored in MongoDB (database name pshub). The app’s connection log refers to MongoDB Atlas.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Orders and your name</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">An order form asks for your Facebook name. That name is stored with the order, together with the game, the account type (Non-Trophy, Trophy, or PS4 Primary), whether it is a Weekly (7-day) or Monthly (30-day) rental or a purchase, the price, the dates, the payment status, and an order reference that looks like PH- followed by digits.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">The order form does not ask for your email, your phone number, or your PSN password. If you upload a payment screenshot, a photo of the console sign-in code, or a photo showing the account was returned, that file is stored with the order. A customer row in the shop database keeps the name, game, dates, price, and status for the same rental.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Messenger and the support assistant</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">If you message the Facebook Page, we store your Messenger PSID (the id Meta gives this Page for you), the time of the message, and the message text. A photo with no caption is stored as a note that a photo arrived. The same chat store is used for the website support widget, keyed by the site cookie instead of a PSID. When a Messenger chat is tied to an order, the PSID is also saved on that order.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">The support assistant sends the message text, and a short recent history of that same chat, to Anthropic Claude at api.anthropic.com so it can write a reply about slots, prices, and how renting works. If the Anthropic key is not set and an OpenAI key is set, the same text is sent to OpenAI instead. The request includes live shop facts such as prices and which payment methods are on. It does not include a PSN password. The assistant is not given other customers’ names.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Payments</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Local payment is GCash or Maya, often a QR arranged in Messenger. International customers can pay with PayPal. When card or QR Ph checkout is on, you pay on a PayMongo page. Card details are entered on PayMongo’s site and are not stored here. We send PayMongo the amount in pesos, the game name, and the order reference, and we store the payment result they send back. The shop’s own GCash, Maya, and PayPal receiving details live in shop settings.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Site visits, cookies, and Facebook</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">A cookie named ph_sid identifies a browser for 30 days from the last visit. Public page views store the path, the time, that session id, and a hash of the IP address. The raw IP address is not written into the visit row. Game requests and waitlist votes store the Facebook name you type and that session id.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">The footer loads Meta’s pixel and records a page view. Messenger itself is a Meta product, so Meta also processes the messages you send the Page. When owner alerts are switched on, a Telegram message to the shop can include the customer’s first name and the order reference.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">How we use it</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">We use this data to take the order, sign the account into your console, track the rental end date, apply the deposit and any late fee, answer questions in the website chat and on Messenger, and run the free waitlist and game-request board. We do not sell customer lists.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">How long we keep it</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">Orders and customer rows stay in MongoDB until the shop deletes them or you ask us to delete them. There is no automatic expiry on an order. A support thread keeps the latest 24 messages, each up to 1,000 characters. Threads that are not waiting on an admin are capped at the newest 400. Visit rows are trimmed after 200,000. The ph_sid cookie expires 30 days after the last visit.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">The shop file is also copied into MongoDB on each save, in the database pshub. Asking us to delete your data is described on <a href="/data-deletion" style="color:var(--ps-blue);">Data Deletion</a>. We complete that request within 30 days.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Contact</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Email <a href="mailto:playstationhub00@gmail.com" style="color:var(--ps-blue);">playstationhub00@gmail.com</a>, <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Messenger</a>, or the <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Facebook Page</a>. That email address is the one published on this site.</p>
+  </section>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

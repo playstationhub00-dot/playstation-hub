@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Deletion — <%= settings.title %></title>
+  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<section style="background:linear-gradient(135deg,#000 0%,#001a3a 60%,#000 100%);padding:4rem 2rem 3rem;text-align:center;position:relative;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,112,209,0.12) 0%,transparent 65%);pointer-events:none;"></div>
+  <div style="position:relative;z-index:1;">
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(0,112,209,0.15);border:1px solid rgba(0,112,209,0.3);border-radius:20px;padding:0.35rem 1rem;font-size:0.8rem;color:var(--ps-blue);font-weight:600;margin-bottom:1.25rem;">PlayStation Hub · Philippines</div>
+    <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:1rem;">User Data Deletion</h1>
+    <p style="color:var(--text-secondary);font-size:1rem;max-width:620px;margin:0 auto;">How to ask PlayStation Hub to delete the data playstation-hub.com stores about you. What we store is on the <a href="/privacy" style="color:var(--ps-blue);">Privacy Policy</a>.</p>
+  </div>
+</section>
+
+<div style="max-width:860px;margin:0 auto;padding:3rem 2rem 4rem;display:flex;flex-direction:column;gap:1rem;">
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">How to ask</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">Message the Facebook Page on <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Messenger</a>, or email <a href="mailto:playstationhub00@gmail.com" style="color:var(--ps-blue);">playstationhub00@gmail.com</a>. You can also use the <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Facebook Page</a>. There is no delete button on the website. A person at PlayStation Hub handles the request.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Tell us the Facebook name on the order, the order reference if you have one (it looks like PH- followed by digits), and that you want your data deleted. If you only used Messenger, send the request from that same chat so we can match the Page-Scoped ID (PSID) Meta gave this Page for you.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">What we delete</h2>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">Within 30 days we delete the matching order in MongoDB, the customer row, the Messenger contact and the support-chat messages we store for that PSID or website session, payment and return photos saved on the order, and the Facebook name on a game request or waitlist vote we can match. We reply when it is done.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">We do not store card numbers. PayMongo, PayPal, GCash, Maya, Meta, and Anthropic (Claude, which reads support messages to draft a reply) keep their own copies under their policies. We cannot delete those copies from this site. A message already sent to the shop’s Telegram alert, when that alert is on, is in that Telegram chat.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">If you used Messenger only</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Open the PlayStation Hub chat and say you want your data deleted. We use the PSID on that conversation to find the messages, and any order that was linked to the same PSID. Removing the app in Facebook settings does not by itself delete the copy stored on playstation-hub.com. Send the message or the email as well.</p>
+  </section>
+
+  <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
+    <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Contact</h2>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Email <a href="mailto:playstationhub00@gmail.com" style="color:var(--ps-blue);">playstationhub00@gmail.com</a> or message <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" style="color:var(--ps-blue);">Messenger</a>. The rental rules are on the <a href="/terms" style="color:var(--ps-blue);">Terms of Service</a>.</p>
+  </section>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
