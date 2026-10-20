@@ -69,6 +69,7 @@ const supportAssistant = require('./lib/support-assistant');
 const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
+const seo = require('./lib/seo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,6 +77,20 @@ const PORT = process.env.PORT || 3000;
 // cookie keeps it out of the edge cache), so the uncompressed page was
 // Railway egress even when Cloudflare compressed it again for the browser.
 app.use(textCompress());
+
+// One host in Google's index. playstation-hub.com and www both used to
+// answer 200. Apex 301s to www and keeps the path and query. Localhost,
+// Railway's own hostname, and health checks are left alone so a deploy
+// probe is not sent to the public site.
+app.use((req, res, next) => {
+  const target = seo.apexRedirect({
+    host: req.hostname,
+    originalUrl: req.originalUrl,
+    userAgent: req.get('user-agent') || ''
+  });
+  if (!target) return next();
+  res.redirect(301, target);
+});
 
 // Guards against a double-click or retry on /admin/upcoming/release/:id
 // starting a second release for the same Coming Soon id while the first is
@@ -471,6 +486,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // How It Works, game pages and the footer all call this so the local /
 // international split cannot drift. Card and bank stay in the sentence only
 // when that method is actually on (see lib/payment-copy.js).
+app.locals.seo = seo;
+app.locals.faqPages = require('./lib/faq-pages');
+app.locals.trafficSources = (rows) => seo.trafficSources(rows);
 app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
   payViaGateway: gateway != null ? !!gateway : !!process.env.PAYMONGO_SECRET_KEY,
   payment_methods: settings && settings.payment_methods
@@ -649,7 +667,20 @@ app.use((req, res, next) => {
   const ip = require('crypto').createHash('sha256').update(clientIp(req)).digest('hex');
   const today = new Date().toISOString().slice(0, 10);
   const now = new Date().toISOString();
-  db.get('visitors').push({ date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid }).write();
+  // First page of a session keeps the campaign and the referring site. A
+  // later page in the same visit must not overwrite that, or the admin
+  // "Traffic sources" card would count the site itself.
+  const attr = seo.attributionForRequest({
+    query: req.query,
+    referrer: req.get('referer') || '',
+    alreadyCaptured: getCookie(req, 'ph_attr') === '1'
+  });
+  if (attr.capture) {
+    res.cookie('ph_attr', '1', { httpOnly: true, sameSite: 'lax', maxAge: SESSION_MAX_AGE_MS });
+  }
+  const visit = { date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid };
+  if (attr.capture) Object.assign(visit, attr.fields);
+  db.get('visitors').push(visit).write();
   // Cap well above realistic traffic volume so All-Time visits actually reflects all
   // time instead of silently plateauing — lowdb rewrites the whole file per write, so
   // some ceiling is still needed to avoid unbounded growth over years of uptime.
@@ -665,6 +696,9 @@ app.use((req, res, next) => {
 // cluttered with staff tooling customers can't use.
 app.use((req, res, next) => {
   res.locals.isAdmin = !!(req.session && req.session.isAdmin);
+  res.locals.ga4Id = seo.cleanGa4Id(process.env.GA4_MEASUREMENT_ID);
+  res.locals.googleSiteVerification = seo.cleanSiteVerification(process.env.GOOGLE_SITE_VERIFICATION);
+  res.locals.seoNoindex = req.path.startsWith('/admin');
   // The floating support chat is for customers. Admin pages include the
   // public footer on a few edit screens, and the widget does not belong there.
   res.locals.showSupportChat = !req.path.startsWith('/admin');
@@ -2454,6 +2488,30 @@ app.get('/browse', (req, res) => {
 });
 
 // ── Game Detail Page ──────────────────────────────────────────────────────────
+function renderNotFound(res) {
+  res.status(404).render('not-found', {
+    settings: getSiteSettings(),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements()
+  });
+}
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(seo.robotsTxt());
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  const games = (getGames() || []).map(g => ({
+    path: '/game/' + gameSlug(g.title),
+    lastmod: g.updated_at || g.created_at || ''
+  }));
+  const upcoming = (getUpcoming() || []).map(g => ({
+    path: '/upcoming/' + gameSlug(g.title) + '-' + g.id,
+    lastmod: g.updated_at || g.created_at || ''
+  }));
+  res.type('application/xml').send(seo.sitemapXml({ games, upcoming }));
+});
+
 function gameSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
@@ -4756,7 +4814,7 @@ app.get('/game/:slug', async (req, res) => {
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
     : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
-  if (!game) return res.redirect('/browse');
+  if (!game) return renderNotFound(res);
   const canonical = gameSlug(game.title);
   if (param !== canonical) {
     const q = req.originalUrl.indexOf('?');
@@ -5670,7 +5728,7 @@ app.get('/upcoming/:slug', (req, res) => {
     const released = releaseLib.findReleasedGame(getGames(), idMatch[1]);
     if (released) return res.redirect(301, '/game/' + gameSlug(released.title));
   }
-  if (!game) return res.redirect('/browse');
+  if (!game) return renderNotFound(res);
   const canonical = gameSlug(game.title) + '-' + game.id;
   if (slug !== canonical) {
     const q = req.originalUrl.indexOf('?');

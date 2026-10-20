@@ -1,12 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rent PS Plus Deluxe — Playstation Hub</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', { page: 'ps-plus', canonicalPath: '/ps-plus/rent', title: 'Rent PS Plus Deluxe | Playstation Hub' }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
-  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body>
 <%- include('partials/announcement') %>

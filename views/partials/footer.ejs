@@ -30,12 +30,31 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=2184795349041848&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<% if (typeof ga4Id !== 'undefined' && ga4Id) { %>
+<script async src="https://www.googletagmanager.com/gtag/js?id=<%= ga4Id %>"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '<%= ga4Id %>');
+</script>
+<% } %>
+<script>
+document.addEventListener('submit', function (e) {
+  var form = e.target;
+  if (!form || (form.id !== 'gdOrderForm' && form.id !== 'reserveForm')) return;
+  try { if (typeof fbq === 'function') fbq('track', 'InitiateCheckout'); } catch (err) {}
+  try {
+    if (typeof gtag === 'function') gtag('event', form.id === 'reserveForm' ? 'reserve_click' : 'rent_click');
+  } catch (err) {}
+}, true);
+</script>
 
 <footer>
   <div class="footer-inner">
     <div class="footer-grid">
       <div class="footer-col footer-brand">
-        <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" style="height:36px;width:auto;"></a>
+        <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" width="230" height="56" style="height:36px;width:auto;"></a>
         <p>PS5/PS4 digital game rentals in the Philippines — rent longer, pay less, no discs or meetups.</p>
         <div class="social-icons">
           <a href="https://facebook.com/PlaystationHub00" target="_blank" rel="noopener" class="social-icon facebook" title="Facebook — PlaystationHub00">

@@ -1,0 +1,17 @@
+<%# items: [{ q, text, open, steps, paragraphs: [[{ text, href }]] }] %>
+<% (items || []).forEach(function (item) { %>
+<details class="faq-item"<% if (item.open) { %> open<% } %>>
+  <summary><%= item.q %></summary>
+  <% if (item.steps && item.steps.length) { %>
+  <ol>
+    <% item.steps.forEach(function (step) { %>
+    <li><%= step %></li>
+    <% }); %>
+  </ol>
+  <% } else { %>
+  <% (item.paragraphs || [[{ text: item.text }]]).forEach(function (para) { %>
+  <p><% para.forEach(function (part) { %><% if (part.href) { %><a href="<%= part.href %>"<% if (/^https?:/.test(part.href)) { %> target="_blank" rel="noopener"<% } %> style="color:var(--ps-blue);"><%= part.text %></a><% } else { %><%= part.text %><% } %><% }); %></p>
+  <% }); %>
+  <% } %>
+</details>
+<% }); %>

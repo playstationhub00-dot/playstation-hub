@@ -1,13 +1,22 @@
+<%
+  var udSeo = seo.upcomingPage({
+    game: game,
+    promo: (typeof settings !== 'undefined' && settings) ? settings.promo : null
+  });
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= game.title %> — Coming Soon — Playstation Hub</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', {
+    title: udSeo.title,
+    description: udSeo.description,
+    canonicalPath: udSeo.canonicalPath,
+    image: udSeo.image,
+    type: udSeo.type,
+    jsonLd: udSeo.jsonLd
+  }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
-  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body>
 <%- include('partials/announcement') %>
@@ -71,6 +80,7 @@
         <% if (game.genre) { %><span class="usd-plat-chip"><%= game.genre %></span><% } %>
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
+      <p class="seo-intro"><%= udSeo.intro %></p>
       <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: udPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="usd-cd-row">
@@ -84,7 +94,7 @@
             <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
           <% } %>
         </div>
-        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand">
+        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand" width="230" height="56">
       </div>
     </div>
   </div>
@@ -110,7 +120,7 @@
         <% if (udPsn.media.length) { %>
           <%- include('partials/game-psn-media', { items: udPsn.media, title: game.title }) %>
         <% } else if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster">
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140">
         <% } %>
         <!-- Same poster badges as the released-game page: platform corner chip,
              plus an urgency banner when a rental slot is scarce. Meaningless
@@ -360,7 +370,7 @@
       <div class="gd-slider" id="gpSlider">
         <div class="gd-slider-track" id="gpSliderTrack">
           <% gpGallery.forEach((img, i) => { %>
-            <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
+            <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" width="1280" height="720" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
           <% }) %>
         </div>
         <% if (gpGallery.length > 1) { %>
@@ -376,7 +386,7 @@
       <% if (gpGallery.length > 1) { %>
       <div class="gd-thumbs" id="gpThumbs">
         <% gpGallery.forEach((img, i) => { %>
-          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img <%- imgThumb(img) %> alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img <%- imgThumb(img) %> width="160" height="90" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
         <% }) %>
       </div>
       <% } %>

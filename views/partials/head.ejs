@@ -1,0 +1,65 @@
+<%
+  // One <head> for every page: title, description, canonical on www, social
+  // tags, and JSON-LD. Admin routes pass noindex (the visitor middleware also
+  // sets seoNoindex for /admin). Query strings never become the canonical.
+  var seoApi = seo;
+  var pageKey = (typeof page !== 'undefined') ? page : '';
+  var base = {};
+  if (pageKey === 'home') {
+    base = seoApi.homePage({
+      games: (typeof games !== 'undefined' ? games : []),
+      promo: (typeof promo !== 'undefined' ? promo : null),
+      faqItems: (typeof faqItems !== 'undefined' ? faqItems : [])
+    });
+  } else if (pageKey) {
+    base = seoApi.staticPage(pageKey);
+  }
+  var pageTitle = (typeof title !== 'undefined' && title) ? title : (base.title || ((typeof settings !== 'undefined' && settings && settings.title) || 'Playstation Hub'));
+  var pageDesc = (typeof description !== 'undefined') ? description : (base.description || '');
+  var pagePath = (typeof canonicalPath !== 'undefined') ? canonicalPath : (base.canonicalPath || '/');
+  var canonical = seoApi.canonicalUrl(pagePath);
+  var noindexPage = !!((typeof noindex !== 'undefined' && noindex) || (typeof seoNoindex !== 'undefined' && seoNoindex));
+  var img = (typeof image !== 'undefined' && image) ? image : (base.image || ((typeof settings !== 'undefined' && settings && settings.logo_path) || '/logo.svg'));
+  var ogImage = seoApi.absoluteUrl(img);
+  var ogType = (typeof type !== 'undefined' && type) ? type : (base.type || 'website');
+  var blocks = [];
+  if (!noindexPage) blocks = blocks.concat(seoApi.siteGraph());
+  if (base.jsonLd && base.jsonLd.length) blocks = blocks.concat(base.jsonLd);
+  if (typeof jsonLd !== 'undefined' && jsonLd && jsonLd.length) blocks = blocks.concat(jsonLd);
+  var fav = (typeof settings !== 'undefined' && settings && settings.favicon_path) || '/favicon.svg';
+  var verify = (typeof googleSiteVerification !== 'undefined' && googleSiteVerification) ? googleSiteVerification : '';
+%>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= pageTitle %></title>
+<% if (pageDesc) { %>
+<meta name="description" content="<%= pageDesc %>">
+<% } %>
+<% if (!noindexPage) { %>
+<link rel="canonical" href="<%= canonical %>">
+<% } %>
+<% if (noindexPage) { %>
+<meta name="robots" content="noindex, nofollow">
+<% } %>
+<meta property="og:title" content="<%= pageTitle %>">
+<% if (pageDesc) { %>
+<meta property="og:description" content="<%= pageDesc %>">
+<% } %>
+<meta property="og:image" content="<%= ogImage %>">
+<meta property="og:url" content="<%= canonical %>">
+<meta property="og:type" content="<%= ogType %>">
+<meta property="og:site_name" content="Playstation Hub">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="<%= pageTitle %>">
+<% if (pageDesc) { %>
+<meta name="twitter:description" content="<%= pageDesc %>">
+<% } %>
+<meta name="twitter:image" content="<%= ogImage %>">
+<link rel="icon" href="<%= fav %>" type="<%= seoApi.faviconType(fav) %>">
+<meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
+<% if (verify) { %>
+<meta name="google-site-verification" content="<%= verify %>">
+<% } %>
+<% blocks.forEach(function (block) { %>
+<script type="application/ld+json"><%- seoApi.jsonLdScript(block) %></script>
+<% }); %>

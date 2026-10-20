@@ -61,6 +61,27 @@
       </div>
     </div>
 
+    <% const srcRows = (typeof trafficSources === 'function') ? trafficSources(visitors) : []; %>
+    <div class="table-card" style="border-color:rgba(96,165,250,0.2);margin-bottom:2rem;">
+      <h2 style="border-color:rgba(96,165,250,0.1);">Traffic sources</h2>
+      <div style="font-size:0.72rem;color:#555;margin-bottom:0.85rem;">First visit of each session. Campaign names come from the link that brought them.</div>
+      <% if (!srcRows.length) { %>
+        <div style="padding:1rem 0;color:#555;">No visits recorded yet.</div>
+      <% } else { %>
+      <table class="games-table" style="width:100%;">
+        <thead><tr><th>Source</th><th>Sessions</th></tr></thead>
+        <tbody>
+          <% srcRows.forEach(function (s) { %>
+          <tr>
+            <td style="color:#e8e8e8;font-weight:600;"><%= s.label %></td>
+            <td style="color:#aaa;"><%= s.count %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% } %>
+    </div>
+
     <!-- Session Funnel + Exit Pages -->
     <div class="vf-section">
       <div class="vf-filter-row">

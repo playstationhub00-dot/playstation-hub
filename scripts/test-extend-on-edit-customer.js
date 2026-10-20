@@ -8,6 +8,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const seo = require('../lib/seo');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -32,7 +33,8 @@ function render(cust, extendTier) {
     accounts: [],
     currentAssign: null,
     extendTier: extendTier || { p7: 0, p30: 0 },
-    todayManila: '2026-09-05'
+    todayManila: '2026-09-05',
+    seo
   }, { filename: VIEW });
 }
 

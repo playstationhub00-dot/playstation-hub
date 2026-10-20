@@ -4,8 +4,8 @@
 // redirectSlug before looking the title up, so a title the rename script had
 // not changed (NBA2K27 → slug nba2k27) was sent to /game/nba-2k27 and then
 // 302'd to /browse. Every catalogue game's card href must finish on that
-// game's page. The other spelling still resolves, and a missing slug still
-// ends on /browse.
+// game's page. The other spelling still resolves. A slug that names no game
+// is a 404 with a link back to the catalogue, not a redirect.
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
@@ -193,11 +193,11 @@ async function main() {
       assert.ok(final.body.includes('name="game_id" value="' + id + '"'));
     }
   });
-  await okAsync('a slug that names no game still ends on /browse', async () => {
-    const missing = await follow('/game/not-a-real-game');
-    assert.strictEqual(missing.status, 200);
-    assert.strictEqual(missing.path, '/browse');
-    assert.ok(missing.hops.some(h => h.status === 302 && h.location === '/browse'));
+  await okAsync('a slug that names no game is a 404 with a link back to the catalogue', async () => {
+    const missing = await call('/game/not-a-real-game');
+    assert.strictEqual(missing.status, 404);
+    assert.ok(!missing.headers.location);
+    assert.ok(missing.body.includes('href="/browse"'));
   });
   await okAsync('digit titles are not rewritten into a second spelling', async () => {
     for (const title of ['Tekken 8', 'WWE 2K25', 'F1 24', 'Battlefield 6', 'Resident Evil 2 Deluxe Edition']) {

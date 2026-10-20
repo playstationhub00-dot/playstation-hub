@@ -74,8 +74,8 @@ ok('signing in a released reservation updates its existing customer record', () 
 ok('old Coming Soon links redirect to the released game', () => {
   const u = block("app.get('/upcoming/:slug'");
   const find = u.indexOf('releaseLib.findReleasedGame(');
-  const browse = u.indexOf("if (!game) return res.redirect('/browse');");
-  assert.ok(find > 0 && browse > find, 'checked before falling back to /browse');
+  const missing = u.indexOf('if (!game) return renderNotFound(res);');
+  assert.ok(find > 0 && missing > find, 'checked before the unknown-slug 404');
   assert.ok(u.includes("res.redirect(301, '/game/' + gameSlug(released.title))"));
 });
 

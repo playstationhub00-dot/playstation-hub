@@ -17,28 +17,7 @@
     <div>
       <h2 class="hm-title">Questions</h2>
       <div class="faq-list">
-        <details class="faq-item">
-          <summary>Do I need to give you my PSN password?</summary>
-          <p>No, and we never ask for it. You bring up the sign-in screen on your own console and send us the code from it — that signs <em>our</em> account into <em>your</em> console. Your password never leaves your hands.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Can I try a game before I pay?</summary>
-          <p>Yes — three hours free, on our account, before you commit to renting or buying. Message us and we'll set it up.</p>
-        </details>
-        <% if (hmDep) { %>
-        <details class="faq-item">
-          <summary>When do I get my ₱<%= hmDep %> deposit back?</summary>
-          <p>As soon as you return the account at the end of your rental. It only applies to Trophy accounts. If you return late, ₱<%= (promo && promo.late_fee_per_day) || 0 %> a day comes out of it — return on time and you get the full amount back.</p>
-        </details>
-        <% } %>
-        <details class="faq-item">
-          <summary>What happens when my rental ends?</summary>
-          <p>You sign our account out of your console and send us a quick screenshot to confirm. That frees the slot for the next person, and releases your deposit if you paid one.</p>
-        </details>
-        <details class="faq-item">
-          <summary>What if there are no slots left for the game I want?</summary>
-          <p>You can join the line for free and we'll message you the moment one opens, or pay a small priority fee to move ahead of everyone on the free list. Either way you keep your place — you can see exactly where you are in the queue.</p>
-        </details>
+        <%- include('../faq-items', { items: (typeof faqItems !== 'undefined' && faqItems) ? faqItems : faqPages.homeItems({ deposit: hmDep, lateFee: (promo && promo.late_fee_per_day) || 0 }) }) %>
       </div>
     </div>
   </div>

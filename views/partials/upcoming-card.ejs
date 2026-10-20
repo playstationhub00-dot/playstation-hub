@@ -21,7 +21,7 @@
 <a href="/upcoming/<%= game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>-<%= game.id %>" class="game-card upcoming-card gc2-split game-card-link<%= csFull ? ' cs-full' : '' %>" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
   <div class="gc2-art">
     <% if (game.cover_image) { %>
-      <img <%- imgCard(game.cover_image) %> alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
+      <img <%- imgCard(game.cover_image) %> width="480" height="720" alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
     <% } else { %>
       <div class="cs-cover-placeholder">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
