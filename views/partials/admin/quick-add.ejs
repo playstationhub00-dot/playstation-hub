@@ -418,12 +418,12 @@
     return d === 7 ? p7 : d === 30 ? p30 : 0;
   }
 
-  // Mirrors lib/reservations.preorderPricing: deposit on Trophy only, paid in
-  // full now — nothing owed on release.
+  // Mirrors lib/reservations.preorderPricing: deposit on Trophy and PS4
+  // Primary, paid in full now — nothing owed on release.
   function qaReservation(base, type) {
     var b = Number(base) || 0;
     if (b <= 0) return { total: 0, amountDue: 0, remainingDue: 0 };
-    var deposit = type === 'tr' ? qaResDepositValue() : 0;
+    var deposit = (type === 'tr' || type === 'ps4') ? qaResDepositValue() : 0;
     var total = b + deposit;
     return { total: total, amountDue: total, remainingDue: 0 };
   }
@@ -553,7 +553,10 @@
       return;
     }
     var type = el('qaType').value, d = daysValue();
-    var pre = type === 'tr' ? 'tr' : 'nt';
+    // A rental, including PS4 Primary, is quoted from the Trophy fields.
+    // A purchase has no PS4 buy price and still uses Non-Trophy.
+    var rentPre = (type === 'tr' || type === 'ps4') ? 'tr' : 'nt';
+    var buyPre = type === 'tr' ? 'tr' : 'nt';
     // "Full price" reads the "f"-suffixed dataset (undiscounted) instead of
     // the promo'd one — same fields the server computes with the promo's
     // enabled flags switched off, so this preview cannot drift from the save.
@@ -565,7 +568,7 @@
     // A sale is priced from the buy fields, not the rental tiers. PS4 Primary
     // has no buy price of its own and borrows Non-Trophy, same as the server.
     if (qaIsBuy()) {
-      var buy = parseInt(opt.dataset[(pre === 'tr' ? 'buytr' : 'buynt') + suf]) || 0;
+      var buy = parseInt(opt.dataset[(buyPre === 'tr' ? 'buytr' : 'buynt') + suf]) || 0;
       var amt = override !== '' ? (parseInt(override) || 0) : buy;
       if (!amt) {
         box.className = 'qa-price qa-price-empty';
@@ -579,8 +582,8 @@
       return;
     }
 
-    var p7 = parseInt(opt.dataset[pre + '7' + suf]) || 0;
-    var p30 = parseInt(opt.dataset[pre + '30' + suf]) || 0;
+    var p7 = parseInt(opt.dataset[rentPre + '7' + suf]) || 0;
+    var p30 = parseInt(opt.dataset[rentPre + '30' + suf]) || 0;
 
     // A reservation on a game that has not released: the list price plus the
     // deposit, paid in full now — nothing owed on launch day. Mirrors

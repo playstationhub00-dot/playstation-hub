@@ -231,11 +231,15 @@ async function main() {
     assert.ok(!dumped.includes('ps4Primary'));
   });
 
-  await ok('PS4 Primary is offered only when the game runs on PS4, at the Non-Trophy price', () => {
+  await ok('PS4 Primary is offered only when the game runs on PS4, and the deposit applies', () => {
     const card = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 2 }, { nonTrophy: 0, trophy: 0, ps4Primary: 5 }, promo);
     assert.strictEqual(card.slots.ps4Primary, 2);
     assert.ok(card.ps4Primary.toLowerCase().includes('deposit'));
     assert.strictEqual(card.prices.nonTrophyWeekly, 249);
+    assert.strictEqual(card.prices.ps4PrimaryWeekly, 299);
+    assert.strictEqual(card.prices.ps4PrimaryMonthly, 539);
+    assert.strictEqual(card.prices.ps4PrimaryWeekly, card.prices.trophyWeekly);
+    assert.strictEqual(card.prices.ps4PrimaryMonthly, card.prices.trophyMonthly);
   });
 
   await ok('a per-game discount replaces the site promo on that title', () => {
@@ -703,7 +707,7 @@ async function main() {
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
       '- PS4 Primary: 2 slots available',
-      '  ₱249/week | ₱449/month',
+      '  ₱299/week | ₱539/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
       'Promos:',
