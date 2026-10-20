@@ -14,7 +14,7 @@
   } else if (pageKey) {
     base = seoApi.staticPage(pageKey);
   }
-  var pageTitle = (typeof title !== 'undefined' && title) ? title : (base.title || ((typeof settings !== 'undefined' && settings && settings.title) || 'Playstation Hub'));
+  var pageTitle = (typeof title !== 'undefined' && title) ? title : (base.title || ((typeof settings !== 'undefined' && settings && settings.title) || 'PlayStation Hub'));
   var pageDesc = (typeof description !== 'undefined') ? description : (base.description || '');
   var pagePath = (typeof canonicalPath !== 'undefined') ? canonicalPath : (base.canonicalPath || '/');
   var canonical = seoApi.canonicalUrl(pagePath);
@@ -48,7 +48,7 @@
 <meta property="og:image" content="<%= ogImage %>">
 <meta property="og:url" content="<%= canonical %>">
 <meta property="og:type" content="<%= ogType %>">
-<meta property="og:site_name" content="Playstation Hub">
+<meta property="og:site_name" content="PlayStation Hub">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<%= pageTitle %>">
 <% if (pageDesc) { %>

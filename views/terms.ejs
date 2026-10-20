@@ -25,25 +25,28 @@
 
   <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
     <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Rentals</h2>
-    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">A rental is Weekly (7 days) or Monthly (30 days). When the monthly promo is on, the default is 10% off the 30-day price, and checkout charges the price after that discount. You pick the game, the account type, and the length on the site. The price on the game page is the price for that order.</p>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">A rental is Weekly (7 days) or Monthly (30 days). When the monthly promo is on, the default is 10% off the 30-day price, and checkout charges the price after that discount. You pick the game, the account type, and the length on the site. The price on the game page is the price for that order. You can extend a weekly or monthly rental at the same price you paid.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;"><%- include('partials/swap-line') %> Swaps must be to a game in the same price tier. Swapping into a higher-priced game like GTA VI means paying the price difference.</p>
   </section>
 
+  <% const termDep = (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100; %>
+  <% const termLate = (settings.promo && settings.promo.late_fee_per_day != null) ? settings.promo.late_fee_per_day : 20; %>
   <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
     <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Account types</h2>
     <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;"><strong style="color:#fff;">Non-Trophy</strong> is the cheapest. Play happens on the shop account. There is no deposit.</p>
-    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;"><strong style="color:#fff;">Trophy</strong> is your own profile. Trophies and saves stay with you. The price is higher than Non-Trophy, and there is a ₱100 refundable deposit.</p>
-    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;"><strong style="color:#fff;">PS4 Primary</strong> is Trophy-style (your own profile, trophies and saves, ₱100 refundable deposit). It is only for games that support PS4, and it is priced like Non-Trophy.</p>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;"><strong style="color:#fff;">Trophy</strong> is your own profile. Trophies and saves stay with you. The price is higher than Non-Trophy, and there is a ₱<%= termDep %> refundable deposit.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;"><strong style="color:#fff;">PS4 Primary</strong> is the Trophy-style account for games that support PS4. You play on your own profile, so trophies and saves stay with you. It costs the same as a PS5 Trophy rental, and the ₱<%= termDep %> refundable deposit applies.</p>
   </section>
 
   <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
     <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Deposit and late fee</h2>
-    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">The ₱100 deposit on Trophy and PS4 Primary is refunded when the account is returned with proof. Non-Trophy has no deposit. These amounts are the shop defaults in settings.</p>
-    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">The late fee is ₱20 per day, deducted from that deposit. Return on time and the full deposit can be refunded. A late return uses the deposit first. The per-day amount in shop settings is the one applied to the rental.</p>
+    <p style="margin:0 0 0.6rem;color:#aaa;font-size:0.9rem;line-height:1.65;">The ₱<%= termDep %> deposit on Trophy and PS4 Primary is refunded when the account is returned with proof. Sign our account out and send a screenshot of the signed-out account. Once we verify it, the deposit goes back the way you paid (GCash or Maya, or PayPal), which takes about a minute. Non-Trophy has no deposit. These amounts are the shop defaults in settings.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Non-Trophy rentals have no late fees, because no deposit is collected. On Trophy and PS4 Primary, a late return costs ₱<%= termLate %> per late day, deducted from the ₱<%= termDep %> deposit. Return on time and the full deposit can be refunded. You can cancel and get your rental fee refunded only within 12 hours after your rental starts. It goes back the way you paid: GCash or Maya, or PayPal. After that, the rental fee can't be refunded.</p>
   </section>
 
   <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">
     <h2 style="font-size:1.05rem;font-weight:800;margin:0 0 0.45rem;">Access</h2>
-    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Access is through a console sign-in QR code. You send the code from your console, and the shop account signs in there. We never ask for your PSN password. Customers never share a password. See <a href="/how-to-sign-in" style="color:var(--ps-blue);">How to Sign In</a>.</p>
+    <p style="margin:0;color:#aaa;font-size:0.9rem;line-height:1.65;">Access is through a console sign-in QR code. You send the code from your console, and the shop account signs in there. We never ask for your PSN password. Customers never share a password. Online multiplayer needs your own PS Plus subscription. A PlayStation Hub rental does not include it. See <a href="/how-to-sign-in" style="color:var(--ps-blue);">How to Sign In</a>.</p>
   </section>
 
   <section style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:12px;padding:1.25rem 1.4rem;">

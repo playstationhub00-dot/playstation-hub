@@ -200,6 +200,15 @@ ok('editing and deleting leave the other promos alone', () => {
   assert.deepStrictEqual(removed.map(o => o.id), ['p1']);
 });
 
+ok('a monthly percent claim is live only for a custom promo that says so', () => {
+  const month = custom({ title: 'Monthly 10%', text: '10% off monthly rentals this week.', badge: '10% off' });
+  const rows = live([month], loyaltyOn, '2026-10-14');
+  assert.deepStrictEqual(promos.monthlyDiscountLive(rows), { pct: 10, id: 'p1' });
+  const week = custom({ title: 'Elden week', text: '₱50 off Elden Ring this week.', badge: '₱50 off' });
+  assert.strictEqual(promos.monthlyDiscountLive(live([week], loyaltyOn, '2026-10-14')), null);
+  assert.strictEqual(promos.monthlyDiscountLive(live([], loyaltyOn, '2026-10-14')), null);
+});
+
 console.log('\ncounts');
 
 ok('banner views dedupe per session per day, page views and orders do not', () => {

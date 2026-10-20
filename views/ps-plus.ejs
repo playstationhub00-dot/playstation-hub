@@ -44,7 +44,7 @@
 <section id="pricing" class="psplus-pricing-section">
   <div class="psplus-pricing-inner">
     <h2>Pricing</h2>
-    <p style="color:var(--text-secondary);font-size:0.9rem;margin-top:0.25rem;">Unlimited game changes, subject to slot availability. Prices may vary.</p>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-top:0.25rem;"><%- include('partials/swap-line') %> Prices may vary.</p>
 
     <!-- Slot availability card -->
     <%
@@ -114,12 +114,12 @@
             <span class="psplus-price-amount" style="color:#FFD700;">₱<%= prices.tr_price_30d %></span>
           </div>
         </div>
-        <div class="psplus-deposit-note">+₱100 refundable security deposit</div>
+        <div class="psplus-deposit-note">+₱<%= (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100 %> refundable security deposit</div>
       </div>
     </div>
     <div class="psplus-notes">
-      <span>🔒 ₱100 security deposit for Trophy account</span>
-      <span>🔄 Unlimited game changes, subject to slot availability</span>
+      <span>🔒 ₱<%= (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100 %> refundable deposit for Trophy and PS4 Primary</span>
+      <span>🔄 <%- include('partials/swap-line') %></span>
     </div>
     <a href="/ps-plus/rent" class="ppc-cta ppc-cta-block">Rent PS Plus Deluxe →</a>
   </div>

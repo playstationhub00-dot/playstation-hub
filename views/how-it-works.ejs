@@ -64,7 +64,7 @@
         <p>Pick <strong style="color:#fff;">Non-Trophy</strong>, <strong style="color:#ffc400;">Trophy</strong>, or <strong style="color:#60a5fa;">PS4 Primary</strong>. The difference is explained further down this page.</p>
         <div class="hiw-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-          Trophy and PS4 Primary include a ₱100 refundable deposit. Non-Trophy has no deposit.
+          Trophy and PS4 Primary include a ₱<%= (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100 %> refundable deposit. Non-Trophy has no deposit.
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@
       <div class="hiw-icon">📅</div>
       <div class="hiw-body">
         <h2>Pick How Long <span style="font-size:0.8rem;color:#555;font-weight:600;">— renting only</span></h2>
-        <p>Choose <strong style="color:#fff;">Weekly (7 days)</strong> or <strong style="color:#fff;">Monthly (30 days)</strong>. Monthly works out cheaper per day, and any active discount is applied automatically at checkout.</p>
+        <p>Choose <strong style="color:#fff;">Weekly (7 days)</strong> or <strong style="color:#fff;">Monthly (30 days)</strong>. Monthly works out cheaper per day. A percent off applies only when the monthly promo is on, and checkout charges the price after that discount. <%- include('partials/swap-line') %></p>
         <div class="hiw-tip">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           Buying permanently? Skip this step — there's no time limit.
@@ -231,7 +231,7 @@
   </div>
 
   <div style="margin-top:1rem;background:#111;border:1px solid #1a1a1a;border-radius:10px;padding:1rem 1.25rem;font-size:0.82rem;color:#555;text-align:center;line-height:1.7;">
-    💡 Trophy accounts include a <strong style="color:#888;">₱100 refundable deposit</strong>, returned once you send the account back. Non-Trophy has no deposit.<br>
+    💡 Trophy and PS4 Primary include a <strong style="color:#888;">₱<%= (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100 %> refundable deposit</strong>, returned once you send the account back. Non-Trophy has no deposit.<br>
     Not sure which to pick? Message us — we're happy to help you choose.
   </div>
 </div>

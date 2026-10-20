@@ -79,7 +79,7 @@ ok('the from-price is the cheapest discounted rent price', () => {
 
 ok('a game title names the rental, the real platform, and the from-price', () => {
   const page = seo.gamePage({ game: elden, promo, availability: { ntAvail: true, trAvail: false, ps4Avail: false, showPs4: false } });
-  assert.strictEqual(page.title, 'Rent Elden Ring PS5 Philippines – from ₱349 | Playstation Hub');
+  assert.strictEqual(page.title, 'Rent Elden Ring PS5 Philippines – from ₱349 | PlayStation Hub');
   assert.ok(page.title.length <= 70, page.title + ' (' + page.title.length + ')');
   assert.ok(page.description.includes('Trophy'));
   assert.ok(page.description.includes('Non-Trophy'));
@@ -101,14 +101,14 @@ ok('an upcoming title says Reserve and uses the real from-price', () => {
     game: Object.assign({ id: 5 }, both, { title: 'Phantom Blade', platform: 'PS5' }),
     promo
   });
-  assert.strictEqual(page.title, 'Reserve Phantom Blade PS5 Philippines – from ₱199 | Playstation Hub');
+  assert.strictEqual(page.title, 'Reserve Phantom Blade PS5 Philippines – from ₱199 | PlayStation Hub');
   assert.strictEqual(page.canonicalPath, '/upcoming/phantom-blade-5');
   assert.ok(page.intro.startsWith('Reserve Phantom Blade for PS5 in the Philippines from ₱199'));
 });
 
 ok('the home title uses the cheapest from-price in the catalogue', () => {
   const home = seo.homePage({ games: [elden, both], promo, faqItems: faqPages.homeItems({ deposit: 100, lateFee: 20 }) });
-  assert.strictEqual(home.title, 'PS5 & PS4 Game Rental Philippines – from ₱199 | Playstation Hub');
+  assert.strictEqual(home.title, 'PS5 & PS4 Game Rental Philippines – from ₱199 | PlayStation Hub');
   assert.ok(home.description.includes('Philippines'));
   assert.ok(home.jsonLd.some(b => b['@type'] === 'FAQPage'));
 });
@@ -116,7 +116,8 @@ ok('the home title uses the cheapest from-price in the catalogue', () => {
 ok('static pages have a title and a description near 150 characters', () => {
   ['browse', 'faq', 'promos', 'ps-plus', 'how-it-works', 'buy', 'terms', 'privacy'].forEach(key => {
     const page = seo.staticPage(key);
-    assert.ok(page.title.includes('Playstation Hub'), key);
+    assert.ok(page.title.includes('PlayStation Hub'), key);
+    assert.ok(!page.title.includes('Playstation Hub'), key);
     assert.ok(page.title.length <= 65, key + ' title ' + page.title.length + ' ' + page.title);
     assert.ok(page.description.length >= 80 && page.description.length <= 180, key + ' ' + page.description.length);
     assert.strictEqual(page.canonicalPath, seo.STATIC_PATHS[key] || page.canonicalPath);
@@ -180,7 +181,11 @@ ok('FAQ JSON-LD is built from the same questions the page renders', () => {
   assert.ok(joined.includes('GCash'));
   assert.ok(joined.includes('Maya'));
   assert.ok(joined.includes('PayPal'));
-  assert.ok(!/unlimited (game|swap)/i.test(joined), 'unconfirmed game-change claim');
+  assert.ok(joined.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
+  assert.ok(joined.includes('same price tier'));
+  assert.ok(joined.includes('GTA VI'));
+  assert.ok(joined.includes('Non-Trophy rentals have no late fees'));
+  assert.ok(!joined.includes('Monthly is 10% off.'));
   const ld = seo.faqPage(items);
   assert.strictEqual(ld['@type'], 'FAQPage');
   assert.strictEqual(ld.mainEntity.length, items.length);
@@ -198,7 +203,7 @@ ok('site-wide graph names the organisation and the website', () => {
   const graph = seo.siteGraph();
   const org = graph.find(b => b['@type'] === 'Organization');
   const site = graph.find(b => b['@type'] === 'WebSite');
-  assert.strictEqual(org.name, 'Playstation Hub');
+  assert.strictEqual(org.name, 'PlayStation Hub');
   assert.ok(org.sameAs.includes('https://facebook.com/PlaystationHub00'));
   assert.ok(org.sameAs.includes('http://m.me/PlaystationHub00'));
   assert.strictEqual(site.url, 'https://www.playstation-hub.com');
@@ -376,7 +381,8 @@ async function main() {
       const res = await call(p + '?x=1');
       assert.strictEqual(res.status, 200, p);
       const title = titleOf(res.body);
-      assert.ok(title.includes('Playstation Hub'), p + ' title ' + title);
+      assert.ok(title.includes('PlayStation Hub'), p + ' title ' + title);
+      assert.ok(!res.body.includes('Playstation Hub'), p + ' still says Playstation Hub');
       assert.ok(title.includes(titleBit) || res.body.includes(titleBit), p + ' ' + title);
       const canon = canonicalOf(res.body);
       const expect = p === '/' ? 'https://www.playstation-hub.com' : 'https://www.playstation-hub.com' + p;
@@ -398,9 +404,10 @@ async function main() {
   await okAsync('a game page title, intro, cover image, and product data come from the catalogue', async () => {
     const res = await call('/game/elden-ring?utm_source=google');
     assert.strictEqual(res.status, 200);
-    assert.strictEqual(titleOf(res.body), 'Rent Elden Ring PS5 Philippines – from ₱349 | Playstation Hub');
+    assert.strictEqual(titleOf(res.body), 'Rent Elden Ring PS5 Philippines – from ₱349 | PlayStation Hub');
     assert.strictEqual(canonicalOf(res.body), 'https://www.playstation-hub.com/game/elden-ring');
     assert.ok(res.body.includes('Rent Elden Ring for PS5 in the Philippines from ₱349'));
+    assert.ok(res.body.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
     assert.ok(res.body.includes('property="og:image" content="https://www.playstation-hub.com/uploads/1.png"'));
     assert.ok(/<img[^>]*class="gd-cover gdh-poster"[^>]*width="/.test(res.body) || /<img[^>]*width="[^"]*"[^>]*class="gd-cover gdh-poster"/.test(res.body));
     const blocks = jsonLd(res.body);
@@ -448,7 +455,8 @@ async function main() {
     assert.ok(faq.body.includes('₱100'));
     faqLd.mainEntity.forEach(q => {
       assert.ok(faq.body.includes(q.name), q.name);
-      assert.ok(!/unlimited (game|swap)/i.test(q.acceptedAnswer.text));
+      assert.ok(q.name !== 'Can I change games during my rental?' || q.acceptedAnswer.text.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
+      assert.ok(!/unlimited swap of games/i.test(q.acceptedAnswer.text));
     });
     const home = await call('/');
     const homeLd = jsonLd(home.body).find(b => b['@type'] === 'FAQPage');
