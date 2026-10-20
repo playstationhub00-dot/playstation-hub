@@ -52,7 +52,6 @@ ok('both pages render and the footer links them, with the contact email beside M
     assert.ok(html.includes('7 days'));
     assert.ok(html.includes('Monthly'));
     assert.ok(html.includes('30 days'));
-    assert.ok(html.includes('10% off'));
     assert.ok(html.includes('Non-Trophy'));
     assert.ok(html.includes('Trophy'));
     assert.ok(html.includes('PS4 Primary'));
@@ -75,13 +74,27 @@ ok('both pages render and the footer links them, with the contact email beside M
   assert.ok(footer.includes('href="/terms"'));
   assert.ok(footer.includes('mailto:playstationhub00@gmail.com'));
   assert.ok(faq.includes('mailto:playstationhub00@gmail.com'));
+  assert.ok(!faq.includes('10% off'), 'faq must not claim 10% off unless a monthly promo is live');
+  assert.ok(faq.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
+  assert.ok(faq.includes('same price tier'));
+  assert.ok(faq.includes('Non-Trophy rentals have no late fees'));
+  assert.ok(terms.includes('When the monthly promo is on'));
+  assert.ok(terms.includes('10% off'));
+  assert.ok(!faq.includes('Playstation Hub'));
+  assert.ok(!terms.includes('Playstation Hub'));
 });
 
 ok('terms state the rental rules and do not add court clauses', () => {
   const terms = render('terms.ejs').toLowerCase();
   assert.ok(terms.includes('terms of service'));
   assert.ok(terms.includes('late fee'));
+  assert.ok(terms.includes('no late fees'));
   assert.ok(terms.includes('₱20'));
+  assert.ok(terms.includes('costs the same as a ps5 trophy rental'));
+  assert.ok(!terms.includes('priced like non-trophy'));
+  assert.ok(terms.includes('unlimited free game changes while your rental is active'));
+  assert.ok(terms.includes('same price tier'));
+  assert.ok(terms.includes('gta vi'));
   assert.ok(terms.includes('psn password'));
   ['governing law', 'liability', 'chargeback', 'free trial', 'priority fee', 'jurisdiction'].forEach(word => {
     assert.ok(!terms.includes(word), 'invented policy: ' + word);

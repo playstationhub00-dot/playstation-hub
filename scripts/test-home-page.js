@@ -141,7 +141,8 @@ async function main() {
   });
   await okAsync('Power-up from the site promo, and the trust line', async () => {
     const power = slice(home, 'class="hm-wrap hm-power-wrap"', '</section>');
-    assert.ok(power.includes('Rent 30 days → <b>10% off</b>, automatically'));
+    assert.ok(!power.includes('10% off'), 'the 10% line stays hidden until a monthly promo is live');
+    assert.ok(!home.includes(', automatically'));
     assert.ok(power.includes('<li>✓ Ready in minutes</li>') && /<li>✓ \d+ players<\/li>/.test(power));
     assert.ok(!power.includes('recommend us'), 'no reviews yet, so no recommend figure');
   });
@@ -180,9 +181,13 @@ async function main() {
   });
 
   console.log('\npromo off');
-  await okAsync('with the site promo off the Power-up line disappears', async () => {
+  await okAsync('the 10% line appears only while a monthly promo is live, then hides when the site promo is off', async () => {
     const login = await call('POST', '/admin/login', { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'password=' + encodeURIComponent(TEST_PASSWORD) });
     const cookie = (login.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+    await call('POST', '/admin/promos/save', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Cookie: cookie }, body: 'title=' + encodeURIComponent('Monthly 10%') + '&text=' + encodeURIComponent('10% off monthly rentals.') + '&badge=' + encodeURIComponent('10% off') + '&enabled=on' });
+    const on = (await call('GET', '/')).body;
+    assert.ok(on.includes('Rent 30 days → <b>10% off</b> while the monthly promo is on'));
+    assert.ok(!on.includes(', automatically'));
     await call('POST', '/admin/promo', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Cookie: cookie }, body: 'discount_7=0&discount_30=10&deposit=100' });
     const off = (await call('GET', '/')).body;
     assert.ok(!off.includes('class="hm-power"') && off.includes('<li>✓ Ready in minutes</li>'));

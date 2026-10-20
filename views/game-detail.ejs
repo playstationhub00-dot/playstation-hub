@@ -128,6 +128,7 @@
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
       <p class="seo-intro"><%= gdSeo.intro %></p>
+      <p class="seo-intro"><%- include('partials/swap-line') %></p>
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>

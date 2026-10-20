@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <%- include('partials/head', { page: 'ps-plus', canonicalPath: '/ps-plus/rent', title: 'Rent PS Plus Deluxe | Playstation Hub' }) %>
+  <%- include('partials/head', { page: 'ps-plus', canonicalPath: '/ps-plus/rent', title: 'Rent PS Plus Deluxe | PlayStation Hub' }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
 <body>
@@ -46,6 +46,7 @@
         <span class="gd-genre-tag" style="background:rgba(255,215,0,0.1);border-color:#856200;color:#FFD700;">DELUXE</span>
       </div>
       <h1 class="gd-title">PS Plus Deluxe</h1>
+      <p class="seo-intro"><%- include('partials/swap-line') %></p>
       <p class="gd-desc" style="font-size:0.85rem;color:#666;margin-bottom:0.5rem;">Access hundreds of games including monthly titles. Trophy or Non-Trophy — your choice.</p>
 
       <% if (allUnavail) { %>

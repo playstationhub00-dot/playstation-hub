@@ -221,7 +221,7 @@ db.defaults({
   announcements: [],
   nextAnnouncementId: 1,
   site_settings: {
-    title: 'Playstation Hub',
+    title: 'PlayStation Hub',
     logo_path: '/logo.svg',
     favicon_path: '/favicon.svg',
     hero_bg: { type: 'default', path: '' },
@@ -705,6 +705,7 @@ app.use((req, res, next) => {
   if (!req.path.startsWith('/admin') && !req.path.startsWith('/css') && !req.path.startsWith('/js') && !req.path.startsWith('/uploads')) {
     const ctx = promoContext();
     res.locals.livePromos = ctx.live;
+    res.locals.monthlyPromo = promos.monthlyDiscountLive(ctx.live);
     res.locals.bannerPromo = ctx.banner;
     res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
     res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
@@ -1123,6 +1124,10 @@ function getSiteSettings() {
   // Seeded once, the first time this process reads settings that predate
   // loyalty. A later save from the form replaces the object; this does not
   // run again, and it does not touch anything else on the settings document.
+  if (s && typeof s.title === 'string' && s.title.includes('Playstation Hub')) {
+    s.title = s.title.replace(/Playstation Hub/g, 'PlayStation Hub');
+    db.set('site_settings.title', s.title).write();
+  }
   if (s && s.loyalty === undefined) {
     const seeded = loyalty.normalizeSettings(null);
     db.set('site_settings.loyalty', seeded).write();
@@ -2125,7 +2130,13 @@ app.get('/', (req, res) => {
   const home = {
     banner: homeView.bannerGames(all, s.home_banner_ids, newReleasesRaw).map(withWeekly),
     topRented: homeView.topRented(all, homeCustomers, new Date()).map(withWeekly),
-    powerUp: homeView.powerUp(s.promo),
+    powerUp: (() => {
+      const line = homeView.powerUp(s.promo);
+      // The 30-day percent is a promo, not a standing discount. Show it only
+      // while a monthly offer is live in Admin → Loyalty → Promos.
+      if (line && line.days === 30 && !promos.monthlyDiscountLive(promoContext().live)) return null;
+      return line;
+    })(),
     trust: homeView.trust(homeReviews.recommend, homeReviews.renterCount),
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
@@ -2574,7 +2585,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
     const image = `${SITE_URL}/uploads/jpg/${imgBase}.jpg`;
     const desc = (g.description && g.description.trim())
       ? g.description.trim()
-      : `${g.title} for ${g.platform || 'PS5'} — rent or buy permanent access from Playstation Hub.`;
+      : `${g.title} for ${g.platform || 'PS5'} — rent or buy permanent access from PlayStation Hub.`;
     const ptype = catName(g.price_category_id);
 
     const push = (suffix, label, base, final, inStock, durLabel, typeLabel) => {
@@ -2584,7 +2595,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
         inStock ? 'in stock' : 'out of stock', 'new',
         metaPrice(base), onSale ? metaPrice(final) : '',
         onSale ? metaSaleWindow(promo.ends_at) : '',
-        link, image, 'Playstation Hub',
+        link, image, 'PlayStation Hub',
         ptype, g.platform || '', durLabel, typeLabel]);
     };
 
@@ -6383,7 +6394,7 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   const section_gap = Math.min(7, Math.max(1.5, parseFloat(req.body.section_gap) || 4));
 
   // Preserve hero_text — only update the fields this form controls
-  db.set('site_settings.title', (title || 'Playstation Hub').trim()).write();
+  db.set('site_settings.title', (title || 'PlayStation Hub').trim().replace(/Playstation Hub/g, 'PlayStation Hub')).write();
   db.set('site_settings.logo_path', logo_path).write();
   db.set('site_settings.favicon_path', favicon_path).write();
   db.set('site_settings.hero_bg', hero_bg).write();

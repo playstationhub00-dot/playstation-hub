@@ -4,9 +4,15 @@
   var _paySentence = (typeof paymentNote === 'function')
     ? paymentNote(typeof settings !== 'undefined' ? settings : null, typeof payViaGateway !== 'undefined' && payViaGateway)
     : 'GCash or Maya for local customers · PayPal for international customers';
+  var _promo = (typeof settings !== 'undefined' && settings && settings.promo) ? settings.promo : {};
+  var _monthly = (typeof monthlyPromo !== 'undefined' && monthlyPromo) ? monthlyPromo : null;
   var faqItems = faqPages.faqItems({
     hasPromos: typeof livePromos !== 'undefined' && livePromos && livePromos.length,
-    paymentSentence: _paySentence
+    paymentSentence: _paySentence,
+    monthlyPromoOn: !!_monthly,
+    monthlyPct: _monthly && _monthly.pct,
+    deposit: _promo.deposit,
+    lateFee: _promo.late_fee_per_day
   });
   var faqLd = seo.faqPage(faqItems);
 %>
