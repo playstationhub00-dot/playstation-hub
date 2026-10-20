@@ -108,7 +108,8 @@ async function main() {
   await okAsync('the old sections are gone, and payment methods are listed only in the footer', async () => {
     ['Which account type is for you?', 'Three ways to play', 'Why Rent From Us', 'Ways to Pay', 'Browse by Price Tier', 'Most Popular', 'hero-v2', 'Rent Longer. Save More.', 'spotlight-section']
       .forEach(t => assert.ok(!home.includes(t), t));
-    assert.ok(home.indexOf('GCash') > home.indexOf('<footer'), 'GCash only after the footer starts');
+    const visible = home.slice(home.indexOf('<body'));
+    assert.ok(visible.indexOf('GCash') > visible.indexOf('<footer'), 'GCash only after the footer starts');
   });
   await okAsync('a game card is on the page before "Choose your player"', async () => {
     assert.ok(home.indexOf('class="game-card') > 0 && home.indexOf('class="game-card') < home.indexOf('id="players"'));

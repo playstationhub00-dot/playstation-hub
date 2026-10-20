@@ -1,14 +1,16 @@
-﻿<!DOCTYPE html>
+﻿<%
+  var faqItems = faqPages.homeItems({
+    deposit: (typeof promo !== 'undefined' && promo && promo.deposit) || 0,
+    lateFee: (typeof promo !== 'undefined' && promo && promo.late_fee_per_day) || 0
+  });
+%>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Playstation Hub — PS5/PS4 Game Rentals</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', { page: 'home', faqItems: faqItems }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/home-search.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/home.css?v=<%= assetV %>">
-  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body class="home2">
 
@@ -45,7 +47,7 @@
 <%- include('partials/home/psplus', { home, psplusPopular, psplusSlug }) %>
 <%- include('partials/home/players', { home, promo }) %>
 <%- include('partials/home/achievements', { home, games, reviews, reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge, reviewDisplayName, renterCount }) %>
-<%- include('partials/home/how-faq', { promo }) %>
+<%- include('partials/home/how-faq', { promo: promo, faqItems: faqItems }) %>
 
 <%- include('partials/footer') %>
 

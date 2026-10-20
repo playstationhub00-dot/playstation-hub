@@ -8,6 +8,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const seo = require('../lib/seo');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -25,7 +26,7 @@ const GAME = {
 function render(file, locals) {
   const f = path.join(ROOT, 'views', file);
   return ejs.render(fs.readFileSync(f, 'utf8'), Object.assign({
-    settings: SETTINGS, priceCategories: [], accounts: [{ id: 1, label: 'Account A', game_ids: [7] }], msg: null, assetV: '1'
+    settings: SETTINGS, priceCategories: [], accounts: [{ id: 1, label: 'Account A', game_ids: [7] }], msg: null, assetV: '1', seo
   }, locals), { filename: f });
 }
 const EDIT = render('edit.ejs', { game: GAME });

@@ -10,6 +10,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const seo = require('../lib/seo');
 const feed = require('../lib/psplus-feed');
 const cat = require('../lib/psplus-catalog');
 const view = require('../lib/psplus-catalog-view');
@@ -41,7 +42,8 @@ function render({ games = STORED, tab = 'games', popular = POPULAR, entries = EN
     byYear, years: ['2026'], popular, prices: { nt_price_7d: 120, nt_price_30d: 350, tr_price_7d: 150, tr_price_30d: 450 },
     slots: { nt_slots: 2, tr_slots: 1, ps4_slots: 0 }, psplusGameId: 17, psplusSlug: 'ps-plus-deluxe',
     catalog, activeTab: tab, fromWeekly: 120,
-    reviews: [], reviewStats: null, recommend: null, reviewBadge: null, reviewDisplayName: null
+    reviews: [], reviewStats: null, recommend: null, reviewBadge: null, reviewDisplayName: null,
+    seo
   }, { filename: VIEW });
   return { html, catalog };
 }

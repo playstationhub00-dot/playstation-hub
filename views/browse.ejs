@@ -1,13 +1,9 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Browse Games — <%= settings.title %></title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', { page: 'browse' }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/browse-filters.css?v=<%= assetV %>">
-  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body class="browse-page">
 

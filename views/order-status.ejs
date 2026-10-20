@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order <%= order.ref %> — Playstation Hub</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', {
+    title: 'Order ' + order.ref + ' — Playstation Hub',
+    noindex: true,
+    canonicalPath: '/order/' + order.ref
+  }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
 <body>

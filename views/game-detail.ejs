@@ -1,13 +1,25 @@
+<%
+  var gdSeo = seo.gamePage({
+    game: game,
+    promo: (typeof promo !== 'undefined' ? promo : null),
+    availability: (typeof computeAvailability === 'function')
+      ? computeAvailability(game, typeof accountSummary !== 'undefined' ? accountSummary : null)
+      : null
+  });
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= game.title %> — Playstation Hub</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', {
+    title: gdSeo.title,
+    description: gdSeo.description,
+    canonicalPath: gdSeo.canonicalPath,
+    image: gdSeo.image,
+    type: gdSeo.type,
+    jsonLd: gdSeo.jsonLd
+  }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
-  <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 </head>
 <body class="gd-page-booking-v2">
 <%- include('partials/announcement') %>
@@ -115,10 +127,11 @@
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
       <h1 class="usd-title"><%= game.title %></h1>
+      <p class="seo-intro"><%= gdSeo.intro %></p>
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>
-        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand">
+        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand" width="230" height="56">
       </div>
     </div>
   </div>
@@ -133,7 +146,7 @@
         <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
       <% } else if (game.cover_image) { %>
         <% const gdhFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" style="<%= gdhFocal %>">
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140" style="<%= gdhFocal %>">
       <% } else { %>
         <div class="gd-cover gd-cover-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
@@ -573,7 +586,7 @@
     <div class="gd-slider" id="gdSlider">
       <div class="gd-slider-track" id="gdSliderTrack">
         <% gdhGallery.forEach((img, i) => { %>
-          <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
+          <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" width="1280" height="720" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
         <% }) %>
       </div>
       <% if (gdhGallery.length > 1) { %>
@@ -589,7 +602,7 @@
     <% if (gdhGallery.length > 1) { %>
     <div class="gd-thumbs" id="gdThumbs">
       <% gdhGallery.forEach((img, i) => { %>
-        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img <%- imgThumb(img) %> alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
+        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img <%- imgThumb(img) %> width="160" height="90" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
       <% }) %>
     </div>
     <% } %>

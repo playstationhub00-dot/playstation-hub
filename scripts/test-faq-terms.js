@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const pay = require('../lib/payment-copy');
+const seo = require('../lib/seo');
+const faqPages = require('../lib/faq-pages');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -29,7 +31,9 @@ const locals = {
   paymentNote: (settings, gateway) => pay.paymentNote({
     payViaGateway: !!gateway,
     payment_methods: settings && settings.payment_methods
-  })
+  }),
+  seo,
+  faqPages
 };
 
 function render(name) {

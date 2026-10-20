@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= bundle.name %> — Playstation Hub</title>
-  <link rel="icon" href="<%= settings.favicon_path %>" type="image/svg+xml">
+  <%- include('partials/head', {
+    title: 'Buy ' + bundle.name + ' | Playstation Hub',
+    description: 'Buy the ' + bundle.name + ' game bundle from Playstation Hub in the Philippines. One payment, permanent access. Pay with GCash, Maya, or PayPal.',
+    canonicalPath: '/bundle/' + (bundle.slug || '')
+  }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
 <body>

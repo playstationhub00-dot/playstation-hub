@@ -22,6 +22,8 @@
     var a = e && e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!a || !MESSENGER.test(a.getAttribute('href') || '')) return;
     send({ page: location.pathname, source: a.getAttribute('data-track-source') || 'other' });
+    try { if (typeof fbq === 'function') fbq('track', 'Contact'); } catch (err) {}
+    try { if (typeof gtag === 'function') gtag('event', 'message_click'); } catch (err) {}
   }
 
   if (typeof document !== 'undefined') {

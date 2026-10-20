@@ -4,7 +4,7 @@
   const navActive = typeof active !== 'undefined' ? active : '';
 %>
 <nav>
-  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" /></a>
+  <a href="/" class="logo"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>" width="230" height="56" /></a>
 
   <div class="nav-links" id="navLinks">
     <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>

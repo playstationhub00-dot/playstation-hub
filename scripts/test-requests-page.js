@@ -14,6 +14,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const seo = require('../lib/seo');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -54,7 +55,8 @@ function render(voting, stocked) {
     stockedRequests: stocked,
     initials,
     reviews: [], reviewStats: null, recommend: null, reviewBadge: null, reviewDisplayName: null,
-    announcements: [], announcement: null
+    announcements: [], announcement: null,
+    seo
   }, { filename: VIEW });
 }
 

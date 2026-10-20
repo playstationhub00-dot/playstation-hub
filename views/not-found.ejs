@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', {
+    title: 'Page not found | Playstation Hub',
+    description: 'That page is not on Playstation Hub. Browse PS5 and PS4 games for rent in the Philippines.',
+    noindex: true,
+    canonicalPath: '/'
+  }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+<section style="max-width:720px;margin:0 auto;padding:4rem 1.5rem 5rem;text-align:center;">
+  <h1 style="font-size:clamp(2rem,5vw,3rem);font-weight:900;letter-spacing:-1px;margin-bottom:0.75rem;">We could not find that page</h1>
+  <p style="color:var(--text-secondary);font-size:1rem;line-height:1.6;margin-bottom:1.5rem;">The game or link may have been renamed. The catalogue is the place to look.</p>
+  <p style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+    <a href="/browse" class="btn btn-primary">Browse games</a>
+    <a href="/" class="btn btn-outline">Home</a>
+  </p>
+</section>
+<%- include('partials/footer') %>
+</body>
+</html>
