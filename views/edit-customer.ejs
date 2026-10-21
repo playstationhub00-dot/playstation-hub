@@ -247,8 +247,15 @@ function renderCustSwapPanel() {
   const status = document.getElementById('cust_status').value;
   const isBought = status === 'bought';
   const accountType = document.getElementById('cust_type').value;
-  const ps4Fallback = accountType === 'ps4';
-  const usingType = ps4Fallback ? 'nt' : accountType;
+  // A PS4 Primary rental uses the Trophy price. A purchase still borrows
+  // Non-Trophy, which has the only buy price that exists for that type.
+  let usingType = accountType === 'tr' || (accountType === 'ps4' && !isBought) ? 'tr' : (accountType === 'ps4' ? 'nt' : accountType);
+  let ps4Note = '';
+  if (accountType === 'ps4' && isBought) {
+    ps4Note = '<div class="cust-swap-note">🕹️ PS4 Primary has no separate buy price — using Non-Trophy pricing.</div>';
+  } else if (accountType === 'ps4') {
+    ps4Note = '<div class="cust-swap-note">🕹️ PS4 Primary uses the Trophy price.</div>';
+  }
   const days = document.getElementById('cust_days').value;
 
   let refPrice = null;
@@ -256,7 +263,11 @@ function renderCustSwapPanel() {
     const raw = parseFloat(opt.dataset[usingType === 'tr' ? 'buytr' : 'buynt']) || 0;
     if (raw > 0) refPrice = (CUST_PROMO.buyEnabled && CUST_PROMO.buyPct > 0) ? Math.round(raw * (1 - CUST_PROMO.buyPct / 100)) : raw;
   } else if (Object.prototype.hasOwnProperty.call(CUST_PROMO.discounts, days)) {
-    const raw = parseFloat(opt.dataset[usingType + days]) || 0;
+    let raw = parseFloat(opt.dataset[usingType + days]) || 0;
+    if (accountType === 'ps4' && !(raw > 0)) {
+      raw = parseFloat(opt.dataset['nt' + days]) || 0;
+      ps4Note = '<div class="cust-swap-note">🕹️ PS4 Primary uses the Trophy price. No Trophy price is set for this duration, so this quote uses Non-Trophy.</div>';
+    }
     if (raw > 0) {
       // The game's own discount (data-pct7 / data-pct30) when the page carries it,
       // else the site promo — the same number the server records.
@@ -292,7 +303,7 @@ function renderCustSwapPanel() {
     html = '<div class="cust-swap-ok">✅ No additional payment — no refund on downgrades<div class="cust-swap-sub">Total stays ₱' + CUST_ORIGINAL_PRICE + '</div></div>';
     priceInput.value = CUST_ORIGINAL_PRICE;
   }
-  if (ps4Fallback) html += '<div class="cust-swap-note">🕹️ PS4 Primary has no separate price — using Non-Trophy pricing.</div>';
+  if (ps4Note) html += ps4Note;
   resultEl.innerHTML = html;
   panel.hidden = false;
 }

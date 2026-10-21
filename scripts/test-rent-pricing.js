@@ -159,4 +159,20 @@ ok('the form shows 0 exactly when the server refuses to price', () => {
   assert.strictEqual(p.amountForDays(0, { 7: 199, 30: 599 }), null);
 });
 
+console.log('\nlistPrice() — PS4 Primary uses the Trophy field');
+
+ok('PS4 Primary weekly and monthly read the Trophy price', () => {
+  const game = { nt_price_7d: 249, nt_price_30d: 499, tr_price_7d: 299, tr_price_30d: 599 };
+  assert.strictEqual(p.listPrice(game, 'ps4', 7), 299);
+  assert.strictEqual(p.listPrice(game, 'ps4', 30), 599);
+  assert.strictEqual(p.listPrice(game, 'tr', 7), 299);
+  assert.strictEqual(p.listPrice(game, 'nt', 7), 249);
+});
+
+ok('PS4 Primary falls back to Non-Trophy only when that Trophy field is empty', () => {
+  const game = { nt_price_7d: 249, nt_price_30d: 499, tr_price_7d: 0, tr_price_30d: 599 };
+  assert.strictEqual(p.listPrice(game, 'ps4', 7), 249);
+  assert.strictEqual(p.listPrice(game, 'ps4', 30), 599);
+});
+
 console.log('\n' + passed + ' assertions passed\n');

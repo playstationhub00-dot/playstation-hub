@@ -1367,6 +1367,17 @@ function promotedTier(resolved, priceType, promo) {
   return tier;
 }
 
+// Promo already taken off, for whichever account type the customer picked.
+// PS4 Primary quotes the Trophy tier (listPrice), not Non-Trophy.
+function rentTier(resolved, type, promo) {
+  const tier = {};
+  rentPricing.STANDARD_DAYS.forEach(d => {
+    tier[d] = rentPricing.discounted(rentPricing.listPrice(resolved, type, d),
+                                     rentDiscountPct(resolved, d, promo));
+  });
+  return tier;
+}
+
 // The % off one game's rental: its own discount if it has one, else the site
 // promo (lib/game-discount.js). A promo object carrying no_discounts — Quick
 // Add's "Full price" — means none at all, the game's own included, because a
@@ -1384,7 +1395,7 @@ function extendTierFor(customer, promo) {
   if (!customer || customer.status !== 'renting') return { p7: 0, p30: 0 };
   const g = getGame(customer.game_id);
   if (!g) return { p7: 0, p30: 0 };
-  const t = promotedTier(resolveGamePrices(g), customer.account_type === 'tr' ? 'tr' : 'nt', promo);
+  const t = rentTier(resolveGamePrices(g), customer.account_type, promo);
   return { p7: t[7] || 0, p30: t[30] || 0 };
 }
 
@@ -1397,8 +1408,7 @@ function computeRentPricing(game, type, days, promoOverride) {
   if (!game || !['nt', 'tr', 'ps4'].includes(type)) return null;
   const promo = promoOverride || getSiteSettings().promo || {};
   const resolved = resolveGamePrices(game);
-  const priceType = type === 'ps4' ? 'nt' : type;
-  const tier = promotedTier(resolved, priceType, promo);
+  const tier = rentTier(resolved, type, promo);
   // Custom durations are a real thing the admin form offers, so they get a
   // real price instead of a rejection. lib/rent-pricing.js owns that curve and
   // the admin preview mirrors it.
@@ -1427,27 +1437,28 @@ function computeBuyPricing(game, type, promoOverride) {
 // active promo discount applied — the same number a walk-in customer would pay
 // today. Used to price a game swap's top-up. Returns null when there's no reliable
 // basis to compute one (custom duration, missing price data) so the caller falls
-// back to manual admin entry instead of guessing. PS4 Primary has no price fields
-// of its own on games, so it borrows the Non-Trophy price (flagged via ps4Fallback).
+// back to manual admin entry instead of guessing. A PS4 Primary rental uses the
+// Trophy price. A PS4 Primary purchase still has no buy price of its own and
+// borrows Non-Trophy (flagged via ps4Fallback, as is a rental whose Trophy
+// field was never set).
 function computeSwapReferencePrice(game, { days, accountType, isBought, promo }) {
   if (!game) return null;
-  const ps4Fallback = accountType === 'ps4';
-  const usingType = ps4Fallback ? 'nt' : accountType;
   if (isBought) {
-    const val = usingType === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
+    const val = accountType === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
     if (!val) return null;
     const price = (promo && promo.buy_promo_enabled && promo.buy_promo_pct > 0)
       ? Math.round(val * (1 - promo.buy_promo_pct / 100)) : val;
-    return { price, ps4Fallback };
+    return { price, ps4Fallback: accountType === 'ps4' };
   }
   const d = parseInt(days);
   if (!PROMO_DURATIONS.includes(d)) return null;
   const resolved = resolveGamePrices(game);
-  const base = resolved[usingType + '_price_' + d + 'd'];
+  const base = rentPricing.listPrice(resolved, accountType, d);
   if (!base) return null;
   const pct = rentDiscountPct(resolved, d, promo);
-  const price = pct > 0 ? base - Math.round(base * pct / 100) : base;
-  return { price, ps4Fallback };
+  const price = rentPricing.discounted(base, pct);
+  const trophyMissing = accountType === 'ps4' && !(Number(resolved['tr_price_' + d + 'd']) > 0);
+  return { price, ps4Fallback: trophyMissing };
 }
 
 app.get('/how-it-works', (req, res) => {
@@ -2648,14 +2659,13 @@ app.post('/order/create', async (req, res) => {
   const s = getSiteSettings();
   const promo = s.promo || {};
   const resolved = resolveGamePrices(game);
-  // PS4 Primary has no price fields of its own and borrows Non-Trophy pricing,
-  // matching computeSwapReferencePrice()'s existing behaviour.
-  const priceType = type === 'ps4' ? 'nt' : type;
-  const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+  // PS4 Primary has no price fields of its own. Charge the Trophy price, the
+  // same number the game page shows, including the same promo.
+  const base = rentPricing.listPrice(resolved, type, d);
   if (!base) return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
 
   const pct = rentDiscountPct(game, d, promo);
-  const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const amountDue = rentPricing.discounted(base, pct);
   const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
 
   // Freeze the tier's whole price set. A tier's prices can change after an
@@ -2928,11 +2938,10 @@ app.post('/order/reserve', async (req, res) => {
       remainingDue = rentAfterPromo + psplusDeposit;
     } else {
       const resolved = resolveGamePrices(game);
-      const priceType = type === 'ps4' ? 'nt' : type;
-      const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+      const base = rentPricing.listPrice(resolved, type, d);
       if (!base) return res.redirect(errRedirect);
       const pct = rentDiscountPct(game, d, promo);
-      const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+      const rentAfterPromo = rentPricing.discounted(base, pct);
       const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
       remainingDue = rentAfterPromo + gameDeposit;
     }
@@ -2954,11 +2963,10 @@ app.post('/order/reserve', async (req, res) => {
     upcomingGameId = null;
   } else {
     const resolved = resolveGamePrices(game);
-    const priceType = type === 'ps4' ? 'nt' : type;
-    const base = resolved[priceType + '_price_' + d + 'd'] || 0;
+    const base = rentPricing.listPrice(resolved, type, d);
     if (!base) return res.redirect(errRedirect);
     const pct = rentDiscountPct(game, d, promo);
-    const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+    const rentAfterPromo = rentPricing.discounted(base, pct);
     const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
     // Flat ₱100 priority fee, matching the site's existing reservation copy —
     // not a percentage of the total, and independent of the promo/deposit math.
@@ -3162,16 +3170,16 @@ function priorityUpgradePatch(order) {
   const isPsplus = order.game_id === 'psplus';
   const game = isPsplus ? null : getGame(order.game_id);
   if (!isPsplus && !game) return null;
-  const priceType = order.account_type === 'ps4' ? 'nt' : order.account_type;
   // Recomputed from CURRENT prices and promo rather than the remaining_due
   // stored when they joined the line — a promo may have started or ended since,
-  // and every paid path quotes today's price.
+  // and every paid path quotes today's price. A PS4 Primary rental uses the
+  // Trophy price, same as checkout.
   const base = isPsplus
-    ? (getPsplusPrices()[priceType + '_price_' + order.days + 'd'] || 0)
-    : (resolveGamePrices(game)[priceType + '_price_' + order.days + 'd'] || 0);
+    ? (getPsplusPrices()[order.account_type + '_price_' + order.days + 'd'] || 0)
+    : rentPricing.listPrice(resolveGamePrices(game), order.account_type, order.days);
   if (!base) return null;
   const pct = isPsplus ? getPromoDiscountPct(promo, order.days) : rentDiscountPct(game, order.days, promo);
-  const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+  const rentAfterPromo = rentPricing.discounted(base, pct);
   const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
   return {
     amount_due: 100,
@@ -5627,7 +5635,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   const rentMismatches = rentAudit.scan(customers, c => {
     const g = getGame(c.game_id);
     if (!g) return null;
-    return promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', rentPromo);
+    return rentTier(resolveGamePrices(g), c.account_type, rentPromo);
   });
 
   const rentIgnored = rentAudit.dismissedRows(customers);
@@ -6851,11 +6859,11 @@ app.post('/admin/customers/:id/extend', requireAuth, async (req, res) => {
   if (days < 1) return res.status(400).json({ ok: false, reason: 'bad_days', message: 'Enter how many extra days.' });
 
   const game = getGame(existing.game_id);
-  const type = existing.account_type === 'tr' ? 'tr' : 'nt';
   const promo = getSiteSettings().promo || {};
   // Extra days are priced off the same promo-adjusted curve a fresh rental uses,
   // so extending a week never costs a different number than renting a week.
-  const tier = game ? promotedTier(resolveGamePrices(game), type, promo) : {};
+  // PS4 Primary extends at the Trophy tier.
+  const tier = game ? rentTier(resolveGamePrices(game), existing.account_type, promo) : {};
   const override = b.price !== undefined && String(b.price).trim() !== '' ? parseInt(b.price) : null;
 
   const ext = extensions.build({
