@@ -83,8 +83,8 @@ async function main() {
     rows.forEach((r, i) => assert.ok(r.includes('<span class="hm-rk hm-rk-' + (i + 1) + '">' + (i + 1) + '</span>'), 'rank ' + (i + 1)));
   });
   ok('each row has its cover picture, and a plain square when there is none', () => {
-    assert.ok(rows[0].includes('<img src="/uploads/w/160/g1.png" alt="" class="hm-board-cover" loading="lazy" decoding="async">'));
-    assert.ok(rows[9].includes('src="/uploads/w/160/g10.png"'));
+    assert.ok(rows[0].includes('<img src="/uploads/w/160/g1.png?v=2" alt="" class="hm-board-cover" loading="lazy" decoding="async">'));
+    assert.ok(rows[9].includes('src="/uploads/w/160/g10.png?v=2"'));
     assert.ok(rows[2].includes('<span class="hm-board-cover" aria-hidden="true"></span>') && !rows[2].includes('<img'), 'game 3 has no cover');
     rows.forEach((r, i) => assert.ok(r.indexOf('hm-board-cover') > r.indexOf('hm-rk') && r.indexOf('hm-board-cover') < r.indexOf('hm-board-title'), 'picture between rank and title, row ' + (i + 1)));
   });

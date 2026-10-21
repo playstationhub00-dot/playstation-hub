@@ -36,14 +36,20 @@ async function main() {
   console.log('\nurl helpers');
   await ok('a hosted cover is 480px on a 1x screen and 720px on a 2x screen', async () => {
     const attrs = v.cardAttrs('/uploads/1791607091002.webp');
-    assert.ok(attrs.includes('src="/uploads/w/480/1791607091002.webp"'));
-    assert.ok(attrs.includes('srcset="/uploads/w/480/1791607091002.webp 480w, /uploads/w/720/1791607091002.webp 720w"'));
+    const q = '?v=' + v.URL_VERSION;
+    assert.ok(attrs.includes('src="/uploads/w/480/1791607091002.webp' + q + '"'));
+    assert.ok(attrs.includes('srcset="/uploads/w/480/1791607091002.webp' + q + ' 480w, /uploads/w/720/1791607091002.webp' + q + ' 720w"'));
     assert.ok(attrs.includes('sizes="280px"'));
-    assert.strictEqual(v.cardSrc('/uploads/1791607091002.webp'), '/uploads/w/720/1791607091002.webp');
+    assert.strictEqual(v.cardSrc('/uploads/1791607091002.webp'), '/uploads/w/720/1791607091002.webp' + q);
   });
   await ok('the top-rented thumbnail is the 160px copy', async () => {
-    assert.strictEqual(v.thumbSrc('/uploads/g1.png'), '/uploads/w/160/g1.png');
-    assert.strictEqual(v.thumbAttrs('/uploads/g1.png'), 'src="/uploads/w/160/g1.png"');
+    const q = '?v=' + v.URL_VERSION;
+    assert.strictEqual(v.thumbSrc('/uploads/g1.png'), '/uploads/w/160/g1.png' + q);
+    assert.strictEqual(v.thumbAttrs('/uploads/g1.png'), 'src="/uploads/w/160/g1.png' + q + '"');
+  });
+  await ok('the PS Plus catalog grid uses the same cache-buster on owner uploads', async () => {
+    const grid = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'psplus-catalog-grid.ejs'), 'utf8');
+    assert.ok(grid.includes("'?v=" + v.URL_VERSION + "'"));
   });
   await ok('branding files and external urls are not rewritten', async () => {
     assert.strictEqual(v.cardSrc('/uploads/logo-custom.png'), '/uploads/logo-custom.png');
@@ -125,6 +131,15 @@ async function main() {
     const again = await get('/uploads/w/480/big-cover.png');
     assert.strictEqual(again.status, 200);
     assert.strictEqual(again.headers['content-type'], 'image/webp');
+  });
+  await ok('a versioned url serves the same file and stays cacheable for a year', async () => {
+    const plain = await get('/uploads/w/720/big-cover.png');
+    const versioned = await get('/uploads/w/720/big-cover.png?v=' + v.URL_VERSION);
+    assert.strictEqual(versioned.status, 200);
+    assert.strictEqual(versioned.headers['content-type'], 'image/webp');
+    assert.strictEqual(versioned.headers['cache-control'], 'public, max-age=31536000, immutable');
+    assert.ok(versioned.body.equals(plain.body));
+    assert.ok(versioned.body.length > 0);
   });
   await ok('an image already smaller than the requested width is not enlarged', async () => {
     const res = await get('/uploads/w/480/small-icon.webp');

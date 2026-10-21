@@ -568,6 +568,9 @@ const UNVERSIONED_UPLOAD_NAMES = /^(favicon-custom|logo-custom|hero-bg-image|her
 
 // Width-capped copies of /uploads images (lib/image-variants.js). Registered
 // before the static handler so /uploads/w/… is not a directory lookup.
+// Pages append ?v= (lib/image-variants.js URL_VERSION) so a new encoder is a
+// new Cloudflare cache key. The query is not read here: every URL, with or
+// without it, serves the current file and stays cacheable for a year.
 app.get('/uploads/w/:width/:name', async (req, res) => {
   try {
     const result = await imageVariants.ensureVariant({
