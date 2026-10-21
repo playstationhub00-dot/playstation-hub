@@ -553,7 +553,9 @@
       return;
     }
     var type = el('qaType').value, d = daysValue();
-    var pre = type === 'tr' ? 'tr' : 'nt';
+    // A released PS4 Primary rental quotes the Trophy tier. A purchase still
+    // borrows Non-Trophy, and a Coming Soon reservation has no PS4 price.
+    var pre = (type === 'tr' || (type === 'ps4' && !qaIsUpcoming() && !qaIsBuy())) ? 'tr' : 'nt';
     // "Full price" reads the "f"-suffixed dataset (undiscounted) instead of
     // the promo'd one — same fields the server computes with the promo's
     // enabled flags switched off, so this preview cannot drift from the save.
@@ -565,7 +567,7 @@
     // A sale is priced from the buy fields, not the rental tiers. PS4 Primary
     // has no buy price of its own and borrows Non-Trophy, same as the server.
     if (qaIsBuy()) {
-      var buy = parseInt(opt.dataset[(pre === 'tr' ? 'buytr' : 'buynt') + suf]) || 0;
+      var buy = parseInt(opt.dataset[(type === 'tr' ? 'buytr' : 'buynt') + suf]) || 0;
       var amt = override !== '' ? (parseInt(override) || 0) : buy;
       if (!amt) {
         box.className = 'qa-price qa-price-empty';
@@ -581,6 +583,11 @@
 
     var p7 = parseInt(opt.dataset[pre + '7' + suf]) || 0;
     var p30 = parseInt(opt.dataset[pre + '30' + suf]) || 0;
+    // Match the game page: a missing Trophy field falls back to Non-Trophy.
+    if (type === 'ps4' && pre === 'tr') {
+      if (!p7) p7 = parseInt(opt.dataset['nt7' + suf]) || 0;
+      if (!p30) p30 = parseInt(opt.dataset['nt30' + suf]) || 0;
+    }
 
     // A reservation on a game that has not released: the list price plus the
     // deposit, paid in full now — nothing owed on launch day. Mirrors

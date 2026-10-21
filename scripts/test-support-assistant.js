@@ -231,11 +231,22 @@ async function main() {
     assert.ok(!dumped.includes('ps4Primary'));
   });
 
-  await ok('PS4 Primary is offered only when the game runs on PS4, at the Non-Trophy price', () => {
+  await ok('PS4 Primary is offered only when the game runs on PS4, at the Trophy price', () => {
     const card = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 2 }, { nonTrophy: 0, trophy: 0, ps4Primary: 5 }, promo);
     assert.strictEqual(card.slots.ps4Primary, 2);
     assert.ok(card.ps4Primary.toLowerCase().includes('deposit'));
     assert.strictEqual(card.prices.nonTrophyWeekly, 249);
+    assert.strictEqual(card.prices.trophyWeekly, 299);
+    assert.strictEqual(card.prices.ps4PrimaryWeekly, 299);
+    assert.strictEqual(card.prices.ps4PrimaryMonthly, 539, '10% off the Trophy month, not the Non-Trophy month');
+    const off = { enabled: false, discounts: { 7: 0, 30: 10 }, deposit: 100 };
+    const full = facts.publicGame(hogwarts, { ntSlots: 0, trSlots: 1, ps4Slots: 1 }, {}, off);
+    assert.strictEqual(full.prices.ps4PrimaryWeekly, 299);
+    assert.strictEqual(full.prices.ps4PrimaryMonthly, 599);
+    const quoted = facts.slotReply(full, facts.faqBundle({ promo: off, siteUrl: 'https://www.playstation-hub.com' }), 'en');
+    assert.ok(quoted.includes('- PS4 Primary: 1 slot available\n  ₱299/week | ₱599/month'), quoted);
+    assert.ok(quoted.includes('+ ₱100 security deposit'), quoted);
+    assert.ok(!quoted.includes('₱249/week'), quoted);
   });
 
   await ok('a per-game discount replaces the site promo on that title', () => {
@@ -703,7 +714,7 @@ async function main() {
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
       '- PS4 Primary: 2 slots available',
-      '  ₱249/week | ₱449/month',
+      '  ₱299/week | ₱539/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
       'Promos:',
