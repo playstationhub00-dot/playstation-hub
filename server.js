@@ -78,11 +78,15 @@ const PORT = process.env.PORT || 3000;
 // Railway egress even when Cloudflare compressed it again for the browser.
 app.use(textCompress());
 
-// One host in Google's index. playstation-hub.com and www both used to
-// answer 200. Apex 301s to www and keeps the path and query. Localhost,
-// Railway's own hostname, and health checks are left alone so a deploy
-// probe is not sent to the public site.
+// One host in Google's index, and one host on the public internet.
+// playstation-hub.com and the *.up.railway.app hostname both used to answer
+// 200, so crawlers and anyone with the Railway link skipped Cloudflare and
+// the bytes left Railway directly. GET and HEAD 301 to www and keep the
+// path and query. Other methods stay put: a 301 of a POST drops the body,
+// which would break checkout and the payment webhook. Localhost, Railway's
+// private network, health checks, and the webhook URLs are left alone.
 app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const target = seo.apexRedirect({
     host: req.hostname,
     originalUrl: req.originalUrl,
@@ -497,6 +501,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // international split cannot drift. Card and bank stay in the sentence only
 // when that method is actually on (see lib/payment-copy.js).
 app.locals.seo = seo;
+app.locals.policy = require('./lib/policy-copy');
 app.locals.faqPages = require('./lib/faq-pages');
 app.locals.trafficSources = (rows) => seo.trafficSources(rows);
 app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
@@ -735,7 +740,10 @@ function requireAuth(req, res, next) {
   // Those requests are told plainly. Page loads and ordinary form posts (which
   // ask for text/html) still go to the login page.
   const accept = String(req.get('accept') || '');
-  if (req.method !== 'GET' && !accept.includes('text/html')) {
+  // A GET that asks only for JSON (the notification bell) is the same kind of
+  // background request: send the small logged-out answer, not the login page.
+  const jsonOnly = accept.includes('application/json') && !accept.includes('text/html');
+  if (jsonOnly || (req.method !== 'GET' && !accept.includes('text/html'))) {
     return res.status(401).json({
       ok: false, reason: 'logged_out',
       message: 'You were logged out — log in again in a new tab, then press the button again. Nothing was saved.'
@@ -2471,7 +2479,7 @@ function browsePsplusData(accountSummaryMap) {
     avail = (sl.nt_slots || 0) + (sl.tr_slots || 0) + (sl.ps4_slots || 0) > 0;
     availPs4 = (sl.ps4_slots || 0) > 0;
   }
-  return { items, from: psplusFromWeekly(), avail, availPs4, rent: psGame ? '/game/' + gameSlug(psGame.title) : '/ps-plus' };
+  return { items, from: psplusFromWeekly(), avail, availPs4, rent: '/ps-plus' };
 }
 
 app.get('/browse', (req, res) => {
@@ -2533,7 +2541,9 @@ app.get('/robots.txt', (req, res) => {
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const games = (getGames() || []).map(g => ({
+  // /ps-plus is already a static URL. The catalogue row would list the same
+  // product a second time at /game/ps-plus-deluxe.
+  const games = (getGames() || []).filter(g => !seo.isPsplusDeluxeTitle(g.title)).map(g => ({
     path: '/game/' + gameSlug(g.title),
     lastmod: g.updated_at || g.created_at || ''
   }));
@@ -2541,11 +2551,19 @@ app.get('/sitemap.xml', (req, res) => {
     path: '/upcoming/' + gameSlug(g.title) + '-' + g.id,
     lastmod: g.updated_at || g.created_at || ''
   }));
+  res.set('Cache-Control', 'public, max-age=300');
   res.type('application/xml').send(seo.sitemapXml({ games, upcoming }));
 });
 
 function gameSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// A failed order for the PS Plus Deluxe catalogue row goes to the real
+// checkout. Every other game still returns to its own page.
+function orderErrorPath(game) {
+  if (seo.isPsplusDeluxeTitle(game && game.title)) return '/ps-plus/rent?order_error=1';
+  return '/game/' + gameSlug(game.title) + '?order_error=1';
 }
 
 // ── Meta / Facebook product catalog feed ─────────────────────────────────────
@@ -2559,7 +2577,37 @@ function gameSlug(title) {
 // can't drift from the site. Note the two promos round differently and that is
 // deliberate: rentals follow `base - round(base*pct/100)` (matching game-card.ejs)
 // and permanent follows `round(base*(1-pct/100))` (matching buyPrice()).
-const SITE_URL = (process.env.SITE_URL || 'https://playstation-hub-production.up.railway.app').replace(/\/+$/, '');
+// Customer-facing links (order pages, the Meta catalog, payment return URLs).
+// A SITE_URL that still points at *.up.railway.app is ignored: that host
+// bypasses Cloudflare, and every message that used it sent customers there.
+function publicSiteUrl() {
+  const fallback = 'https://www.playstation-hub.com';
+  const raw = String(process.env.SITE_URL || '').trim().replace(/\/+$/, '');
+  if (!raw) return fallback;
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    if (host.endsWith('.up.railway.app') || host.endsWith('.railway.app')) return fallback;
+  } catch (e) {
+    return fallback;
+  }
+  return raw;
+}
+const SITE_URL = publicSiteUrl();
+
+// A saved template or env value can still name the Railway host. Keep a real
+// custom link, turn a railway.app link into the public site, and leave a blank
+// blank so a review ask is not invented when no website link was saved.
+function customerSiteUrl(stored) {
+  const raw = String(stored || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    if (host.endsWith('.railway.app')) return SITE_URL;
+  } catch (e) {
+    return raw;
+  }
+  return raw;
+}
 
 // Admin-entered descriptions contain hard line breaks. A quoted newline is legal
 // RFC4180, but it splits the row for stricter parsers (and for the Google Sheets
@@ -2601,7 +2649,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
     const avail = computeAvailability(g, summaryMap[g.id],
       { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const group = `ph-${g.id}`;
-    const link = `${SITE_URL}/game/${gameSlug(g.title)}`;
+    const link = `${SITE_URL}${seo.gamePath(g.title)}`;
     const imgBase = path.basename(String(g.cover_image)).replace(/\.[^.]+$/, '');
     const image = `${SITE_URL}/uploads/jpg/${imgBase}.jpg`;
     const desc = (g.description && g.description.trim())
@@ -2663,7 +2711,7 @@ app.post('/order/create', async (req, res) => {
   const type = ['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null;
   const d = parseInt(days);
   if (!name || !type || !PROMO_DURATIONS.includes(d)) {
-    return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+    return res.redirect(orderErrorPath(game));
   }
 
   const s = getSiteSettings();
@@ -2672,7 +2720,7 @@ app.post('/order/create', async (req, res) => {
   // PS4 Primary has no price fields of its own. Charge the Trophy price, the
   // same number the game page shows, including the same promo.
   const base = rentPricing.listPrice(resolved, type, d);
-  if (!base) return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+  if (!base) return res.redirect(orderErrorPath(game));
 
   const pct = rentDiscountPct(game, d, promo);
   const amountDue = rentPricing.discounted(base, pct);
@@ -2703,7 +2751,7 @@ app.post('/order/create', async (req, res) => {
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order create]', e.message);
-    res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+    res.redirect(orderErrorPath(game));
   }
 });
 
@@ -2878,7 +2926,7 @@ app.post('/order/reserve', async (req, res) => {
     ? '/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1'
     : isPsplus
       ? '/ps-plus/rent?order_error=1'
-      : '/game/' + gameSlug(game.title) + '?order_error=1';
+      : orderErrorPath(game);
 
   const name = (fb_name || '').trim();
   const type = (isUpcoming || isPsplus)
@@ -4768,7 +4816,7 @@ app.get('/api/search-index', async (req, res) => {
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       bpr: buyPrices.length ? Math.min(...buyPrices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
+      s: slots, u: seo.gamePath(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
     };
@@ -4778,9 +4826,8 @@ app.get('/api/search-index', async (req, res) => {
     u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // "Most Played in PS Plus" titles aren't individually rentable — they're all played
-  // through the one PS Plus Deluxe subscription game, same as the homepage cards.
-  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
-  const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
+  // through the one PS Plus Deluxe subscription, so search opens /ps-plus.
+  const psplusUrl = '/ps-plus';
   const psplus = getPsplusPopular().map(g => ({
     t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
@@ -4826,6 +4873,7 @@ app.get('/api/search-index', async (req, res) => {
     console.error('[search-index] requests lookup failed', e.message);
   }
 
+  res.set('Cache-Control', 'public, max-age=300');
   res.json([...available, ...soon, ...psplus, ...psplusCatalogEntries, ...psplusMonthly, ...requested]);
 });
 
@@ -4844,6 +4892,14 @@ app.get('/game/:slug', async (req, res) => {
     ? getGame(parseInt(param))
     : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
   if (!game) return renderNotFound(res);
+  // /ps-plus is the product page. Checkout does not use this URL: renting PS
+  // Plus posts to /order/create-psplus from /ps-plus/rent and stores game_id
+  // 'psplus'. This catalogue row is only the slot count and the cover, so a
+  // 301 does not drop an order. Query strings are kept (utm, order_error).
+  if (seo.isPsplusDeluxeTitle(game.title)) {
+    const q = req.originalUrl.indexOf('?');
+    return res.redirect(301, '/ps-plus' + (q === -1 ? '' : req.originalUrl.slice(q)));
+  }
   const canonical = gameSlug(game.title);
   if (param !== canonical) {
     const q = req.originalUrl.indexOf('?');
@@ -5192,7 +5248,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   const releasedOrders = (await orders.listByStates(['awaiting_qr'])).filter(o => o && o.released_at);
   {
     const tpls = getSiteSettings().message_templates || {};
-    const base = String(tpls.website_link || SITE_URL).replace(/\/+$/, '');
+    const base = customerSiteUrl(tpls.website_link) || SITE_URL;
     releasedOrders.forEach(o => {
       if (!o.url_key) return;
       o.release_msg = releaseLib.releaseMessage({
@@ -5250,7 +5306,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
   {
     const tpls = getSiteSettings().message_templates || {};
-    const base = String(tpls.website_link || SITE_URL).replace(/\/+$/, '');
+    const base = customerSiteUrl(tpls.website_link) || SITE_URL;
     unpaidQuickAdds.forEach(o => {
       o.reminder_msg = quickAddSettle.reminderMessage({
         fbName: o.fb_name, owed: o.amount_due, gameTitle: o.game_title, ref: o.ref,
@@ -5328,7 +5384,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   {
     const reviewedRefs = new Set((reviews || []).map(r => r && r.order_ref).filter(Boolean));
     const tpls = getSiteSettings().message_templates || {};
-    const siteUrl = tpls.website_link || '';
+    const siteUrl = customerSiteUrl(tpls.website_link);
     ledgerOrders.forEach(o => {
       // No key means no customer-facing page to send them to — the same reason
       // lib/templates.js collapses the ask for hand-added customers.
@@ -5722,6 +5778,102 @@ app.get('/admin', requireAuth, async (req, res) => {
     );
   }
 });
+
+// The topbar bell. Same inputs as the list built inside GET /admin, without
+// rendering every tab (the PS Plus catalog alone is hundreds of rows). The
+// bell polls this instead of re-downloading /admin.
+async function loadAdminNotifications() {
+  const customers = getCustomers() || [];
+  const unlinkedRentals = customers.filter(c =>
+    c && (c.status === 'renting' || c.status === 'bought')
+    && !String(c.game_id).startsWith('upcoming_')
+    && !findAccountAssignmentForCustomer(c.id)
+    && requiresSlotAssignment(c.game_id, c.account_type || 'nt')
+  );
+  const remToday = new Date(); remToday.setHours(0, 0, 0, 0);
+  const needsReminder = customers.filter(c => {
+    if (c.status !== 'renting' || !c.end_date) return false;
+    const end = new Date(c.end_date + 'T00:00:00');
+    const dl = Math.ceil((end - remToday) / 86400000);
+    return dl <= 1;
+  }).map(c => {
+    const end = new Date(c.end_date + 'T00:00:00');
+    const dl = Math.ceil((end - remToday) / 86400000);
+    const kind = dl < 0 ? 'expiry_overdue' : dl === 0 ? 'expiry_today' : 'expiry_tomorrow';
+    return { c, dl, kind, overdueBy: dl < 0 ? Math.abs(dl) : null };
+  }).sort((a, b) => a.dl - b.dl);
+  const reviews = db.get('reviews').value() || [];
+  const reviewQueue = reviewRules.buildRequestQueue(customers, reviews, new Date());
+  try {
+    await orders.expireStaleQrs();
+    await orders.advanceEndedRentals();
+  } catch (e) { console.error('[order sweep]', e.message); }
+  const orderQueue = await orders.listByStates(orders.OWNER_STATES);
+  orderQueue.forEach(o => {
+    if (o && o.payment_method === 'paypal') {
+      const q = paypalQuoteFor(o);
+      if (q) o.paypal_expected = q.total;
+    }
+  });
+  const refundsOwed = (await orders.listByStates(['closed']))
+    .filter(o => (o.deposit_due || 0) > 0 && !o.deposit_refunded);
+  const negativeReviews = reviews
+    .filter(r => r && r.private && !r.handled)
+    .sort((a, b) => Date.parse(b.created_at || '') - Date.parse(a.created_at || ''));
+  const allOrders = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
+  const boughtRefs = new Set(
+    customers.filter(c => c && c.status === 'bought' && c.order_ref).map(c => c.order_ref)
+  );
+  const boughtWithDuration = allOrders.filter(o =>
+    o && boughtRefs.has(o.ref) && (o.end_date || o.days)
+  );
+  const customerEndByRef = new Map();
+  customers.forEach(c => {
+    if (c && c.status === 'renting' && c.order_ref && c.end_date) customerEndByRef.set(c.order_ref, c);
+  });
+  const staleEndDates = allOrders.filter(o => {
+    if (!o || o.is_buy) return false;
+    if (!['active', 'awaiting_return', 'verifying_return'].includes(o.state)) return false;
+    const c = customerEndByRef.get(o.ref);
+    return c && (!o.end_date || o.end_date < c.end_date);
+  }).map(o => Object.assign({}, o, { customer_end_date: customerEndByRef.get(o.ref).end_date }));
+  const liveCustomerIds = new Set(customers.map(c => c.id));
+  const orphanedOrders = allOrders.filter(o =>
+    o && o.customer_id
+    && !orders.PAID_EXCLUDED_STATES.includes(o.state)
+    && !liveCustomerIds.has(o.customer_id)
+  );
+  const rentPromo = getSiteSettings().promo || {};
+  const rentMismatches = rentAudit.scan(customers, c => {
+    const g = getGame(c.game_id);
+    if (!g) return null;
+    return promotedTier(resolveGamePrices(g), c.account_type === 'tr' ? 'tr' : 'nt', rentPromo);
+  });
+  const paymongoHealth = await orders.webhookHealth().catch(() => null);
+  const supportHandoffs = supportThreads.createStore(supportThreads.bind(db)).listHandoffs();
+  const built = notifications.build({
+    orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
+    negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
+    rentMismatches, paymongoHealth, supportHandoffs, now: new Date()
+  });
+  return {
+    count: built.count,
+    criticalCount: built.criticalCount,
+    items: built.items.map(it => ({
+      urgency: it.urgency,
+      icon: it.icon,
+      title: it.title,
+      sub: it.sub,
+      tab: it.tab,
+      expiresAt: it.expiresAt || null
+    }))
+  };
+}
+
+app.get('/admin/api/notifications', requireAuth, asyncRoute(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  res.json(await loadAdminNotifications());
+}));
 
 // Recent Visits only renders the 100 most recent rows server-side — clicking an older
 // day in the 14-day chart needs the full matching set, not just whatever of that day
@@ -7525,7 +7677,7 @@ app.get('/admin/mongo-status', requireAuth, async (req, res) => {
 });
 
 // ── Meta / Facebook Product Catalog Feed ──────────────────────────────────────
-// Give Meta this URL: https://your-railway-domain.up.railway.app/feed/meta.csv
+// Give Meta this URL: https://www.playstation-hub.com/feed/meta.csv
 // Every order, for offline analysis — scripts/funnel-report.js reads this file.
 // Behind requireAuth like the games export beside it: order rows carry customer
 // names and amounts, so this is owner-only.
@@ -7567,7 +7719,7 @@ app.get('/api/games-export', requireAuth, (req, res) => {
 });
 
 app.get('/feed/meta.csv', (req, res) => {
-  const siteUrl = process.env.SITE_URL || 'https://your-domain.up.railway.app';
+  const siteUrl = publicSiteUrl();
   const games = getGames().filter(g => !g.upcoming);
   const rows = [
     ['id','title','description','availability','condition','price','link','image_link','brand','google_product_category']
@@ -7612,7 +7764,7 @@ function supportFactsNow(loyaltyNote) {
     categories: getPriceCategories(),
     promo: settings.promo || {},
     paymentMethods: settings.payment_methods || [],
-    siteUrl: process.env.SITE_URL || 'https://www.playstation-hub.com',
+    siteUrl: customerSiteUrl(process.env.SITE_URL) || SITE_URL,
     pageUsername: settings.fb_page_username || 'PlaystationHub00',
     psplusPrices: getPsplusPrices(),
     psplusSlots: getPsplusSlots(),
@@ -7662,7 +7814,7 @@ async function supportLookup(query) {
 function notifySupportHandoff(result) {
   if (!result || !result.newlyHandedOff) return;
   if (!telegram.isAlertEnabled(getSiteSettings(), 'support_handoff')) return;
-  const site = process.env.SITE_URL || 'https://www.playstation-hub.com';
+  const site = customerSiteUrl(process.env.SITE_URL) || SITE_URL;
   const text = telegram.formatSupportAlert(
     { channel: result.channel, reason: result.reason, preview: result.preview },
     { adminUrl: site + '/admin?tab=messaging' }

@@ -40,7 +40,7 @@
     <div class="shop-slides" id="hmSlides">
       <% spotlight.forEach(sl => { const it = sl.item; const isBox = sl.kind === 'box';
         const cover = isBox ? ((it.covers.find(c => c.cover) || {}).cover || '') : it.cover; %>
-      <a class="shop-slide" href="<%= isBox ? '/bundle/' + it.slug : '/game/' + it.slug + '?mode=buy' %>">
+      <a class="shop-slide" href="<%= isBox ? '/bundle/' + it.slug : (seo.isPsplusDeluxeTitle(it.title) ? '/ps-plus' : '/game/' + it.slug + '?mode=buy') %>">
         <% if (cover) { %><img src="<%= cover %>" alt="" style="object-position: <%= !isBox && it.fx != null ? it.fx : 50 %>% <%= !isBox && it.fy != null ? it.fy : 50 %>%;"><% } %>
         <span class="shop-slide-shade"></span>
         <span class="shop-slide-body">

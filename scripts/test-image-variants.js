@@ -96,6 +96,31 @@ async function main() {
     assert.strictEqual(meta.width, 720);
     assert.ok(res.body.length < fs.statSync(big).size);
   });
+  await ok('a detailed cover at 720px is well under the upload, and a file already narrower than 720px is recompressed', async () => {
+    const w = 900, h = 506;
+    const raw = Buffer.alloc(w * h * 3);
+    for (let i = 0; i < raw.length; i += 3) {
+      const x = (i / 3) % w;
+      const y = Math.floor((i / 3) / w);
+      raw[i] = (x * 3 + y) & 255;
+      raw[i + 1] = (y * 5 + 40) & 255;
+      raw[i + 2] = ((x ^ y) * 2) & 255;
+    }
+    const wide = path.join(uploadsDir, 'detail-wide.webp');
+    const narrow = path.join(uploadsDir, 'detail-narrow.webp');
+    await sharp(raw, { raw: { width: w, height: h, channels: 3 } }).webp({ quality: 90 }).toFile(wide);
+    await sharp(raw, { raw: { width: w, height: h, channels: 3 } }).resize({ width: 700 }).webp({ quality: 90 }).toFile(narrow);
+    const wideRes = await get('/uploads/w/720/detail-wide.webp');
+    const narrowRes = await get('/uploads/w/720/detail-narrow.webp');
+    const wideBytes = fs.statSync(wide).size;
+    const narrowBytes = fs.statSync(narrow).size;
+    assert.strictEqual(wideRes.status, 200);
+    assert.strictEqual(wideRes.headers['content-type'], 'image/webp');
+    assert.ok(wideRes.body.length < wideBytes * 0.6, wideRes.body.length + ' vs ' + wideBytes);
+    const narrowMeta = await sharp(narrowRes.body).metadata();
+    assert.ok(narrowMeta.width <= 700);
+    assert.ok(narrowRes.body.length < narrowBytes, narrowRes.body.length + ' vs ' + narrowBytes);
+  });
   await ok('the second request reuses the file on disk', async () => {
     const again = await get('/uploads/w/480/big-cover.png');
     assert.strictEqual(again.status, 200);

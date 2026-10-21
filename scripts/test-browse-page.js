@@ -180,7 +180,7 @@ async function main() {
     const h = await page('/browse?tab=psplus');
     assert.ok(!opening(h, 'bfPsplus').includes(' hidden'));
     const lead = between(h, 'bfPsplus', 'bfPsGrid');
-    assert.ok(lead.includes('<a class="bf-ps-lead" href="/game/ps-plus-deluxe">'));
+    assert.ok(lead.includes('<a class="bf-ps-lead" href="/ps-plus">'));
     assert.ok(lead.includes('Hundreds of games, one account') && lead.includes('from <b>₱159</b>/week') && lead.includes('>Rent</span>'));
     assert.ok(opening(h, 'bfSortWrap').includes(' hidden'), 'one order: no Sort menu');
     assert.deepStrictEqual(browseData(h).psplus.map(p => p.k).sort(), ['days-gone', 'returnal'], 'hidden games left out');
