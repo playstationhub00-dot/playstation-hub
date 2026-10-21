@@ -1,6 +1,7 @@
 <%#
   PS Plus Deluxe in one card: what it is, its weekly price, and a strip of the
-  most-played PS Plus games. Locals: home, psplusPopular, psplusSlug.
+  most-played PS Plus games. Each tile opens /ps-plus, the product page.
+  Locals: home, psplusPopular.
 %>
 <% if (home.prices.psplus || psplusPopular.length) { %>
 <section class="hm-wrap hm-sec" id="psplus">
@@ -14,7 +15,7 @@
     <% if (psplusPopular.length) { %>
     <div class="hm-psplus-strip" aria-label="Most played on PS Plus">
       <% psplusPopular.slice(0, 6).forEach(p => { %>
-      <a class="hm-ps-tile" href="<%= psplusSlug ? '/game/' + psplusSlug : '/ps-plus' %>">
+      <a class="hm-ps-tile" href="/ps-plus">
         <% if (p.cover_image) { %><img <%- imgCard(p.cover_image) %> alt="" loading="lazy" decoding="async"><% } %>
         <span><%= p.title %></span>
       </a>

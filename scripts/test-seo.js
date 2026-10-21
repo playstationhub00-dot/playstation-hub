@@ -211,6 +211,41 @@ ok('FAQ JSON-LD is built from the same questions the page renders', () => {
   assert.ok(home.some(i => /PSN password/.test(i.q)));
   assert.ok(home.some(i => /₱100/.test(i.q)));
   assert.strictEqual(faqPages.homeItems({ deposit: 0, lateFee: 20 }).some(i => /deposit back/.test(i.q)), false);
+  const trial = 'The free 3-hour trial (Non-Trophy) covers any game, PS Plus Deluxe included, as long as it\'s available at the time.';
+  assert.ok(joined.includes(trial));
+  assert.ok(home.find(i => i.q === 'Can I try a game before I pay?').text.includes(trial));
+  assert.ok(joined.includes('The exception is our PS Plus Deluxe rental, which runs on a PS Plus subscription, so online play is included.'));
+});
+
+ok('PS Plus Deluxe is one public path, and its JSON-LD uses the prices it is given', () => {
+  assert.strictEqual(seo.gamePath('Elden Ring'), '/game/elden-ring');
+  assert.strictEqual(seo.gamePath('PS Plus Deluxe'), '/ps-plus');
+  assert.strictEqual(seo.gamePath('PlayStation Plus Deluxe'), '/ps-plus');
+  assert.strictEqual(seo.gamePath('Resident Evil 2 Deluxe Edition'), '/game/resident-evil-2-deluxe-edition');
+  const blocks = seo.psplusJsonLd({
+    prices: { nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799 },
+    slots: { nt_slots: 1, tr_slots: 0 }
+  });
+  assert.ok(!blocks.some(b => b['@type'] === 'FAQPage'));
+  const product = blocks.find(b => b['@type'] === 'Product');
+  const crumbs = blocks.find(b => b['@type'] === 'BreadcrumbList');
+  assert.strictEqual(product.name, 'PS Plus Deluxe');
+  assert.strictEqual(product.url, 'https://www.playstation-hub.com/ps-plus');
+  assert.deepStrictEqual(product.offers.map(o => [o.name, o.price, o.priceCurrency, o.availability]), [
+    ['Non-Trophy · Weekly', '349', 'PHP', 'https://schema.org/InStock'],
+    ['Non-Trophy · Monthly', '699', 'PHP', 'https://schema.org/InStock'],
+    ['Trophy · Weekly', '399', 'PHP', 'https://schema.org/OutOfStock'],
+    ['Trophy · Monthly', '799', 'PHP', 'https://schema.org/OutOfStock']
+  ]);
+  assert.deepStrictEqual(crumbs.itemListElement.map(c => c.name), ['Home', 'PS Plus']);
+  assert.strictEqual(crumbs.itemListElement[0].item, 'https://www.playstation-hub.com');
+  assert.strictEqual(crumbs.itemListElement[1].item, 'https://www.playstation-hub.com/ps-plus');
+  blocks.forEach(b => assert.deepStrictEqual(JSON.parse(seo.jsonLdScript(b))['@type'], b['@type']));
+  const stored = seo.psplusJsonLd({
+    prices: { nt_price_7d: 111, nt_price_30d: 222, tr_price_7d: 333, tr_price_30d: 444 },
+    slots: { nt_slots: 2, tr_slots: 3 }
+  });
+  assert.deepStrictEqual(stored.find(b => b['@type'] === 'Product').offers.map(o => o.price), ['111', '222', '333', '444']);
 });
 
 ok('site-wide graph names the organisation and the website', () => {
@@ -320,7 +355,8 @@ function game(id, title, extra) {
 const GAMES = [
   game(1, 'Elden Ring', { nt_price_7d: 349 }),
   game(2, 'Spider-Man', { platform: 'PS4/PS5', nt_price_7d: 199, nt_price_30d: 449, tr_price_7d: 249, tr_price_30d: 549, ps4_primary_slots: 1, cover_image: 'https://image.api.playstation.com/spider.png' }),
-  game(3, 'Resident Evil Remake Trilogy')
+  game(3, 'Resident Evil Remake Trilogy'),
+  game(4, 'PS Plus Deluxe', { nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799, non_trophy_slots: 1, trophy_slots: 1 })
 ];
 const UPCOMING = [
   { id: 5, title: 'Phantom Blade', platform: 'PS5', genre: 'Action', release_date: '2027-03-01', cover_image: '/uploads/phantom.png', created_at: '2026-03-01T00:00:00.000Z', non_trophy_slots: 2, trophy_slots: 1, nt_price_7d: 299, nt_price_30d: 699, tr_price_7d: 349, tr_price_30d: 799 }
@@ -328,6 +364,11 @@ const UPCOMING = [
 
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   games: GAMES, upcoming: UPCOMING, nextId: 10, nextUpcomingId: 6,
+  psplus_prices: { nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799 },
+  psplus_slots: { nt_slots: 1, tr_slots: 1, ps4_slots: 0 },
+  psplus_popular: [
+    { id: 1, title: 'Ghost of Tsushima', platform: 'PS5', rank: 1, cover_image: '' }
+  ],
   customers: [], visitors: [], migrations: ['genre-by-slug-2026-10-14']
 }));
 process.env.PORT = String(PORT);
@@ -413,6 +454,7 @@ async function main() {
       assert.ok(res.body.includes('property="og:type"'), p);
       assert.ok(res.body.includes('property="og:site_name"'), p);
       assert.ok(res.body.includes('name="twitter:card"'), p);
+      assert.ok(res.body.includes('PlayStation Hub is an independent rental shop, not affiliated with Sony Interactive Entertainment.'), p);
       assert.ok(res.body.includes('content="verifytoken123"'), p);
       jsonLd(res.body).forEach(b => assert.ok(b['@type'] || b['@graph'], p));
     }
@@ -456,6 +498,32 @@ async function main() {
     assert.ok(missingSoon.body.includes('href="/browse"'));
   });
 
+  await okAsync('the PS Plus Deluxe game URL 301s to /ps-plus, which carries the stored prices', async () => {
+    const old = await call('/game/ps-plus-deluxe?utm_source=google');
+    assert.strictEqual(old.status, 301);
+    assert.strictEqual(old.headers.location, '/ps-plus?utm_source=google');
+    const byId = await call('/game/4');
+    assert.strictEqual(byId.status, 301);
+    assert.strictEqual(byId.headers.location, '/ps-plus');
+    const page = await call('/ps-plus');
+    assert.strictEqual(page.status, 200);
+    assert.strictEqual(canonicalOf(page.body), 'https://www.playstation-hub.com/ps-plus');
+    assert.ok(page.body.includes('Online play included'));
+    assert.ok(!page.body.includes('/game/ps-plus-deluxe'));
+    const blocks = jsonLd(page.body);
+    blocks.forEach(b => assert.ok(b['@type']));
+    assert.ok(!blocks.some(b => b['@type'] === 'FAQPage'));
+    const product = blocks.find(b => b['@type'] === 'Product');
+    assert.deepStrictEqual(product.offers.map(o => o.price), ['349', '699', '399', '799']);
+    product.offers.forEach(o => assert.strictEqual(o.priceCurrency, 'PHP'));
+    const crumbs = blocks.find(b => b['@type'] === 'BreadcrumbList');
+    assert.deepStrictEqual(crumbs.itemListElement.map(c => c.name), ['Home', 'PS Plus']);
+    const index = JSON.parse((await call('/api/search-index')).body);
+    assert.ok(index.some(e => e.t === 'PS Plus Deluxe' && e.u === '/ps-plus'));
+    assert.ok(index.some(e => e.t === 'Ghost of Tsushima' && e.u === '/ps-plus' && e.y === 'psplus'));
+    assert.ok(!index.some(e => String(e.u).includes('/game/ps-plus-deluxe')));
+  });
+
   await okAsync('an old spelling still 301s to the live slug', async () => {
     const old = await call('/game/resident-evil-remake-triology');
     assert.strictEqual(old.status, 301);
@@ -489,6 +557,10 @@ async function main() {
     seo.assertWellFormedXml(map.body);
     GAMES.forEach(g => {
       const slug = g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      if (g.title === 'PS Plus Deluxe') {
+        assert.ok(!map.body.includes('/game/' + slug), 'duplicate PS Plus URL stays out of the sitemap');
+        return;
+      }
       assert.ok(map.body.includes('https://www.playstation-hub.com/game/' + slug), g.title);
     });
     assert.ok(map.body.includes('https://www.playstation-hub.com/upcoming/phantom-blade-5'));

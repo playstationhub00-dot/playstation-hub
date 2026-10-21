@@ -2273,6 +2273,13 @@ footer {
 }
 .footer-copy { font-size: 0.75rem; color: #444; }
 .footer-tagline { font-size: 0.75rem; color: #333; }
+.footer-disclaimer {
+  flex: 1 0 100%;
+  margin: 0.85rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: #888;
+}
 @media (max-width: 820px) {
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem 1.5rem; }
   .footer-brand { grid-column: 1 / -1; }

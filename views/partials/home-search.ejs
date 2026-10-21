@@ -22,7 +22,7 @@
   <div class="hs-chips-label">🔥 Popular right now</div>
   <div class="hs-chips">
     <% hsChips.forEach(g => { %>
-    <a class="hs-chip" href="/game/<%= g.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>"><img <%- imgThumb(g.cover_image) %> alt="" loading="lazy" decoding="async"><span><%= g.title %></span></a>
+    <a class="hs-chip" href="<%= seo.gamePath(g.title) %>"><img <%- imgThumb(g.cover_image) %> alt="" loading="lazy" decoding="async"><span><%= g.title %></span></a>
     <% }) %>
   </div>
   <% } %>

@@ -10,6 +10,7 @@ const ejs = require('ejs');
 const pay = require('../lib/payment-copy');
 const seo = require('../lib/seo');
 const faqPages = require('../lib/faq-pages');
+const policy = require('../lib/policy-copy');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -33,7 +34,8 @@ const locals = {
     payment_methods: settings && settings.payment_methods
   }),
   seo,
-  faqPages
+  faqPages,
+  policy
 };
 
 function render(name) {
@@ -82,6 +84,17 @@ ok('both pages render and the footer links them, with the contact email beside M
   assert.ok(terms.includes('10% off'));
   assert.ok(!faq.includes('Playstation Hub'));
   assert.ok(!terms.includes('Playstation Hub'));
+  const disclaimer = 'PlayStation Hub is an independent rental shop, not affiliated with Sony Interactive Entertainment.';
+  assert.ok(faq.includes(disclaimer));
+  assert.ok(terms.includes(disclaimer));
+  assert.ok(faq.includes(policy.ONLINE_EXCEPTION));
+  assert.ok(terms.includes(policy.ONLINE_WITHOUT));
+  assert.ok(terms.includes(policy.ONLINE_EXCEPTION));
+  const trialQ = 'Can I try a game before I pay?';
+  const trial = policy.TRIAL_ANSWER;
+  assert.ok(faq.includes(trial));
+  assert.strictEqual(faqPages.faqItems({}).find(i => i.q === trialQ).text, trial);
+  assert.strictEqual(faqPages.homeItems({ deposit: 100, lateFee: 20 }).find(i => i.q === trialQ).text, trial);
 });
 
 ok('terms state the rental rules and do not add court clauses', () => {
