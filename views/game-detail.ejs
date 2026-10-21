@@ -126,7 +126,7 @@
         <span class="usd-plat-chip"><%= game.platform %></span>
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
-      <h1 class="usd-title"><%= game.title %></h1>
+      <h1 class="usd-title"><%= gdSeo.heading %></h1>
       <p class="seo-intro"><%= gdSeo.intro %></p>
       <p class="seo-intro"><%- include('partials/swap-line') %></p>
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
@@ -362,7 +362,7 @@
           <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = gameDiscountPct(game, d, promo); %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
             <span class="gd-dur-days"><%= durLabel %></span>
-            <span class="gd-dur-price" id="price-<%= d %>">—</span>
+            <span class="gd-dur-price" id="price-<%= d %>"><%- rentPriceHtml(game, 'nt', d, promo) %></span>
             <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
           </button>
           <% }) %>
@@ -608,6 +608,16 @@
     </div>
     <% } %>
   </div>
+  <% } %>
+
+  <% if (gdSeo.faqs && gdSeo.faqs.length) { %>
+  <section class="gd-faq" id="game-faq">
+    <h2 class="gd-faq-title"><%= game.title %> rental FAQ</h2>
+    <div class="faq-list">
+      <%- include('partials/faq-items', { items: gdSeo.faqs }) %>
+    </div>
+    <p class="gd-faq-more">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>.</p>
+  </section>
   <% } %>
 
   <!-- ══ MOBILE STICKY BAR (≤820px) ══ -->

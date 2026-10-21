@@ -79,21 +79,40 @@ ok('the from-price is the cheapest discounted rent price', () => {
 
 ok('a game title names the rental, the real platform, and the from-price', () => {
   const page = seo.gamePage({ game: elden, promo, availability: { ntAvail: true, trAvail: false, ps4Avail: false, showPs4: false } });
-  assert.strictEqual(page.title, 'Rent Elden Ring PS5 Philippines – from ₱349 | PlayStation Hub');
-  assert.ok(page.title.length <= 70, page.title + ' (' + page.title.length + ')');
+  assert.strictEqual(page.title, 'Rent Elden Ring PS5 – from ₱349 | PlayStation Hub');
+  assert.ok(page.title.length <= 60, page.title + ' (' + page.title.length + ')');
+  assert.ok(!page.title.includes('Philippines'), 'a title over 60 characters drops Philippines');
   assert.ok(page.description.includes('Trophy'));
   assert.ok(page.description.includes('Non-Trophy'));
   assert.ok(page.description.includes('GCash'));
   assert.ok(page.description.includes('Maya'));
   assert.ok(page.description.includes('PayPal'));
   assert.ok(page.description.includes('Messenger'));
+  assert.ok(!page.description.includes('PS4 Primary'), page.description);
   assert.ok(page.description.length >= 80 && page.description.length <= 180, page.description + ' (' + page.description.length + ')');
+  assert.strictEqual(page.heading, 'Rent Elden Ring for PS5 in the Philippines');
+  assert.strictEqual(page.faqs.length, 0);
+  assert.ok(!page.jsonLd.some(b => b['@type'] === 'FAQPage'));
   assert.strictEqual(page.canonicalPath, '/game/elden-ring');
   assert.strictEqual(page.image, '/uploads/elden.png');
   assert.strictEqual(page.intro, 'Rent Elden Ring for PS5 in the Philippines from ₱349.');
   const bothPage = seo.gamePage({ game: both, promo });
   assert.ok(bothPage.title.includes('PS4/PS5'));
   assert.ok(bothPage.title.includes('₱199'));
+  assert.ok(bothPage.description.includes('PS4 Primary'), bothPage.description);
+  assert.strictEqual(bothPage.heading, 'Rent Spider-Man for PS5 & PS4 in the Philippines');
+  const short = seo.gamePage({
+    game: { title: 'Hades', platform: 'PS5', nt_price_7d: 99, nt_price_30d: 199, tr_price_7d: 149, tr_price_30d: 299 },
+    promo
+  });
+  assert.ok(short.title.includes('Philippines'), short.title);
+  assert.ok(short.title.includes('PlayStation Hub'), short.title);
+  const ps4only = seo.gamePage({
+    game: { title: 'Old Game', platform: 'PS4', nt_price_7d: 149, nt_price_30d: 299, tr_price_7d: 199, tr_price_30d: 399 },
+    promo
+  });
+  assert.strictEqual(ps4only.heading, 'Rent Old Game for PS4 in the Philippines');
+  assert.ok(ps4only.description.includes('PS4 Primary'));
 });
 
 ok('an upcoming title says Reserve and uses the real from-price', () => {
@@ -101,7 +120,8 @@ ok('an upcoming title says Reserve and uses the real from-price', () => {
     game: Object.assign({ id: 5 }, both, { title: 'Phantom Blade', platform: 'PS5' }),
     promo
   });
-  assert.strictEqual(page.title, 'Reserve Phantom Blade PS5 Philippines – from ₱199 | PlayStation Hub');
+  assert.strictEqual(page.title, 'Reserve Phantom Blade PS5 – from ₱199 | PlayStation Hub');
+  assert.ok(!page.description.includes('PS4 Primary'), page.description);
   assert.strictEqual(page.canonicalPath, '/upcoming/phantom-blade-5');
   assert.ok(page.intro.startsWith('Reserve Phantom Blade for PS5 in the Philippines from ₱199'));
 });
@@ -125,6 +145,46 @@ ok('static pages have a title and a description near 150 characters', () => {
   assert.strictEqual(seo.staticPage('browse').canonicalPath, '/browse');
   assert.strictEqual(seo.staticPage('ps-plus').canonicalPath, '/ps-plus');
   assert.strictEqual(seo.staticPage('how-it-works').canonicalPath, '/how-it-works');
+});
+
+ok('the five priority games use the brief titles and a visible FAQ', () => {
+  const cases = [
+    ['Ghost of Yotei', 249, 'Rent Ghost of Yotei PS5 Philippines – from ₱249 | PS Hub', 56],
+    ['Resident Evil Requiem', 349, 'Rent Resident Evil Requiem PS5 Philippines – ₱349 | PS Hub', 58],
+    ['007 First Light', 349, 'Rent 007 First Light PS5 Philippines – from ₱349 | PS Hub', 57],
+    ['Crimson Desert', 349, 'Rent Crimson Desert PS5 Philippines – from ₱349 | PS Hub', 56],
+    ['Battlefield 6', 249, 'Rent Battlefield 6 PS5 Philippines – from ₱249 | PS Hub', 55]
+  ];
+  cases.forEach(([title, weekly, expected, chars]) => {
+    const page = seo.gamePage({
+      game: { title, platform: 'PS5', nt_price_7d: weekly, nt_price_30d: 799, tr_price_7d: weekly + 50, tr_price_30d: 899 },
+      promo
+    });
+    assert.strictEqual(page.title, expected);
+    assert.strictEqual(page.title.length, chars, page.title);
+    assert.ok(page.title.length <= 60);
+    assert.ok(!page.description.includes('PS4 Primary'), page.description);
+    assert.ok(page.description.includes('₱' + weekly + '/week'), page.description);
+    assert.ok(page.description.length >= 80 && page.description.length <= 180, page.description.length + ' ' + page.description);
+    assert.strictEqual(page.heading, 'Rent ' + title + ' for PS5 in the Philippines');
+    assert.strictEqual(page.faqs.length, 6, title);
+    const faqLd = page.jsonLd.find(b => b['@type'] === 'FAQPage');
+    assert.ok(faqLd, title + ' missing FAQPage');
+    assert.strictEqual(faqLd.mainEntity.length, 6);
+    page.faqs.forEach((item, i) => {
+      assert.strictEqual(faqLd.mainEntity[i].name, item.q);
+      assert.strictEqual(faqLd.mainEntity[i].acceptedAnswer.text, item.text);
+    });
+    const product = page.jsonLd.find(b => b['@type'] === 'Product');
+    assert.strictEqual(product.description, page.description);
+    assert.ok(!product.offers.some(o => /PS4 Primary/.test(o.name)));
+  });
+  // A weekly discount changes the brief title's peso figure instead of leaving the old one.
+  const discounted = seo.gamePage({
+    game: { title: 'Ghost of Yotei', platform: 'PS5', nt_price_7d: 249, nt_price_30d: 549, tr_price_7d: 299, tr_price_30d: 649, discounts: { 7: 10 } },
+    promo
+  });
+  assert.ok(discounted.title.includes('₱224'), discounted.title);
 });
 
 ok('game JSON-LD is a Product with PHP offers and a breadcrumb', () => {
@@ -303,14 +363,19 @@ function game(id, title, extra) {
 const GAMES = [
   game(1, 'Elden Ring', { nt_price_7d: 349 }),
   game(2, 'Spider-Man', { platform: 'PS4/PS5', nt_price_7d: 199, nt_price_30d: 449, tr_price_7d: 249, tr_price_30d: 549, ps4_primary_slots: 1, cover_image: 'https://image.api.playstation.com/spider.png' }),
-  game(3, 'Resident Evil Remake Trilogy')
+  game(3, 'Resident Evil Remake Trilogy'),
+  game(6, 'Ghost of Yotei', { nt_price_7d: 249, nt_price_30d: 549, tr_price_7d: 299, tr_price_30d: 649 }),
+  game(7, 'Resident Evil Requiem'),
+  game(8, '007 First Light'),
+  game(9, 'Crimson Desert'),
+  game(10, 'Battlefield 6', { nt_price_7d: 249, nt_price_30d: 549, tr_price_7d: 299, tr_price_30d: 649 })
 ];
 const UPCOMING = [
   { id: 5, title: 'Phantom Blade', platform: 'PS5', genre: 'Action', release_date: '2027-03-01', cover_image: '/uploads/phantom.png', created_at: '2026-03-01T00:00:00.000Z', non_trophy_slots: 2, trophy_slots: 1, nt_price_7d: 299, nt_price_30d: 699, tr_price_7d: 349, tr_price_30d: 799 }
 ];
 
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
-  games: GAMES, upcoming: UPCOMING, nextId: 10, nextUpcomingId: 6,
+  games: GAMES, upcoming: UPCOMING, nextId: 11, nextUpcomingId: 6,
   customers: [], visitors: [], migrations: ['genre-by-slug-2026-10-14']
 }));
 process.env.PORT = String(PORT);
@@ -404,7 +469,13 @@ async function main() {
   await okAsync('a game page title, intro, cover image, and product data come from the catalogue', async () => {
     const res = await call('/game/elden-ring?utm_source=google');
     assert.strictEqual(res.status, 200);
-    assert.strictEqual(titleOf(res.body), 'Rent Elden Ring PS5 Philippines – from ₱349 | PlayStation Hub');
+    assert.strictEqual(titleOf(res.body), 'Rent Elden Ring PS5 – from ₱349 | PlayStation Hub');
+    assert.ok(res.body.includes('<h1 class="usd-title">Rent Elden Ring for PS5 in the Philippines</h1>'));
+    assert.ok(res.body.includes('id="price-7">₱349'));
+    assert.ok(res.body.includes('id="price-30"><span class="gd-dur-price-orig">₱799</span> ₱719'));
+    assert.ok(!jsonLd(res.body).some(b => b['@type'] === 'FAQPage'));
+    const eldenDesc = (res.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+    assert.ok(!eldenDesc.includes('PS4 Primary'), eldenDesc);
     assert.strictEqual(canonicalOf(res.body), 'https://www.playstation-hub.com/game/elden-ring');
     assert.ok(res.body.includes('Rent Elden Ring for PS5 in the Philippines from ₱349'));
     assert.ok(res.body.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
@@ -420,6 +491,48 @@ async function main() {
     assert.ok(titleOf(bothRes.body).includes('PS4/PS5'));
     assert.ok(titleOf(bothRes.body).includes('₱199'));
     assert.ok(bothRes.body.includes('https://image.api.playstation.com/spider.png'));
+    assert.ok(bothRes.body.includes('<h1 class="usd-title">Rent Spider-Man for PS5 &amp; PS4 in the Philippines</h1>'));
+    assert.ok(bothRes.body.includes('id="price-7">₱199'));
+    const spiderDesc = (bothRes.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+    assert.ok(spiderDesc.includes('PS4 Primary'), spiderDesc);
+    const spiderProduct = jsonLd(bothRes.body).find(b => b['@type'] === 'Product');
+    const ps4Offer = spiderProduct.offers.find(o => /PS4 Primary/.test(o.name) && /7/.test(o.name));
+    assert.strictEqual(ps4Offer.price, '249');
+  });
+
+  await okAsync('priority game pages render the brief title, FAQ, and prices without JavaScript', async () => {
+    const pages = [
+      ['/game/ghost-of-yotei', 'Rent Ghost of Yotei PS5 Philippines – from ₱249 | PS Hub', 'Rent Ghost of Yotei for PS5 in the Philippines', '₱249'],
+      ['/game/resident-evil-requiem', 'Rent Resident Evil Requiem PS5 Philippines – ₱349 | PS Hub', 'Rent Resident Evil Requiem for PS5 in the Philippines', '₱349'],
+      ['/game/007-first-light', 'Rent 007 First Light PS5 Philippines – from ₱349 | PS Hub', 'Rent 007 First Light for PS5 in the Philippines', '₱349'],
+      ['/game/crimson-desert', 'Rent Crimson Desert PS5 Philippines – from ₱349 | PS Hub', 'Rent Crimson Desert for PS5 in the Philippines', '₱349'],
+      ['/game/battlefield-6', 'Rent Battlefield 6 PS5 Philippines – from ₱249 | PS Hub', 'Rent Battlefield 6 for PS5 in the Philippines', '₱249']
+    ];
+    for (const [p, title, h1, weekly] of pages) {
+      const res = await call(p);
+      assert.strictEqual(res.status, 200, p);
+      assert.strictEqual(titleOf(res.body), title);
+      assert.ok(title.length >= 51 && title.length <= 58, title + ' ' + title.length);
+      assert.ok(res.body.includes('<h1 class="usd-title">' + h1 + '</h1>'), h1);
+      assert.ok(res.body.includes('id="price-7">' + weekly), p);
+      assert.ok(!res.body.includes('id="price-7">—'), p);
+      assert.ok(!res.body.includes('id="price-30">—'), p);
+      const desc = (res.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+      const decoded = desc.replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+      assert.ok(!decoded.includes('PS4 Primary'), decoded);
+      assert.ok(decoded.includes(weekly + '/week'), decoded);
+      const blocks = jsonLd(res.body);
+      const faqLd = blocks.find(b => b['@type'] === 'FAQPage');
+      assert.ok(faqLd && faqLd.mainEntity.length === 6, p);
+      faqLd.mainEntity.forEach(q => {
+        assert.ok(res.body.includes(q.name), q.name);
+        const encoded = q.acceptedAnswer.text
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        assert.ok(res.body.includes(encoded), q.name);
+      });
+      JSON.parse(JSON.stringify(faqLd));
+    }
   });
 
   await okAsync('an upcoming page says Reserve and an unknown slug is a real 404', async () => {

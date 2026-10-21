@@ -448,6 +448,16 @@ app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, day
 // A specific game's rent discount (its own % if set, else the site promo) — see
 // lib/game-discount.js. Every view that prices a game's rental uses this.
 app.locals.gameDiscountPct = (game, days, promo) => gameDiscount.discountPct(game, days, promo);
+// Server-rendered duration price. Same quote as public/js/game-detail.js
+// updatePrices(): PS4 Primary is the Trophy price, and a live promo shows the
+// crossed-out list price next to the amount the customer pays.
+app.locals.rentPriceHtml = (game, type, days, promo) => {
+  const pct = gameDiscount.discountPct(game, days, promo);
+  const q = rentPricing.quoteDuration(game, type, days, pct);
+  if (!q.base) return '—';
+  if (q.pct > 0) return '<span class="gd-dur-price-orig">₱' + q.base + '</span> ₱' + q.final;
+  return '₱' + q.base;
+};
 // A game's tier (price category) for its pill: { id, name, color, description } or null.
 app.locals.gameTier = (game) => tierStyle.tierOf(game, getPriceCategories());
 app.locals.tierPillColor = (cat) => tierStyle.pillColor(cat);

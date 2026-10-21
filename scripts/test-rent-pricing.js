@@ -175,4 +175,15 @@ ok('PS4 Primary falls back to Non-Trophy only when that Trophy field is empty', 
   assert.strictEqual(p.listPrice(game, 'ps4', 30), 599);
 });
 
+ok('a duration quote applies the promo after PS4 Primary reads the Trophy price', () => {
+  const game = { nt_price_7d: 249, nt_price_30d: 499, tr_price_7d: 299, tr_price_30d: 799 };
+  const ps4 = p.quoteDuration(game, 'ps4', 30, 10);
+  assert.strictEqual(ps4.base, 799);
+  assert.strictEqual(ps4.final, 719);
+  const nt = p.quoteDuration(game, 'nt', 7, 0);
+  assert.strictEqual(nt.base, 249);
+  assert.strictEqual(nt.final, 249);
+  assert.strictEqual(nt.pct, 0);
+});
+
 console.log('\n' + passed + ' assertions passed\n');
