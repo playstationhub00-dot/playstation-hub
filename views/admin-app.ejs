@@ -389,8 +389,18 @@ window.addEventListener('beforeinstallprompt', e => {
   deferredPrompt = e;
 });
 
-// Auto-refresh every 2 minutes
-setTimeout(() => location.reload(), 120000);
+// Refresh the summary while this screen is actually open. It used to reload
+// the whole page every 2 minutes even when the phone was locked, which is a
+// full HTML document each time. Ten minutes, and only once the tab is visible.
+var RELOAD_MS = 10 * 60 * 1000;
+var reloadAt = Date.now() + RELOAD_MS;
+function maybeReload() {
+  if (document.hidden) return;
+  if (Date.now() < reloadAt) return;
+  location.reload();
+}
+setInterval(maybeReload, 30000);
+document.addEventListener('visibilitychange', maybeReload);
 </script>
 </body>
 </html>

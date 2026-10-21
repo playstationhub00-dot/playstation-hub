@@ -37,12 +37,26 @@ ok('apex redirects to www and keeps the path and query', () => {
   );
 });
 
-ok('www, localhost, railway hosts, and health checks are not redirected', () => {
+ok('the public railway hostname 301s to www, and private railway, localhost, and health checks do not', () => {
   assert.strictEqual(seo.apexRedirect({ host: 'www.playstation-hub.com', originalUrl: '/browse' }), null);
   assert.strictEqual(seo.apexRedirect({ host: 'localhost', originalUrl: '/' }), null);
   assert.strictEqual(seo.apexRedirect({ host: '127.0.0.1', originalUrl: '/' }), null);
-  assert.strictEqual(seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/' }), null);
+  assert.strictEqual(
+    seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/browse?utm_source=x' }),
+    'https://www.playstation-hub.com/browse?utm_source=x'
+  );
+  assert.strictEqual(
+    seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/' }),
+    'https://www.playstation-hub.com/'
+  );
+  assert.strictEqual(seo.apexRedirect({ host: 'foo.railway.internal', originalUrl: '/' }), null);
   assert.strictEqual(seo.apexRedirect({ host: 'foo.railway.internal', originalUrl: '/health' }), null);
+  assert.strictEqual(seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/health', userAgent: 'Mozilla/5.0' }), null);
+  assert.strictEqual(seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/webhooks/paymongo' }), null);
+  assert.strictEqual(seo.apexRedirect({ host: 'playstation-hub-production.up.railway.app', originalUrl: '/webhook?hub.mode=subscribe' }), null);
+  assert.strictEqual(seo.apexRedirect({
+    host: 'playstation-hub-production.up.railway.app', originalUrl: '/', userAgent: 'RailwayHealthCheck/1.0'
+  }), null);
   assert.strictEqual(seo.apexRedirect({ host: 'playstation-hub.com', originalUrl: '/health', userAgent: 'Mozilla/5.0' }), null);
   assert.strictEqual(seo.apexRedirect({
     host: 'playstation-hub.com', originalUrl: '/', userAgent: 'RailwayHealthCheck/1.0'
@@ -242,7 +256,10 @@ ok('robots.txt points crawlers at the sitemap and keeps admin out', () => {
   const txt = seo.robotsTxt();
   assert.ok(txt.includes('User-agent: *'));
   assert.ok(txt.includes('Disallow: /admin'));
+  assert.ok(txt.includes('Disallow: /api/'));
+  assert.ok(txt.includes('Disallow: /order/'));
   assert.ok(txt.includes('Sitemap: https://www.playstation-hub.com/sitemap.xml'));
+  assert.ok(txt.indexOf('Disallow: /admin') < txt.indexOf('Sitemap:'));
 });
 
 ok('utm and referrer are kept on the first visit only', () => {
@@ -476,21 +493,34 @@ async function main() {
     });
     assert.ok(map.body.includes('https://www.playstation-hub.com/upcoming/phantom-blade-5'));
     assert.ok(map.body.includes('<lastmod>2026-01-15</lastmod>'));
+    assert.strictEqual(map.headers['cache-control'], 'public, max-age=300');
     const robots = await call('/robots.txt');
     assert.strictEqual(robots.status, 200);
     assert.ok(robots.body.includes('User-agent: *'));
     assert.ok(robots.body.includes('Disallow: /admin'));
+    assert.ok(robots.body.includes('Disallow: /api/'));
+    assert.ok(robots.body.includes('Disallow: /order/'));
     assert.ok(robots.body.includes('Sitemap: https://www.playstation-hub.com/sitemap.xml'));
+    const index = await call('/api/search-index');
+    assert.strictEqual(index.status, 200);
+    assert.strictEqual(index.headers['cache-control'], 'public, max-age=300');
   });
 
-  await okAsync('apex 301s to www and local or railway hosts do not', async () => {
+  await okAsync('apex and the railway hostname 301 to www; local, private, and probes do not', async () => {
     const apex = await call('/browse?utm_source=google', { Host: 'playstation-hub.com' });
     assert.strictEqual(apex.status, 301);
     assert.strictEqual(apex.headers.location, 'https://www.playstation-hub.com/browse?utm_source=google');
     const local = await call('/browse', { Host: 'localhost' });
     assert.strictEqual(local.status, 200);
-    const railway = await call('/', { Host: 'playstation-hub-production.up.railway.app' });
-    assert.strictEqual(railway.status, 200);
+    const railway = await call('/browse?utm_source=x', { Host: 'playstation-hub-production.up.railway.app' });
+    assert.strictEqual(railway.status, 301);
+    assert.strictEqual(railway.headers.location, 'https://www.playstation-hub.com/browse?utm_source=x');
+    const internal = await call('/', { Host: 'foo.railway.internal' });
+    assert.notStrictEqual(internal.status, 301);
+    const probe = await call('/', { Host: 'playstation-hub-production.up.railway.app', 'User-Agent': 'RailwayHealthCheck/1.0' });
+    assert.notStrictEqual(probe.status, 301);
+    const hook = await call('/webhooks/paymongo', { Host: 'playstation-hub-production.up.railway.app' });
+    assert.notStrictEqual(hook.status, 301);
     const health = await call('/health', { Host: 'playstation-hub.com', 'User-Agent': 'RailwayHealthCheck/1.0' });
     assert.notStrictEqual(health.status, 301);
   });

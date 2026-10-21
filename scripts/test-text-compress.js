@@ -1,11 +1,11 @@
 // Run: node scripts/test-text-compress.js
 //
 // A logged-in admin response used to never finish. express-session flushes
-// the uncompressed Content-Length, then splits the body around the last
-// byte. textCompress tried to gzip after that and threw once the headers
-// were already sent, so the browser spun until the connection died.
-// Anonymous pages still have to come back gzipped. Neither case may take
-// longer than a couple of seconds.
+// headers, then splits the body around the last byte. Gzipping after that
+// threw once the headers were already sent, so the browser spun until the
+// connection died. Headers are now held until the body is complete, so a
+// logged-in page is gzipped and still finishes. Anonymous pages stay
+// gzipped. Neither case may take longer than a couple of seconds.
 const assert = require('assert');
 const http = require('http');
 const zlib = require('zlib');
@@ -98,14 +98,13 @@ function request(server, method, path, { headers = {}, body = null } = {}) {
     const login = await request(server, 'POST', '/login', { body: 'password=x' });
     const cookie = login.headers['set-cookie'].map(c => c.split(';')[0]).join('; ');
 
-    await ok('a logged-in page finishes and is the full HTML', async () => {
+    await ok('a logged-in page finishes, is the full HTML, and is gzipped', async () => {
       const res = await request(server, 'GET', '/admin', { headers: { Cookie: cookie } });
       assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.headers['content-encoding'], 'gzip');
       assert.strictEqual(decode(res, res.body), HTML);
+      assert.ok(res.body.length < Buffer.byteLength(HTML), 'gzip should be smaller than the raw page');
       assert.ok(res.ms < 2000, 'took ' + res.ms + 'ms');
-      // The session wrapper has already promised the uncompressed length, so
-      // this response is sent as-is. What matters is that it arrives whole.
-      assert.ok(!res.headers['content-encoding'], 'logged-in body stays the length the session already sent');
     });
 
     console.log('\n' + passed + ' assertions passed\n');
