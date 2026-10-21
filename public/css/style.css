@@ -882,6 +882,10 @@ nav {
   font-size: 0.95rem;
   line-height: 1.45;
 }
+.gd-faq { margin-top: 2.5rem; }
+.gd-faq-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 0.75rem; }
+.gd-faq-more { margin: 0.85rem 0 0; font-size: 0.85rem; color: #999; }
+.gd-faq-more a { color: var(--ps-blue); }
 .usd-title {
   font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 900; line-height: 1.14; letter-spacing: -0.01em;
   margin: 0.35rem 0 0.05rem; color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.55);
