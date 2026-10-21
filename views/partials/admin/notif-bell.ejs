@@ -168,19 +168,85 @@
   // that fell due — none of it reached this bell until the page was reloaded
   // by hand, so the badge could sit at zero while three things waited.
   //
-  // It re-fetches this page and lifts the freshly rendered bell out of it,
-  // rather than asking a JSON endpoint and rebuilding the markup in JavaScript.
-  // The bell's markup then exists once, here, and cannot drift from a second
-  // copy — the same reason the pricing rules in this project live in one
-  // module each. The cost is a page render; everything below exists to make
-  // sure that cost is only paid when it can actually change something.
+  // It asks /admin/api/notifications for the list and repaints this bell.
+  // Re-fetching /admin to lift the markup out did the same job, but that
+  // response is the whole admin document (every tab, including the PS Plus
+  // catalog) and it went out every 30 seconds the tab was visible.
   var REFRESH_MS = 30000;
   var wrap = document.querySelector('.nb-wrap');
   var busy = false;
+  var lastSig = '';
+
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function paint(data) {
+    var count = data.count || 0;
+    var crit = data.criticalCount || 0;
+    var b = btn();
+    if (b) {
+      b.classList.toggle('nb-has', count > 0);
+      b.title = count
+        ? count + ' thing' + (count === 1 ? '' : 's') + ' need you'
+        : 'Nothing waiting';
+      var badge = b.querySelector('.nb-badge');
+      if (count) {
+        if (!badge) { badge = el('span', 'nb-badge'); b.appendChild(badge); }
+        badge.classList.toggle('nb-crit', crit > 0);
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+    var p = panel();
+    if (!p) return;
+    p.textContent = '';
+    var head = el('div', 'nb-head');
+    head.appendChild(el('span', 'nb-head-t', 'Needs you'));
+    if (count) {
+      head.appendChild(el('span', 'nb-head-n',
+        (crit ? crit + ' urgent · ' : '') + count + ' total'));
+    }
+    p.appendChild(head);
+    var items = data.items || [];
+    if (!count) {
+      var empty = el('div', 'nb-empty');
+      empty.appendChild(el('div', 'nb-empty-ic', '✅'));
+      empty.appendChild(el('div', 'nb-empty-t', 'All clear'));
+      empty.appendChild(el('div', 'nb-empty-s', 'No payments, returns or reminders waiting.'));
+      p.appendChild(empty);
+    } else {
+      var list = el('div', 'nb-list');
+      items.forEach(function (it) {
+        var row = el('button', 'nb-item u-' + (it.urgency || 'info'));
+        row.addEventListener('click', function () { nbGo(it.tab); });
+        row.appendChild(el('span', 'nb-ic', it.icon || ''));
+        var main = el('span', 'nb-m');
+        main.appendChild(el('span', 'nb-t', it.title || ''));
+        main.appendChild(el('span', 'nb-s', it.sub || ''));
+        row.appendChild(main);
+        if (it.expiresAt) {
+          row.appendChild(el('span', 'nb-clock', '--:--')).setAttribute('data-expires', it.expiresAt);
+        }
+        list.appendChild(row);
+      });
+      p.appendChild(list);
+      var foot = el('div', 'nb-foot');
+      var more = el('button', 'nb-foot-btn', 'Open the dashboard →');
+      more.addEventListener('click', function () { nbGo('dashboard'); });
+      foot.appendChild(more);
+      p.appendChild(foot);
+    }
+    tick();
+  }
 
   function refresh() {
     // A hidden tab cannot show anyone anything, and an admin panel left open
-    // on a second monitor overnight should not re-render this page all night.
+    // on a second monitor overnight should not keep asking.
     if (busy || document.hidden || !wrap || !window.fetch) return;
     // Never swap the list out from under someone reading it — mid-click, the
     // button they are pressing would stop existing. It picks up next tick.
@@ -188,23 +254,20 @@
     if (p && !p.hidden) return;
 
     busy = true;
-    fetch(window.location.pathname + window.location.search, {
+    fetch('/admin/api/notifications', {
       credentials: 'same-origin',
-      headers: { 'X-Requested-With': 'fetch' }
+      headers: { 'Accept': 'application/json' }
     }).then(function (r) {
       if (!r.ok) throw new Error('http ' + r.status);
-      return r.text();
-    }).then(function (html) {
-      var fresh = new DOMParser().parseFromString(html, 'text/html').querySelector('.nb-wrap');
-      if (!fresh) return;
-      // Re-check: the panel may have been opened while the request was in
-      // flight, and the whole point is not to disturb it.
+      return r.json();
+    }).then(function (data) {
+      if (!data || typeof data.count !== 'number') return;
       var open = panel();
       if (open && !open.hidden) return;
-      if (fresh.innerHTML !== wrap.innerHTML) {
-        wrap.innerHTML = fresh.innerHTML;
-        tick();
-      }
+      var sig = JSON.stringify(data);
+      if (sig === lastSig) return;
+      lastSig = sig;
+      paint(data);
     }).catch(function () {
       // A failed refresh is not worth telling the owner about — the bell is
       // simply as current as its last successful one.
