@@ -80,12 +80,14 @@
   }
   // Owner uploads are served as a width-capped copy (see /uploads/w/ in server.js).
   // The sheet (w >= 900) keeps the original. PlayStation urls stay on their CDN.
+  // ?v= must stay in step with URL_VERSION in lib/image-variants.js. The path
+  // is cached for a year, so a new encoder is invisible until this query changes.
   function cover(g, w) {
     if (g.c && g.c.indexOf('/uploads/') === 0 && g.c.indexOf('/uploads/w/') !== 0 && g.c.indexOf('/uploads/jpg/') !== 0) {
       if (!(w > 0) || w >= 900) return g.c;
       var base = g.c.split('?')[0].split('/').pop();
       var width = w <= 240 ? 240 : 480;
-      return '/uploads/w/' + width + '/' + encodeURIComponent(base);
+      return '/uploads/w/' + width + '/' + encodeURIComponent(base) + '?v=2';
     }
     return g.c || (g.i ? g.i + '?w=' + w : '');
   }
