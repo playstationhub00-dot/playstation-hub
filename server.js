@@ -487,6 +487,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // international split cannot drift. Card and bank stay in the sentence only
 // when that method is actually on (see lib/payment-copy.js).
 app.locals.seo = seo;
+app.locals.policy = require('./lib/policy-copy');
 app.locals.faqPages = require('./lib/faq-pages');
 app.locals.trafficSources = (rows) => seo.trafficSources(rows);
 app.locals.paymentNote = (settings, gateway) => paymentCopy.paymentNote({
@@ -2461,7 +2462,7 @@ function browsePsplusData(accountSummaryMap) {
     avail = (sl.nt_slots || 0) + (sl.tr_slots || 0) + (sl.ps4_slots || 0) > 0;
     availPs4 = (sl.ps4_slots || 0) > 0;
   }
-  return { items, from: psplusFromWeekly(), avail, availPs4, rent: psGame ? '/game/' + gameSlug(psGame.title) : '/ps-plus' };
+  return { items, from: psplusFromWeekly(), avail, availPs4, rent: '/ps-plus' };
 }
 
 app.get('/browse', (req, res) => {
@@ -2523,7 +2524,9 @@ app.get('/robots.txt', (req, res) => {
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  const games = (getGames() || []).map(g => ({
+  // /ps-plus is already a static URL. The catalogue row would list the same
+  // product a second time at /game/ps-plus-deluxe.
+  const games = (getGames() || []).filter(g => !seo.isPsplusDeluxeTitle(g.title)).map(g => ({
     path: '/game/' + gameSlug(g.title),
     lastmod: g.updated_at || g.created_at || ''
   }));
@@ -2536,6 +2539,13 @@ app.get('/sitemap.xml', (req, res) => {
 
 function gameSlug(title) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// A failed order for the PS Plus Deluxe catalogue row goes to the real
+// checkout. Every other game still returns to its own page.
+function orderErrorPath(game) {
+  if (seo.isPsplusDeluxeTitle(game && game.title)) return '/ps-plus/rent?order_error=1';
+  return '/game/' + gameSlug(game.title) + '?order_error=1';
 }
 
 // ── Meta / Facebook product catalog feed ─────────────────────────────────────
@@ -2591,7 +2601,7 @@ app.get('/feed/meta-catalog.csv', (req, res) => {
     const avail = computeAvailability(g, summaryMap[g.id],
       { nt: g.nt_days_left, tr: g.tr_days_left, ps4: g.ps4_days_left });
     const group = `ph-${g.id}`;
-    const link = `${SITE_URL}/game/${gameSlug(g.title)}`;
+    const link = `${SITE_URL}${seo.gamePath(g.title)}`;
     const imgBase = path.basename(String(g.cover_image)).replace(/\.[^.]+$/, '');
     const image = `${SITE_URL}/uploads/jpg/${imgBase}.jpg`;
     const desc = (g.description && g.description.trim())
@@ -2653,7 +2663,7 @@ app.post('/order/create', async (req, res) => {
   const type = ['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null;
   const d = parseInt(days);
   if (!name || !type || !PROMO_DURATIONS.includes(d)) {
-    return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+    return res.redirect(orderErrorPath(game));
   }
 
   const s = getSiteSettings();
@@ -2662,7 +2672,7 @@ app.post('/order/create', async (req, res) => {
   // PS4 Primary has no price fields of its own. Charge the Trophy price, the
   // same number the game page shows, including the same promo.
   const base = rentPricing.listPrice(resolved, type, d);
-  if (!base) return res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+  if (!base) return res.redirect(orderErrorPath(game));
 
   const pct = rentDiscountPct(game, d, promo);
   const amountDue = rentPricing.discounted(base, pct);
@@ -2693,7 +2703,7 @@ app.post('/order/create', async (req, res) => {
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
     console.error('[order create]', e.message);
-    res.redirect('/game/' + gameSlug(game.title) + '?order_error=1');
+    res.redirect(orderErrorPath(game));
   }
 });
 
@@ -2868,7 +2878,7 @@ app.post('/order/reserve', async (req, res) => {
     ? '/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=1'
     : isPsplus
       ? '/ps-plus/rent?order_error=1'
-      : '/game/' + gameSlug(game.title) + '?order_error=1';
+      : orderErrorPath(game);
 
   const name = (fb_name || '').trim();
   const type = (isUpcoming || isPsplus)
@@ -4758,7 +4768,7 @@ app.get('/api/search-index', async (req, res) => {
     return {
       t: g.title, p: g.platform, pr: prices.length ? Math.min(...prices) : null,
       bpr: buyPrices.length ? Math.min(...buyPrices) : null,
-      s: slots, u: '/game/' + gameSlug(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
+      s: slots, u: seo.gamePath(g.title), y: 'now', img: imageVariants.thumbSrc(g.cover_image || ''),
       k: bundle ? bundle.games.map(bg => bg.title).join(' ') : '',
       bn: bundle ? bundle.count : 0
     };
@@ -4768,9 +4778,8 @@ app.get('/api/search-index', async (req, res) => {
     u: '/upcoming/' + gameSlug(g.title) + '-' + g.id, y: 'soon', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
   // "Most Played in PS Plus" titles aren't individually rentable — they're all played
-  // through the one PS Plus Deluxe subscription game, same as the homepage cards.
-  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
-  const psplusUrl = psplusGame ? '/game/' + gameSlug(psplusGame.title) : '/ps-plus';
+  // through the one PS Plus Deluxe subscription, so search opens /ps-plus.
+  const psplusUrl = '/ps-plus';
   const psplus = getPsplusPopular().map(g => ({
     t: g.title, p: g.platform || 'PS5', u: psplusUrl, y: 'psplus', img: imageVariants.thumbSrc(g.cover_image || '')
   }));
@@ -4834,6 +4843,14 @@ app.get('/game/:slug', async (req, res) => {
     ? getGame(parseInt(param))
     : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
   if (!game) return renderNotFound(res);
+  // /ps-plus is the product page. Checkout does not use this URL: renting PS
+  // Plus posts to /order/create-psplus from /ps-plus/rent and stores game_id
+  // 'psplus'. This catalogue row is only the slot count and the cover, so a
+  // 301 does not drop an order. Query strings are kept (utm, order_error).
+  if (seo.isPsplusDeluxeTitle(game.title)) {
+    const q = req.originalUrl.indexOf('?');
+    return res.redirect(301, '/ps-plus' + (q === -1 ? '' : req.originalUrl.slice(q)));
+  }
   const canonical = gameSlug(game.title);
   if (param !== canonical) {
     const q = req.originalUrl.indexOf('?');

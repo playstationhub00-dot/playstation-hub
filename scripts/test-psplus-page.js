@@ -118,6 +118,21 @@ ok('the game list is embedded as JSON a title can never break out of', () => {
   assert.deepStrictEqual([gow.m, gow.rent.u], ['SEP 2026', '/game/god-of-war-ragnar-k']);
 });
 
+ok('most played cards and the benefit line point at /ps-plus, not the duplicate game page', () => {
+  const { html } = render();
+  assert.ok(html.includes('Online play included'));
+  assert.ok(html.includes('<span>🎮 Online play included</span>'));
+  assert.ok(!html.includes('/game/ps-plus-deluxe'));
+  assert.ok(html.includes('href="/ps-plus" class="game-card gc2-card"'));
+  const blocks = [];
+  const re = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g;
+  let m;
+  while ((m = re.exec(html))) blocks.push(JSON.parse(m[1]));
+  const product = blocks.find(b => b['@type'] === 'Product');
+  assert.deepStrictEqual(product.offers.map(o => Number(o.price)), [120, 350, 150, 450]);
+  assert.ok(!blocks.some(b => b['@type'] === 'FAQPage'));
+});
+
 ok('the sheet rents PS Plus Deluxe and quotes the weekly price', () => {
   const { html } = render();
   assert.ok(html.includes('<a class="ppc-sheet-rent" href="/ps-plus/rent">Rent PS Plus Deluxe · from ₱120/week</a>'));

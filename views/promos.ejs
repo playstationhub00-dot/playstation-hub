@@ -28,7 +28,7 @@
     <h2><%= offer.title %></h2>
     <% if (offer.text) { %><p class="promo-card-text"><%= offer.text %></p><% } %>
     <% if (offer.game_title) { %>
-    <p class="promo-card-game"><a href="/game/<%= offer.game_title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') %>"><%= offer.game_title %></a></p>
+    <p class="promo-card-game"><a href="<%= seo.gamePath(offer.game_title) %>"><%= offer.game_title %></a></p>
     <% } %>
     <% const promoWhen = (typeof promoFormat === 'function') ? promoFormat : function (d) { return d; }; %>
     <% if (offer.starts_on || offer.ends_on) { %>

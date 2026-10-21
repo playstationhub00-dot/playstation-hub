@@ -4,7 +4,7 @@
     base price struck when the buy promo cuts it). Locals: g (a game from
     server.js buyShopData), rank (1–3 or null), hideRank (the catalog shows
     the sticker only on Best sellers in best-selling order). %>
-<a href="/game/<%= g.slug %>?mode=buy" class="shop-card">
+<a href="<%= seo.isPsplusDeluxeTitle(g.title) ? '/ps-plus' : '/game/' + g.slug + '?mode=buy' %>" class="shop-card">
   <span class="shop-cover">
     <% if (g.cover) { %><img <%- imgCard(g.cover) %> alt="<%= g.title %>" loading="lazy" decoding="async" style="object-position: <%= g.fx != null ? g.fx : 50 %>% <%= g.fy != null ? g.fy : 50 %>%;"><% } else { %><span class="shop-nocover"><%= g.title %></span><% } %>
     <span class="shop-stock <%= g.ready ? 'shop-in' : 'shop-wait' %>"><%= g.ready ? 'In stock' : 'Set up on order' %></span>

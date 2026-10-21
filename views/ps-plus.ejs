@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <%- include('partials/head', { page: 'ps-plus' }) %>
+  <%- include('partials/head', { page: 'ps-plus', jsonLd: seo.psplusJsonLd({ prices: prices, slots: slots }) }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/psplus-catalog.css?v=<%= assetV %>">
 </head>
@@ -19,7 +19,7 @@
     <div>
       <div class="ppc-eyebrow">PlayStation Hub</div>
       <h1 class="ppc-title">PS PLUS <span>DELUXE</span></h1>
-      <p class="ppc-lead">One rental, every game below. Trophy or Non-Trophy, weekly or monthly.</p>
+      <p class="ppc-lead">One rental, every game below. Trophy or Non-Trophy, weekly or monthly. Online play included.</p>
     </div>
     <div class="ppc-hero-side">
       <div class="ppc-stats">
@@ -118,6 +118,7 @@
       </div>
     </div>
     <div class="psplus-notes">
+      <span>🎮 Online play included</span>
       <span>🔒 ₱<%= (settings.promo && settings.promo.deposit != null) ? settings.promo.deposit : 100 %> refundable deposit for Trophy and PS4 Primary</span>
       <span>🔄 <%- include('partials/swap-line') %></span>
     </div>
@@ -138,7 +139,7 @@
   </h2>
   <div class="games-grid">
     <% popular.forEach((game, idx) => { %>
-    <%- include('partials/psplus-card', { game, idx, href: psplusSlug ? '/game/' + psplusSlug : '/game/17' }) %>
+    <%- include('partials/psplus-card', { game, idx, href: '/ps-plus' }) %>
     <% }) %>
   </div>
 </section>
