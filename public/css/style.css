@@ -3187,6 +3187,7 @@ footer {
 .ord-flash-warn { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #ef4444; }
 .ord-title { font-size: 1.5rem; font-weight: 900; margin: 0 0 0.35rem; letter-spacing: -0.01em; }
 .ord-sub { font-size: 0.9rem; color: #888; margin: 0 0 1.5rem; line-height: 1.6; }
+.ord-newslot { margin: -0.75rem 0 1.25rem; padding: 0.7rem 0.9rem; background: #1a1300; border: 1px solid rgba(251,191,36,0.3); border-radius: 10px; color: #fcd34d; font-size: 0.85rem; line-height: 1.5; }
 .ord-card { background: #0d0d0d; border: 1px solid #222; border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 1.5rem; }
 .ord-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; padding: 0.25rem 0; }
 .ord-row span:last-child { color: #ddd; font-weight: 600; }
@@ -3373,6 +3374,8 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .oq-badge { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; background: #1a1a1a; color: #888; padding: 0.15rem 0.5rem; border-radius: 5px; }
 .oq-badge-res { background:#3a1a5c; color:#c9a4ff; }
 .oq-badge-buy { background:#2a0a3a; color:#d9a7f0; }
+.oq-badge-newslot { background:#3a2a06; color:#fbbf24; }
+.oq-newslot-flag { display: block; margin-top: 2px; font-size: 0.68rem; font-weight: 700; color: #fbbf24; }
 .oq-timer { font-size: 0.75rem; font-weight: 800; color: #f59e0b; font-variant-numeric: tabular-nums; }
 .oq-timer-dead { color: #ef4444; }
 .oq-meta { font-size: 0.82rem; color: #888; margin-bottom: 0.25rem; }

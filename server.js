@@ -10,6 +10,7 @@ const sessionStore = require('./lib/session-store');
 const computeAvailability = require('./lib/availability');
 const { imageFileFilter } = require('./lib/upload-filters');
 const buyTypeSellable = computeAvailability.buyTypeSellable;
+const buyOption = computeAvailability.buyOption;
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
 const reviewRules = require('./lib/reviews');
@@ -447,6 +448,7 @@ app.locals.computeAvailability = computeAvailability;
 // Expose the buy-side availability rule so the detail page's buy panel gates on
 // the same predicate the order route enforces
 app.locals.buyTypeSellable = buyTypeSellable;
+app.locals.buyOption = buyOption;
 // Expose promo discount lookup so game cards can show the final discounted price, not just the badge
 app.locals.getPromoDiscountPct = (promo, days) => getPromoDiscountPct(promo, days);
 // A specific game's rent discount (its own % if set, else the site promo) — see
@@ -2297,19 +2299,19 @@ function buyShopData() {
   const games = allGames
     .map(g => {
       const sum = summaryMap[g.id] || null;
-      // Same legacy-fullness rule game-detail.ejs's buy panel judges each type
-      // against: a type that has been rented before and has no free legacy
-      // slot now drops off instead of still advertising a price.
+      // Every type with a permanent price can be bought (lib/availability.js
+      // buyOption); one with no slot to hand over now is a new slot the owner
+      // adds after the sale, the same rule game-detail.ejs's buy panel uses.
       const avail = computeAvailability(g, sum);
       const neverRented = !g.renters && !g.stocked;
-      const nt = (g.buy_nt_price || 0) > 0 && buyTypeSellable(sum, 'non_trophy', { everStocked: !neverRented, avail: avail.ntAvail });
-      const tr = (g.buy_tr_price || 0) > 0 && buyTypeSellable(sum, 'trophy', { everStocked: !neverRented, avail: avail.trAvail });
+      const nt = buyOption(sum, 'non_trophy', { everStocked: !neverRented, avail: avail.ntAvail }, g.buy_nt_price);
+      const tr = buyOption(sum, 'trophy', { everStocked: !neverRented, avail: avail.trAvail }, g.buy_tr_price);
       return { g, nt, tr, neverRented };
     })
-    .filter(x => x.nt || x.tr)
+    .filter(x => x.nt.buyable || x.tr.buyable)
     .map(({ g, nt, tr, neverRented }) => {
-      // The cheapest type that can still be bought, after the buy promo.
-      const offer = [nt ? buyPricing.priceFor(g, 'nt', promo) : null, tr ? buyPricing.priceFor(g, 'tr', promo) : null]
+      // The cheapest type that can be bought, after the buy promo.
+      const offer = [nt.buyable ? buyPricing.priceFor(g, 'nt', promo) : null, tr.buyable ? buyPricing.priceFor(g, 'tr', promo) : null]
         .filter(Boolean).sort((a, b) => a.amount - b.amount)[0];
       const genres = browseCore.genreParts(g.genre);
       return {
@@ -2318,9 +2320,11 @@ function buyShopData() {
         platform: g.platform || '', ps4: g.platform === 'PS4' || g.platform === 'PS4/PS5', ps5: g.platform === 'PS5' || g.platform === 'PS4/PS5',
         genres, genre: genres[0] || '',
         price: offer.amount, was: offer.discounted ? offer.base : null,
-        nt: !!nt, tr: !!tr,
-        // "Set up on order": never rented and not stocked — the account is made on the first sale.
-        ready: !neverRented,
+        nt: nt.buyable, tr: tr.buyable,
+        // "In stock" when a type can be handed over now and the game has been
+        // stocked before. Never stocked (its account is made on the first sale)
+        // or full everywhere (every type a new slot) is "Set up on order".
+        ready: !neverRented && (nt.inStock || tr.inStock),
         released: g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso ? g.release_date : null
       };
     });
@@ -2812,20 +2816,18 @@ app.post('/order/buy', async (req, res) => {
   if (!game || !type) return res.redirect('/buy?order_error=1');
   const base = type === 'tr' ? (game.buy_tr_price || 0) : (game.buy_nt_price || 0);
   if (!base) return res.redirect('/buy?order_error=1');
-  // Re-check sellability at order time, exactly as the bundle branch above does —
-  // the page a customer loaded may be stale, and hiding a card is presentation
-  // only. This route is what actually prevents selling an account twice, and
-  // the same legacy-fullness rule the detail page's buy panel judges against.
+  // Judged again at order time — the page a customer loaded may be stale. A
+  // type with no slot to hand over now is still sold: the order is marked
+  // new_slot and the owner adds a slot for this game (Needs you now, Orders
+  // tab). Unlike a bundle above, a single game is not one specific slot.
   const slotKey = type === 'tr' ? 'trophy' : 'non_trophy';
   const buySum = gameAccountSummary(game.id);
   const buyAvail = computeAvailability(game, buySum);
   const buyNeverRented = !game.renters && !game.stocked;
-  if (!buyTypeSellable(buySum, slotKey, {
+  const option = buyOption(buySum, slotKey, {
     everStocked: !buyNeverRented,
     avail: type === 'tr' ? buyAvail.trAvail : buyAvail.ntAvail
-  })) {
-    return res.redirect('/buy?order_error=sold');
-  }
+  }, base);
   const s = getSiteSettings();
   const promo = s.promo || {};
   const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
@@ -2840,7 +2842,8 @@ app.post('/order/buy', async (req, res) => {
       deposit_due: 0,
       fb_name: name,
       session_id: req.sessionId || null,
-      is_buy: true
+      is_buy: true,
+      ...(option.newSlot ? { new_slot: true } : {})
     });
     res.redirect('/order/' + order.ref + '?k=' + order.url_key);
   } catch (e) {
@@ -2948,6 +2951,7 @@ app.post('/order/reserve', async (req, res) => {
   // change below; restored here.
   const promo = getSiteSettings().promo || {};
   let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
+  let newSlot = false;
   if (isBuyPreorder) {
     // Permanent price, paid in full now — no deposit (nothing to return) and
     // no split with a release-day balance, unlike a rental reservation. The
@@ -2967,6 +2971,10 @@ app.post('/order/reserve', async (req, res) => {
     remainingDue = 0;
     releaseDate = game.release_date || '';
     upcomingGameId = game.id;
+    // No rent slot of this type left on the Coming Soon game: on release the
+    // owner sets up a new slot for this buyer.
+    const left = resolveUpcomingSlots(game);
+    newSlot = (type === 'tr' ? left.trophy_slots : left.non_trophy_slots) === 0;
   } else if (isUpcoming) {
     // Priced through lib/reservations so the admin's Quick Add records the
     // same reservation this route creates. Two copies of a price rule is
@@ -3054,7 +3062,8 @@ app.post('/order/reserve', async (req, res) => {
       is_psplus: isPsplus,
       upcoming_game_id: upcomingGameId,
       release_date: releaseDate,
-      remaining_due: remainingDue
+      remaining_due: remainingDue,
+      ...(newSlot ? { new_slot: true } : {})
     };
     // orders.create() defaults new orders to 'awaiting_payment' — a Fall in
     // Line entry has nothing to pay, so it starts in its resting state
@@ -5715,7 +5724,8 @@ app.get('/admin', requireAuth, async (req, res) => {
   const notifs = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
     negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
-    rentMismatches, paymongoHealth, supportHandoffs, now: dashNowDate
+    rentMismatches, paymongoHealth, supportHandoffs, now: dashNowDate,
+    newSlotOrders: notifications.pendingNewSlots(allOrders)
   });
 
   // Paid reservations per Coming Soon game, for the "N reserved" line and the
@@ -5857,7 +5867,8 @@ async function loadAdminNotifications() {
   const built = notifications.build({
     orderQueue, needsReminder, unlinkedRentals, refundsOwed, reviewQueue,
     negativeReviews, orphanedOrders, boughtWithDuration, staleEndDates,
-    rentMismatches, paymongoHealth, supportHandoffs, now: new Date()
+    rentMismatches, paymongoHealth, supportHandoffs, now: new Date(),
+    newSlotOrders: notifications.pendingNewSlots(allOrders)
   });
   return {
     count: built.count,

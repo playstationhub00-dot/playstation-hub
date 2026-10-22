@@ -118,7 +118,7 @@ async function main() {
   await okAsync('the shop header: title, search into the catalog, All games', async () => {
     assert.ok(shop.includes('<span class="shop-kicker">The game shop</span>') && shop.includes('<h1>Buy games · own them forever</h1>'));
     assert.ok(shop.includes('<form class="shop-search" method="get" action="/buy/catalog" role="search">'));
-    assert.ok(shop.includes('placeholder="Search 5 games to own…"'), 'only games that can still be bought');
+    assert.ok(shop.includes('placeholder="Search 6 games to own…"'), 'every game with a permanent price, full ones too');
     assert.ok(shop.includes('<a class="shop-all" href="/buy/catalog">All games ›</a>'));
     ['/css/shop.css', '/js/home.js', '/js/shop.js'].forEach(src => assert.ok(shop.includes(src + '?v='), src));
   });
@@ -134,16 +134,17 @@ async function main() {
   });
   await okAsync('a shelf per tab, in order, each with its first items and See all', async () => {
     assert.deepStrictEqual([...shop.matchAll(/<section class="shop-shelf" id="shelf-([\w-]+)">/g)].map(m => m[1]), ['best-sellers', 'ready-today', 'box-sets', 'under-1000', '1000-1999', '2000-up']);
-    assert.deepStrictEqual(titles(shelf(shop, 'best-sellers')), ['Tekken', 'Plain &amp; &lt;Co&gt;', 'Elden', 'Astro', 'Callisto'], 'sold first, then the most rented, topped up');
+    assert.deepStrictEqual(titles(shelf(shop, 'best-sellers')), ['Tekken', 'Plain &amp; &lt;Co&gt;', 'Elden', 'Full', 'Astro', 'Callisto'], 'sold first, then the most rented, topped up');
     assert.deepStrictEqual(titles(shelf(shop, 'ready-today')), ['Tekken', 'Plain &amp; &lt;Co&gt;', 'Elden', 'Astro']);
     assert.deepStrictEqual(boxNames(shelf(shop, 'box-sets')), ['Box Gone', 'Box Big'], 'best value first; the one-game account and the hidden one left out');
-    assert.deepStrictEqual(titles(shelf(shop, 'under-1000')), ['Plain &amp; &lt;Co&gt;', 'Astro']);
+    assert.deepStrictEqual(titles(shelf(shop, 'under-1000')), ['Plain &amp; &lt;Co&gt;', 'Full', 'Astro']);
     assert.deepStrictEqual(titles(shelf(shop, '1000-1999')), ['Callisto', 'Elden']);
     assert.deepStrictEqual(titles(shelf(shop, '2000-up')), ['Tekken']);
     assert.ok(shelf(shop, 'best-sellers').includes('<a class="shop-seeall" href="/buy/catalog?tab=best-sellers">See all ›</a>'));
     assert.ok(shelf(shop, '1000-1999').includes('<span class="shop-note">2 games</span>') && shelf(shop, '1000-1999').includes('href="/buy/catalog?tab=1000-1999"'));
     const cards = titles(shop);
-    assert.ok(!cards.includes('NoBuy') && !cards.includes('Full') && !shop.includes('Zzyzx Hidden Box'), 'nothing that cannot be bought');
+    assert.ok(!cards.includes('NoBuy') && !shop.includes('Zzyzx Hidden Box'), 'nothing without a permanent price');
+    assert.ok(card(shop, 'zzyzx-full').includes('<span class="shop-stock shop-wait">Set up on order</span>'), 'every slot taken: still sold, as a new slot');
   });
   await okAsync('cards: best-seller stickers, stock tags, the cheapest type\'s price with the promo base struck', async () => {
     const best = shelf(shop, 'best-sellers');
@@ -172,13 +173,13 @@ async function main() {
   console.log('\nthe catalog');
   const all = await page('/buy/catalog');
   await okAsync('the tab row with counts, All games on, every game in best-selling order', async () => {
-    assert.deepStrictEqual(tabs(all).map(t => t.key + ' ' + t.count), ['all 5', 'best-sellers 5', 'ready-today 4', 'box-sets 2', 'under-1000 2', '1000-1999 2', '2000-up 1']);
+    assert.deepStrictEqual(tabs(all).map(t => t.key + ' ' + t.count), ['all 6', 'best-sellers 6', 'ready-today 4', 'box-sets 2', 'under-1000 3', '1000-1999 2', '2000-up 1']);
     assert.ok(all.includes('data-tab="all" href="/buy/catalog" aria-current="page"'));
-    assert.deepStrictEqual(shown(all, 'scGrid', 'id'), [3, 5, 2, 1, 4]);
+    assert.deepStrictEqual(shown(all, 'scGrid', 'id'), [3, 5, 2, 7, 1, 4]);
     assert.deepStrictEqual(ranks(all), ['hidden #1', 'hidden #2', 'hidden #3'], 'stickers wait for Best sellers');
     assert.ok(all.includes('<a class="shop-back" href="/buy">‹ Back to the shop</a>'));
     assert.ok(opening(all, 'scBoxGrid').includes(' hidden'));
-    assert.ok(/<span class="bf-count" id="scCount">All games · 5 games<\/span>/.test(all));
+    assert.ok(/<span class="bf-count" id="scCount">All games · 6 games<\/span>/.test(all));
   });
   await okAsync('Best sellers shows #1–#3; Box sets shows box-set cards, its own sorts and no Filters', async () => {
     const best = await page('/buy/catalog?tab=best-sellers');
@@ -194,7 +195,7 @@ async function main() {
     assert.deepStrictEqual(shown(mid, 'scGrid', 'id'), [4, 2]);
     assert.deepStrictEqual(sorts(mid), ['*price-asc', 'best-selling', 'price-desc', 'az', 'newest']);
     const az = await page('/buy/catalog?tab=under-1000&sort=az');
-    assert.deepStrictEqual(shown(az, 'scGrid', 'id'), [1, 5]);
+    assert.deepStrictEqual(shown(az, 'scGrid', 'id'), [1, 7, 5]);
     assert.strictEqual(tabs(az)[0].href, '/buy/catalog', 'another tab starts in its own order');
     const s = await page('/buy/catalog?search=elden');
     assert.ok(opening(s, 'scSearch').includes('value="elden"'));
@@ -209,7 +210,7 @@ async function main() {
     assert.deepStrictEqual(shown(await page('/buy/catalog?account=tr'), 'scGrid', 'id'), [3, 1]);
     const odd = await page('/buy/catalog?tab=nope&sort=cheapest');
     assert.deepStrictEqual(tabs(odd).filter(t => t.on).map(t => t.key), ['all']);
-    assert.deepStrictEqual(shown(odd, 'scGrid', 'id'), [3, 5, 2, 1, 4]);
+    assert.deepStrictEqual(shown(odd, 'scGrid', 'id'), [3, 5, 2, 7, 1, 4]);
   });
   await okAsync('nothing matches: the empty grid clears search and filters, keeps the tab', async () => {
     const none = await page('/buy/catalog?tab=ready-today&search=zzzz');

@@ -89,6 +89,9 @@
         <% if (o.is_buy) { %>
         <span class="oq-badge oq-badge-buy">♾️ Purchase</span>
         <% } %>
+        <% if (o.new_slot) { %>
+        <span class="oq-badge oq-badge-newslot">🆕 New slot needed — add a <%= nyType(o.account_type) %> account for <%= o.game_title %></span>
+        <% } %>
         <span class="oq-badge"><%= QUEUE_LABEL[o.state] %></span>
         <% if (o.state === 'qr_pending' && o.qr_expires_at) { %>
         <span class="oq-timer" data-expires="<%= o.qr_expires_at %>">--:--</span>

@@ -109,6 +109,9 @@
 
   <h1 class="ord-title"><%= step.title %></h1>
   <p class="ord-sub"><%= step.sub %></p>
+  <% if (order.new_slot && !['active', 'closed', 'cancelled'].includes(order.state)) { %>
+  <div class="ord-newslot">🆕 We're adding a new <%= order.account_type === 'tr' ? 'Trophy' : 'Non-Trophy' %> slot for you — we'll message you on Facebook when it's ready.</div>
+  <% } %>
 
   <div class="ord-card">
     <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>

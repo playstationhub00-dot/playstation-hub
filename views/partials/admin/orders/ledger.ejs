@@ -113,7 +113,7 @@
           data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>">
         <td class="oq-lref"><%= o.ref %></td>
         <td class="oq-lcust"><%= o.fb_name %> <%- include('../loyalty-badge', { name: o.fb_name, rowId: o.customer_id }) %></td>
-        <td class="oq-lgame"><%= o.game_title %></td>
+        <td class="oq-lgame"><%= o.game_title %><% if (o.new_slot) { %><span class="oq-newslot-flag"><%= ['active', 'awaiting_return', 'verifying_return', 'closed', 'cancelled', 'payment_rejected'].includes(o.state) ? '🆕 New slot' : '🆕 New slot needed — add a ' + typeLbl + ' account for ' + o.game_title %></span><% } %></td>
         <td class="oq-lmeta"><%= typeLbl %> · <%= durLbl %></td>
         <td class="oq-lnum oq-ldates"><%= dates %></td>
         <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %></td>
