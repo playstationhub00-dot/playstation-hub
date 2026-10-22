@@ -2076,6 +2076,11 @@ select.ss-native {
 .dash-profit-items { padding: 0 0.5rem 0.5rem 0.5rem; }
 .dash-profit-item { display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; font-size: 0.7rem; color: #aaa; border-bottom: 1px solid #161616; }
 .dash-profit-item:last-child { border-bottom: none; }
+.dash-profit-meta { color: #555; font-size: 0.64rem; margin-left: 0.25rem; }
+.dash-profit-extra { border-bottom-style: dashed; }
+.dash-profit-sub { padding-left: 0.9rem; color: #666; }
+.dash-profit-sub .dash-profit-meta { margin-left: 0; color: #777; }
+.dash-profit-warn { color: #f59e0b; font-size: 0.64rem; font-weight: 700; margin-left: 0.25rem; }
 .dash-month-val { font-size: 1.1rem; font-weight: 900; line-height: 1.1; }
 .dash-month-lbl { font-size: 0.75rem; color: #555; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.4px; }
 

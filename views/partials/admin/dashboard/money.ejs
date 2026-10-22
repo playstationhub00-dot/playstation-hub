@@ -156,6 +156,7 @@
 
     <!-- ── Money section: chart, drill-down and insight rendering ── -->
 
+    <script src="/js/earned-lines.js?v=<%= assetV %>"></script>
     <script>
     (function() {
       const DASH_DATA = <%- JSON.stringify(dashboardData).replace(/</g, '\\u003c') %>;
@@ -409,8 +410,16 @@
           el.innerHTML = '<div style="color:#444;font-size:0.7rem;padding:0.4rem 0;">No payments this month</div>';
           return;
         }
-        el.innerHTML = payments.map(function (x) {
-          return '<div class="dash-profit-item"><span>' + dashEscapeHtml(x.c.customer_name || 'Unknown') + ' — ' + dashEscapeHtml(x.c.game_title || '') + '</span><span>₱' + (x.p.amount || 0).toLocaleString() + '</span></div>';
+        // One line per payment, saying what it was and when; a rental's extra
+        // payments sit indented under it (public/js/earned-lines.js).
+        el.innerHTML = window.EarnedLines.earnedLines(payments).map(function (l) {
+          const meta = '<span class="dash-profit-meta">' + dashEscapeHtml(l.label) + (l.when ? ' · ' + dashEscapeHtml(l.when) : '') + '</span>';
+          const who = l.extra
+            ? '<span class="dash-profit-sub">↳ ' + meta + '</span>'
+            : '<span>' + dashEscapeHtml(l.name) + ' — ' + dashEscapeHtml(l.game) + ' ' + meta +
+              (l.warn ? ' <span class="dash-profit-warn" title="This rental\'s payments add up to more than its price — a payment may be recorded twice">⚠ paid more than its price</span>' : '') + '</span>';
+          return '<div class="dash-profit-item' + (l.extra ? ' dash-profit-extra' : '') + '">' + who +
+            '<span>' + (l.amount < 0 ? '-₱' : '₱') + Math.abs(l.amount).toLocaleString() + '</span></div>';
         }).join('');
       }
       function renderProfitCostItems(year, month) {
