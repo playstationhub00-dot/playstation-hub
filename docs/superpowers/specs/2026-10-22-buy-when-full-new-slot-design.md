@@ -1,6 +1,6 @@
 # Buy permanently even when full — the owner adds a new slot — Design
 
-Date: 2026-10-22 · Status: approved by owner (visual proposal approved)
+Date: 2026-10-22 · Status: approved by owner (visual proposal approved); amended after the plan's dry run (2026-10-22)
 
 ## Problem
 
@@ -44,6 +44,10 @@ For each account type a game sells permanently (Non-Trophy, Trophy):
 - **New slot** = buyable but not in stock — every slot of that type is rented out,
   sold, or offline. The customer can still buy it; the owner adds a slot.
 
+The rule lives in `lib/availability.js` as `buyOption(summary, slotKey, legacy, price)` →
+`{ buyable, inStock, newSlot }`. Templates reach it through `app.locals.buyOption`; the
+released game page, the Buy shop data and the checkout all call it, so they cannot disagree.
+
 Box sets (account bundles) are **not** included: they sell a specific account's slot,
 so a taken bundle slot stays taken.
 
@@ -62,6 +66,8 @@ so a taken bundle slot stays taken.
 - The "Nothing to buy right now" box is no longer reachable for a game with a
   permanent price (every priced type is buyable); it stays only for the case of no
   buyable type.
+- On a phone (600px and narrower) the tag drops onto its own line under the card name
+  instead of squeezing it.
 - The buy form, button and checkout flow are unchanged.
 
 ## 2 · Coming Soon page
@@ -72,6 +78,9 @@ so a taken bundle slot stays taken.
   type's permanent price after the buy promo). Tapping it switches to Buy Permanent with
   that type selected. The strip follows the selected type; the Full Slot pill, the paid
   request and the waitlist stay as they are.
+- The strip's price has no thousands comma ("Buy ₱1999 →"), matching the card prices.
+- On a phone (420px and narrower) the key icon and text share the first line and the
+  button runs full width below.
 - **Buy Permanent tab:** a type with no rent slots left gets the same amber pill, and
   when selected the note "🆕 Pre-order now. On release day we set up a fresh Trophy slot
   for you and message you." Pre-orders were already allowed when full; only the wording
@@ -87,6 +96,8 @@ so a taken bundle slot stays taken.
 - The **Ready today** shelf/tab keeps holding "In stock" games only, so full games
   appear on the other shelves and tabs but not there.
 - The card price is the cheapest permanent price among its buyable types, as now.
+- The existing Buy shop test's "Zzyzx Full" game (every slot taken) now stays listed, so
+  that test's counts and orders change with it.
 
 ## 4 · Checkout
 
@@ -97,16 +108,22 @@ so a taken bundle slot stays taken.
   when that type's Coming Soon slots (`resolveUpcomingSlots`) are 0 at order time.
 - Bundle purchases (`POST /order/buy` for a box set) keep refusing a taken slot.
 - The customer's order page shows, for a `new_slot` order: "🆕 We're adding a new
-  Trophy slot for you — we'll message you on Facebook when it's ready."
+  Trophy slot for you — we'll message you on Facebook when it's ready." The note goes
+  once the order is `active`, `closed` or `cancelled`.
 
 ## 5 · Admin
 
 - **Orders tab:** a `new_slot` order's row shows the amber flag "🆕 New slot needed —
-  add a Trophy account for Elden Ring" (type and game from the order).
+  add a Trophy account for Elden Ring" (type and game from the order). Once the slot is
+  set up or the order is over (`active`, `awaiting_return`, `verifying_return`,
+  `closed`, `cancelled`, `payment_rejected`) the flag shortens to "🆕 New slot". The
+  order's card in the "Do now" list carries the same "New slot needed" badge.
 - **Needs you now** (`lib/notifications.js`): a new item kind `new_slot` (icon 🆕,
   urgency warn) — "New slot to add" with "PH-… · name · game · Trophy" — for each
   `new_slot` order from the moment its payment is confirmed until it is activated or
-  cancelled. Pre-orders (Coming Soon) show it once their game is released.
+  cancelled — order states `awaiting_qr` and `qr_pending`
+  (`notifications.pendingNewSlots`). Pre-orders (Coming Soon) show it once their game is
+  released. It ranks just below an overdue expiry (`RANK.new_slot` = 9).
 - Activation is unchanged: the owner adds the account in Accounts as they do today, then
   activates the order.
 
@@ -136,6 +153,10 @@ where a route needs the order store.
 - Checkout: `/order/buy` on a full type creates an order with `new_slot: true`; an
   in-stock type has none; a taken bundle slot still refuses.
 - Admin: the order flag and the Needs-you-now item.
+- Test files: `scripts/test-buy-new-slot.js` (rule and item),
+  `scripts/test-buy-new-slot-orders.js` (checkout, pre-order, shop, order page, admin),
+  `scripts/test-buy-new-slot-game-page.js`, `scripts/test-buy-new-slot-coming-soon.js`, and
+  the updated `scripts/test-buy-page.js`.
 - Browser check on the throwaway instance at 1280px and 375px.
 - Full suite green except known pre-existing failures.
 
