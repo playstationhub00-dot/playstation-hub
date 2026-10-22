@@ -73,6 +73,7 @@ function onTypeChange() {
   renderDurButtons();
   updateSummary();
   updateCta();
+  updateOwnStrip();
 }
 
 function renderDurButtons() {
@@ -254,6 +255,11 @@ function selectUdBuyType(type) {
   const trCard = document.getElementById('udBuyTrCard');
   if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
   if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
+  // A full type is pre-ordered as a new slot: say what that means for the picked one.
+  ['nt', 'tr'].forEach(t => {
+    const note = document.getElementById('udBuyNewSlotNote-' + t);
+    if (note) note.hidden = t !== type;
+  });
   const typeField = document.getElementById('udBuyOrderType');
   if (typeField) typeField.value = type;
 }
@@ -282,6 +288,28 @@ function handleUdBuyClick(e) {
   return true;
 }
 
+// ── Own it instead ── the picked type is full but has a permanent price: the
+// gold strip on the Rent tab offers to buy it, and the owner adds a new slot.
+// See docs/superpowers/specs/2026-10-22-buy-when-full-new-slot-design.md.
+function updateOwnStrip() {
+  const strip = document.getElementById('udOwnStrip');
+  if (!strip) return;
+  const price = BUY_FINAL[selectedType] || 0;
+  const show = getSlots() === 0 && price > 0;
+  strip.hidden = !show;
+  if (!show) return;
+  const name = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
+  strip.querySelectorAll('.ud-own-type').forEach(el => { el.textContent = name; });
+  document.getElementById('udOwnGo').textContent = 'Buy ₱' + price + ' →';
+}
+
+function ownInstead() {
+  setUpcomingMode('buy');
+  selectUdBuyType(selectedType);
+  const panel = document.getElementById('udBuyPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // Init
 const initChecked = document.querySelector('input[name="rental_type"]:checked');
 if (initChecked) initChecked.closest('.gd-type-pill').classList.add('gd-type-selected');
@@ -293,6 +321,7 @@ renderDurButtons();
 // than an empty shell.
 updateSummary();
 updateCta();
+updateOwnStrip();
 
 // ── Gameplay gallery slider ──
 // Deliberately a small standalone copy rather than sharing the rent page's
