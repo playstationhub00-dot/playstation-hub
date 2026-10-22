@@ -48,24 +48,18 @@
   // own "Set up on order" label, and must not make a stocked game look brand new.
   // A game with any open slot (even a legacy, unlinked one) is stocked too.
   const noneStocked = neverRented && !hasTrophyAcc && !hasNtAcc && (!showPs4 || !hasPs4Acc) && totalSlots === 0;
-  // Buy is gated on slot state, not just on a price being set: an account already
-  // sold (or taken offline) must stop being offered, the same way it already stops
-  // being rentable. Each tier is judged against its own slot type. A linked
-  // account keeps a rented slot sellable (it hands over on a known date); a
-  // legacy slot that has actually been rented before has no such date to sell
-  // against, so once every one of its slots is taken by a renter, buying it is
-  // shown as full rather than offered.
-  const buyNtSellable = buyTypeSellable(sum, 'non_trophy', { everStocked: !ntNotStocked, avail: ntAvail });
-  const buyTrSellable = buyTypeSellable(sum, 'trophy', { everStocked: !trNotStocked, avail: trAvail });
-  const buyNt = (buyNtSellable ? (game.buy_nt_price || 0) : 0);
-  const buyTr = (buyTrSellable ? (game.buy_tr_price || 0) : 0);
-  // Priced to sell, blocked only because every legacy slot of a type that has
-  // actually been rented before is currently taken — as opposed to no price
-  // ever being set, or a linked account genuinely sold/offline, both of which
-  // stay hidden entirely rather than shown as full.
-  const buyNtFull = (game.buy_nt_price || 0) > 0 && !hasNtAcc && !ntNotStocked && !ntAvail;
-  const buyTrFull = (game.buy_tr_price || 0) > 0 && !hasTrophyAcc && !trNotStocked && !trAvail;
-  const hasBuy = buyNt > 0 || buyTr > 0 || buyNtFull || buyTrFull;
+  // Every type with a permanent price can be bought (lib/availability.js
+  // buyOption). One with no slot to hand over now — every slot rented out,
+  // sold or offline — is a new slot: the owner adds one after the sale, so its
+  // card says so instead of being greyed out. The checkout (POST /order/buy)
+  // judges the same rule again and marks the order new_slot.
+  const buyNtOpt = buyOption(sum, 'non_trophy', { everStocked: !ntNotStocked, avail: ntAvail }, game.buy_nt_price);
+  const buyTrOpt = buyOption(sum, 'trophy', { everStocked: !trNotStocked, avail: trAvail }, game.buy_tr_price);
+  const buyNt = buyNtOpt.buyable ? Number(game.buy_nt_price) : 0;
+  const buyTr = buyTrOpt.buyable ? Number(game.buy_tr_price) : 0;
+  const buyNtNew = buyNtOpt.newSlot;
+  const buyTrNew = buyTrOpt.newSlot && hasTrophy;
+  const hasBuy = buyNt > 0 || buyTr > 0;
   const buyPromo = promo.buy_promo_enabled && promo.buy_promo_pct > 0;
   const buyNtFinal = buyPromo ? Math.round(buyNt * (1 - promo.buy_promo_pct / 100)) : buyNt;
   const buyTrFinal = buyPromo ? Math.round(buyTr * (1 - promo.buy_promo_pct / 100)) : buyTr;
@@ -461,7 +455,7 @@
 
         <div class="gd-section-label" style="margin-top:0;">SELECT ACCOUNT TYPE</div>
 
-        <!-- NT Buy card -->
+        <!-- NT Buy card — tagged as a new slot when every Non-Trophy slot is taken -->
         <% if (buyNt > 0) { %>
         <div class="gd-type-card" id="buyNtCard" onclick="selectBuyType('nt')" style="cursor:pointer;margin-bottom:0.75rem;border-color:#222;">
           <div style="display:none;"><input type="radio" name="buyType" value="nt" id="buyRadioNt"></div>
@@ -469,8 +463,13 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🎮</span>
               <span class="gd-type-name">Non-Trophy — Permanent Access</span>
+              <% if (buyNtNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
             </div>
+            <% if (buyNtNew) { %>
+            <div class="gd-type-desc">Our Non-Trophy slots are all taken — we'll add a brand-new one just for you.</div>
+            <% } else { %>
             <div class="gd-type-desc">Played on our account. No trophy tracking. One-time payment, lifetime access.</div>
+            <% } %>
             <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
               <% if (buyPromo) { %>
                 <span style="font-size:0.85rem;color:#555;text-decoration:line-through;">₱<%= buyNt %></span>
@@ -480,23 +479,9 @@
             </div>
           </div>
         </div>
-        <% } else if (buyNtFull) { %>
-        <!-- NT full — every legacy slot of this type is taken by a renter, with no
-             known handover date to sell against, so it's shown as full rather
-             than offered. Same treatment as the rent panel's own "Full Slot". -->
-        <div class="gd-type-card gd-type-disabled" id="buyNtCard" style="margin-bottom:0.75rem;border-color:#222;">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🎮</span>
-              <span class="gd-type-name">Non-Trophy — Permanent Access</span>
-              <span class="gd-type-status gd-status-rented">Full Slot</span>
-            </div>
-            <div class="gd-type-desc">Every Non-Trophy slot is currently rented out — none free to hand over.</div>
-          </div>
-        </div>
         <% } %>
 
-        <!-- TR Buy card -->
+        <!-- TR Buy card — tagged as a new slot when every Trophy slot is taken -->
         <% if (buyTr > 0 && hasTrophy) { %>
         <div class="gd-type-card" id="buyTrCard" onclick="selectBuyType('tr')" style="cursor:pointer;margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
           <div style="display:none;"><input type="radio" name="buyType" value="tr" id="buyRadioTr"></div>
@@ -504,8 +489,13 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🏆</span>
               <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
+              <% if (buyTrNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
             </div>
+            <% if (buyTrNew) { %>
+            <div class="gd-type-desc" style="color:#886600;">Our Trophy slots are all taken — we'll add a brand-new one just for you.</div>
+            <% } else { %>
             <div class="gd-type-desc" style="color:#886600;">Earn trophies on your own PSN account. Play at your own pace forever.</div>
+            <% } %>
             <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
               <% if (buyPromo) { %>
                 <span style="font-size:0.85rem;color:#664d00;text-decoration:line-through;">₱<%= buyTr %></span>
@@ -515,18 +505,14 @@
             </div>
           </div>
         </div>
-        <% } else if (buyTrFull && hasTrophy) { %>
-        <!-- TR full — same reasoning as the NT full card above. -->
-        <div class="gd-type-card gd-type-disabled" id="buyTrCard" style="margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
-          <div class="gd-type-body">
-            <div class="gd-type-header">
-              <span class="gd-type-icon">🏆</span>
-              <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
-              <span class="gd-type-status gd-status-rented">Full Slot</span>
-            </div>
-            <div class="gd-type-desc" style="color:#886600;">Every Trophy slot is currently rented out — none free to hand over.</div>
-          </div>
-        </div>
+        <% } %>
+
+        <!-- What a new slot means — shown by selectBuyType for the picked type only -->
+        <% if (buyNtNew) { %>
+        <div class="gd-newslot-note" id="buyNewSlotNote-nt" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Non-Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
+        <% } %>
+        <% if (buyTrNew) { %>
+        <div class="gd-newslot-note" id="buyNewSlotNote-tr" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
         <% } %>
 
         <!-- What you get -->

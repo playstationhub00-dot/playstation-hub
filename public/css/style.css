@@ -3819,6 +3819,16 @@ body.light-mode .gmp-warn { color: #92400e; }
 .gd-notstocked-title { font-size: 0.82rem; font-weight: 700; color: #f0a500; margin-bottom: 0.2rem; }
 .gd-notstocked-sub { font-size: 0.75rem; color: #8a8a8a; line-height: 1.55; }
 .gd-status-notstocked { background: rgba(245,158,11,0.15); color: #f0a500; }
+.gd-status-newslot { background: rgba(251,191,36,0.14); color: #fbbf24; border: 1px solid rgba(251,191,36,0.35); }
+.gd-newslot-note { margin: -0.25rem 0 1rem; padding: 0.65rem 0.85rem; background: #1a1300; border: 1px solid rgba(251,191,36,0.3); border-radius: 10px; color: #fcd34d; font-size: 0.8rem; line-height: 1.5; }
+/* The new-slot tag is long: on a narrow card it drops under the name instead of squeezing it. */
+#buyNtCard .gd-type-header, #buyTrCard .gd-type-header,
+#udBuyNtCard .gd-type-header, #udBuyTrCard .gd-type-header { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  #buyNtCard .gd-type-header, #buyTrCard .gd-type-header,
+  #udBuyNtCard .gd-type-header, #udBuyTrCard .gd-type-header { display: grid; grid-template-columns: auto 1fr; }
+  .gd-type-header > .gd-status-newslot { grid-column: 1 / -1; justify-self: start; margin-left: 0; }
+}
 .gd-notstocked-note { margin-top: 0.45rem; font-size: 0.75rem; color: #7a7a7a; line-height: 1.55; }
 
 .ssg-guide-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.85rem; }

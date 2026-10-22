@@ -38,6 +38,11 @@ function selectBuyType(type) {
   const trCard = document.getElementById('buyTrCard');
   if (ntCard) ntCard.style.borderColor = type === 'nt' ? '#22c55e' : '#222';
   if (trCard) trCard.style.borderColor = type === 'tr' ? '#ffc400' : 'rgba(255,196,0,0.2)';
+  // A full type sells as a new slot: say what that means for the picked one.
+  ['nt', 'tr'].forEach(t => {
+    const note = document.getElementById('buyNewSlotNote-' + t);
+    if (note) note.hidden = t !== type;
+  });
   const typeField = document.getElementById('buyOrderType');
   if (typeField) typeField.value = type;
   updateBuyPriceHeader();
