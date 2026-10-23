@@ -140,10 +140,18 @@ ok('an upcoming title says Reserve and uses the real from-price', () => {
   assert.ok(page.intro.startsWith('Reserve Phantom Blade for PS5 in the Philippines from ₱199'));
 });
 
-ok('the home title uses the cheapest from-price in the catalogue', () => {
+ok('the home title and description name the brand without a catalogue price', () => {
   const home = seo.homePage({ games: [elden, both], promo, faqItems: faqPages.homeItems({ deposit: 100, lateFee: 20 }) });
-  assert.strictEqual(home.title, 'PS5 & PS4 Game Rental Philippines – from ₱199 | PlayStation Hub');
-  assert.ok(home.description.includes('Philippines'));
+  const desc = 'PlayStation Hub rents PS5 and PS4 digital games in the Philippines. Free game changes while you rent. Pay with GCash, Maya and PayPal. Order on Messenger.';
+  assert.strictEqual(home.title, 'PlayStation Hub | Rent PS5 & PS4 Games in the Philippines');
+  assert.strictEqual(home.description, desc);
+  assert.ok(home.description.length >= 140 && home.description.length <= 165, home.description.length + ' ' + home.description);
+  assert.ok(!/₱\d/.test(home.description), home.description);
+  assert.ok(home.description.includes('Free game changes'));
+  assert.ok(home.description.includes('GCash'));
+  assert.ok(home.description.includes('Maya'));
+  assert.ok(home.description.includes('PayPal'));
+  assert.ok(home.description.includes('Messenger'));
   assert.ok(home.jsonLd.some(b => b['@type'] === 'FAQPage'));
 });
 
@@ -308,16 +316,31 @@ ok('PS Plus Deluxe is one public path, and its JSON-LD uses the prices it is giv
   assert.deepStrictEqual(stored.find(b => b['@type'] === 'Product').offers.map(o => o.price), ['111', '222', '333', '444']);
 });
 
-ok('site-wide graph names the organisation and the website', () => {
+ok('site-wide graph is one OnlineStore and one WebSite', () => {
   const graph = seo.siteGraph();
-  const org = graph.find(b => b['@type'] === 'Organization');
+  const org = graph.find(b => b['@type'] === 'OnlineStore');
   const site = graph.find(b => b['@type'] === 'WebSite');
+  assert.strictEqual(graph.filter(b => b['@type'] === 'OnlineStore' || b['@type'] === 'Organization').length, 1);
+  assert.strictEqual(graph.filter(b => b['@type'] === 'WebSite').length, 1);
   assert.strictEqual(org.name, 'PlayStation Hub');
-  assert.ok(org.sameAs.includes('https://facebook.com/PlaystationHub00'));
-  assert.ok(org.sameAs.includes('http://m.me/PlaystationHub00'));
-  assert.strictEqual(site.url, 'https://www.playstation-hub.com');
+  assert.strictEqual(org.alternateName, 'PS HUB');
+  assert.strictEqual(org.url, 'https://www.playstation-hub.com/');
+  assert.strictEqual(org.logo, 'https://www.playstation-hub.com/logo.svg');
+  assert.ok(fs.existsSync(path.join(__dirname, '../public/logo.svg')));
+  assert.deepStrictEqual(org.sameAs, ['https://facebook.com/PlaystationHub00']);
+  assert.ok(!org.sameAs.some(u => /maps\.google|google\.com\/maps/i.test(u)));
+  assert.deepStrictEqual(org.contactPoint, {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    url: 'https://m.me/PlaystationHub00',
+    availableLanguage: ['English', 'Filipino']
+  });
+  assert.deepStrictEqual(org.areaServed, { '@type': 'Country', name: 'Philippines' });
+  assert.strictEqual(site.name, 'PlayStation Hub');
+  assert.strictEqual(site.alternateName, 'PS HUB');
+  assert.strictEqual(site.url, 'https://www.playstation-hub.com/');
   const script = seo.jsonLdScript(org);
-  assert.strictEqual(JSON.parse(script)['@type'], 'Organization');
+  assert.strictEqual(JSON.parse(script)['@type'], 'OnlineStore');
   assert.ok(!script.includes('<'), 'json-ld must not break out of a script tag');
 });
 
@@ -479,7 +502,7 @@ function canonicalOf(html) {
 }
 
 const PAGES = [
-  ['/', 'PS5 &amp; PS4 Game Rental Philippines'],
+  ['/', 'PlayStation Hub | Rent PS5 &amp; PS4 Games in the Philippines'],
   ['/browse', 'Rent PS5'],
   ['/faq', 'FAQ'],
   ['/promos', 'Promos'],
@@ -525,6 +548,48 @@ async function main() {
     }
   });
 
+  await okAsync('the homepage title, description, H1, and store JSON-LD match the brand search brief', async () => {
+    const home = await call('/');
+    const desc = 'PlayStation Hub rents PS5 and PS4 digital games in the Philippines. Free game changes while you rent. Pay with GCash, Maya and PayPal. Order on Messenger.';
+    assert.strictEqual(titleOf(home.body), 'PlayStation Hub | Rent PS5 &amp; PS4 Games in the Philippines');
+    assert.ok(home.body.includes('<meta name="description" content="' + desc + '">'));
+    assert.ok(home.body.includes('<meta property="og:description" content="' + desc + '">'));
+    assert.ok(home.body.includes('<meta name="twitter:description" content="' + desc + '">'));
+    const h1s = home.body.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/g) || [];
+    assert.strictEqual(h1s.length, 1, h1s.join('\n'));
+    assert.ok(h1s[0].includes('PlayStation Hub'));
+    assert.ok(h1s[0].includes('Rent the Latest'));
+    assert.ok(h1s[0].includes('PS5 &amp; PS4'));
+    const blocks = jsonLd(home.body);
+    const org = blocks.find(b => b['@type'] === 'OnlineStore');
+    const site = blocks.find(b => b['@type'] === 'WebSite');
+    assert.ok(org, 'missing OnlineStore');
+    assert.strictEqual(blocks.filter(b => b['@type'] === 'OnlineStore' || b['@type'] === 'Organization').length, 1);
+    assert.strictEqual(org.name, 'PlayStation Hub');
+    assert.strictEqual(org.alternateName, 'PS HUB');
+    assert.strictEqual(org.url, 'https://www.playstation-hub.com/');
+    assert.strictEqual(org.logo, 'https://www.playstation-hub.com/logo.svg');
+    assert.deepStrictEqual(org.sameAs, ['https://facebook.com/PlaystationHub00']);
+    assert.deepStrictEqual(org.contactPoint, {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      url: 'https://m.me/PlaystationHub00',
+      availableLanguage: ['English', 'Filipino']
+    });
+    assert.deepStrictEqual(org.areaServed, { '@type': 'Country', name: 'Philippines' });
+    assert.ok(site, 'missing WebSite');
+    assert.strictEqual(blocks.filter(b => b['@type'] === 'WebSite').length, 1);
+    assert.strictEqual(site.name, 'PlayStation Hub');
+    assert.strictEqual(site.alternateName, 'PS HUB');
+    assert.strictEqual(site.url, 'https://www.playstation-hub.com/');
+    assert.strictEqual(canonicalOf(home.body), 'https://www.playstation-hub.com');
+    assert.ok(!/name="robots"[^>]*noindex/i.test(home.body));
+    assert.ok(!home.headers['x-robots-tag']);
+    ['/browse', '/ps-plus', '/how-it-works', '/faq'].forEach(href => {
+      assert.ok(home.body.includes('<a href="' + href + '"'), 'missing crawlable link ' + href);
+    });
+  });
+
   await okAsync('a game page title, intro, cover image, and product data come from the catalogue', async () => {
     const res = await call('/game/elden-ring?utm_source=google');
     assert.strictEqual(res.status, 200);
@@ -548,7 +613,7 @@ async function main() {
     assert.ok(product, 'missing Product');
     assert.ok(product.offers.some(o => o.priceCurrency === 'PHP' && o.price === '349'));
     assert.ok(blocks.some(b => b['@type'] === 'BreadcrumbList'));
-    assert.ok(blocks.some(b => b['@type'] === 'Organization'));
+    assert.ok(blocks.some(b => b['@type'] === 'OnlineStore'));
     const bothRes = await call('/game/spider-man');
     assert.ok(titleOf(bothRes.body).includes('PS4/PS5'));
     assert.ok(titleOf(bothRes.body).includes('₱199'));
@@ -667,7 +732,7 @@ async function main() {
     const homeLd = jsonLd(home.body).find(b => b['@type'] === 'FAQPage');
     assert.ok(homeLd.mainEntity.length >= 4);
     homeLd.mainEntity.forEach(q => assert.ok(home.body.includes(q.name), q.name));
-    assert.ok(titleOf(home.body).includes('₱199'));
+    assert.strictEqual(titleOf(home.body), 'PlayStation Hub | Rent PS5 &amp; PS4 Games in the Philippines');
   });
 
   await okAsync('sitemap lists every catalogue game and robots.txt is served by the app', async () => {

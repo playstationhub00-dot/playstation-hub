@@ -118,7 +118,7 @@ async function main() {
   console.log('\ntop');
   await okAsync('one-line tagline from the hero text, with the compact search beside it', async () => {
     const head = slice(home, 'class="hm-head"', 'class="hm-stage');
-    assert.ok(head.includes('<h1 class="hm-tagline">Rent the Latest <span style="color:#F0A500;">PS5 &amp; PS4</span> Games</h1>'));
+    assert.ok(head.includes('<h1 class="hm-tagline">PlayStation Hub · Rent the Latest <span style="color:#F0A500;">PS5 &amp; PS4</span> Games</h1>'));
     assert.ok(head.includes('class="hs hs-compact" id="homeSearch"') && head.includes('id="hsInput"'));
     assert.ok(!home.includes('class="hs-chip"') && !home.includes('Old subtitle'));
   });
