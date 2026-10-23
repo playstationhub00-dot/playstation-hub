@@ -303,7 +303,7 @@ if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1
     if (!m) return v;
     const game = db.get('games').find({ id: parseInt(m[1]) }).value();
     if (!game) return v;
-    const slug = game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = titleFixes.publicSlug(game.title);
     changed = true;
     return { ...v, path: '/game/' + slug, page: game.title };
   });
@@ -866,6 +866,23 @@ try {
   }
 } catch (e) {
   console.log('[genre] migration failed:', e.message);
+}
+
+// The four slug-typo families only (assasins, calisto, berseker, triology).
+// Idempotent: a second boot finds nothing to write, so it does not sync the
+// blob. Ids, stored slugs, prices, and order documents are not touched.
+// NBA2K27, Townfall, and afdordable stay on scripts/rename-game-titles.js.
+try {
+  const slugTitles = titleFixes.applySlugTitles(db.getState());
+  if (slugTitles.changes.length) {
+    db.setState(slugTitles.state);
+    slugTitles.changes.forEach(c => {
+      console.log('[titles] ' + c.path + ': ' + JSON.stringify(c.from) + ' -> ' + JSON.stringify(c.to));
+    });
+    db.write();
+  }
+} catch (e) {
+  console.log('[titles] slug title migration failed:', e.message);
 }
 
 // Orders persist as their own MongoDB documents, reusing the connection the
@@ -1573,16 +1590,16 @@ app.post('/requests/add', async (req, res) => {
   // Guard: never let a game we already stock become a request. The client checks
   // this too for immediate feedback, but the client can be bypassed.
   const slug = gameRequests.slugify(title);
-  const already = getGames().find(g => gameSlug(g.title) === slug);
-  if (already) return res.redirect('/game/' + slug);
+  const already = getGames().find(g => titleFixes.slugMatches(gameSlug(g.title), slug));
+  if (already) return res.redirect('/game/' + gameSlug(already.title));
 
   // Free auto-inherit: if this title matches something already in Coming Soon or
   // PS Plus popular, copy its cover so the request never starts with a blank
   // thumbnail. Available-catalogue titles are excluded by the guard above, so
   // only these two lists are worth checking here.
   const inheritedCover =
-    (getUpcoming().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
-    (getPsplusPopular().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
+    (getUpcoming().find(g => titleFixes.slugMatches(gameSlug(g.title), slug)) || {}).cover_image ||
+    (getPsplusPopular().find(g => titleFixes.slugMatches(gameSlug(g.title), slug)) || {}).cover_image ||
     '';
 
   const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover });
@@ -2383,7 +2400,20 @@ app.locals.buySpotlightChoices = buySpotlightChoices;
 
 app.get('/bundle/:slug', (req, res) => {
   const allGames = getGames();
-  const acc = getAccounts().find(a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled) && gameSlug(a.public_name || a.label) === req.params.slug);
+  const param = req.params.slug;
+  const sellable = a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled);
+  const accounts = getAccounts().filter(sellable);
+  let acc = accounts.find(a => gameSlug(a.public_name || a.label) === param);
+  if (!acc) {
+    acc = accounts.find(a => titleFixes.slugMatches(gameSlug(a.public_name || a.label), param));
+    if (acc) {
+      const canonical = gameSlug(acc.public_name || acc.label);
+      if (canonical && canonical !== param) {
+        const q = req.originalUrl.indexOf('?');
+        return res.redirect(301, '/bundle/' + canonical + (q === -1 ? '' : req.originalUrl.slice(q)));
+      }
+    }
+  }
   if (!acc) return res.redirect('/buy');
   const name = acc.public_name || acc.label;
   const games = buildBundleGames(acc, allGames);
@@ -2563,7 +2593,7 @@ app.get('/sitemap.xml', (req, res) => {
 });
 
 function gameSlug(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return titleFixes.publicSlug(title);
 }
 
 // A failed order for the PS Plus Deluxe catalogue row goes to the real
@@ -4891,15 +4921,14 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
-  // Card links, the search index and the homepage all use gameSlug(title).
-  // redirectSlug rewrites a few of those (nba2k27 → nba-2k27, and the typo
-  // tokens triology / berseker / assasins) toward the spelling the rename
-  // script would produce. That script is not part of boot, so the live title
-  // often still slugs to the pre-rename form. Redirecting before lookup sent
-  // /game/nba2k27 to /game/nba-2k27, which matched nothing and 302'd to
-  // /browse. Resolve either form first. The canonical URL is always the
-  // current title's slug — the same string the card href uses — and only a
-  // slug that does not name a game falls through to /browse.
+  // Card links, the search index and the homepage all use gameSlug(title),
+  // which is the corrected public slug for assasins / calisto / berseker /
+  // triology even when the stored title still has the typo. Old URLs 301
+  // here after lookup. NBA2K27 is not one of those tokens: its card and its
+  // canonical stay /game/nba2k27 until the title is "NBA 2K27", and
+  // /game/nba-2k27 is only an alias. Redirecting that alias before lookup
+  // used to 404 it. Resolve either form first. A slug that names no game
+  // is a 404.
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
     : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
@@ -5901,9 +5930,9 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
-  // Same rule as /game/:slug. The card href is gameSlug(title) + '-' + id.
-  // A typo redirect that runs before lookup would 301 that href at a slug
-  // the title does not have, whenever the rename script has not been applied.
+  // Same rule as /game/:slug. The card href is the public slug plus '-' + id,
+  // so a typo token's card already points at the corrected URL. The old
+  // spelling 301s after lookup. nba2k27 is not corrected on boot.
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
   let game = idMatch ? getUpcomingGame(idMatch[1]) : null;
@@ -8218,7 +8247,7 @@ app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
   const when = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
   const result = await sendTelegramMessage(
-    'Test alert — Playstation Hub\n' +
+    'Test alert — PlayStation Hub\n' +
     'If you can read this, sign-in alerts are working.\n' +
     'Sent ' + when
   );
@@ -8549,7 +8578,7 @@ const paymentReminderTimer = setInterval(() => {
 if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
 app.listen(PORT, () => {
-  console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
+  console.log(`\n✅ PlayStation Hub running at http://localhost:${PORT}`);
   console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
 });
 

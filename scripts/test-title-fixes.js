@@ -18,8 +18,9 @@ console.log('\nfixString');
 ok('renames the listed catalogue titles and leaves correct ones alone', () => {
   assert.strictEqual(fixes.fixString('Resident Evil Remake Triology'), 'Resident Evil Remake Trilogy');
   assert.strictEqual(fixes.fixString('Khazan The First Berseker'), 'Khazan The First Berserker');
-  assert.strictEqual(fixes.fixString('Assasins Creed Shadows'), "Assassin's Creed Shadows");
-  assert.strictEqual(fixes.fixString('Assasins Creed Shadows w/ DLC'), "Assassin's Creed Shadows w/ DLC");
+  assert.strictEqual(fixes.fixString('Assasins Creed Shadows'), 'Assassins Creed Shadows');
+  assert.strictEqual(fixes.fixString('Assasins Creed Shadows w/ DLC'), 'Assassins Creed Shadows w/ DLC');
+  assert.strictEqual(fixes.fixString('Calisto Protocol'), 'Callisto Protocol');
   assert.strictEqual(fixes.fixString('Silent Hill TownFall'), 'Silent Hill: Townfall');
   assert.strictEqual(fixes.fixString('NBA2K27'), 'NBA 2K27');
   assert.strictEqual(fixes.fixString("Assassin's Creed Shadows"), "Assassin's Creed Shadows");
@@ -31,7 +32,7 @@ ok('renames the listed catalogue titles and leaves correct ones alone', () => {
 ok('fixes the same typos inside review text, including afdordable', () => {
   assert.strictEqual(
     fixes.fixString('Prices are afdordable and Assasins Creed Shadows is great'),
-    "Prices are affordable and Assassin's Creed Shadows is great"
+    'Prices are affordable and Assassins Creed Shadows is great'
   );
   assert.strictEqual(fixes.fixString('already affordable'), 'already affordable');
 });
@@ -57,17 +58,67 @@ ok('applyToState renames titles and review text without touching slugs, and a se
   assert.deepStrictEqual(second.state, first.state);
 });
 
+ok('applySlugTitles fixes the four URL families and leaves NBA2K27, Townfall, slugs, and names alone', () => {
+  const state = {
+    games: [
+      { id: 1, title: 'NBA2K27', slug: 'nba2k27' },
+      { id: 2, title: 'Calisto Protocol', slug: 'leave-me' },
+      { id: 3, title: 'Assasins Creed Shadows w/ DLC' }
+    ],
+    upcoming: [{ id: 4, title: 'Khazan The First Berseker' }, { id: 5, title: 'Silent Hill TownFall' }],
+    reviews: [{ text: 'afdordable Assasins', game_rented: 'Resident Evil Remake Triology' }],
+    customers: [{ game_title: 'Calisto Protocol', fb_name: 'Afdordable Fan' }]
+  };
+  const first = fixes.applySlugTitles(state);
+  assert.strictEqual(first.state.games[0].title, 'NBA2K27');
+  assert.strictEqual(first.state.games[0].slug, 'nba2k27');
+  assert.strictEqual(first.state.games[1].title, 'Callisto Protocol');
+  assert.strictEqual(first.state.games[1].slug, 'leave-me');
+  assert.strictEqual(first.state.games[2].title, 'Assassins Creed Shadows w/ DLC');
+  assert.strictEqual(first.state.upcoming[0].title, 'Khazan The First Berserker');
+  assert.strictEqual(first.state.upcoming[1].title, 'Silent Hill TownFall');
+  assert.strictEqual(first.state.reviews[0].text, 'afdordable Assassins');
+  assert.strictEqual(first.state.reviews[0].game_rented, 'Resident Evil Remake Trilogy');
+  assert.strictEqual(first.state.customers[0].game_title, 'Callisto Protocol');
+  assert.strictEqual(first.state.customers[0].fb_name, 'Afdordable Fan');
+  const second = fixes.applySlugTitles(first.state);
+  assert.strictEqual(second.changes.length, 0);
+  assert.deepStrictEqual(second.state, first.state);
+});
+
 console.log('\nredirectSlug');
 
 ok('old game slugs redirect and corrected slugs do not', () => {
   assert.strictEqual(fixes.redirectSlug('resident-evil-remake-triology'), 'resident-evil-remake-trilogy');
   assert.strictEqual(fixes.redirectSlug('khazan-the-first-berseker'), 'khazan-the-first-berserker');
-  assert.strictEqual(fixes.redirectSlug('assasins-creed-shadows'), 'assassin-s-creed-shadows');
-  assert.strictEqual(fixes.redirectSlug('assasins-creed-shadows-w-dlc'), 'assassin-s-creed-shadows-w-dlc');
+  assert.strictEqual(fixes.redirectSlug('assasins-creed-shadows'), 'assassins-creed-shadows');
+  assert.strictEqual(fixes.redirectSlug('assasins-creed-shadows-w-dlc'), 'assassins-creed-shadows-w-dlc');
+  assert.strictEqual(fixes.redirectSlug('assassin-s-creed-shadows'), 'assassins-creed-shadows');
+  assert.strictEqual(fixes.redirectSlug('assassin-s-creed-shadows-w-dlc'), 'assassins-creed-shadows-w-dlc');
+  assert.strictEqual(fixes.redirectSlug('assassin-s-creed-black-flag-resynced'), null);
+  assert.strictEqual(fixes.redirectSlug('calisto-protocol'), 'callisto-protocol');
+  assert.strictEqual(fixes.redirectSlug('callisto-protocol'), null);
+  assert.strictEqual(fixes.redirectSlug('assassins-creed-shadows'), null);
   assert.strictEqual(fixes.redirectSlug('nba2k27'), 'nba-2k27');
   assert.strictEqual(fixes.redirectSlug('silent-hill-townfall'), null);
   assert.strictEqual(fixes.redirectSlug('resident-evil-remake-trilogy'), null);
   assert.strictEqual(fixes.redirectSlug('nba-2k27'), null);
+});
+
+ok('publicSlug corrects the four tokens and leaves NBA2K27 and Black Flag alone', () => {
+  assert.strictEqual(fixes.publicSlug('Assasins Creed Shadows'), 'assassins-creed-shadows');
+  assert.strictEqual(fixes.publicSlug('Assassins Creed Shadows'), 'assassins-creed-shadows');
+  assert.strictEqual(fixes.publicSlug("Assassin's Creed Shadows"), 'assassins-creed-shadows');
+  assert.strictEqual(fixes.publicSlug('Assasins Creed Shadows w/ DLC'), 'assassins-creed-shadows-w-dlc');
+  assert.strictEqual(fixes.publicSlug("Assassin's Creed Black Flag Resynced"), 'assassin-s-creed-black-flag-resynced');
+  assert.strictEqual(fixes.publicSlug('Calisto Protocol'), 'callisto-protocol');
+  assert.strictEqual(fixes.publicSlug('Callisto Protocol'), 'callisto-protocol');
+  assert.strictEqual(fixes.publicSlug('Khazan The First Berseker'), 'khazan-the-first-berserker');
+  assert.strictEqual(fixes.publicSlug('Khazan The First Berserker'), 'khazan-the-first-berserker');
+  assert.strictEqual(fixes.publicSlug('Resident Evil Remake Triology'), 'resident-evil-remake-trilogy');
+  assert.strictEqual(fixes.publicSlug('NBA2K27'), 'nba2k27');
+  assert.strictEqual(fixes.publicSlug('NBA 2K27'), 'nba-2k27');
+  assert.strictEqual(fixes.publicSlug('Callisto Protocol'), fixes.publicSlug('Calisto Protocol'));
 });
 
 ok('the migration script dry-runs unless --apply, and a second apply changes nothing', () => {
