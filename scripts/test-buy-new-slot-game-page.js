@@ -81,7 +81,7 @@ async function main() {
     const panel = buyPanel((await get('/game/zzyzx-rented')).body);
     const nt = cardOf(panel, 'buyNtCard');
     assert.ok(nt.includes('onclick="selectBuyType(\'nt\')"') && !nt.includes('gd-type-disabled'));
-    assert.ok(nt.includes('<span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span>'));
+    assert.ok(!nt.includes('gd-status-newslot'), 'the new-slot wording lives in What You Get, not on the card');
     assert.ok(nt.includes('Our Non-Trophy slots are all taken — we\'ll add a brand-new one just for you.'));
     const tr = cardOf(panel, 'buyTrCard');
     assert.ok(tr.includes('onclick="selectBuyType(\'tr\')"') && tr.includes('Our Trophy slots are all taken — we\'ll add a brand-new one just for you.'));
@@ -90,7 +90,7 @@ async function main() {
   });
   await okAsync('the set-up-on-order note, one per new-slot type, hidden until that type is picked', async () => {
     const panel = buyPanel((await get('/game/zzyzx-rented')).body);
-    assert.ok(panel.includes('<div class="gd-newslot-note" id="buyNewSlotNote-tr" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Trophy slot for this game after you pay, then message you on Facebook when it\'s ready. Same price, yours forever.</div>'));
+    assert.ok(panel.includes('<div class="gd-newslot-note" style="margin:0;" id="buyNewSlotNote-tr" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Trophy slot for this game after you pay, then message you on Facebook when it\'s ready. Same price, yours forever.</div>'));
     assert.ok(panel.includes('id="buyNewSlotNote-nt" hidden'));
     const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'game-detail.js'), 'utf8');
     assert.ok(js.includes("document.getElementById('buyNewSlotNote-' + t)"), 'selectBuyType shows the picked type\'s note');
@@ -102,7 +102,7 @@ async function main() {
   });
   await okAsync('a sold linked account no longer hides the type: it is a new slot', async () => {
     const panel = buyPanel((await get('/game/zzyzx-sold')).body);
-    assert.ok(cardOf(panel, 'buyNtCard').includes('🆕 New slot · set up on order'));
+    assert.ok(cardOf(panel, 'buyNtCard').includes('Our Non-Trophy slots are all taken') && panel.includes('id="buyNewSlotNote-nt"'));
   });
   await okAsync('no permanent price: no Buy Permanent tab, as before', async () => {
     assert.ok(!(await get('/game/zzyzx-nobuy')).body.includes('id="buyPanel"'));

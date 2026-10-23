@@ -462,7 +462,6 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🎮</span>
               <span class="gd-type-name">Non-Trophy — Permanent Access</span>
-              <% if (buyNtNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
             </div>
             <% if (buyNtNew) { %>
             <div class="gd-type-desc">Our Non-Trophy slots are all taken — we'll add a brand-new one just for you.</div>
@@ -488,7 +487,6 @@
             <div class="gd-type-header">
               <span class="gd-type-icon">🏆</span>
               <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
-              <% if (buyTrNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
             </div>
             <% if (buyTrNew) { %>
             <div class="gd-type-desc" style="color:#886600;">Our Trophy slots are all taken — we'll add a brand-new one just for you.</div>
@@ -506,18 +504,17 @@
         </div>
         <% } %>
 
-        <!-- What a new slot means — shown by selectBuyType for the picked type only -->
-        <% if (buyNtNew) { %>
-        <div class="gd-newslot-note" id="buyNewSlotNote-nt" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Non-Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
-        <% } %>
-        <% if (buyTrNew) { %>
-        <div class="gd-newslot-note" id="buyNewSlotNote-tr" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
-        <% } %>
-
         <!-- What you get -->
         <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
           <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem;">What You Get</div>
           <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
+            <!-- A full type is a new slot: shown by selectBuyType for the picked type only -->
+            <% if (buyNtNew) { %>
+            <div class="gd-newslot-note" style="margin:0;" id="buyNewSlotNote-nt" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Non-Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
+            <% } %>
+            <% if (buyTrNew) { %>
+            <div class="gd-newslot-note" style="margin:0;" id="buyNewSlotNote-tr" hidden>🆕 <strong>Set up on order:</strong> we buy a fresh Trophy slot for this game after you pay, then message you on Facebook when it's ready. Same price, yours forever.</div>
+            <% } %>
             <div>♾️ &nbsp;Permanent access — no time limit</div>
             <div>🔓 &nbsp;Play anytime, as many times as you want</div>
             <div>💳 &nbsp;<%- include('partials/pay-note').trim() %></div>
