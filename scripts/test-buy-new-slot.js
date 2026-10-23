@@ -24,6 +24,11 @@ ok('every slot rented out, sold or offline: still buyable, as a new slot', () =>
   assert.deepStrictEqual(buyOption(null, 'trophy', { everStocked: true, avail: false }, '1999'), { buyable: true, inStock: false, newSlot: true }, 'legacy slots all rented');
 });
 
+ok('Buy follows the rent Full Slot status: a rented slot that could be sold later is still a new slot now', () => {
+  assert.deepStrictEqual(buyOption(summary(2, 1), 'trophy', { everStocked: true, avail: false }, 1999), { buyable: true, inStock: false, newSlot: true }, 'rent says Full Slot');
+  assert.deepStrictEqual(buyOption(summary(2, 1), 'trophy', { everStocked: true, avail: true }, 1999), { buyable: true, inStock: true, newSlot: false }, 'rent has a free slot');
+});
+
 ok('never stocked is in stock as before (its account is made on the first sale)', () => {
   assert.deepStrictEqual(buyOption(null, 'trophy', { everStocked: false, avail: false }, 999), { buyable: true, inStock: true, newSlot: false });
 });
