@@ -159,6 +159,17 @@ ok('static pages have a title and a description near 150 characters', () => {
   assert.strictEqual(seo.staticPage('browse').canonicalPath, '/browse');
   assert.strictEqual(seo.staticPage('ps-plus').canonicalPath, '/ps-plus');
   assert.strictEqual(seo.staticPage('how-it-works').canonicalPath, '/how-it-works');
+  ['how-it-works', 'trophy-guide', 'psplus-vs-renting', 'guides'].forEach(key => {
+    const page = seo.staticPage(key);
+    assert.ok(page.title.length <= 60, key + ' title ' + page.title.length + ' ' + page.title);
+    assert.ok(page.title.endsWith('| PlayStation Hub'), page.title);
+    assert.ok(!page.title.includes('Playstation Hub'), page.title);
+    assert.strictEqual(page.canonicalPath, seo.STATIC_PATHS[key]);
+  });
+  ['how-it-works', 'trophy-guide', 'psplus-vs-renting'].forEach(key => {
+    const description = seo.staticPage(key).description;
+    assert.ok(description.length >= 140 && description.length <= 155, key + ' ' + description.length + ' ' + description);
+  });
 });
 
 ok('the five priority games use the brief titles and a visible FAQ', () => {
@@ -336,6 +347,9 @@ ok('sitemap is XML and lists every game, upcoming title, and public page', () =>
   assert.strictEqual((xml.match(/<url>/g) || []).length, (xml.match(/<\/url>/g) || []).length);
   assert.ok(xml.includes('<loc>https://www.playstation-hub.com/game/elden-ring</loc>'));
   assert.ok(xml.includes('<loc>https://www.playstation-hub.com/game/spider-man</loc>'));
+  ['/guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary', '/guides/ps-plus-deluxe-vs-renting'].forEach(p => {
+    assert.ok(xml.includes('<loc>https://www.playstation-hub.com' + p + '</loc>'), p);
+  });
   assert.ok(xml.includes('<loc>https://www.playstation-hub.com/upcoming/phantom-blade-5</loc>'));
   assert.ok(xml.includes('<lastmod>2026-01-15</lastmod>'));
   assert.ok(xml.includes('<lastmod>2026-03-01</lastmod>'));
@@ -489,6 +503,65 @@ const PAGES = [
   ['/terms', 'Terms'],
   ['/privacy', 'Privacy']
 ];
+
+ok('the three rental guides use live prices and confirmed policy lines', () => {
+  const guidePages = require('../lib/guide-pages');
+  const policy = require('../lib/policy-copy');
+  const promos = require('../lib/promos');
+  const ctx = {
+    deposit: 100,
+    lateFee: 20,
+    monthlyPromo: null,
+    games: GAMES,
+    upcoming: UPCOMING,
+    promo: { enabled: true, discounts: { 7: 0, 30: 10 }, deposit: 100, late_fee_per_day: 20 },
+    psplusPrices: { nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799 },
+    loyaltyOffers: promos.loyaltyOffers(null),
+    psplusNames: [],
+    popularTitles: ['Ghost of Tsushima']
+  };
+  const how = guidePages.build('how', ctx);
+  const trophy = guidePages.build('trophy', ctx);
+  const psplus = guidePages.build('psplus', ctx);
+  [how, trophy, psplus].forEach(model => {
+    assert.deepStrictEqual(guidePages.issues(model), [], model.key + ' ' + guidePages.issues(model).join(' | '));
+    assert.strictEqual(model.canonicalPath.startsWith('/'), true);
+    assert.ok(model.jsonLd.some(b => b['@type'] === 'FAQPage'));
+    assert.ok(model.jsonLd.some(b => b['@type'] === 'BreadcrumbList'));
+    const faqLd = model.jsonLd.find(b => b['@type'] === 'FAQPage');
+    model.faqs.forEach((item, i) => {
+      assert.strictEqual(faqLd.mainEntity[i].acceptedAnswer.text, item.text);
+    });
+  });
+  assert.strictEqual(how.title, 'How to Rent PS5 Games in the Philippines | PlayStation Hub');
+  assert.strictEqual(how.h1, 'How to rent PS5 games in the Philippines (step by step)');
+  assert.ok(how.jsonLd.some(b => b['@type'] === 'HowTo'));
+  const howto = how.jsonLd.find(b => b['@type'] === 'HowTo');
+  assert.strictEqual(howto.step.length, 10);
+  howto.step.forEach((step, i) => assert.strictEqual(step.text, how.sections.find(s => s.steps).steps.filter(s => s.id)[i].text));
+  const swap = how.faqs.find(f => f.q === 'Can I change games during my rental?');
+  assert.strictEqual(swap.text, policy.SWAP_LINE + ' ' + policy.SWAP_TIER);
+  const trial = how.faqs.find(f => f.q === 'Can I try a game before I pay?');
+  assert.strictEqual(trial.text, policy.TRIAL_ANSWER);
+  assert.ok(!guidePages.collectText(how).includes('always 10% off'));
+  assert.ok(how.answer.text.includes('₱') === false);
+  assert.strictEqual(trophy.title, 'Trophy vs Non-Trophy vs PS4 Primary Guide | PlayStation Hub');
+  assert.strictEqual(trophy.h1, 'Trophy vs Non-Trophy vs PS4 Primary: which rental account is right for you?');
+  assert.strictEqual(trophy.jsonLd.find(b => b['@type'] === 'Article').inLanguage, 'en-PH');
+  assert.ok(guidePages.collectText(trophy).includes('₱199'));
+  assert.ok(guidePages.collectText(trophy).includes('Spider-Man'));
+  assert.strictEqual(psplus.title, 'PS Plus Deluxe vs Renting (Philippines) | PlayStation Hub');
+  assert.strictEqual(psplus.h1, 'PS Plus Deluxe vs renting games: which is better for you?');
+  assert.strictEqual(psplus.jsonLd.find(b => b['@type'] === 'Article').inLanguage, 'en');
+  assert.ok(!psplus.jsonLd.some(b => b['@type'] === 'Product' || b['@type'] === 'Offer'));
+  assert.ok(guidePages.collectText(psplus).includes('₱349'));
+  assert.ok(guidePages.collectText(psplus).includes('₱699'));
+  assert.ok(!guidePages.collectText(psplus).includes('not in our PS Plus Deluxe list'));
+  const promoOn = guidePages.build('how', Object.assign({}, ctx, { monthlyPromo: { pct: 10 } }));
+  assert.ok(guidePages.collectText(promoOn).includes('Monthly is 10% off right now (current promo, can end).'));
+  assert.ok(!guidePages.collectText(promoOn).includes('always 10% off'));
+  assert.deepStrictEqual(guidePages.issues(promoOn), []);
+});
 
 async function main() {
   require('../server.js');
@@ -745,6 +818,91 @@ async function main() {
     assert.ok(String(mine[0].referrer).includes('google.com'));
     const sources = seo.trafficSources(stored.visitors);
     assert.ok(sources.some(s => s.label === 'google / cpc' && s.count >= 1));
+  });
+
+  await okAsync('rental guides return 200 with one H1, canonical, valid JSON-LD, and sitemap entries', async () => {
+    const guidePages = require('../lib/guide-pages');
+    const expected = [
+      {
+        path: '/how-it-works',
+        title: 'How to Rent PS5 Games in the Philippines | PlayStation Hub',
+        h1: 'How to rent PS5 games in the Philippines (step by step)',
+        types: ['HowTo', 'FAQPage', 'BreadcrumbList', 'WebPage']
+      },
+      {
+        path: '/guides/trophy-vs-non-trophy-vs-ps4-primary',
+        title: 'Trophy vs Non-Trophy vs PS4 Primary Guide | PlayStation Hub',
+        h1: 'Trophy vs Non-Trophy vs PS4 Primary: which rental account is right for you?',
+        types: ['Article', 'FAQPage', 'BreadcrumbList']
+      },
+      {
+        path: '/guides/ps-plus-deluxe-vs-renting',
+        title: 'PS Plus Deluxe vs Renting (Philippines) | PlayStation Hub',
+        h1: 'PS Plus Deluxe vs renting games: which is better for you?',
+        types: ['Article', 'FAQPage', 'BreadcrumbList']
+      },
+      {
+        path: '/guides',
+        title: 'PS5 & PS4 Rental Guides | PlayStation Hub',
+        h1: 'PS5 and PS4 rental guides',
+        types: ['BreadcrumbList']
+      }
+    ];
+    function decode(s) {
+      return s.replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    }
+    function visible(html) {
+      return decode(html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' '));
+    }
+    for (const page of expected) {
+      const res = await call(page.path);
+      assert.strictEqual(res.status, 200, page.path);
+      assert.strictEqual(decode(titleOf(res.body)), page.title, page.path);
+      assert.strictEqual(canonicalOf(res.body), 'https://www.playstation-hub.com' + page.path);
+      const h1s = res.body.match(/<h1\b[^>]*>[\s\S]*?<\/h1>/g) || [];
+      assert.strictEqual(h1s.length, 1, page.path + ' h1 count');
+      assert.strictEqual(decode(h1s[0].replace(/<[^>]+>/g, '').trim()), page.h1);
+      const desc = (res.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
+      assert.ok(desc.length >= 80, page.path + ' description');
+      const blocks = jsonLd(res.body);
+      blocks.forEach(b => assert.ok(b['@type'] || b['@graph'], page.path));
+      page.types.forEach(type => assert.ok(blocks.some(b => b['@type'] === type), page.path + ' missing ' + type));
+      assert.ok(!blocks.some(b => b['@type'] === 'Product'), page.path);
+      const text = visible(res.body);
+      assert.ok(!res.body.includes('Playstation Hub'), page.path);
+      assert.ok(!text.includes('always 10% off'), page.path);
+      assert.ok(!text.includes('stored locally'), page.path);
+      assert.ok(!text.includes('Game Trials'), page.path);
+      assert.ok(text.includes('href') === false || res.body.includes('href="/browse"'), page.path);
+      assert.ok(res.body.includes('href="/browse"'), page.path);
+      assert.ok(res.body.includes('href="/faq"'), page.path);
+      assert.ok(res.body.includes('href="/guides/trophy-vs-non-trophy-vs-ps4-primary"'), page.path);
+      assert.ok(res.body.includes('href="/guides/ps-plus-deluxe-vs-renting"'), page.path);
+      const faqLd = blocks.find(b => b['@type'] === 'FAQPage');
+      if (faqLd) {
+        faqLd.mainEntity.forEach(q => {
+          assert.ok(text.includes(q.name), page.path + ' ' + q.name);
+          assert.ok(text.includes(q.acceptedAnswer.text), page.path + ' answer ' + q.name);
+        });
+      }
+      const howto = blocks.find(b => b['@type'] === 'HowTo');
+      if (howto) howto.step.forEach(step => assert.ok(text.includes(step.text), page.path + ' ' + step.name));
+    }
+    const how = await call('/how-it-works');
+    assert.ok(how.body.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
+    assert.ok(how.body.includes('Yes, on Non-Trophy accounts. You can play free for three hours'));
+    assert.ok(['/game/ghost-of-yotei', '/game/spider-man', '/game/elden-ring', '/game/battlefield-6'].some(href => how.body.includes('href="' + href + '"')));
+    assert.ok(how.body.includes('href="/ps-plus"'));
+    const plus = await call('/guides/ps-plus-deluxe-vs-renting');
+    assert.ok(plus.body.includes('₱349'));
+    assert.ok(plus.body.includes('₱699'));
+    assert.ok(!plus.body.includes('not in our PS Plus Deluxe list'));
+    assert.ok(!plus.body.includes('always 10% off'));
+    const map = await call('/sitemap.xml');
+    ['/how-it-works', '/guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary', '/guides/ps-plus-deluxe-vs-renting'].forEach(p => {
+      assert.ok(map.body.includes('<loc>https://www.playstation-hub.com' + p + '</loc>'), p);
+    });
+    assert.strictEqual(guidePages.PATHS.trophy, '/guides/trophy-vs-non-trophy-vs-ps4-primary');
   });
 
   console.log('\n' + passed + ' assertions passed\n');

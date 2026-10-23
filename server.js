@@ -71,6 +71,7 @@ const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const seo = require('./lib/seo');
+const guidePages = require('./lib/guide-pages');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -647,7 +648,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/guides': 'Guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary': 'Trophy vs Non-Trophy', '/guides/ps-plus-deluxe-vs-renting': 'PS Plus vs Renting', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -1484,9 +1485,62 @@ function computeSwapReferencePrice(game, { days, accountType, isBought, promo })
   return { price, ps4Fallback: trophyMissing };
 }
 
-app.get('/how-it-works', (req, res) => {
-  res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+function guidePageInput() {
+  const settings = getSiteSettings() || {};
+  const promo = settings.promo || {};
+  let live = [];
+  try { live = (promoContext().live) || []; } catch (e) { live = []; }
+  const games = (getGames() || []).map(game => resolveGamePrices(game));
+  let psplusNames = [];
+  try {
+    const catalog = psplusCatalogView.buildPublicCatalog({
+      games: psplusCatalogStore.all(),
+      siteGames: getGames(),
+      entries: getPsplus(),
+      slugFor: gameSlug,
+      monthlyCovers: psplusMonthlyCoversStore.all()
+    });
+    psplusNames = ((catalog && catalog.items) || []).map(item => item && item.n).filter(Boolean);
+  } catch (e) {
+    psplusNames = [];
+  }
+  const popular = (getPsplusPopular() || []).slice().sort((a, b) => (a.rank || 999) - (b.rank || 999));
+  return {
+    deposit: promo.deposit,
+    lateFee: promo.late_fee_per_day,
+    monthlyPromo: promos.monthlyDiscountLive(live),
+    games,
+    upcoming: getUpcoming() || [],
+    promo,
+    psplusPrices: getPsplusPrices() || {},
+    loyaltyOffers: live,
+    psplusNames,
+    popularTitles: popular.map(row => row && row.title).filter(Boolean)
+  };
+}
+
+function renderGuide(res, key) {
+  res.render('guide', {
+    model: guidePages.build(key, guidePageInput()),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
+}
+
+app.get('/how-it-works', (req, res) => renderGuide(res, 'how'));
+
+app.get('/guides', (req, res) => {
+  res.render('guides', {
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
 });
+
+app.get('/guides/trophy-vs-non-trophy-vs-ps4-primary', (req, res) => renderGuide(res, 'trophy'));
+
+app.get('/guides/ps-plus-deluxe-vs-renting', (req, res) => renderGuide(res, 'psplus'));
 
 app.get('/faq', (req, res) => {
   res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
