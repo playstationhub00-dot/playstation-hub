@@ -120,9 +120,8 @@
         <span class="usd-plat-chip"><%= game.platform %></span>
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
       </div>
-      <h1 class="usd-title"><%= gdSeo.heading %></h1>
-      <p class="seo-intro"><%= gdSeo.intro %></p>
-      <p class="seo-intro"><%- include('partials/swap-line') %></p>
+      <%# Visible title only. "Rent … in the Philippines" stays in the title tag, meta description, Open Graph tags, and JSON-LD. %>
+      <h1 class="usd-title"><%= game.title %></h1>
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>

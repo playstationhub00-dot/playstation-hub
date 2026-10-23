@@ -529,15 +529,18 @@ async function main() {
     const res = await call('/game/elden-ring?utm_source=google');
     assert.strictEqual(res.status, 200);
     assert.strictEqual(titleOf(res.body), 'Rent Elden Ring PS5 – from ₱349 | PlayStation Hub');
-    assert.ok(res.body.includes('<h1 class="usd-title">Rent Elden Ring for PS5 in the Philippines</h1>'));
+    assert.ok(res.body.includes('<h1 class="usd-title">Elden Ring</h1>'));
+    assert.strictEqual((res.body.match(/<h1\b/g) || []).length, 1);
+    assert.ok(!res.body.includes('class="seo-intro"'));
     assert.ok(res.body.includes('id="price-7">₱349'));
     assert.ok(res.body.includes('id="price-30"><span class="gd-dur-price-orig">₱799</span> ₱719'));
     assert.ok(!jsonLd(res.body).some(b => b['@type'] === 'FAQPage'));
     const eldenDesc = (res.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
     assert.ok(!eldenDesc.includes('PS4 Primary'), eldenDesc);
     assert.strictEqual(canonicalOf(res.body), 'https://www.playstation-hub.com/game/elden-ring');
-    assert.ok(res.body.includes('Rent Elden Ring for PS5 in the Philippines from ₱349'));
-    assert.ok(res.body.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
+    assert.ok(eldenDesc.includes('Rent Elden Ring for PS5 in the Philippines from ₱349'), eldenDesc);
+    assert.ok(res.body.includes('property="og:description" content="' + eldenDesc + '"'));
+    assert.ok(!res.body.includes('Unlimited FREE game changes while your rental is active (2-day cooldown between swaps, subject to slot availability).'));
     assert.ok(res.body.includes('property="og:image" content="https://www.playstation-hub.com/uploads/1.png"'));
     assert.ok(/<img[^>]*class="gd-cover gdh-poster"[^>]*width="/.test(res.body) || /<img[^>]*width="[^"]*"[^>]*class="gd-cover gdh-poster"/.test(res.body));
     const blocks = jsonLd(res.body);
@@ -550,7 +553,8 @@ async function main() {
     assert.ok(titleOf(bothRes.body).includes('PS4/PS5'));
     assert.ok(titleOf(bothRes.body).includes('₱199'));
     assert.ok(bothRes.body.includes('https://image.api.playstation.com/spider.png'));
-    assert.ok(bothRes.body.includes('<h1 class="usd-title">Rent Spider-Man for PS5 &amp; PS4 in the Philippines</h1>'));
+    assert.ok(bothRes.body.includes('<h1 class="usd-title">Spider-Man</h1>'));
+    assert.ok(!bothRes.body.includes('class="seo-intro"'));
     assert.ok(bothRes.body.includes('id="price-7">₱199'));
     const spiderDesc = (bothRes.body.match(/<meta name="description" content="([^"]*)"/) || [])[1] || '';
     assert.ok(spiderDesc.includes('PS4 Primary'), spiderDesc);
@@ -561,11 +565,11 @@ async function main() {
 
   await okAsync('priority game pages render the brief title, FAQ, and prices without JavaScript', async () => {
     const pages = [
-      ['/game/ghost-of-yotei', 'Rent Ghost of Yotei PS5 Philippines – from ₱249 | PS Hub', 'Rent Ghost of Yotei for PS5 in the Philippines', '₱249'],
-      ['/game/resident-evil-requiem', 'Rent Resident Evil Requiem PS5 Philippines – ₱349 | PS Hub', 'Rent Resident Evil Requiem for PS5 in the Philippines', '₱349'],
-      ['/game/007-first-light', 'Rent 007 First Light PS5 Philippines – from ₱349 | PS Hub', 'Rent 007 First Light for PS5 in the Philippines', '₱349'],
-      ['/game/crimson-desert', 'Rent Crimson Desert PS5 Philippines – from ₱349 | PS Hub', 'Rent Crimson Desert for PS5 in the Philippines', '₱349'],
-      ['/game/battlefield-6', 'Rent Battlefield 6 PS5 Philippines – from ₱249 | PS Hub', 'Rent Battlefield 6 for PS5 in the Philippines', '₱249']
+      ['/game/ghost-of-yotei', 'Rent Ghost of Yotei PS5 Philippines – from ₱249 | PS Hub', 'Ghost of Yotei', '₱249'],
+      ['/game/resident-evil-requiem', 'Rent Resident Evil Requiem PS5 Philippines – ₱349 | PS Hub', 'Resident Evil Requiem', '₱349'],
+      ['/game/007-first-light', 'Rent 007 First Light PS5 Philippines – from ₱349 | PS Hub', '007 First Light', '₱349'],
+      ['/game/crimson-desert', 'Rent Crimson Desert PS5 Philippines – from ₱349 | PS Hub', 'Crimson Desert', '₱349'],
+      ['/game/battlefield-6', 'Rent Battlefield 6 PS5 Philippines – from ₱249 | PS Hub', 'Battlefield 6', '₱249']
     ];
     for (const [p, title, h1, weekly] of pages) {
       const res = await call(p);
@@ -573,6 +577,9 @@ async function main() {
       assert.strictEqual(titleOf(res.body), title);
       assert.ok(title.length >= 51 && title.length <= 58, title + ' ' + title.length);
       assert.ok(res.body.includes('<h1 class="usd-title">' + h1 + '</h1>'), h1);
+      assert.strictEqual((res.body.match(/<h1\b/g) || []).length, 1, p);
+      assert.ok(!res.body.includes('class="seo-intro"'), p);
+      assert.ok(!res.body.includes('<h1 class="usd-title">Rent '), p);
       assert.ok(res.body.includes('id="price-7">' + weekly), p);
       assert.ok(!res.body.includes('id="price-7">—'), p);
       assert.ok(!res.body.includes('id="price-30">—'), p);
