@@ -3368,8 +3368,31 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .oq-group-n { font-variant-numeric:tabular-nums; background:#1a1a1a; color:#aaa; border-radius:20px; padding:0.05rem 0.5rem; font-size:0.7rem; }
 .oq-group-sub { font-size:0.7rem; font-weight:600; color:#666; }
 .oq-group-now .oq-row { border-left:3px solid var(--ps-blue); }
-.oq-group-refunds .oq-row, .oq-group-followups .oq-row { border-left:3px solid #f59e0b; }
-.oq-group-waitlist .oq-row { border-left:3px solid #3a3a3a; }
+.oq-group-refunds .oq-row { border-left:3px solid #f59e0b; }
+/* By game: one card per game + account type (views/partials/admin/orders/needs-you.ejs). */
+.oq-group-bygame { margin-top: 0.2rem; }
+.oq-card { background: #111; border: 1px solid #242424; border-radius: 12px; margin-bottom: 0.5rem; }
+.oq-card-free { border-color: rgba(34,197,94,0.45); }
+.oq-card-h { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; list-style: none; cursor: pointer; padding: 0.65rem 0.85rem; }
+.oq-card-h::-webkit-details-marker { display: none; }
+.oq-card-h::before { content: '▸'; color: #666; font-size: 0.7rem; transition: transform 0.15s; }
+.oq-card[open] > .oq-card-h::before { transform: rotate(90deg); }
+.oq-card-title { font-weight: 800; color: #f2f2f2; font-size: 0.88rem; }
+.oq-card-type { font-size: 0.7rem; font-weight: 700; border-radius: 20px; padding: 0.08rem 0.55rem; }
+.oq-card-type-tr { background: rgba(255,196,0,0.12); color: #ffc400; }
+.oq-card-type-nt { background: rgba(124,92,255,0.15); color: #b9a6ff; }
+.oq-card-type-ps4 { background: #1e1e1e; color: #aaa; }
+.oq-card-free-tag { font-size: 0.7rem; font-weight: 800; border-radius: 20px; padding: 0.08rem 0.55rem; background: rgba(34,197,94,0.15); color: #22c55e; }
+.oq-card-n { margin-left: auto; font-size: 0.72rem; font-weight: 600; color: #888; white-space: nowrap; }
+.oq-card-body { padding: 0 0.7rem 0.3rem; }
+.oq-card-lbl { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #777; margin: 0.35rem 0.15rem 0.45rem; }
+.oq-row-wait { border-left: 3px solid #3a3a3a; }
+.oq-row-follow { border-left: 3px solid #f59e0b; }
+body.light-mode .oq-card { background: #fff; border-color: #e2e2e2; }
+body.light-mode .oq-card-free { border-color: rgba(22,163,74,0.5); }
+body.light-mode .oq-card-title { color: #111; }
+body.light-mode .oq-card-n, body.light-mode .oq-card-lbl { color: #666; }
+@media (max-width: 600px) { .oq-card-n { margin-left: 0; width: 100%; white-space: normal; } }
 .oq-group-released .oq-row { border-left:3px solid #22c55e; }
 
 /* Rows, shared by all four groups. */

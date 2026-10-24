@@ -9,6 +9,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
+const { buildBoard } = require('../lib/needs-you-board');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -22,6 +23,7 @@ const lo = (ref, state, extra) => Object.assign({
 }, extra || {});
 
 function fixture(over) {
+  let f;
   const ledgerOrders = [
     lo('PH-0201', 'active'),
     lo('PH-0202', 'closed', { is_buy: true }),
@@ -30,7 +32,7 @@ function fixture(over) {
     lo('PH-0205', 'cancelled'),
     lo('PH-0206', 'awaiting_return', { deposit_due: 100 })
   ];
-  return Object.assign({
+  f = Object.assign({
     orderQueue: [
       lo('PH-0101', 'verifying_payment', { created_at: '2026-09-20T01:00:00Z', fb_name: 'Ana Cruz', payment_method: 'gcash', payment_proof: '/uploads/r.png' }),
       lo('PH-0102', 'qr_pending', { created_at: '2026-09-22T01:00:00Z', qr_expires_at: '2026-09-25T10:00:00Z', qr_code: 'ABCD-EFGH', fb_name: 'Ben Reyes', account_type: 'tr', days: 7, deposit_due: 100, psid: '123' }),
@@ -42,8 +44,8 @@ function fixture(over) {
       lo('PH-0131', 'awaiting_qr', { released_at: '2026-09-26T02:00:00Z', fb_name: 'Jon Reyes', game_title: 'Phantom Blade Zero', is_buy: true, days: null, release_msg: '🎮 Phantom Blade Zero is out! Your reservation PH-0131 is ready.' })
     ],
     abandonedOrders: [
-      lo('PH-0110', 'awaiting_payment', { created_at: '2026-09-20T00:00:00Z', fb_name: 'Eli Tan' }),
-      lo('PH-0111', 'payment_rejected', { created_at: '2026-09-24T00:00:00Z', fb_name: 'Fay Ong', account_type: 'tr', days: 7, deposit_due: 100, psid: '456' })
+      lo('PH-0110', 'awaiting_payment', { game_id: 5, created_at: '2026-09-20T00:00:00Z', fb_name: 'Eli Tan' }),
+      lo('PH-0111', 'payment_rejected', { game_id: 5, created_at: '2026-09-24T00:00:00Z', fb_name: 'Fay Ong', account_type: 'tr', days: 7, deposit_due: 100, psid: '456' })
     ],
     waitlistOrders: [
       lo('PH-0120', 'waitlisted', { game_id: 5, created_at: '2026-09-10T00:00:00Z', fb_name: 'Gio Yu', queuePosition: 2 }),
@@ -63,6 +65,12 @@ function fixture(over) {
     paymongoHealth: { ok_count: 9, fail_count: 0, last_ok_at: '2026-09-20T03:23:00Z' },
     settings: { owner_online: true, payment_methods: [{ key: 'gcash', label: 'GCash', enabled: true }] }
   }, over || {});
+  // server.js builds the board from these same two lists; a test that passes
+  // its own orderBoard (or slotsFree) keeps it.
+  if (!f.orderBoard) {
+    f.orderBoard = buildBoard({ waitlist: f.waitlistOrders, followUps: f.abandonedOrders, slotsFree: f.slotsFree || {} });
+  }
+  return f;
 }
 
 function render(over) {
@@ -95,20 +103,23 @@ ok('Do now: live QR first, then oldest first', () => {
   assert.deepStrictEqual(refsIn(groupBlock(html, 'now')), ['PH-0102', 'PH-0101', 'PH-0103']);
 });
 
-ok('Follow-ups newest first; Waitlist priority first', () => {
-  assert.deepStrictEqual(refsIn(groupBlock(html, 'followups')), ['PH-0111', 'PH-0110']);
-  assert.deepStrictEqual(refsIn(groupBlock(html, 'waitlist')), ['PH-0121', 'PH-0120']);
+ok('By game: one card per game + type; waiting priority first, then follow-ups newest first', () => {
+  const board = groupBlock(html, 'bygame');
+  assert.deepStrictEqual(refsIn(board), ['PH-0121', 'PH-0120', 'PH-0110', 'PH-0111']);
+  assert.deepStrictEqual([...board.matchAll(/data-oq-card="([^"]+)"/g)].map(m => m[1]), ['5|nt', '5|tr']);
 });
 
-ok('Do now and Refunds start open; Follow-ups and Waitlist start collapsed', () => {
+ok('Do now, Refunds and By game start open; the old Follow-ups and Waitlist groups are gone', () => {
   assert.ok(html.includes('data-oq-group="now" open>'));
   assert.ok(html.includes('data-oq-group="refunds" open>'));
-  assert.ok(html.includes('data-oq-group="followups">'));
-  assert.ok(html.includes('data-oq-group="waitlist">'));
+  assert.ok(html.includes('data-oq-group="bygame" open>'));
+  assert.ok(!html.includes('data-oq-group="followups"') && !html.includes('data-oq-group="waitlist"'));
 });
 
-ok('the Follow-ups heading carries the weekly funnel line', () => {
-  assert.ok(groupBlock(html, 'followups').includes('2 of 5 started this week · 12% of game views'));
+ok('the By game heading: total, waiting and didn\'t-pay counts, then the weekly funnel line', () => {
+  const h = /<summary class="oq-group-h"><span class="oq-group-name">By game<\/span>[\s\S]*?<\/summary>/.exec(groupBlock(html, 'bygame'))[0];
+  assert.ok(h.includes('<span class="oq-group-n">4</span>'));
+  assert.ok(h.includes('<span class="oq-group-sub">2 waiting · 2 didn&#39;t pay · 2 of 5 started this week · 12% of game views</span>'));
 });
 
 ok('the QR countdown and the ages are still rendered for the script to tick', () => {
@@ -202,11 +213,62 @@ ok('Payment link appears only when a PayMongo key is configured', () => {
   }
 });
 
+console.log('\nBy game cards');
+
+// One card's markup, from its <details> to the next card or the board's end.
+function cardBlock(s, key) {
+  const start = s.indexOf('data-oq-card="' + key + '"');
+  if (start < 0) return '';
+  const next = s.indexOf('data-oq-card="', start + 10);
+  return s.slice(start, next > 0 ? next : undefined);
+}
+
+ok('a card line: title, type tag and counts; a section per kind of person', () => {
+  const nt = cardBlock(html, '5|nt');
+  assert.ok(nt.includes('<span class="oq-card-title">Tekken 8</span>'));
+  assert.ok(nt.includes('<span class="oq-card-type oq-card-type-nt">Non-Trophy</span>'));
+  assert.ok(nt.includes('<span class="oq-card-n">2 waiting · 1 didn&#39;t pay</span>'));
+  assert.ok(nt.includes('<div class="oq-card-lbl">Waiting · 2</div>') && nt.includes('<div class="oq-card-lbl">Started, didn\'t pay · 1</div>'));
+  const tr = cardBlock(html, '5|tr');
+  assert.ok(tr.includes('<span class="oq-card-type oq-card-type-tr">Trophy</span>') && tr.includes('<span class="oq-card-n">1 didn&#39;t pay</span>'));
+  assert.ok(!tr.includes('Waiting ·'), 'no empty section');
+});
+
+ok('rows drop the game and type the card already shows; the copied messages keep them', () => {
+  const nt = cardBlock(html, '5|nt');
+  assert.ok(!/<div class="oq-meta">\s*Tekken 8/.test(nt), 'no game in the meta line');
+  assert.ok(/<div class="oq-meta">\s*Monthly ·\s*⭐ Priority — paid/.test(nt));
+  assert.ok(/<div class="oq-meta">\s*Monthly · ₱349/.test(nt));
+  assert.ok(nt.includes('A slot just opened up for Tekken 8 (Non-Trophy, Monthly)'));
+  assert.ok(nt.includes('🎮 Tekken 8 (Non-Trophy)'));
+});
+
+ok('a card with a free slot is tagged, goes first and starts open; the others start folded', () => {
+  const freeHtml = render({ slotsFree: { '5|tr': 2 } });
+  const board = groupBlock(freeHtml, 'bygame');
+  assert.deepStrictEqual([...board.matchAll(/data-oq-card="([^"]+)"/g)].map(m => m[1]), ['5|tr', '5|nt']);
+  assert.ok(board.includes('<details class="oq-card oq-card-free" data-oq-card="5|tr" open>'));
+  assert.ok(cardBlock(freeHtml, '5|tr').includes('<span class="oq-card-free-tag">🟢 2 slots free</span>'));
+  assert.ok(board.includes('<details class="oq-card" data-oq-card="5|nt">'));
+  const one = render({ slotsFree: { '5|nt': 1 } });
+  assert.ok(cardBlock(one, '5|nt').includes('🟢 1 slot free</span>'));
+});
+
+ok('Coming Soon and box-set cards say so; nothing to show means no board', () => {
+  const kinds = render({ waitlistOrders: [], abandonedOrders: [
+    lo('PH-0140', 'awaiting_payment', { game_id: 'upcoming_4', game_title: 'Ghost of Yotei', account_type: 'tr', is_reservation: true }),
+    lo('PH-0141', 'awaiting_payment', { game_id: 'bundle_2', game_title: 'Spider-Man Box', is_buy: true, days: null })
+  ] });
+  assert.ok(cardBlock(kinds, 'upcoming_4|tr').includes('<span class="oq-card-n">1 didn&#39;t pay · Coming Soon</span>'));
+  assert.ok(cardBlock(kinds, 'bundle_2|nt').includes('<span class="oq-card-n">1 didn&#39;t pay · Box set</span>'));
+  assert.ok(!render({ waitlistOrders: [], abandonedOrders: [] }).includes('data-oq-group="bygame"'));
+});
+
 console.log('\nwaitlist: slot given and edit name');
 
 ok('✅ Slot given is a visible button on free and priority rows, with its confirm', () => {
   const R = r => '&#34;' + r + '&#34;';
-  const visible = outsideMenus(groupBlock(html, 'waitlist'));
+  const visible = outsideMenus(groupBlock(html, 'bygame'));
   [['PH-0120', 'Gio Yu'], ['PH-0121', 'Hana Go']].forEach(([ref, name]) => {
     assert.ok(visible.includes('action="/admin/orders/' + ref + '/slot-given"'), ref);
     assert.ok(visible.includes("onsubmit=\"return confirm('Mark the slot as given to ' + " + R(name) + " + ' (' + " + R(ref) + " + ')?\\n\\nThey leave the line and the record is kept. A ₱100 priority fee stops counting as money — it\\'s already in the rent you recorded.');\""), ref + ' confirm');
@@ -215,14 +277,14 @@ ok('✅ Slot given is a visible button on free and priority rows, with its confi
 });
 
 ok('✏️ Edit name sits in every Waitlist row\'s ⋯ menu, prefilled with the name', () => {
-  const inMenus = menus(groupBlock(html, 'waitlist'));
+  const inMenus = menus(groupBlock(html, 'bygame'));
   [['PH-0120', 'Gio Yu'], ['PH-0121', 'Hana Go']].forEach(([ref, name]) => {
     assert.ok(inMenus.includes('<form method="POST" action="/admin/orders/' + ref + '/rename" class="oq-rename">'), ref);
     assert.ok(inMenus.includes('<input type="text" id="oqName-' + ref + '" name="fb_name" value="' + name + '" maxlength="80" required class="oq-rename-input">'), ref + ' input');
   });
-  assert.ok(!outsideMenus(groupBlock(html, 'waitlist')).includes('/rename'), 'not outside the menu');
+  assert.ok(!outsideMenus(groupBlock(html, 'bygame')).includes('/rename'), 'not outside the menu');
   const paidOnSite = render({ waitlistOrders: [lo('PH-0122', 'reserved', { game_id: 5, fb_name: 'Ivo Paz', queuePosition: 1 })] });
-  const m = menus(groupBlock(paidOnSite, 'waitlist'));
+  const m = menus(groupBlock(paidOnSite, 'bygame'));
   assert.ok(m.includes('action="/admin/orders/PH-0122/rename"') && !m.includes('undo-priority'));
 });
 

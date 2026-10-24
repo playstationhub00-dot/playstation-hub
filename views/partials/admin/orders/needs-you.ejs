@@ -1,7 +1,8 @@
 <%#
-  Needs You: every row that wants a click from the owner, in five groups —
+  Needs You: every row that wants a click from the owner, in four groups —
   Do now, Just released (reservations a release moved on to sign-in),
-  Refunds owed, Follow-ups (started but didn't pay) and Waitlist.
+  Refunds owed, and By game: the Waitlist and the Follow-ups (started but
+  didn't pay) as one card per game + account type (lib/needs-you-board.js).
   Each row's content, forms, routes and confirm prompts are the ones its old
   standalone zone had; only the grouping and the button weight changed. Rare
   or destructive actions sit behind the ⋯ menu. public/js/admin-orders.js
@@ -35,26 +36,15 @@
   // the message, it is the customer's move.
   const nyReleased = [...(typeof releasedOrders !== 'undefined' && releasedOrders ? releasedOrders : [])]
     .sort((a, b) => String(b.released_at || '').localeCompare(String(a.released_at || '')));
-  const nyFollowUps = [...(abandonedOrders || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  // Priority first, then free — the tier order queueRules.buildQueue numbers
-  // them in, so this list can never show a priority customer beneath a free
-  // entry. Within a tier, oldest first. Grouped per game + account type,
-  // because that is the scope a slot actually opens in.
-  const nyWaitlist = [...(waitlistOrders || [])].sort((a, b) => {
-    const ka = String(a.game_id) + '|' + a.account_type;
-    const kb = String(b.game_id) + '|' + b.account_type;
-    if (ka !== kb) return ka < kb ? -1 : 1;
-    const ta = a.state === 'reserved' ? 0 : 1;
-    const tb = b.state === 'reserved' ? 0 : 1;
-    if (ta !== tb) return ta - tb;
-    const da = Date.parse(a.created_at || '') || 0;
-    const db = Date.parse(b.created_at || '') || 0;
-    if (da !== db) return da - db;
-    return String(a.ref).localeCompare(String(b.ref));
-  });
+  // Waitlist + Follow-ups, already grouped and ordered by server.js with
+  // lib/needs-you-board.js: cards with a free slot first, then most people.
+  const nyBoard = (typeof orderBoard !== 'undefined' && orderBoard) || [];
+  const nyWaitingN = nyBoard.reduce((n, c) => n + c.waiting.length, 0);
+  const nyFollowN = nyBoard.reduce((n, c) => n + c.followUps.length, 0);
   // Only the groups that have to be cleared count toward the headline (and
   // the sidebar badge in views/admin.ejs). Follow-ups and the waitlist never
-  // "finish" the way a payment check does, so they carry their own counts.
+  // "finish" the way a payment check does, so the By game board carries its
+  // own counts.
   const nyCount = nyDoNow.length + nyRefunds.length;
   const nyMethods = ((settings && settings.payment_methods) || []).filter(m => m.enabled).map(m => m.label);
   const nyPayLine = nyMethods.length
@@ -71,7 +61,7 @@
 <p class="oq-group-sub" id="promoWeekLine">Promos this week: <%= promoWeek.banner %> banner views · <%= promoWeek.page %> promos page views · <%= promoWeek.orders %> orders used a promo</p>
 <% } %>
 
-<% if (!nyDoNow.length && !nyReleased.length && !nyRefunds.length && !nyFollowUps.length && !nyWaitlist.length) { %>
+<% if (!nyDoNow.length && !nyReleased.length && !nyRefunds.length && !nyBoard.length) { %>
 <div class="oq-empty">Nothing waiting on you right now.</div>
 <% } %>
 
@@ -204,68 +194,31 @@
 </details>
 <% } %>
 
-<% if (nyFollowUps.length) { %>
-<details class="oq-group oq-group-followups" data-oq-group="followups">
-  <summary class="oq-group-h"><span class="oq-group-name">Follow-ups</span><span class="oq-group-n"><%= nyFollowUps.length %></span><% if (nyFunnel) { %><span class="oq-group-sub"><%= nyFunnel %></span><% } %></summary>
-  <% nyFollowUps.forEach(o => {
-    const abTypeLabel = nyType(o.account_type);
-    const abDurLabel = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
-    const abTotal = (o.amount_due || 0) + (o.deposit_due || 0);
-    const firstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
-    const followUpMsg = '👋 Hi ' + firstName + '! Saw you started an order with us —\n\n'
-      + '🎮 ' + o.game_title + ' (' + abTypeLabel + ')\n'
-      + (o.is_buy ? '🛒 One-time purchase\n' : '⏱ ' + abDurLabel + ' rental\n')
-      + '💰 Total: ₱' + abTotal + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
-      + '🔖 Reference: ' + o.ref + '\n\n'
-      + 'Still want it? ' + nyPayLine + '\n\n'
-      + 'No worries if you changed your mind, just let us know!';
+<% if (nyBoard.length) { %>
+<%# One card per game + account type: who is waiting for that slot and who
+    started an order for it but didn't pay. A card with a free slot starts
+    open; public/js/admin-orders.js remembers each card the owner opens or
+    closes, keyed by its data-oq-card. %>
+<details class="oq-group oq-group-bygame" data-oq-group="bygame" open>
+  <summary class="oq-group-h"><span class="oq-group-name">By game</span><span class="oq-group-n"><%= nyWaitingN + nyFollowN %></span><span class="oq-group-sub"><%= [nyWaitingN ? nyWaitingN + ' waiting' : '', nyFollowN ? nyFollowN + " didn't pay" : '', nyFunnel].filter(Boolean).join(' · ') %></span></summary>
+  <% nyBoard.forEach(card => {
+    const cardCount = [
+      card.waiting.length ? card.waiting.length + ' waiting' : '',
+      card.followUps.length ? card.followUps.length + " didn't pay" : '',
+      card.kind === 'upcoming' ? 'Coming Soon' : card.kind === 'bundle' ? 'Box set' : ''
+    ].filter(Boolean).join(' · ');
   %>
-  <div class="oq-row">
-    <div class="oq-main">
-      <div class="oq-top">
-        <span class="oq-ref"><%= o.ref %></span>
-        <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
-        <% if (reminded) { %><span class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span><% } %>
-        <span class="oq-ab-name"><%= o.fb_name %></span>
-        <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
-      </div>
-      <div class="oq-meta">
-        <%= o.game_title %> · <%= abTypeLabel %> · <%= abDurLabel %> · ₱<%= abTotal %>
-        <% if (o.state === 'payment_rejected') { %>· <span class="oq-ab-rejected">payment rejected</span><% } %>
-        <%# Only present when they arrived via the Messenger bot; a customer who
-            typed straight into the website has no psid to open a thread with. %>
-        <% if (o.psid) { %>· <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a><% } %>
-      </div>
-    </div>
-    <div class="oq-actions">
-      <button type="button" class="oq-btn-ghost rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
-      <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
-        <button type="submit" class="oq-btn-go" title="Confirm this order was paid outside the site">✅ Mark paid</button>
-      </form>
-      <details class="oq-more">
-        <summary class="oq-more-btn" title="More actions" aria-label="More actions">⋯</summary>
-        <div class="oq-more-menu">
-          <% if (process.env.PAYMONGO_SECRET_KEY) { %>
-          <button type="button" class="oq-more-item oq-paylink" data-ref="<%= o.ref %>" title="Create a PayMongo checkout link and copy it — paste into Messenger">💳 Payment link</button>
-          <% } %>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Cancel order ' + <%= JSON.stringify(o.ref) %> + '? The customer said no or never followed up. The record is kept, unlike Delete.');">
-            <button type="submit" class="oq-more-item" title="Cancel this order — the customer declined or never paid">Cancel</button>
-          </form>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out duplicate or accidental orders. This cannot be undone.');">
-            <button type="submit" class="oq-more-item oq-more-danger" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
-          </form>
-        </div>
-      </details>
-    </div>
-  </div>
-  <% }) %>
-</details>
-<% } %>
-
-<% if (nyWaitlist.length) { %>
-<details class="oq-group oq-group-waitlist" data-oq-group="waitlist">
-  <summary class="oq-group-h"><span class="oq-group-name">Waitlist</span><span class="oq-group-n"><%= nyWaitlist.length %></span></summary>
-  <% nyWaitlist.forEach(o => {
+  <details class="oq-card<%= card.slotsFree ? ' oq-card-free' : '' %>" data-oq-card="<%= card.key %>"<%= card.slotsFree ? ' open' : '' %>>
+    <summary class="oq-card-h">
+      <span class="oq-card-title"><%= card.title %></span>
+      <span class="oq-card-type oq-card-type-<%= card.type %>"><%= nyType(card.type) %></span>
+      <% if (card.slotsFree) { %><span class="oq-card-free-tag">🟢 <%= card.slotsFree %> slot<%= card.slotsFree === 1 ? '' : 's' %> free</span><% } %>
+      <span class="oq-card-n"><%= cardCount %></span>
+    </summary>
+    <div class="oq-card-body">
+  <% if (card.waiting.length) { %>
+  <div class="oq-card-lbl">Waiting · <%= card.waiting.length %></div>
+  <% card.waiting.forEach(o => {
     const wlTypeLabel = nyType(o.account_type);
     const wlDurLabel = o.days === 7 ? 'Weekly' : 'Monthly';
     const wlFirstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
@@ -274,7 +227,7 @@
       + '🔖 Reference: ' + o.ref;
     const wlPriority = o.state === 'reserved';
   %>
-  <div class="oq-row">
+  <div class="oq-row oq-row-wait">
     <div class="oq-main">
       <div class="oq-top">
         <%# queuePosition comes from queueRules.buildQueue on the server — the
@@ -287,7 +240,7 @@
         <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
       </div>
       <div class="oq-meta">
-        <%= o.game_title %> · <%= wlTypeLabel %> · <%= wlDurLabel %> ·
+        <%= wlDurLabel %> ·
         <%= wlPriority ? '⭐ Priority — paid' : 'Free entry' %><%= o.queueExpired ? ' · waiting 30+ days' : '' %>
       </div>
     </div>
@@ -332,6 +285,65 @@
       </details>
     </div>
   </div>
+  <% }) %>
+  <% } %>
+  <% if (card.followUps.length) { %>
+  <div class="oq-card-lbl">Started, didn't pay · <%= card.followUps.length %></div>
+  <% card.followUps.forEach(o => {
+    const abTypeLabel = nyType(o.account_type);
+    const abDurLabel = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
+    const abTotal = (o.amount_due || 0) + (o.deposit_due || 0);
+    const firstName = (o.fb_name || '').trim().split(/\s+/)[0] || 'there';
+    const followUpMsg = '👋 Hi ' + firstName + '! Saw you started an order with us —\n\n'
+      + '🎮 ' + o.game_title + ' (' + abTypeLabel + ')\n'
+      + (o.is_buy ? '🛒 One-time purchase\n' : '⏱ ' + abDurLabel + ' rental\n')
+      + '💰 Total: ₱' + abTotal + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
+      + '🔖 Reference: ' + o.ref + '\n\n'
+      + 'Still want it? ' + nyPayLine + '\n\n'
+      + 'No worries if you changed your mind, just let us know!';
+  %>
+  <div class="oq-row oq-row-follow">
+    <div class="oq-main">
+      <div class="oq-top">
+        <span class="oq-ref"><%= o.ref %></span>
+        <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
+        <% if (reminded) { %><span class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span><% } %>
+        <span class="oq-ab-name"><%= o.fb_name %></span>
+        <span class="oq-ab-age" data-created="<%= o.created_at %>">--</span>
+      </div>
+      <div class="oq-meta">
+        <%= abDurLabel %> · ₱<%= abTotal %>
+        <% if (o.state === 'payment_rejected') { %>· <span class="oq-ab-rejected">payment rejected</span><% } %>
+        <%# Only present when they arrived via the Messenger bot; a customer who
+            typed straight into the website has no psid to open a thread with. %>
+        <% if (o.psid) { %>· <a class="oq-thread" href="https://www.facebook.com/messages/t/<%= o.psid %>" target="_blank" rel="noopener">open chat →</a><% } %>
+      </div>
+    </div>
+    <div class="oq-actions">
+      <button type="button" class="oq-btn-ghost rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
+      <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
+        <button type="submit" class="oq-btn-go" title="Confirm this order was paid outside the site">✅ Mark paid</button>
+      </form>
+      <details class="oq-more">
+        <summary class="oq-more-btn" title="More actions" aria-label="More actions">⋯</summary>
+        <div class="oq-more-menu">
+          <% if (process.env.PAYMONGO_SECRET_KEY) { %>
+          <button type="button" class="oq-more-item oq-paylink" data-ref="<%= o.ref %>" title="Create a PayMongo checkout link and copy it — paste into Messenger">💳 Payment link</button>
+          <% } %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Cancel order ' + <%= JSON.stringify(o.ref) %> + '? The customer said no or never followed up. The record is kept, unlike Delete.');">
+            <button type="submit" class="oq-more-item" title="Cancel this order — the customer declined or never paid">Cancel</button>
+          </form>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out duplicate or accidental orders. This cannot be undone.');">
+            <button type="submit" class="oq-more-item oq-more-danger" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
+          </form>
+        </div>
+      </details>
+    </div>
+  </div>
+  <% }) %>
+  <% } %>
+    </div>
+  </details>
   <% }) %>
 </details>
 <% } %>
