@@ -113,8 +113,12 @@ ok('true for any chip, type or non-blank search; false for defaults and whitespa
 console.log('\nnormalizeGroups()');
 
 ok('keeps only known groups with boolean values', () => {
-  assert.deepStrictEqual(plain(F.normalizeGroups({ now: false, waitlist: true, followups: 'yes', bogus: true })),
-    { now: false, waitlist: true });
+  assert.deepStrictEqual(plain(F.normalizeGroups({ now: false, bygame: true, refunds: 'yes', bogus: true })),
+    { now: false, bygame: true });
+});
+
+ok('the old Follow-ups and Waitlist groups are forgotten — the By game board replaced them', () => {
+  assert.deepStrictEqual(plain(F.normalizeGroups({ followups: true, waitlist: false })), {});
 });
 
 ok('anything that is not an object is an empty object', () => {
@@ -124,6 +128,28 @@ ok('anything that is not an object is an empty object', () => {
 
 ok('remembers the Just released group too', () => {
   assert.deepStrictEqual(plain(F.normalizeGroups({ released: false })), { released: false });
+});
+
+console.log('\nnormalizeCards()');
+
+ok('keeps game_id|type keys with boolean values, for every kind of card', () => {
+  assert.deepStrictEqual(plain(F.normalizeCards({
+    '3|nt': true, '12|tr': false, 'psplus|ps4': true, 'upcoming_4|tr': false, 'bundle_2|nt': true
+  })), { '3|nt': true, '12|tr': false, 'psplus|ps4': true, 'upcoming_4|tr': false, 'bundle_2|nt': true });
+});
+
+ok('drops anything else: other values, unknown types, odd keys', () => {
+  assert.deepStrictEqual(plain(F.normalizeCards({
+    '3|nt': 'yes', '3|xx': true, '3': true, '<b>|nt': true, '3|tr|x': true, '7|tr': false
+  })), { '7|tr': false });
+  assert.deepStrictEqual(plain(F.normalizeCards(null)), {});
+  assert.deepStrictEqual(plain(F.normalizeCards('x')), {});
+});
+
+ok('keeps at most 300 cards so the memory cannot grow without end', () => {
+  const many = {};
+  for (let i = 0; i < 400; i++) many[i + '|nt'] = true;
+  assert.strictEqual(Object.keys(plain(F.normalizeCards(many))).length, 300);
 });
 
 console.log('\nwiring');

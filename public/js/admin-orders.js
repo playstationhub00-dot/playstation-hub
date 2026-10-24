@@ -1,5 +1,5 @@
 // Admin → Orders tab: ledger filters (status chip, type, search) that persist
-// for the session, Needs You group open/closed memory, the QR countdowns and
+// for the session, Needs You group and By game card open/closed memory, the QR countdowns and
 // "x ago" ages, and the Payment link button. Loaded on the admin page; the
 // page wiring is skipped when there is no document (the test sandbox).
 (function () {
@@ -7,9 +7,14 @@
 
   var CHIPS = ['all', 'out', 'paid', 'unpaid', 'cancelled'];
   var TYPES = ['all', 'rental', 'purchase', 'reservation'];
-  var GROUP_KEYS = ['now', 'released', 'refunds', 'followups', 'waitlist'];
+  var GROUP_KEYS = ['now', 'released', 'refunds', 'bygame'];
   var LEDGER_KEY = 'oqLedger';
   var GROUPS_KEY = 'oqGroups';
+  // By game cards (views/partials/admin/orders/needs-you.ejs data-oq-card):
+  // '<game_id>|<type>', e.g. '3|nt', 'psplus|tr', 'upcoming_4|tr'.
+  var CARDS_KEY = 'oqCards';
+  var CARD_KEY_RE = /^[A-Za-z0-9_]{1,40}\|(tr|nt|ps4)$/;
+  var MAX_CARDS = 300;
 
   // Anything read back from storage is untrusted: unknown values fall back to
   // defaults rather than filtering the ledger down to nothing.
@@ -53,12 +58,26 @@
     return out;
   }
 
+  // Same rule for the cards: only well-formed keys with boolean values, and a
+  // cap so years of games cannot grow the stored object without end.
+  function normalizeCards(raw) {
+    var out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    var n = 0;
+    Object.keys(raw).forEach(function (k) {
+      if (n >= MAX_CARDS) return;
+      if (CARD_KEY_RE.test(k) && typeof raw[k] === 'boolean') { out[k] = raw[k]; n++; }
+    });
+    return out;
+  }
+
   window.__oqFilter = {
     normalizeLedgerState: normalizeLedgerState,
     orderType: orderType,
     rowMatches: rowMatches,
     isFiltering: isFiltering,
-    normalizeGroups: normalizeGroups
+    normalizeGroups: normalizeGroups,
+    normalizeCards: normalizeCards
   };
 
   // ── Page wiring ──────────────────────────────────────────────────────────
@@ -122,6 +141,22 @@
         var cur = normalizeGroups(readJson('local', GROUPS_KEY));
         cur[key] = d.open;
         writeJson('local', GROUPS_KEY, cur);
+      });
+    });
+  }
+
+  // Each By game card re-opens or folds the way the owner last left it; a
+  // card they never touched keeps the template's default (open when a slot
+  // is free).
+  function initCards() {
+    var saved = normalizeCards(readJson('local', CARDS_KEY));
+    toArray(document.querySelectorAll('details[data-oq-card]')).forEach(function (d) {
+      var key = d.getAttribute('data-oq-card');
+      if (Object.prototype.hasOwnProperty.call(saved, key)) d.open = saved[key];
+      d.addEventListener('toggle', function () {
+        var cur = normalizeCards(readJson('local', CARDS_KEY));
+        cur[key] = d.open;
+        writeJson('local', CARDS_KEY, normalizeCards(cur));
       });
     });
   }
@@ -237,6 +272,7 @@
     setInterval(tick, 1000);
     formatAges();
     initGroups();
+    initCards();
     initLedger();
   }
 
