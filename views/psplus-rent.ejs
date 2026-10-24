@@ -110,7 +110,7 @@
       </div>
 
       <!-- CHOOSE OPTION -->
-      <%- include('partials/queue-line', { queues: queues, activeType: (trAvail ? 'tr' : 'nt'), selfRef: null, selfSession: selfSession, suffix: '' }) %>
+      <%- include('partials/queue-line', { queues: queues, activeType: (trAvail ? 'tr' : 'nt'), selfRef: null, suffix: '' }) %>
       <div class="gd-section-label" style="margin-top:1.5rem;">CHOOSE YOUR OPTION</div>
       <%- include('partials/noslot-options', { game_id: 'psplus', suffix: '', resValMsgId: 'reserveValidationMsg' }) %>
       <% if (order_error === '1') { %>
@@ -194,7 +194,7 @@
             <div class="gd-noslot-sub">Choose how you'd like to get in line.</div>
           </div>
         </div>
-        <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, selfSession: selfSession, suffix: 'Wait' }) %>
+        <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, suffix: 'Wait' }) %>
         <div class="gd-section-label" style="margin-top:1rem;">CHOOSE YOUR OPTION</div>
         <%- include('partials/noslot-options', { game_id: 'psplus', suffix: 'Wait', resValMsgId: 'reserveValidationMsg' }) %>
       </div>

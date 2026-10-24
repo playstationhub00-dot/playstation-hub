@@ -145,10 +145,11 @@ check('an unknown account type is dropped rather than crashing', () => {
   assert.strictEqual(q.tr.length + q.nt.length + q.ps4.length, 0);
 });
 
-check('a row carries a masked name and the raw session id', () => {
+check('a row carries a masked name and no session id', () => {
   const row = queue.buildQueue([entry({ fb_name: 'Aira Santos', session_id: 'abc' })], NOW).tr[0];
   assert.strictEqual(row.name, 'Aira S.');
-  assert.strictEqual(row.sessionId, 'abc');
+  assert.ok(!('sessionId' in row) && !JSON.stringify(row).includes('abc'));
+  assert.strictEqual(row.isSelf, false);
   assert.strictEqual(row.tier, 'free');
 });
 

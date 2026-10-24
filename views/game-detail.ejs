@@ -426,13 +426,13 @@
 
         <!-- The picked type has no slot: one "get in line" card -->
         <div id="reserveSection" style="display:none;">
-          <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, selfSession: selfSession, suffix: '', hideStrip: true }) %>
+          <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, suffix: '', hideStrip: true }) %>
           <%- include('partials/noslot-options', { game_id: game.id, suffix: '', resValMsgId: 'reserveValidationMsg2', variant: 'card' }) %>
         </div>
         <% } else { %>
         <!-- Every type is full: the "get in line" card shown directly -->
         <div id="reserveSectionAll">
-        <%- include('partials/queue-line', { queues: queues, activeType: (trAvail ? 'tr' : (ntAvail ? 'nt' : 'tr')), selfRef: null, selfSession: selfSession, suffix: 'All', hideStrip: true }) %>
+        <%- include('partials/queue-line', { queues: queues, activeType: (trAvail ? 'tr' : (ntAvail ? 'nt' : 'tr')), selfRef: null, suffix: 'All', hideStrip: true }) %>
         <%- include('partials/noslot-options', { game_id: game.id, suffix: 'All', resValMsgId: 'reserveValidationMsg1', variant: 'card' }) %>
         </div>
         <% } %>

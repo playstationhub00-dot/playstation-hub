@@ -45,7 +45,6 @@
   // '<' escape below is what stops a name from closing this script tag.
   var DATA = <%- JSON.stringify(queues || { nt: [], tr: [], ps4: [] }).replace(/</g, '\\u003c') %>;
   var SELF_REF = <%- JSON.stringify(selfRef || null).replace(/</g, '\\u003c') %>;
-  var SELF_SESSION = <%- JSON.stringify(selfSession || null).replace(/</g, '\\u003c') %>;
   // The game page's "get in line" card (noslot-options variant 'card') shows
   // the count and positions itself, so it asks for the strip to stay hidden;
   // the list popout still opens from the card's "View list".
@@ -70,7 +69,7 @@
 
   function isSelf(row) {
     if (SELF_REF && row.ref === SELF_REF) return true;
-    return !!(SELF_SESSION && row.sessionId && row.sessionId === SELF_SESSION);
+    return !!row.isSelf;
   }
 
   window.qlRender = function(suffix, type) {

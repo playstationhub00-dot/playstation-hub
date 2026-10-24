@@ -1669,9 +1669,9 @@ app.get('/ps-plus/rent', async (req, res) => {
   // POST /order/reserve, so the same queue rules apply with no special-casing.
   let queues = { nt: [], tr: [], ps4: [] };
   try {
-    queues = queueRules.buildQueue(await orders.listQueueCandidates('psplus'), new Date());
+    queues = queueRules.buildQueue(await orders.listQueueCandidates('psplus'), new Date(), req.sessionId);
   } catch (e) { console.error('[psplus queue]', e.message); }
-  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null });
+  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues });
 });
 
 // PS Plus admin CRUD
@@ -4923,12 +4923,12 @@ app.get('/game/:slug', async (req, res) => {
   // than throwing, so the page keeps rendering without the queue strip.
   let queues = { nt: [], tr: [], ps4: [] };
   try {
-    queues = queueRules.buildQueue(await orders.listQueueCandidates(game.id), new Date());
+    queues = queueRules.buildQueue(await orders.listQueueCandidates(game.id), new Date(), req.sessionId);
   } catch (e) { console.error('[game queue]', e.message); }
   // One shared pool, sorted so any review naming this game surfaces first. The
   // aggregate counts the whole pool on purpose — it describes the business, so
   // the same figure is true on every game page.
-  res.render('game-detail', Object.assign({ game: resolved, psnView: gamePsnView.buildGamePsnView(resolved), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues, selfSession: req.sessionId || null },
+  res.render('game-detail', Object.assign({ game: resolved, psnView: gamePsnView.buildGamePsnView(resolved), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues },
     reviewBlockLocals(game.title)));
 });
 
