@@ -60,6 +60,16 @@ ok('a stocked request with no matching game stays unlinked', () => {
   assert.strictEqual(link.linkedUrl, null);
 });
 
+ok('a request filed under the old spelling links to the corrected catalogue slug', () => {
+  const link = board.linkStockedRequest(
+    { title: 'Assasins Creed Shadows' },
+    [{ id: 4, title: 'Assassins Creed Shadows' }],
+    []
+  );
+  assert.strictEqual(link.linkKind, 'available');
+  assert.strictEqual(link.linkedUrl, '/game/assassins-creed-shadows');
+});
+
 ok('title match still finds an older stocked request that has no game_id', () => {
   const link = board.linkStockedRequest(
     { title: 'Elden Ring Nightreign' },
