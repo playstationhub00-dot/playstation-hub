@@ -71,6 +71,9 @@ const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const seo = require('./lib/seo');
+const { createStateSync } = require('./lib/state-sync');
+const { createAnalyticsStore, selectHydration } = require('./lib/analytics-store');
+const privateHtmlCache = require('./lib/private-html-cache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -78,6 +81,11 @@ const PORT = process.env.PORT || 3000;
 // cookie keeps it out of the edge cache), so the uncompressed page was
 // Railway egress even when Cloudflare compressed it again for the browser.
 app.use(textCompress());
+// HTML stays out of any shared cache. Cloudflare is not configured to cache
+// these pages; this only stops a shared cache from storing them if one is
+// later pointed at the origin. Sitemap, feeds and static files set their own
+// Cache-Control and are left alone.
+privateHtmlCache.install(app);
 
 // One host in Google's index, and one host on the public internet.
 // playstation-hub.com and the *.up.railway.app hostname both used to answer
@@ -651,17 +659,42 @@ const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Pl
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
+// The local row is what the admin page reads. The Mongo copy is one small
+// insert, not a replacement of the state document.
 function pushCapped(key, row, cap) {
-  db.get(key).push(row).write();
-  const all = db.get(key).value();
-  if (all.length > cap) db.set(key, all.slice(all.length - cap)).write();
+  let oldestKept = null;
+  stateSync.withAnalytics(() => {
+    db.get(key).push(row).write();
+    const all = db.get(key).value();
+    if (all.length > cap) {
+      const kept = all.slice(all.length - cap);
+      oldestKept = kept[0] && kept[0].time;
+      db.set(key, kept).write();
+    }
+  });
+  mirrorAnalytics(key, [row]);
+  if (oldestKept) {
+    analytics.dropOlderThan(key, oldestKept).catch(e => console.error('[analytics] cap', key, e.message));
+  }
 }
 
 // One more robot / webhook hit that was deliberately not counted as a visitor.
+// The day's counter lives in its own collection. It must not upload the
+// catalogue, the visitor log, or anything else in the state document.
 function countSkippedVisit() {
   const day = new Date().toISOString().slice(0, 10);
-  const skips = db.get('visitor_skips').value() || {};
-  db.set(['visitor_skips', day], (skips[day] || 0) + 1).write();
+  stateSync.withAnalytics(() => {
+    const skips = db.get('visitor_skips').value() || {};
+    db.set(['visitor_skips', day], (skips[day] || 0) + 1).write();
+  });
+  if (process.env.MONGODB_URI) {
+    analytics.incSkip(day).catch(e => console.error('[analytics] skip', e.message));
+  }
+}
+
+function mirrorAnalytics(kind, rows) {
+  if (!process.env.MONGODB_URI || !rows || !rows.length) return;
+  analytics.addRows(kind, rows).catch(e => console.error('[analytics]', kind, e.message));
 }
 
 app.use((req, res, next) => {
@@ -700,12 +733,23 @@ app.use((req, res, next) => {
   }
   const visit = { date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid };
   if (attr.capture) Object.assign(visit, attr.fields);
-  db.get('visitors').push(visit).write();
-  // Cap well above realistic traffic volume so All-Time visits actually reflects all
-  // time instead of silently plateauing — lowdb rewrites the whole file per write, so
-  // some ceiling is still needed to avoid unbounded growth over years of uptime.
-  const all = db.get('visitors').value();
-  if (all.length > 200000) db.set('visitors', all.slice(all.length - 200000)).write();
+  let oldestKept = null;
+  stateSync.withAnalytics(() => {
+    db.get('visitors').push(visit).write();
+    // Cap well above realistic traffic volume so All-Time visits actually reflects all
+    // time instead of silently plateauing — lowdb rewrites the whole file per write, so
+    // some ceiling is still needed to avoid unbounded growth over years of uptime.
+    const all = db.get('visitors').value();
+    if (all.length > 200000) {
+      const kept = all.slice(all.length - 200000);
+      oldestKept = kept[0] && kept[0].time;
+      db.set('visitors', kept).write();
+    }
+  });
+  mirrorAnalytics('visitors', [visit]);
+  if (oldestKept) {
+    analytics.dropOlderThan('visitors', oldestKept).catch(e => console.error('[analytics] cap visitors', e.message));
+  }
   next();
 });
 
@@ -831,29 +875,46 @@ function newPsplusPopularId() {
   return id;
 }
 
-// MongoDB sync — saves entire db state after every write
-function syncToMongo() {
-  if (!process.env.MONGODB_URI) return;
-  _getMongoDb().then(mdb => {
-    if (!mdb) return;
-    return mdb.collection('state').replaceOne(
+// MongoDB sync. Atlas is outside Railway, so every replacement of the state
+// document is billed egress. Analytics writes (visitors, skips, taps, misses)
+// go through withAnalytics and never schedule one. Everything else waits:
+// money, settings, promos, the catalogue and accounts flush within 2s;
+// chat/promo counters wait up to 45s; a shutdown flushes immediately.
+// Until boot finishes copying the old visitor log into its own collections,
+// sync stays paused so a stripped upload cannot be the only remaining copy.
+let analyticsReady = !process.env.MONGODB_URI;
+let analyticsCopied = false;
+const analytics = createAnalyticsStore({ getDb: _getMongoDb });
+const stateSync = createStateSync({
+  getState: () => db.getState(),
+  enabled: !!process.env.MONGODB_URI,
+  isReady: () => analyticsReady,
+  shouldStrip: () => analyticsCopied,
+  persist: async ({ data }) => {
+    const mdb = await _getMongoDb();
+    if (!mdb) throw new Error('mongo unavailable');
+    await mdb.collection('state').replaceOne(
       { _id: 'db' },
-      { _id: 'db', data: db.getState() },
+      { _id: 'db', data },
       { upsert: true }
     );
-  }).then(r => {
-    if (r) console.log('[mongo] Synced to MongoDB ✅');
-  }).catch(e => {
-    console.log('[mongo sync error]', e.message);
-    _mongo.reset(); // force reconnect next time
-  });
+  },
+  onError: () => _mongo.reset()
+});
+if (process.env.MONGODB_URI) {
+  stateSync.startHourlySummary();
+  stateSync.bindProcess(process);
 }
 const _origWrite = db.write.bind(db);
 db.write = function() {
-  const r = _origWrite();
-  syncToMongo();
+  const r = _origWrite.apply(db, arguments);
+  stateSync.afterWrite();
   return r;
 };
+// Writes above this hook already changed the file. A page view no longer
+// syncs, so publish this snapshot — otherwise a boot-time migration would
+// sit only on the local disk until some later admin edit.
+stateSync.afterWrite();
 
 // One-time genre list. After the write hook, so games.json and the MongoDB
 // state blob get the new genres and the marker in the same save. The marker
@@ -8548,9 +8609,78 @@ const paymentReminderTimer = setInterval(() => {
 }, paymentReminders.SWEEP_INTERVAL_MS);
 if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
-app.listen(PORT, () => {
-  console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
-  console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
-});
+function listen() {
+  app.listen(PORT, () => {
+    console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
+    console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
+  });
+}
+
+// Copy any visitor log still stored inside the state document into the
+// analytics collections, then upload the document without those arrays.
+// A failed copy keeps the old full-document sync so a payment cannot be
+// stranded on local disk. Hydrate runs after that, for a restart whose
+// preload restored a state document that no longer carries the log.
+async function prepareAnalytics() {
+  let migrated = null;
+  try {
+    try { await analytics.ensureIndexes(); }
+    catch (e) { console.error('[analytics] indexes', e.message); }
+    migrated = await analytics.migrate(db.getState());
+    analyticsCopied = true;
+  } catch (e) {
+    console.error('[analytics] migration failed; keeping analytics inside the state document:', e.message);
+    analyticsCopied = false;
+  }
+  analyticsReady = true;
+  try {
+    if (analyticsCopied) {
+      const copied = migrated.copied;
+      if (migrated.changed) {
+        console.log('[analytics] copied visitors=' + copied.visitors +
+          ' taps=' + copied.message_taps +
+          ' misses=' + copied.search_misses +
+          ' skips=' + copied.skips);
+      } else {
+        console.log('[analytics] no visitor log in the state document');
+      }
+      if (migrated.changed || stateSync.isDirty()) {
+        await stateSync.flush({ force: !!migrated.changed });
+      }
+      await hydrateAnalytics();
+    } else if (stateSync.isDirty()) {
+      await stateSync.flush();
+    }
+  } catch (e) {
+    console.error('[analytics] boot flush failed:', e.message);
+  }
+}
+
+async function hydrateAnalytics() {
+  let hydrated;
+  try { hydrated = await analytics.hydrate(); }
+  catch (e) {
+    console.error('[analytics] hydrate failed:', e.message);
+    return;
+  }
+  if (!hydrated) return;
+  const patch = selectHydration({
+    visitors: db.get('visitors').value() || [],
+    message_taps: db.get('message_taps').value() || [],
+    search_misses: db.get('search_misses').value() || [],
+    visitor_skips: db.get('visitor_skips').value() || {}
+  }, hydrated);
+  const keys = Object.keys(patch);
+  if (!keys.length) return;
+  stateSync.withAnalytics(() => {
+    let chain = db;
+    keys.forEach(key => { chain = chain.set(key, patch[key]); });
+    chain.write();
+  });
+  console.log('[analytics] hydrated ' + keys.join(', '));
+}
+
+if (!process.env.MONGODB_URI) listen();
+else prepareAnalytics().catch(e => console.error('[analytics] boot', e.message)).finally(listen);
 
 

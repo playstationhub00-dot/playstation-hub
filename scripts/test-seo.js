@@ -552,6 +552,7 @@ async function main() {
     const home = await call('/');
     const desc = 'PlayStation Hub rents PS5 and PS4 digital games in the Philippines. Free game changes while you rent. Pay with GCash, Maya and PayPal. Order on Messenger.';
     assert.strictEqual(titleOf(home.body), 'PlayStation Hub | Rent PS5 &amp; PS4 Games in the Philippines');
+    assert.strictEqual(home.headers['cache-control'], 'private, no-cache');
     assert.ok(home.body.includes('<meta name="description" content="' + desc + '">'));
     assert.ok(home.body.includes('<meta property="og:description" content="' + desc + '">'));
     assert.ok(home.body.includes('<meta name="twitter:description" content="' + desc + '">'));
