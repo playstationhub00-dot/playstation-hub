@@ -30,7 +30,11 @@
     awaiting_return:   { title: 'Time to return',          sub: 'Sign out and send us proof to finish up.' },
     verifying_return:  { title: 'Checking your return',    sub: 'Almost done — we\'re confirming it now.' },
     closed:            { title: 'Rental complete',         sub: 'Thanks for renting with us!' },
-    cancelled:         { title: 'Order cancelled',         sub: 'This order is no longer active.' },
+    // The owner's "Slot given" closes a waiting-list entry the same way, but the
+    // customer got their account — so it must not read as a refusal.
+    cancelled:         order.slot_given_at
+                         ? { title: '✅ Slot given',          sub: 'You\'re all set — this waiting-list entry is closed.' }
+                         : { title: 'Order cancelled',         sub: 'This order is no longer active.' },
     payment_rejected:  { title: 'Payment not confirmed',   sub: 'We couldn\'t match your payment. Please send proof again.' },
     // Paid in full by default, so there's nothing to "collect" when the game
     // releases — only a hand-arranged partial payment (remaining_due > 0)
@@ -130,13 +134,13 @@
     <% if (paidMethodLabel || paidWhen) { %>
     <div class="ord-paid-meta"><%= [paidMethodLabel, paidWhen].filter(Boolean).join(' · ') %></div>
     <% } %>
-    <% } else if (!order.is_waitlist) { %>
+    <% } else if (!order.is_waitlist && !order.slot_given_at) { %>
     <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
     <% } %>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
     <% } %>
-    <% if (order.is_reservation && order.remaining_due > 0) { %>
+    <% if (order.is_reservation && order.remaining_due > 0 && !order.slot_given_at) { %>
     <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.released_at ? 'before we sign you in' : order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %>.</div>
     <% } %>
   </div>

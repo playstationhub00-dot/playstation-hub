@@ -13,6 +13,7 @@ const buyTypeSellable = computeAvailability.buyTypeSellable;
 const buyOption = computeAvailability.buyOption;
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
+const { cleanFbName } = require('./lib/names');
 const reviewRules = require('./lib/reviews');
 const gatewayRules = require('./lib/gateway');
 const paymongo = require('./lib/paymongo');
@@ -4561,6 +4562,43 @@ app.post('/admin/orders/:ref/cancel', requireAuth, asyncRoute(async (req, res) =
   const r = await orders.transition(order.ref, 'cancelled', {});
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_cancelled');
+}));
+
+// A Waitlist row the owner can act on: a free or priority entry still in line.
+// A Coming Soon reservation or a buy pre-order rests in the same 'reserved'
+// state for a different reason (it paid for a game, not a place in line), so
+// neither action below may ever touch one.
+// See docs/superpowers/specs/2026-10-24-waitlist-slot-given-and-rename-design.md.
+function isWaitlistEntry(order) {
+  return !!order && queueRules.QUEUE_STATES.includes(order.state) && !queueRules.isPreorder(order);
+}
+
+// "✅ Slot given": the customer got their account — the rental itself is
+// recorded with Quick Add, full rent included — so the entry leaves the line.
+// Closed as 'cancelled' with slot_given_at, which also stops a priority ₱100
+// counting as paid (it is already inside the Quick Add rent). The ledger and
+// the customer's order page read slot_given_at to say "Slot given", not
+// "Cancelled".
+app.post('/admin/orders/:ref/slot-given', requireAuth, asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (!isWaitlistEntry(order)) return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const r = await orders.transition(order.ref, 'cancelled', { slot_given_at: new Date().toISOString() });
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_slot_given');
+}));
+
+// "✏️ Edit name": fixes a typo or nickname on a Waitlist row. Only fb_name
+// changes — ref, state and created_at, and so the place in line, stay put. The
+// public line shows the new name masked as usual.
+app.post('/admin/orders/:ref/rename', requireAuth, asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (!isWaitlistEntry(order)) return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const name = cleanFbName(req.body.fb_name);
+  if (!name) return res.redirect('/admin?tab=orders&msg=order_name_bad');
+  if (!(await orders.setName(order.ref, name))) return res.redirect('/admin?tab=orders&msg=order_stale');
+  res.redirect('/admin?tab=orders&msg=order_renamed');
 }));
 
 // A game someone asked for over Messenger, never through the public request
