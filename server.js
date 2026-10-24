@@ -8570,7 +8570,7 @@ const paymentReminderTimer = setInterval(() => {
     release: (ref, stage) => orders.releasePaymentReminder(ref, stage),
     complete: (ref, stage, result) => orders.completePaymentReminder(ref, stage, result),
     setHold: (ref, plan) => orders.setHoldExpiry(ref, plan.expires, plan.anchor),
-    cancel: async (ref) => !!(await orders.transition(ref, 'cancelled', { cancel_reason: 'hold_expired' })),
+    cancel: async (ref) => !!(await orders.transition(ref, 'cancelled', { cancel_reason: 'hold_expired' }, { from: ['awaiting_payment'] })),
     contactFor: (psid) => {
       try { return db.get('messenger_contacts').find({ psid: String(psid) }).value() || null; }
       catch (e) { return null; }

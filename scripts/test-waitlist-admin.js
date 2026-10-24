@@ -161,6 +161,13 @@ async function main() {
     assert.strictEqual(byRef('PH-0401').state, 'reserved');
   });
 
+  await okAsync('signed out, Edit name does nothing', async () => {
+    const r = await post('/admin/orders/PH-0402/rename', { fb_name: 'Hacker' }, { Accept: 'text/html' });
+    assert.strictEqual(r.status, 302);
+    assert.ok(/login/.test(r.headers.location || ''), r.headers.location);
+    assert.notStrictEqual(byRef('PH-0402').fb_name, 'Hacker');
+  });
+
   await okAsync('Slot given on the priority entry: out of the line, everyone moves up, the ₱100 stops counting', async () => {
     const r = await admin('/admin/orders/PH-0401/slot-given');
     assert.strictEqual(r.headers.location, '/admin?tab=orders&msg=order_slot_given');
@@ -200,7 +207,7 @@ async function main() {
       assert.strictEqual((await admin('/admin/orders/PH-0404/rename', { fb_name: bad })).headers.location, '/admin?tab=orders&msg=order_name_bad');
     }
     assert.strictEqual(byRef('PH-0404').fb_name, 'Adrian Bautista');
-    for (const ref of ['PH-0406', 'PH-0408', 'PH-0401']) {
+    for (const ref of ['PH-0406', 'PH-0407', 'PH-0408', 'PH-0401']) {
       assert.strictEqual((await admin('/admin/orders/' + ref + '/rename', { fb_name: 'Someone Else' })).headers.location, '/admin?tab=orders&msg=order_bad_state', ref);
       assert.notStrictEqual(byRef(ref).fb_name, 'Someone Else', ref);
     }
