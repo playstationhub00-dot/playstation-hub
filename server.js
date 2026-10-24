@@ -14,6 +14,7 @@ const buyOption = computeAvailability.buyOption;
 const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
 const { cleanFbName } = require('./lib/names');
+const needsYouBoard = require('./lib/needs-you-board');
 const reviewRules = require('./lib/reviews');
 const gatewayRules = require('./lib/gateway');
 const paymongo = require('./lib/paymongo');
@@ -5492,6 +5493,32 @@ app.get('/admin', requireAuth, async (req, res) => {
   // before initialization" from the temporal dead zone, which as an
   // unhandled rejection killed the process and took the whole site down.
   const waitlistOrders = queueRules.forAdminPanel(allOrders, new Date());
+  // Needs you → By game: the Waitlist and the Follow-ups as one card per game
+  // + account type. A card's "🟢 N slots free" uses the same per-type counts
+  // the game page shows (computeAvailability) and PS Plus's own slot counts;
+  // Coming Soon and box-set cards never get one (lib/needs-you-board.js).
+  // See docs/superpowers/specs/2026-10-24-orders-by-game-board-design.md.
+  const boardSlotsFree = {};
+  {
+    const SLOT_FIELD = { nt: 'ntSlots', tr: 'trSlots', ps4: 'ps4Slots' };
+    const summaries = buildAccountSummaryMap();
+    const psplusSlots = getPsplusSlots();
+    waitlistOrders.concat(abandonedOrders).forEach(o => {
+      const type = SLOT_FIELD[o.account_type] ? o.account_type : 'nt';
+      const key = String(o.game_id) + '|' + type;
+      if (key in boardSlotsFree) return;
+      const kind = needsYouBoard.kindOf(o.game_id);
+      if (kind === 'psplus') {
+        boardSlotsFree[key] = Number(psplusSlots[type + '_slots']) || 0;
+      } else if (kind === 'game') {
+        const g = getGame(o.game_id);
+        const avail = g ? computeAvailability(g, summaries[g.id]) : null;
+        // A PS4 Primary slot never shows on a PS5-only game, so it is never free there.
+        boardSlotsFree[key] = avail && (type !== 'ps4' || avail.showPs4) ? (avail[SLOT_FIELD[type]] || 0) : 0;
+      }
+    });
+  }
+  const orderBoard = needsYouBoard.buildBoard({ waitlist: waitlistOrders, followUps: abandonedOrders, slotsFree: boardSlotsFree });
   // Customers → Needs attention → Not paid yet: unpaid Quick Adds, oldest
   // first, each with a copy-ready reminder linking to their own order page
   // (where they can also pay). The link base matches the review asks.
@@ -5955,7 +5982,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
+  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
