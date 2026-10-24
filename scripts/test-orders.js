@@ -111,19 +111,21 @@ check('a waitlist entry still cannot skip straight to a paid state', () => {
 });
 
 check('a mis-marked priority can be undone back to the free list', () => {
-  // The one edge out of 'reserved', so POST /admin/orders/:ref/undo-priority
-  // is not a one-way door. 'cancelled' does not accept 'reserved', so without
-  // this the only remedy for a mis-click would be deleting the order.
+  // The edge back to the free list, so POST /admin/orders/:ref/undo-priority
+  // is not a one-way door. Without it the only remedy for a mis-click would be
+  // deleting the order.
   assert.strictEqual(orders.canTransition('reserved', 'waitlisted'), true);
 });
 
-check('undo and release are the only ways out of reserved', () => {
-  // 'reserved' is a resting state. Two edges leave it: undo-priority back to
-  // 'waitlisted', and releasing a Coming Soon game, which moves its paid
+check('undo, release and slot given are the only ways out of reserved', () => {
+  // 'reserved' is a resting state. Three edges leave it: undo-priority back to
+  // 'waitlisted', releasing a Coming Soon game, which moves its paid
   // reservations to 'awaiting_qr' (POST /admin/upcoming/release/:id, via
-  // lib/release.js). Anything else still fails here so the next change is a
-  // deliberate decision too.
-  ['active', 'qr_pending', 'awaiting_payment', 'verifying_payment', 'closed', 'cancelled']
+  // lib/release.js), and the owner's Slot given, which closes a priority entry
+  // as 'cancelled' (POST /admin/orders/:ref/slot-given). Anything else still
+  // fails here so the next change is a deliberate decision too.
+  assert.strictEqual(orders.canTransition('reserved', 'cancelled'), true);
+  ['active', 'qr_pending', 'awaiting_payment', 'verifying_payment', 'closed']
     .forEach(to => {
       assert.strictEqual(orders.canTransition('reserved', to), false, 'reserved should not reach ' + to);
     });
