@@ -1,6 +1,6 @@
 # Waitlist: "Slot given" and "Edit name" — Design
 
-Date: 2026-10-24 · Status: approved by owner
+Date: 2026-10-24 · Status: approved by owner; amended after the plan's dry run (2026-10-24)
 
 ## Problem
 
@@ -51,6 +51,10 @@ Two gaps:
   - Transition to `cancelled` with `slot_given_at` (ISO timestamp) set on the order.
   - Redirects to `/admin?tab=orders&msg=order_slot_given` (a stale transition gives
     `msg=order_stale`, as the sibling routes do).
+  - Both routes share one guard in `server.js`, `isWaitlistEntry(order)` — in
+    `queueRules.QUEUE_STATES` and not `queueRules.isPreorder(order)`.
+  - Signed out, `requireAuth` answers as it does for every admin route: a form post
+    goes to the login page, a background post gets 401. Nothing changes either way.
 - **State machine (`lib/orders.js`):** add `cancelled` to `reserved`'s allowed
   targets. The route above is the only owner path that uses it for a `reserved`
   order; its pre-order guard keeps Coming Soon reservations and buy pre-orders out.
@@ -67,22 +71,28 @@ Two gaps:
 - **Customer's order page** (`views/order-status.ejs`): an order with
   `slot_given_at` uses the title `✅ Slot given` and the sub `You're all set — this
   waiting-list entry is closed.` instead of `Order cancelled` / `This order is no
-  longer active.`
+  longer active.` It also stops asking for money: no "To send now" total and no
+  "₱X remaining, due once your slot opens" note on a slot given (the rent was taken
+  when the account was handed over).
 - A plain Remove stays exactly as it is (no `slot_given_at`, still "Cancelled").
 
 ## 2 · ✏️ Edit name
 
 - **Where:** the ⋯ menu on every Waitlist row (free and priority). Priority rows
   that had no menu (not upgraded from a free entry) now get one, holding Edit name.
-- **Form:** an inline form inside the menu item — a text input prefilled with the
-  current `fb_name` and a Save button.
+- **Form:** an inline form at the top of the menu — the label `✏️ Edit name`, a text
+  input prefilled with the current `fb_name` (`maxlength="80"`, `required`, id
+  `oqName-<ref>`) and a Save button. It is at least 230px wide so a full name fits,
+  and drops its divider when it is the only item in the menu.
 - **Route:** `POST /admin/orders/:ref/rename` (admin only) with `fb_name`.
-  - Trimmed, inner whitespace collapsed; must be 1–80 characters. Empty or too long
+  - Trimmed, inner whitespace collapsed; must be 1–80 characters
+    (`lib/names.js` `cleanFbName`, which returns null otherwise). Empty or too long
     redirects with `msg=order_name_bad` and changes nothing.
   - Allowed for the same orders as Slot given (`waitlisted` / `reserved`, not a
     pre-order); otherwise `msg=order_bad_state`.
-  - Saves only `fb_name` through a new `orders.setName(ref, name)` (a field-limited
-    patch like `setRentalWindow`, no state change, no history entry).
+  - Saves only `fb_name` through a new `orders.setName(ref, name)`: no state change,
+    no history entry, and its update is itself pinned to `waitlisted` / `reserved`, so
+    a stale form can never rename a rental.
   - Redirects to `/admin?tab=orders&msg=order_renamed`.
 - **Effects:** ref, state, `created_at` and therefore the place in line are
   untouched. The public line shows the new name masked as usual
@@ -92,9 +102,9 @@ Two gaps:
 
 New flash messages beside the existing `order_*` ones:
 
-- `order_slot_given` — "Slot given — they're off the waiting list."
-- `order_renamed` — "Name updated."
-- `order_name_bad` — "Enter a name (up to 80 characters)."
+- `order_slot_given` — "✅ Slot given — off the waiting list."
+- `order_renamed` — "✏️ Name updated."
+- `order_name_bad` — "❌ Enter a name (up to 80 characters)."
 
 ## Unchanged
 
@@ -117,6 +127,11 @@ made-up admin password, an in-memory order store). Never the real orders or data
   names are refused; a pre-order is refused.
 - The Waitlist row renders the Slot given button and the Edit name form on free and
   priority rows.
+- Test files: `scripts/test-waitlist-slot-given-rules.js` (the edge, `cleanFbName`,
+  `setName`), `scripts/test-waitlist-admin.js` (the routes end to end, the public line,
+  the order page, the toasts), and new checks in `scripts/test-orders-template.js`
+  (the button, the form, the ledger label, the styles). `scripts/test-orders.js`'s
+  "ways out of reserved" check now includes Slot given.
 - Browser check on the throwaway instance at 1280px and 375px.
 - Full suite green except the known `scripts/test-upcoming-psn-page-public.js`.
 
