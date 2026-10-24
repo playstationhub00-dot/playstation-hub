@@ -273,9 +273,6 @@
       + 'Still want it? Reply here and we\'ll get you set up.\n\n'
       + '🔖 Reference: ' + o.ref;
     const wlPriority = o.state === 'reserved';
-    // A priority row has a menu only when the upgrade can be undone; a free
-    // row always has Remove.
-    const wlHasMenu = wlPriority ? !!o.upgraded_from_waitlist : true;
   %>
   <div class="oq-row">
     <div class="oq-main">
@@ -296,6 +293,12 @@
     </div>
     <div class="oq-actions">
       <button type="button" class="oq-btn-ghost rem-copy" data-msg="<%= wlMsg %>" title="Copy slot-open message">📋 Copy</button>
+      <%# They got their account (the rental is recorded with Quick Add), so the
+          entry leaves the line. A priority ₱100 stops counting as money because
+          the Quick Add rent already includes it. %>
+      <form method="POST" action="/admin/orders/<%= o.ref %>/slot-given" onsubmit="return confirm('Mark the slot as given to ' + <%= JSON.stringify(o.fb_name || '') %> + ' (' + <%= JSON.stringify(o.ref) %> + ')?\n\nThey leave the line and the record is kept. A ₱100 priority fee stops counting as money — it\'s already in the rent you recorded.');">
+        <button type="submit" class="oq-btn-given" title="They got their account — take them off the waiting list">✅ Slot given</button>
+      </form>
       <% if (!wlPriority) { %>
       <%# For a ₱100 that arrived over Messenger or GCash rather than through
           the site. Confirms first because it books money and moves them above
@@ -304,24 +307,29 @@
         <button type="submit" class="oq-btn-pri" title="They paid the ₱100 priority fee outside the site">⭐ Priority paid</button>
       </form>
       <% } %>
-      <% if (wlHasMenu) { %>
       <details class="oq-more">
         <summary class="oq-more-btn" title="More actions" aria-label="More actions">⋯</summary>
         <div class="oq-more-menu">
-          <% if (wlPriority) { %>
+          <%# Fixes a typo or nickname. Only the name changes — the ref and the
+              place in line stay put. %>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/rename" class="oq-rename">
+            <label class="oq-rename-lbl" for="oqName-<%= o.ref %>">✏️ Edit name</label>
+            <input type="text" id="oqName-<%= o.ref %>" name="fb_name" value="<%= o.fb_name %>" maxlength="80" required class="oq-rename-input">
+            <button type="submit" class="oq-rename-save">Save</button>
+          </form>
+          <% if (wlPriority && o.upgraded_from_waitlist) { %>
           <%# Undo puts them back on the free list at their original join date.
               Only offered on the flag the priority upgrade itself sets. %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
             <button type="submit" class="oq-more-item" title="Put this customer back on the free waiting list">↩ Undo priority</button>
           </form>
-          <% } else { %>
+          <% } else if (!wlPriority) { %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Remove ' + <%= JSON.stringify(o.ref) %> + ' from the waiting list?');">
             <button type="submit" class="oq-more-item oq-more-danger" title="Remove this waitlist entry">Remove</button>
           </form>
           <% } %>
         </div>
       </details>
-      <% } %>
     </div>
   </div>
   <% }) %>

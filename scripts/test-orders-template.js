@@ -202,6 +202,45 @@ ok('Payment link appears only when a PayMongo key is configured', () => {
   }
 });
 
+console.log('\nwaitlist: slot given and edit name');
+
+ok('✅ Slot given is a visible button on free and priority rows, with its confirm', () => {
+  const R = r => '&#34;' + r + '&#34;';
+  const visible = outsideMenus(groupBlock(html, 'waitlist'));
+  [['PH-0120', 'Gio Yu'], ['PH-0121', 'Hana Go']].forEach(([ref, name]) => {
+    assert.ok(visible.includes('action="/admin/orders/' + ref + '/slot-given"'), ref);
+    assert.ok(visible.includes("onsubmit=\"return confirm('Mark the slot as given to ' + " + R(name) + " + ' (' + " + R(ref) + " + ')?\\n\\nThey leave the line and the record is kept. A ₱100 priority fee stops counting as money — it\\'s already in the rent you recorded.');\""), ref + ' confirm');
+  });
+  assert.strictEqual((visible.match(/<button type="submit" class="oq-btn-given" title="They got their account — take them off the waiting list">✅ Slot given<\/button>/g) || []).length, 2);
+});
+
+ok('✏️ Edit name sits in every Waitlist row\'s ⋯ menu, prefilled with the name', () => {
+  const inMenus = menus(groupBlock(html, 'waitlist'));
+  [['PH-0120', 'Gio Yu'], ['PH-0121', 'Hana Go']].forEach(([ref, name]) => {
+    assert.ok(inMenus.includes('<form method="POST" action="/admin/orders/' + ref + '/rename" class="oq-rename">'), ref);
+    assert.ok(inMenus.includes('<input type="text" id="oqName-' + ref + '" name="fb_name" value="' + name + '" maxlength="80" required class="oq-rename-input">'), ref + ' input');
+  });
+  assert.ok(!outsideMenus(groupBlock(html, 'waitlist')).includes('/rename'), 'not outside the menu');
+  const paidOnSite = render({ waitlistOrders: [lo('PH-0122', 'reserved', { game_id: 5, fb_name: 'Ivo Paz', queuePosition: 1 })] });
+  const m = menus(groupBlock(paidOnSite, 'waitlist'));
+  assert.ok(m.includes('action="/admin/orders/PH-0122/rename"') && !m.includes('undo-priority'));
+});
+
+ok('the ledger says ✅ Slot given for a slot given, Cancelled for a plain cancel', () => {
+  const ledger = render({ ledgerGroups: [{ key: '2026-10', label: '2026-10', paidCount: 0, paidTotal: 0, orders: [
+    lo('PH-0207', 'cancelled', { slot_given_at: '2026-10-24T03:00:00Z' }),
+    lo('PH-0208', 'cancelled')
+  ] }] });
+  const row = ref => { const i = ledger.indexOf('<td class="oq-lref">' + ref + '</td>'); assert.ok(i > 0, ref); return ledger.slice(i, ledger.indexOf('</tr>', i)); };
+  assert.ok(row('PH-0207').includes('<span class="oq-st oq-st-dead"><span class="oq-st-dot"></span>✅ Slot given</span>'));
+  assert.ok(row('PH-0208').includes('<span class="oq-st oq-st-dead"><span class="oq-st-dot"></span>Cancelled</span>'));
+});
+
+ok('the new controls are styled', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+  ['.oq-btn-given {', '.oq-rename {', '.oq-rename-input {', '.oq-rename-save {'].forEach(s => assert.ok(css.includes(s), s));
+});
+
 console.log('\nindicator strip');
 
 ok('online pill mirrors the setting', () => {
