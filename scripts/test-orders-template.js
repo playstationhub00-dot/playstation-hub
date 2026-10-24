@@ -254,6 +254,12 @@ ok('a card with a free slot is tagged, goes first and starts open; the others st
   assert.ok(cardBlock(one, '5|nt').includes('🟢 1 slot free</span>'));
 });
 
+ok('the card tags have light-mode colours, so they stay readable on a white card', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+  ['.oq-card-type-tr', '.oq-card-type-nt', '.oq-card-type-ps4', '.oq-card-free-tag']
+    .forEach(c => assert.ok(css.includes('body.light-mode ' + c + ' {'), c));
+});
+
 ok('Coming Soon and box-set cards say so; nothing to show means no board', () => {
   const kinds = render({ waitlistOrders: [], abandonedOrders: [
     lo('PH-0140', 'awaiting_payment', { game_id: 'upcoming_4', game_title: 'Ghost of Yotei', account_type: 'tr', is_reservation: true }),

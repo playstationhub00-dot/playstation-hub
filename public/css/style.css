@@ -3391,6 +3391,11 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 body.light-mode .oq-card { background: #fff; border-color: #e2e2e2; }
 body.light-mode .oq-card-free { border-color: rgba(22,163,74,0.5); }
 body.light-mode .oq-card-title { color: #111; }
+/* The dark-mode tag colours are pale on a pale fill: darker text, a touch more fill. */
+body.light-mode .oq-card-type-tr { background: rgba(245,158,11,0.2); color: #8a5a00; }
+body.light-mode .oq-card-type-nt { background: rgba(124,92,255,0.14); color: #5a3fd0; }
+body.light-mode .oq-card-type-ps4 { background: #ececec; color: #555; }
+body.light-mode .oq-card-free-tag { background: rgba(22,163,74,0.14); color: #15803d; }
 body.light-mode .oq-card-n, body.light-mode .oq-card-lbl { color: #666; }
 @media (max-width: 600px) { .oq-card-n { margin-left: 0; width: 100%; white-space: normal; } }
 .oq-group-released .oq-row { border-left:3px solid #22c55e; }
