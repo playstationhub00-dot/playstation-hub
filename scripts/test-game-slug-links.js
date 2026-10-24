@@ -1,11 +1,10 @@
 // Run: node scripts/test-game-slug-links.js
 //
-// Card hrefs are gameSlug(title). /game/:slug used to 301 that href through
-// redirectSlug before looking the title up, so a title the rename script had
-// not changed (NBA2K27 → slug nba2k27) was sent to /game/nba-2k27 and then
-// 302'd to /browse. Every catalogue game's card href must finish on that
-// game's page. The other spelling still resolves. A slug that names no game
-// is a 404 with a link back to the catalogue, not a redirect.
+// Card hrefs are the public slug. The four typo tokens (assasins, calisto,
+// berseker, triology) publish the corrected slug, and the old URL 301s to
+// it. NBA2K27 is not one of those tokens: its card stays /game/nba2k27, and
+// /game/nba-2k27 301s back there until the title is renamed. A slug that
+// names no game is a 404 with a link back to the catalogue, not a redirect.
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
@@ -20,10 +19,9 @@ const game = (id, title, extra) => Object.assign({
   id, title, platform: 'PS5', genre: 'Action', cover_image: '', renters: 1, created_at: '2020-01-01T00:00:00.000Z'
 }, prices, extra || {});
 
-// The titles whose current slug redirectSlug rewrites. These are the ones the
-// old route could not open. Digit titles (Tekken 8, WWE 2K25, F1 24) are here
-// on purpose: gameSlug does not split letters from digits, and neither should
-// lookup, except for the nba2k27 alias.
+// Digit titles (Tekken 8, WWE 2K25, F1 24) are here on purpose: gameSlug does
+// not split letters from digits, and neither should lookup, except for the
+// nba2k27 alias. Black Flag keeps its apostrophe slug.
 const GAMES = [
   game(80, 'NBA2K27', { renters: 100 }),
   game(2, 'Resident Evil Remake Trilogy'),
@@ -39,7 +37,9 @@ const GAMES = [
   game(15, 'Battlefield 6'),
   game(16, 'Final Fantasy 7 Rebirth'),
   game(17, 'Resident Evil 2 Deluxe Edition'),
-  game(18, 'Call of Duty Black Ops 6')
+  game(18, 'Call of Duty Black Ops 6'),
+  game(19, 'Calisto Protocol'),
+  game(20, "Assassin's Creed Black Flag Resynced")
 ];
 const UPCOMING = [
   { id: 12, title: 'Khazan The First Berseker', platform: 'PS5', genre: 'RPG', release_date: 'TBA', non_trophy_slots: 2, trophy_slots: 1 },
@@ -47,14 +47,17 @@ const UPCOMING = [
   { id: 14, title: 'Resident Evil Remake Triology', platform: 'PS5', genre: 'Horror', release_date: 'TBA', non_trophy_slots: 2, trophy_slots: 1 }
 ];
 
-function cardSlug(title) {
+function rawSlug(title) {
   return String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+function cardSlug(title) {
+  return fixes.publicSlug(title);
 }
 
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   games: GAMES,
   upcoming: UPCOMING,
-  nextId: 19,
+  nextId: 21,
   nextUpcomingId: 15,
   customers: [],
   migrations: ['genre-by-slug-2026-10-14']
@@ -111,10 +114,10 @@ async function main() {
   }
   assert.ok(up, 'server did not come up within 20s');
 
-  const brokenBeforeFix = GAMES.filter(g => fixes.redirectSlug(cardSlug(g.title)));
-  console.log('\ntitles whose card slug redirectSlug rewrites (broken before this fix):');
+  const brokenBeforeFix = GAMES.filter(g => fixes.redirectSlug(rawSlug(g.title)));
+  console.log('\ntitles whose raw slug redirectSlug rewrites:');
   brokenBeforeFix.forEach(g => {
-    console.log('  ' + g.title + '  /game/' + cardSlug(g.title) + '  →  /game/' + fixes.redirectSlug(cardSlug(g.title)));
+    console.log('  ' + g.title + '  /game/' + rawSlug(g.title) + '  →  /game/' + fixes.redirectSlug(rawSlug(g.title)));
   });
 
   const browse = await call('/browse');
@@ -180,18 +183,31 @@ async function main() {
     assert.ok(old.hops.some(h => h.status === 301 && h.location === '/game/resident-evil-remake-trilogy'));
     assert.ok(old.body.includes('name="game_id" value="2"'));
   });
-  await okAsync('the other typo titles answer their corrected slug and stay on the card slug', async () => {
+  await okAsync('old typo slugs 301 to the corrected public slug', async () => {
     const cases = [
-      ['/game/khazan-the-first-berserker', '/game/khazan-the-first-berseker', '3'],
-      ['/game/assassin-s-creed-shadows', '/game/assasins-creed-shadows', '4'],
-      ['/game/assassin-s-creed-shadows-w-dlc', '/game/assasins-creed-shadows-w-dlc', '5']
+      ['/game/khazan-the-first-berseker', '/game/khazan-the-first-berserker', '3'],
+      ['/game/assasins-creed-shadows', '/game/assassins-creed-shadows', '4'],
+      ['/game/assassin-s-creed-shadows?utm=old', '/game/assassins-creed-shadows', '4'],
+      ['/game/assasins-creed-shadows-w-dlc', '/game/assassins-creed-shadows-w-dlc', '5'],
+      ['/game/calisto-protocol', '/game/callisto-protocol', '19']
     ];
     for (const [from, to, id] of cases) {
       const final = await follow(from);
-      assert.strictEqual(final.status, 200, from);
+      assert.strictEqual(final.status, 200, from + ' ' + JSON.stringify(final.hops));
       assert.strictEqual(final.path, to);
+      assert.ok(final.hops.some(h => h.status === 301 && h.location === to + (from.includes('?') ? from.slice(from.indexOf('?')) : '')));
       assert.ok(final.body.includes('name="game_id" value="' + id + '"'));
+      assert.ok(final.body.includes('rel="canonical" href="https://www.playstation-hub.com' + to + '"'));
     }
+  });
+  await okAsync("Black Flag stays on its apostrophe slug", async () => {
+    const href = '/game/assassin-s-creed-black-flag-resynced';
+    const final = await follow(href);
+    assert.strictEqual(final.status, 200);
+    assert.strictEqual(final.path, href);
+    assert.strictEqual(final.hops.length, 1);
+    const missing = await call('/game/assassins-creed-black-flag-resynced');
+    assert.strictEqual(missing.status, 404);
   });
   await okAsync('a slug that names no game is a 404 with a link back to the catalogue', async () => {
     const missing = await call('/game/not-a-real-game');
@@ -220,19 +236,22 @@ async function main() {
       assert.ok(final.body.includes('name="game_id" value="' + u.id + '"'));
     }
   });
-  await okAsync('a corrected coming soon slug 301s back to the live title slug', async () => {
-    const final = await follow('/upcoming/khazan-the-first-berserker-12');
+  await okAsync('an old coming soon typo 301s to the corrected slug and keeps its id', async () => {
+    const final = await follow('/upcoming/khazan-the-first-berseker-12');
     assert.strictEqual(final.status, 200);
-    assert.strictEqual(final.path, '/upcoming/khazan-the-first-berseker-12');
+    assert.strictEqual(final.path, '/upcoming/khazan-the-first-berserker-12');
+    assert.ok(final.hops.some(h => h.status === 301 && h.location === '/upcoming/khazan-the-first-berserker-12'));
     assert.ok(final.body.includes('name="game_id" value="12"'));
-    const tri = await follow('/upcoming/resident-evil-remake-trilogy-14');
-    assert.strictEqual(tri.path, '/upcoming/resident-evil-remake-triology-14');
+    const tri = await follow('/upcoming/resident-evil-remake-triology-14?utm=1');
+    assert.strictEqual(tri.path, '/upcoming/resident-evil-remake-trilogy-14');
+    assert.ok(tri.hops.some(h => h.status === 301 && h.location === '/upcoming/resident-evil-remake-trilogy-14?utm=1'));
     assert.ok(tri.body.includes('name="game_id" value="14"'));
   });
 
   assert.deepStrictEqual(brokenBeforeFix.map(g => g.title).sort(), [
     'Assasins Creed Shadows',
     'Assasins Creed Shadows w/ DLC',
+    'Calisto Protocol',
     'Khazan The First Berseker',
     'NBA2K27'
   ]);
