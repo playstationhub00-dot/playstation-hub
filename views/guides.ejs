@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%
+    var guideLd = [seo.breadcrumb([
+      { name: 'Home', item: seo.ORIGIN },
+      { name: 'Guides', item: seo.canonicalUrl('/guides') }
+    ])];
+  %>
+  <%- include('partials/head', { page: 'guides', jsonLd: guideLd }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<section class="guide-hero">
+  <div class="guide-hero-glow"></div>
+  <div class="guide-hero-inner">
+    <div class="guide-kicker">Guides</div>
+    <h1>PS5 and PS4 rental guides</h1>
+  </div>
+</section>
+
+<div class="guide-wrap">
+  <nav class="guide-crumbs" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    <span class="guide-crumb-sep" aria-hidden="true">/</span>
+    <span>Guides</span>
+  </nav>
+  <p class="guide-answer">How renting works, which account type to pick, and how PS Plus Deluxe compares with renting one game.</p>
+  <div class="guide-boxes">
+    <a class="guide-box guide-box-link" href="/how-it-works">
+      <h2>How to rent PS5 games</h2>
+      <p>Pick a game, pay, sign in by QR, swap, and return with a screenshot.</p>
+    </a>
+    <a class="guide-box guide-box-link" href="/guides/trophy-vs-non-trophy-vs-ps4-primary">
+      <h2>Trophy vs Non-Trophy vs PS4 Primary</h2>
+      <p>Price, deposit, trophies, late fees, and the free 3-hour trial.</p>
+    </a>
+    <a class="guide-box guide-box-link" href="/guides/ps-plus-deluxe-vs-renting">
+      <h2>PS Plus Deluxe vs renting one game</h2>
+      <p>Weekly prices, online play, and which one fits.</p>
+    </a>
+  </div>
+  <p class="guide-also">Browse the <a href="/browse">game list</a>, see <a href="/ps-plus">PS Plus Deluxe</a>, or read the <a href="/faq">rental FAQ</a>.</p>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

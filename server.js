@@ -72,6 +72,10 @@ const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const seo = require('./lib/seo');
+const guidePages = require('./lib/guide-pages');
+const { createStateSync } = require('./lib/state-sync');
+const { createAnalyticsStore, selectHydration } = require('./lib/analytics-store');
+const privateHtmlCache = require('./lib/private-html-cache');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -79,6 +83,11 @@ const PORT = process.env.PORT || 3000;
 // cookie keeps it out of the edge cache), so the uncompressed page was
 // Railway egress even when Cloudflare compressed it again for the browser.
 app.use(textCompress());
+// HTML stays out of any shared cache. Cloudflare is not configured to cache
+// these pages; this only stops a shared cache from storing them if one is
+// later pointed at the origin. Sitemap, feeds and static files set their own
+// Cache-Control and are left alone.
+privateHtmlCache.install(app);
 
 // One host in Google's index, and one host on the public internet.
 // playstation-hub.com and the *.up.railway.app hostname both used to answer
@@ -304,7 +313,7 @@ if (db.get('loyalty_next_id').value() === undefined) db.set('loyalty_next_id', 1
     if (!m) return v;
     const game = db.get('games').find({ id: parseInt(m[1]) }).value();
     if (!game) return v;
-    const slug = game.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = titleFixes.publicSlug(game.title);
     changed = true;
     return { ...v, path: '/game/' + slug, page: game.title };
   });
@@ -648,21 +657,46 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/guides': 'Guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary': 'Trophy vs Non-Trophy', '/guides/ps-plus-deluxe-vs-renting': 'PS Plus vs Renting', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
+// The local row is what the admin page reads. The Mongo copy is one small
+// insert, not a replacement of the state document.
 function pushCapped(key, row, cap) {
-  db.get(key).push(row).write();
-  const all = db.get(key).value();
-  if (all.length > cap) db.set(key, all.slice(all.length - cap)).write();
+  let oldestKept = null;
+  stateSync.withAnalytics(() => {
+    db.get(key).push(row).write();
+    const all = db.get(key).value();
+    if (all.length > cap) {
+      const kept = all.slice(all.length - cap);
+      oldestKept = kept[0] && kept[0].time;
+      db.set(key, kept).write();
+    }
+  });
+  mirrorAnalytics(key, [row]);
+  if (oldestKept) {
+    analytics.dropOlderThan(key, oldestKept).catch(e => console.error('[analytics] cap', key, e.message));
+  }
 }
 
 // One more robot / webhook hit that was deliberately not counted as a visitor.
+// The day's counter lives in its own collection. It must not upload the
+// catalogue, the visitor log, or anything else in the state document.
 function countSkippedVisit() {
   const day = new Date().toISOString().slice(0, 10);
-  const skips = db.get('visitor_skips').value() || {};
-  db.set(['visitor_skips', day], (skips[day] || 0) + 1).write();
+  stateSync.withAnalytics(() => {
+    const skips = db.get('visitor_skips').value() || {};
+    db.set(['visitor_skips', day], (skips[day] || 0) + 1).write();
+  });
+  if (process.env.MONGODB_URI) {
+    analytics.incSkip(day).catch(e => console.error('[analytics] skip', e.message));
+  }
+}
+
+function mirrorAnalytics(kind, rows) {
+  if (!process.env.MONGODB_URI || !rows || !rows.length) return;
+  analytics.addRows(kind, rows).catch(e => console.error('[analytics]', kind, e.message));
 }
 
 app.use((req, res, next) => {
@@ -701,12 +735,23 @@ app.use((req, res, next) => {
   }
   const visit = { date: today, time: now, path: reqPath, page: pageLabel, ip, session_id: sid };
   if (attr.capture) Object.assign(visit, attr.fields);
-  db.get('visitors').push(visit).write();
-  // Cap well above realistic traffic volume so All-Time visits actually reflects all
-  // time instead of silently plateauing — lowdb rewrites the whole file per write, so
-  // some ceiling is still needed to avoid unbounded growth over years of uptime.
-  const all = db.get('visitors').value();
-  if (all.length > 200000) db.set('visitors', all.slice(all.length - 200000)).write();
+  let oldestKept = null;
+  stateSync.withAnalytics(() => {
+    db.get('visitors').push(visit).write();
+    // Cap well above realistic traffic volume so All-Time visits actually reflects all
+    // time instead of silently plateauing — lowdb rewrites the whole file per write, so
+    // some ceiling is still needed to avoid unbounded growth over years of uptime.
+    const all = db.get('visitors').value();
+    if (all.length > 200000) {
+      const kept = all.slice(all.length - 200000);
+      oldestKept = kept[0] && kept[0].time;
+      db.set('visitors', kept).write();
+    }
+  });
+  mirrorAnalytics('visitors', [visit]);
+  if (oldestKept) {
+    analytics.dropOlderThan('visitors', oldestKept).catch(e => console.error('[analytics] cap visitors', e.message));
+  }
   next();
 });
 
@@ -832,29 +877,46 @@ function newPsplusPopularId() {
   return id;
 }
 
-// MongoDB sync — saves entire db state after every write
-function syncToMongo() {
-  if (!process.env.MONGODB_URI) return;
-  _getMongoDb().then(mdb => {
-    if (!mdb) return;
-    return mdb.collection('state').replaceOne(
+// MongoDB sync. Atlas is outside Railway, so every replacement of the state
+// document is billed egress. Analytics writes (visitors, skips, taps, misses)
+// go through withAnalytics and never schedule one. Everything else waits:
+// money, settings, promos, the catalogue and accounts flush within 2s;
+// chat/promo counters wait up to 45s; a shutdown flushes immediately.
+// Until boot finishes copying the old visitor log into its own collections,
+// sync stays paused so a stripped upload cannot be the only remaining copy.
+let analyticsReady = !process.env.MONGODB_URI;
+let analyticsCopied = false;
+const analytics = createAnalyticsStore({ getDb: _getMongoDb });
+const stateSync = createStateSync({
+  getState: () => db.getState(),
+  enabled: !!process.env.MONGODB_URI,
+  isReady: () => analyticsReady,
+  shouldStrip: () => analyticsCopied,
+  persist: async ({ data }) => {
+    const mdb = await _getMongoDb();
+    if (!mdb) throw new Error('mongo unavailable');
+    await mdb.collection('state').replaceOne(
       { _id: 'db' },
-      { _id: 'db', data: db.getState() },
+      { _id: 'db', data },
       { upsert: true }
     );
-  }).then(r => {
-    if (r) console.log('[mongo] Synced to MongoDB ✅');
-  }).catch(e => {
-    console.log('[mongo sync error]', e.message);
-    _mongo.reset(); // force reconnect next time
-  });
+  },
+  onError: () => _mongo.reset()
+});
+if (process.env.MONGODB_URI) {
+  stateSync.startHourlySummary();
+  stateSync.bindProcess(process);
 }
 const _origWrite = db.write.bind(db);
 db.write = function() {
-  const r = _origWrite();
-  syncToMongo();
+  const r = _origWrite.apply(db, arguments);
+  stateSync.afterWrite();
   return r;
 };
+// Writes above this hook already changed the file. A page view no longer
+// syncs, so publish this snapshot — otherwise a boot-time migration would
+// sit only on the local disk until some later admin edit.
+stateSync.afterWrite();
 
 // One-time genre list. After the write hook, so games.json and the MongoDB
 // state blob get the new genres and the marker in the same save. The marker
@@ -867,6 +929,23 @@ try {
   }
 } catch (e) {
   console.log('[genre] migration failed:', e.message);
+}
+
+// The four slug-typo families only (assasins, calisto, berseker, triology).
+// Idempotent: a second boot finds nothing to write, so it does not sync the
+// blob. Ids, stored slugs, prices, and order documents are not touched.
+// NBA2K27, Townfall, and afdordable stay on scripts/rename-game-titles.js.
+try {
+  const slugTitles = titleFixes.applySlugTitles(db.getState());
+  if (slugTitles.changes.length) {
+    db.setState(slugTitles.state);
+    slugTitles.changes.forEach(c => {
+      console.log('[titles] ' + c.path + ': ' + JSON.stringify(c.from) + ' -> ' + JSON.stringify(c.to));
+    });
+    db.write();
+  }
+} catch (e) {
+  console.log('[titles] slug title migration failed:', e.message);
 }
 
 // Orders persist as their own MongoDB documents, reusing the connection the
@@ -1485,9 +1564,62 @@ function computeSwapReferencePrice(game, { days, accountType, isBought, promo })
   return { price, ps4Fallback: trophyMissing };
 }
 
-app.get('/how-it-works', (req, res) => {
-  res.render('how-it-works', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+function guidePageInput() {
+  const settings = getSiteSettings() || {};
+  const promo = settings.promo || {};
+  let live = [];
+  try { live = (promoContext().live) || []; } catch (e) { live = []; }
+  const games = (getGames() || []).map(game => resolveGamePrices(game));
+  let psplusNames = [];
+  try {
+    const catalog = psplusCatalogView.buildPublicCatalog({
+      games: psplusCatalogStore.all(),
+      siteGames: getGames(),
+      entries: getPsplus(),
+      slugFor: gameSlug,
+      monthlyCovers: psplusMonthlyCoversStore.all()
+    });
+    psplusNames = ((catalog && catalog.items) || []).map(item => item && item.n).filter(Boolean);
+  } catch (e) {
+    psplusNames = [];
+  }
+  const popular = (getPsplusPopular() || []).slice().sort((a, b) => (a.rank || 999) - (b.rank || 999));
+  return {
+    deposit: promo.deposit,
+    lateFee: promo.late_fee_per_day,
+    monthlyPromo: promos.monthlyDiscountLive(live),
+    games,
+    upcoming: getUpcoming() || [],
+    promo,
+    psplusPrices: getPsplusPrices() || {},
+    loyaltyOffers: live,
+    psplusNames,
+    popularTitles: popular.map(row => row && row.title).filter(Boolean)
+  };
+}
+
+function renderGuide(res, key) {
+  res.render('guide', {
+    model: guidePages.build(key, guidePageInput()),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
+}
+
+app.get('/how-it-works', (req, res) => renderGuide(res, 'how'));
+
+app.get('/guides', (req, res) => {
+  res.render('guides', {
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
 });
+
+app.get('/guides/trophy-vs-non-trophy-vs-ps4-primary', (req, res) => renderGuide(res, 'trophy'));
+
+app.get('/guides/ps-plus-deluxe-vs-renting', (req, res) => renderGuide(res, 'psplus'));
 
 app.get('/faq', (req, res) => {
   res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
@@ -1574,16 +1706,16 @@ app.post('/requests/add', async (req, res) => {
   // Guard: never let a game we already stock become a request. The client checks
   // this too for immediate feedback, but the client can be bypassed.
   const slug = gameRequests.slugify(title);
-  const already = getGames().find(g => gameSlug(g.title) === slug);
-  if (already) return res.redirect('/game/' + slug);
+  const already = getGames().find(g => titleFixes.slugMatches(gameSlug(g.title), slug));
+  if (already) return res.redirect('/game/' + gameSlug(already.title));
 
   // Free auto-inherit: if this title matches something already in Coming Soon or
   // PS Plus popular, copy its cover so the request never starts with a blank
   // thumbnail. Available-catalogue titles are excluded by the guard above, so
   // only these two lists are worth checking here.
   const inheritedCover =
-    (getUpcoming().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
-    (getPsplusPopular().find(g => gameSlug(g.title) === slug) || {}).cover_image ||
+    (getUpcoming().find(g => titleFixes.slugMatches(gameSlug(g.title), slug)) || {}).cover_image ||
+    (getPsplusPopular().find(g => titleFixes.slugMatches(gameSlug(g.title), slug)) || {}).cover_image ||
     '';
 
   const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover });
@@ -2384,7 +2516,20 @@ app.locals.buySpotlightChoices = buySpotlightChoices;
 
 app.get('/bundle/:slug', (req, res) => {
   const allGames = getGames();
-  const acc = getAccounts().find(a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled) && gameSlug(a.public_name || a.label) === req.params.slug);
+  const param = req.params.slug;
+  const sellable = a => a.for_sale && (a.slots.trophy.enabled || a.slots.non_trophy.enabled);
+  const accounts = getAccounts().filter(sellable);
+  let acc = accounts.find(a => gameSlug(a.public_name || a.label) === param);
+  if (!acc) {
+    acc = accounts.find(a => titleFixes.slugMatches(gameSlug(a.public_name || a.label), param));
+    if (acc) {
+      const canonical = gameSlug(acc.public_name || acc.label);
+      if (canonical && canonical !== param) {
+        const q = req.originalUrl.indexOf('?');
+        return res.redirect(301, '/bundle/' + canonical + (q === -1 ? '' : req.originalUrl.slice(q)));
+      }
+    }
+  }
   if (!acc) return res.redirect('/buy');
   const name = acc.public_name || acc.label;
   const games = buildBundleGames(acc, allGames);
@@ -2564,7 +2709,7 @@ app.get('/sitemap.xml', (req, res) => {
 });
 
 function gameSlug(title) {
-  return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return titleFixes.publicSlug(title);
 }
 
 // A failed order for the PS Plus Deluxe catalogue row goes to the real
@@ -4929,15 +5074,14 @@ app.get('/api/search-index', async (req, res) => {
 
 app.get('/game/:slug', async (req, res) => {
   const param = req.params.slug;
-  // Card links, the search index and the homepage all use gameSlug(title).
-  // redirectSlug rewrites a few of those (nba2k27 → nba-2k27, and the typo
-  // tokens triology / berseker / assasins) toward the spelling the rename
-  // script would produce. That script is not part of boot, so the live title
-  // often still slugs to the pre-rename form. Redirecting before lookup sent
-  // /game/nba2k27 to /game/nba-2k27, which matched nothing and 302'd to
-  // /browse. Resolve either form first. The canonical URL is always the
-  // current title's slug — the same string the card href uses — and only a
-  // slug that does not name a game falls through to /browse.
+  // Card links, the search index and the homepage all use gameSlug(title),
+  // which is the corrected public slug for assasins / calisto / berseker /
+  // triology even when the stored title still has the typo. Old URLs 301
+  // here after lookup. NBA2K27 is not one of those tokens: its card and its
+  // canonical stay /game/nba2k27 until the title is "NBA 2K27", and
+  // /game/nba-2k27 is only an alias. Redirecting that alias before lookup
+  // used to 404 it. Resolve either form first. A slug that names no game
+  // is a 404.
   let game = /^\d+$/.test(param)
     ? getGame(parseInt(param))
     : titleFixes.findBySlug(getGames(), param, g => gameSlug(g.title));
@@ -5939,9 +6083,9 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 // Upcoming CRUD
 app.get('/upcoming/:slug', (req, res) => {
   const slug = req.params.slug;
-  // Same rule as /game/:slug. The card href is gameSlug(title) + '-' + id.
-  // A typo redirect that runs before lookup would 301 that href at a slug
-  // the title does not have, whenever the rename script has not been applied.
+  // Same rule as /game/:slug. The card href is the public slug plus '-' + id,
+  // so a typo token's card already points at the corrected URL. The old
+  // spelling 301s after lookup. nba2k27 is not corrected on boot.
   // slug format: title-slug-ID (ID is at the end after last dash)
   const idMatch = slug.match(/-(\d+)$/);
   let game = idMatch ? getUpcomingGame(idMatch[1]) : null;
@@ -8256,7 +8400,7 @@ app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
 app.post('/admin/test-alert', requireAuth, async (req, res) => {
   const when = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
   const result = await sendTelegramMessage(
-    'Test alert — Playstation Hub\n' +
+    'Test alert — PlayStation Hub\n' +
     'If you can read this, sign-in alerts are working.\n' +
     'Sent ' + when
   );
@@ -8586,9 +8730,78 @@ const paymentReminderTimer = setInterval(() => {
 }, paymentReminders.SWEEP_INTERVAL_MS);
 if (paymentReminderTimer.unref) paymentReminderTimer.unref();
 
-app.listen(PORT, () => {
-  console.log(`\n✅ Playstation Hub running at http://localhost:${PORT}`);
-  console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
-});
+function listen() {
+  app.listen(PORT, () => {
+    console.log(`\n✅ PlayStation Hub running at http://localhost:${PORT}`);
+    console.log(`🔧 Admin panel at http://localhost:${PORT}/admin\n`);
+  });
+}
+
+// Copy any visitor log still stored inside the state document into the
+// analytics collections, then upload the document without those arrays.
+// A failed copy keeps the old full-document sync so a payment cannot be
+// stranded on local disk. Hydrate runs after that, for a restart whose
+// preload restored a state document that no longer carries the log.
+async function prepareAnalytics() {
+  let migrated = null;
+  try {
+    try { await analytics.ensureIndexes(); }
+    catch (e) { console.error('[analytics] indexes', e.message); }
+    migrated = await analytics.migrate(db.getState());
+    analyticsCopied = true;
+  } catch (e) {
+    console.error('[analytics] migration failed; keeping analytics inside the state document:', e.message);
+    analyticsCopied = false;
+  }
+  analyticsReady = true;
+  try {
+    if (analyticsCopied) {
+      const copied = migrated.copied;
+      if (migrated.changed) {
+        console.log('[analytics] copied visitors=' + copied.visitors +
+          ' taps=' + copied.message_taps +
+          ' misses=' + copied.search_misses +
+          ' skips=' + copied.skips);
+      } else {
+        console.log('[analytics] no visitor log in the state document');
+      }
+      if (migrated.changed || stateSync.isDirty()) {
+        await stateSync.flush({ force: !!migrated.changed });
+      }
+      await hydrateAnalytics();
+    } else if (stateSync.isDirty()) {
+      await stateSync.flush();
+    }
+  } catch (e) {
+    console.error('[analytics] boot flush failed:', e.message);
+  }
+}
+
+async function hydrateAnalytics() {
+  let hydrated;
+  try { hydrated = await analytics.hydrate(); }
+  catch (e) {
+    console.error('[analytics] hydrate failed:', e.message);
+    return;
+  }
+  if (!hydrated) return;
+  const patch = selectHydration({
+    visitors: db.get('visitors').value() || [],
+    message_taps: db.get('message_taps').value() || [],
+    search_misses: db.get('search_misses').value() || [],
+    visitor_skips: db.get('visitor_skips').value() || {}
+  }, hydrated);
+  const keys = Object.keys(patch);
+  if (!keys.length) return;
+  stateSync.withAnalytics(() => {
+    let chain = db;
+    keys.forEach(key => { chain = chain.set(key, patch[key]); });
+    chain.write();
+  });
+  console.log('[analytics] hydrated ' + keys.join(', '));
+}
+
+if (!process.env.MONGODB_URI) listen();
+else prepareAnalytics().catch(e => console.error('[analytics] boot', e.message)).finally(listen);
 
 

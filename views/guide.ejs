@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { page: model.pageKey, title: model.title, description: model.description, canonicalPath: model.canonicalPath, jsonLd: model.jsonLd }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: model.navActive }) %>
+
+<section class="guide-hero">
+  <div class="guide-hero-glow"></div>
+  <div class="guide-hero-inner">
+    <div class="guide-kicker"><%= model.kicker %></div>
+    <h1><%= model.h1 %></h1>
+  </div>
+</section>
+
+<div class="guide-wrap">
+  <nav class="guide-crumbs" aria-label="Breadcrumb">
+    <% model.crumbs.forEach(function (crumb, i) { %>
+      <% if (i) { %><span class="guide-crumb-sep" aria-hidden="true">/</span><% } %>
+      <% if (i < model.crumbs.length - 1) { %>
+        <a href="<%= crumb.href %>"><%= crumb.name %></a>
+      <% } else { %>
+        <span><%= crumb.name %></span>
+      <% } %>
+    <% }); %>
+  </nav>
+
+  <p class="guide-answer"><%- model.answer.html %></p>
+  <p class="guide-updated">Last updated <%= model.updatedLabel %>. Prices on this page are the current prices on this site.</p>
+
+  <% model.sections.forEach(function (section) { %>
+  <section class="guide-section" id="<%= section.id %>">
+    <h2><%= section.h2 %></h2>
+    <% (section.paras || []).forEach(function (p) { %>
+      <p><%- p.html %></p>
+    <% }); %>
+    <% if (section.bullets && section.bullets.length) { %>
+    <ul class="guide-list">
+      <% section.bullets.forEach(function (item) { %>
+        <li><%- item.html %></li>
+      <% }); %>
+    </ul>
+    <% } %>
+    <% if (section.boxes && section.boxes.length) { %>
+    <div class="guide-boxes">
+      <% section.boxes.forEach(function (box) { %>
+        <div class="guide-box">
+          <h3><%= box.title %></h3>
+          <p><%- box.text.html %></p>
+        </div>
+      <% }); %>
+    </div>
+    <% } %>
+    <% if (section.table) { %>
+    <div class="guide-table-wrap">
+      <table class="guide-table">
+        <caption><%= section.table.caption %></caption>
+        <thead>
+          <tr>
+            <% section.table.columns.forEach(function (col) { %>
+              <th scope="col"><%= col %></th>
+            <% }); %>
+          </tr>
+        </thead>
+        <tbody>
+          <% section.table.rows.forEach(function (row) { %>
+            <tr>
+              <th scope="row"><%= row.label %></th>
+              <% row.cells.forEach(function (cell) { %>
+                <td><%- cell.html %></td>
+              <% }); %>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+    <% if (section.note) { %>
+      <p class="guide-note"><%- section.note.html %></p>
+    <% } %>
+    <% if (section.steps && section.steps.length) { %>
+      <% section.steps.forEach(function (step, idx, arr) { %>
+        <% if (step.groupLabel) { %>
+          <p class="guide-group"><%= step.groupLabel %></p>
+        <% } else { %>
+          <% var hasLater = arr.slice(idx + 1).some(function (s) { return s.id; }); %>
+          <div class="hiw-step" id="<%= step.id %>">
+            <div class="hiw-num"><%= step.n %></div>
+            <% if (hasLater) { %><div class="hiw-connector"></div><% } %>
+            <div class="hiw-card">
+              <div class="hiw-icon"><%= step.icon %></div>
+              <div class="hiw-body">
+                <h3><%= step.name %></h3>
+                <p><%- step.html %></p>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      <% }); %>
+    <% } %>
+  </section>
+  <% if (section.steps && section.steps.length && model.showAccountBox) { %>
+  <section class="guide-section" id="account-types">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <div class="guide-kicker guide-kicker-gold">Account types</div>
+      <h2>Trophy vs. Non-Trophy Account</h2>
+      <p>Not sure which one to pick? The short version is below. The full comparison, including PS4 Primary, is in the guide linked under the cards.</p>
+    </div>
+    <div class="guide-account-grid">
+      <div class="guide-account-card guide-account-trophy">
+        <div class="guide-account-head">
+          <div class="guide-account-emoji">🏆</div>
+          <div>
+            <div class="guide-account-name guide-account-name-trophy">Trophy Account</div>
+            <div class="guide-account-tag guide-account-tag-trophy">PREMIUM</div>
+          </div>
+        </div>
+        <ul class="guide-account-list">
+          <li><span class="guide-tick guide-tick-yes">✓</span> Play on <strong>your own PSN account</strong></li>
+          <li><span class="guide-tick guide-tick-yes">✓</span> Earn trophies saved to <strong>your profile</strong></li>
+          <li><span class="guide-tick guide-tick-yes">✓</span> Includes a <strong>₱<%= model.deposit %> refundable deposit</strong></li>
+          <li><span class="guide-tick guide-tick-yes">✓</span> Best if you want <strong>trophies on your profile</strong></li>
+        </ul>
+      </div>
+      <div class="guide-account-card">
+        <div class="guide-account-head">
+          <div class="guide-account-emoji">🎮</div>
+          <div>
+            <div class="guide-account-name">Non-Trophy Account</div>
+            <div class="guide-account-tag">STANDARD</div>
+          </div>
+        </div>
+        <ul class="guide-account-list">
+          <li><span class="guide-tick guide-tick-blue">✓</span> Played on <strong>our account</strong></li>
+          <li><span class="guide-tick guide-tick-blue">✓</span> No need to share your own PSN details</li>
+          <li><span class="guide-tick guide-tick-blue">✓</span> Great for just <strong>experiencing the game</strong></li>
+          <li><span class="guide-tick guide-tick-no">✗</span> <span class="guide-muted">Trophies won't appear on your profile</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="guide-account-note">
+      Trophy and PS4 Primary include a <strong>₱<%= model.deposit %> refundable deposit</strong>, returned once the return is verified. Non-Trophy has no deposit.
+      The full comparison is the <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary</a> guide.
+    </div>
+  </section>
+  <% } %>
+  <% }); %>
+
+  <% if (model.faqs && model.faqs.length) { %>
+  <section class="guide-section" id="faq">
+    <h2><%= model.faqHeading %></h2>
+    <% model.faqs.forEach(function (item) { %>
+      <div class="guide-faq-item">
+        <h3><%= item.q %></h3>
+        <p><%- item.html %></p>
+      </div>
+    <% }); %>
+  </section>
+  <% } %>
+
+  <% if (model.loyalty) { %>
+    <p class="guide-also"><%- model.loyalty.html %></p>
+  <% } %>
+  <% if (model.also) { %>
+    <p class="guide-also"><%- model.also.html %></p>
+  <% } %>
+  <% if (model.disclaimer) { %>
+    <p class="guide-disclaimer"><%= model.disclaimer %></p>
+  <% } %>
+</div>
+
+<section class="guide-cta">
+  <h2>Ready to play?</h2>
+  <div class="guide-cta-row">
+    <% model.ctas.forEach(function (cta) { %>
+      <a href="<%= cta.href %>" class="btn <%= cta.outline ? 'btn-outline' : 'btn-primary' %>"<% if (/^https?:/i.test(cta.href)) { %> target="_blank" rel="noopener"<% } %>><%= cta.label %></a>
+    <% }); %>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
+</body>
+</html>

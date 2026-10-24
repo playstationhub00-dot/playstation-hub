@@ -1,11 +1,17 @@
 #!/usr/bin/env node
-// Rename mistyped game titles in the production data. Not run on startup.
+// Rename mistyped game titles in the production data.
+//
+// The four URL families (Assasins, Calisto, Berseker, Triology) are also
+// renamed when the server boots, in the catalogue blob only. This script is
+// the full pass: those four, plus NBA2K27, Silent Hill Townfall, and
+// afdordable, including orders and the request board. It is not part of boot.
 //
 // Game names, upcoming titles, reviews and customer game_title fields live in
 // MongoDB, database `pshub`, collection `state`, document `_id: "db"`, field
 // `data`. scripts/preload.js copies that blob into games.json when the server
 // boots. Orders (`orders.game_title`) and the request board
 // (`game_requests.title`) are their own collections. None of this is in git.
+// Order and game ids are never changed.
 //
 // Dry-run is the default. Nothing is written unless you pass --apply.
 //
@@ -20,8 +26,9 @@
 // What it changes
 //   Resident Evil Remake Triology  -> Resident Evil Remake Trilogy
 //   Khazan The First Berseker       -> Khazan The First Berserker
-//   Assasins Creed Shadows          -> Assassin's Creed Shadows
+//   Assasins Creed Shadows          -> Assassins Creed Shadows
 //   (any "w/ DLC" or other suffix on that title is kept)
+//   Calisto Protocol                -> Callisto Protocol
 //   Silent Hill TownFall            -> Silent Hill: Townfall
 //   NBA2K27                         -> NBA 2K27
 //   afdordable (in review text)     -> affordable
@@ -38,8 +45,9 @@
 // Restart required after a Mongo --apply. A running server holds games.json
 // in memory and the next save overwrites the state document with that copy.
 // Stop the app, run --apply, then start it so preload.js loads the corrected
-// blob. Old /game/ and /upcoming/ URLs redirect (lib/title-fixes.js). The
-// Silent Hill slug does not change.
+// blob. Old /game/, /upcoming/, and /bundle/ URLs 301 to the corrected
+// public slug (lib/title-fixes.js). The Silent Hill slug does not change.
+// NBA2K27 stays at /game/nba2k27 until this script renames the title.
 
 const fs = require('fs');
 const path = require('path');
