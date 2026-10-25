@@ -71,13 +71,26 @@
     return out;
   }
 
+  // "Cancel selected" on the By game board: the bar's count and the question
+  // asked before anything is cancelled.
+  function bulkLabel(n) {
+    return n + ' selected';
+  }
+
+  function bulkConfirm(n) {
+    return 'Cancel ' + n + ' selected order' + (n === 1 ? '' : 's') +
+      '?\n\nThey leave the board; the records stay in All orders.';
+  }
+
   window.__oqFilter = {
     normalizeLedgerState: normalizeLedgerState,
     orderType: orderType,
     rowMatches: rowMatches,
     isFiltering: isFiltering,
     normalizeGroups: normalizeGroups,
-    normalizeCards: normalizeCards
+    normalizeCards: normalizeCards,
+    bulkLabel: bulkLabel,
+    bulkConfirm: bulkConfirm
   };
 
   // ── Page wiring ──────────────────────────────────────────────────────────
@@ -143,6 +156,52 @@
         writeJson('local', GROUPS_KEY, cur);
       });
     });
+  }
+
+  // "Cancel selected": the row checkboxes all belong to #oqBulkForm (their
+  // form attribute), so ticking them is all the form needs. This keeps the bar,
+  // its count and each card's "Select all" box in step with the ticks.
+  function initBulk() {
+    var form = document.getElementById('oqBulkForm');
+    if (!form) return;
+    var label = document.getElementById('oqBulkN');
+    function picks(root) { return toArray((root || document).querySelectorAll('input.oq-pick')); }
+    function ticked() { return picks().filter(function (p) { return p.checked; }).length; }
+    function update() {
+      var n = ticked();
+      form.hidden = n === 0;
+      if (label) label.textContent = bulkLabel(n);
+      toArray(document.querySelectorAll('details[data-oq-card]')).forEach(function (card) {
+        var all = card.querySelector('input.oq-pick-all');
+        if (!all) return;
+        var mine = picks(card);
+        var on = mine.filter(function (p) { return p.checked; }).length;
+        all.checked = mine.length > 0 && on === mine.length;
+        all.indeterminate = on > 0 && on < mine.length;
+      });
+    }
+    document.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || !t.classList) return;
+      if (t.classList.contains('oq-pick-all')) {
+        var card = t.closest('details[data-oq-card]');
+        if (card) picks(card).forEach(function (p) { p.checked = t.checked; });
+      }
+      if (t.classList.contains('oq-pick') || t.classList.contains('oq-pick-all')) update();
+    });
+    var clear = document.getElementById('oqBulkClear');
+    if (clear) {
+      clear.addEventListener('click', function () {
+        picks().forEach(function (p) { p.checked = false; });
+        update();
+      });
+    }
+    form.addEventListener('submit', function (e) {
+      var n = ticked();
+      if (!n || !window.confirm(bulkConfirm(n))) e.preventDefault();
+    });
+    // A reload can bring ticks back; show the bar for them.
+    update();
   }
 
   // Each By game card re-opens or folds the way the owner last left it; a
@@ -273,6 +332,7 @@
     formatAges();
     initGroups();
     initCards();
+    initBulk();
     initLedger();
   }
 

@@ -152,6 +152,18 @@ ok('keeps at most 300 cards so the memory cannot grow without end', () => {
   assert.strictEqual(Object.keys(plain(F.normalizeCards(many))).length, 300);
 });
 
+console.log('\nCancel selected');
+
+ok('the bar counts what is ticked', () => {
+  assert.strictEqual(F.bulkLabel(0), '0 selected');
+  assert.strictEqual(F.bulkLabel(3), '3 selected');
+});
+
+ok('the confirm names how many and says the records stay', () => {
+  assert.strictEqual(F.bulkConfirm(1), 'Cancel 1 selected order?\n\nThey leave the board; the records stay in All orders.');
+  assert.strictEqual(F.bulkConfirm(3), 'Cancel 3 selected orders?\n\nThey leave the board; the records stay in All orders.');
+});
+
 console.log('\nwiring');
 
 ok('admin.ejs loads admin-orders.js with a cache-busting ?v=', () => {
