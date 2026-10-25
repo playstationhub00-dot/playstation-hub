@@ -270,6 +270,40 @@ ok('Coming Soon and box-set cards say so; nothing to show means no board', () =>
   assert.ok(!render({ waitlistOrders: [], abandonedOrders: [] }).includes('data-oq-group="bygame"'));
 });
 
+console.log('\nCancel selected');
+
+const pick = ref => '<input type="checkbox" class="oq-pick" name="refs" value="' + ref + '" form="oqBulkForm" aria-label="Select ' + ref + '">';
+
+ok('a checkbox on every follow-up and free waitlist row, outside the ⋯ menus; none on a priority entry', () => {
+  const visible = outsideMenus(groupBlock(html, 'bygame'));
+  ['PH-0110', 'PH-0111', 'PH-0120'].forEach(ref => assert.ok(visible.includes(pick(ref)), ref));
+  assert.ok(!html.includes('value="PH-0121" form="oqBulkForm"'), 'priority PH-0121 has no checkbox');
+});
+
+ok('each card with something to pick has a Select all box; a priority-only card has none', () => {
+  const board = groupBlock(html, 'bygame');
+  const all = '<label class="oq-pick-all-row"><input type="checkbox" class="oq-pick-all"> Select all in this card</label>';
+  assert.strictEqual(board.split(all).length - 1, 2, 'one per card');
+  const onlyPriority = render({ abandonedOrders: [], waitlistOrders: [lo('PH-0122', 'reserved', { game_id: 5, fb_name: 'Ivo Paz', queuePosition: 1 })] });
+  assert.ok(!onlyPriority.includes('oq-pick'));
+});
+
+ok('one bulk form, hidden until something is ticked, after the board; no board means no form', () => {
+  const form = '<form id="oqBulkForm" method="POST" action="/admin/orders/bulk-cancel" class="oq-bulk-bar" hidden>';
+  assert.strictEqual(html.split(form).length - 1, 1);
+  assert.ok(html.indexOf(form) > html.indexOf('data-oq-group="bygame"'));
+  assert.ok(html.includes('<span class="oq-bulk-n" id="oqBulkN">0 selected</span>'));
+  assert.ok(html.includes('<button type="submit" class="oq-bulk-go">🚫 Cancel selected</button>'));
+  assert.ok(html.includes('<button type="button" class="oq-bulk-clear" id="oqBulkClear">Clear</button>'));
+  assert.ok(!render({ waitlistOrders: [], abandonedOrders: [] }).includes('oqBulkForm'));
+});
+
+ok('the bar and the boxes are styled, in light mode too', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'), 'utf8');
+  ['.oq-pick {', '.oq-pick-all-row {', '.oq-bulk-bar {', '.oq-bulk-bar[hidden] {', '.oq-bulk-go {', '.oq-bulk-clear {',
+   'body.light-mode .oq-bulk-bar {'].forEach(s => assert.ok(css.includes(s), s));
+});
+
 console.log('\nwaitlist: slot given and edit name');
 
 ok('✅ Slot given is a visible button on free and priority rows, with its confirm', () => {

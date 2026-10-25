@@ -207,6 +207,8 @@
       card.followUps.length ? card.followUps.length + " didn't pay" : '',
       card.kind === 'upcoming' ? 'Coming Soon' : card.kind === 'bundle' ? 'Box set' : ''
     ].filter(Boolean).join(' · ');
+    // A ⭐ priority entry is never cancelled in bulk, so it gets no checkbox.
+    const cardPickable = card.followUps.length + card.waiting.filter(o => o.state !== 'reserved').length;
   %>
   <details class="oq-card<%= card.slotsFree ? ' oq-card-free' : '' %>" data-oq-card="<%= card.key %>"<%= card.slotsFree ? ' open' : '' %>>
     <summary class="oq-card-h">
@@ -216,6 +218,9 @@
       <span class="oq-card-n"><%= cardCount %></span>
     </summary>
     <div class="oq-card-body">
+  <% if (cardPickable) { %>
+  <label class="oq-pick-all-row"><input type="checkbox" class="oq-pick-all"> Select all in this card</label>
+  <% } %>
   <% if (card.waiting.length) { %>
   <div class="oq-card-lbl">Waiting · <%= card.waiting.length %></div>
   <% card.waiting.forEach(o => {
@@ -234,6 +239,7 @@
             exact function that numbers this same order on the customer's own
             page. null means an expired free entry: still shown, but no longer
             counted toward anyone's position. %>
+        <% if (!wlPriority) { %><input type="checkbox" class="oq-pick" name="refs" value="<%= o.ref %>" form="oqBulkForm" aria-label="Select <%= o.ref %>"><% } %>
         <span class="oq-wl-pos"><%= o.queuePosition ? '#' + o.queuePosition : (o.queueExpired ? '—' : '#?') %></span>
         <span class="oq-ref"><%= o.ref %></span>
         <span class="oq-ab-name"><%= o.fb_name %></span>
@@ -305,6 +311,7 @@
   <div class="oq-row oq-row-follow">
     <div class="oq-main">
       <div class="oq-top">
+        <input type="checkbox" class="oq-pick" name="refs" value="<%= o.ref %>" form="oqBulkForm" aria-label="Select <%= o.ref %>">
         <span class="oq-ref"><%= o.ref %></span>
         <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
         <% if (reminded) { %><span class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span><% } %>
@@ -346,4 +353,12 @@
   </details>
   <% }) %>
 </details>
+<%# "Cancel selected": every checkbox above points here with form="oqBulkForm",
+    so no form sits inside another. public/js/admin-orders.js shows this bar
+    once something is ticked, keeps its count and asks before it submits. %>
+<form id="oqBulkForm" method="POST" action="/admin/orders/bulk-cancel" class="oq-bulk-bar" hidden>
+  <span class="oq-bulk-n" id="oqBulkN">0 selected</span>
+  <button type="submit" class="oq-bulk-go">🚫 Cancel selected</button>
+  <button type="button" class="oq-bulk-clear" id="oqBulkClear">Clear</button>
+</form>
 <% } %>

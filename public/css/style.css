@@ -3388,6 +3388,19 @@ body.light-mode .ord-expired-alt { border-top-color: #f0dca8; }
 .oq-card-lbl { font-size: 0.66rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #777; margin: 0.35rem 0.15rem 0.45rem; }
 .oq-row-wait { border-left: 3px solid #3a3a3a; }
 .oq-row-follow { border-left: 3px solid #f59e0b; }
+/* Cancel selected: row checkboxes, a select-all per card, and the bar. */
+.oq-pick { width: 1rem; height: 1rem; margin: 0 0.15rem 0 0; accent-color: var(--ps-blue); cursor: pointer; flex-shrink: 0; }
+.oq-pick-all-row { display: flex; align-items: center; gap: 0.45rem; font-size: 0.75rem; font-weight: 700; color: #888; margin: 0.15rem 0.15rem 0.55rem; cursor: pointer; width: fit-content; }
+.oq-pick-all { width: 1rem; height: 1rem; accent-color: var(--ps-blue); cursor: pointer; }
+.oq-bulk-bar { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 0.6rem; background: #151515; border: 1px solid #333; border-radius: 14px; padding: 0.6rem 0.75rem 0.6rem 1rem; box-shadow: 0 12px 32px rgba(0,0,0,0.55); max-width: calc(100vw - 1.5rem); }
+.oq-bulk-bar[hidden] { display: none; }
+.oq-bulk-n { font-weight: 800; font-size: 0.85rem; color: #eee; white-space: nowrap; }
+.oq-bulk-go { background: #ef4444; color: #fff; border: 0; border-radius: 9px; padding: 0.5rem 0.9rem; font-weight: 800; font-size: 0.8rem; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.oq-bulk-clear { background: transparent; color: #bbb; border: 1px solid #333; border-radius: 9px; padding: 0.45rem 0.8rem; font-weight: 700; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
+body.light-mode .oq-bulk-bar { background: #fff; border-color: #ddd; box-shadow: 0 12px 32px rgba(0,0,0,0.15); }
+body.light-mode .oq-bulk-n { color: #111; }
+body.light-mode .oq-bulk-clear { color: #444; border-color: #ccc; }
+body.light-mode .oq-pick-all-row { color: #555; }
 body.light-mode .oq-card { background: #fff; border-color: #e2e2e2; }
 body.light-mode .oq-card-free { border-color: rgba(22,163,74,0.5); }
 body.light-mode .oq-card-title { color: #111; }
