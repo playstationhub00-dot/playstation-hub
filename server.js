@@ -8793,9 +8793,15 @@ const orderCleanupTimer = setInterval(() => {
     settings: getSiteSettings().payment_reminders,
     listCandidates: () => orders.listByStates(orderCleanup.CANCELLABLE_STATES.slice()),
     cancel: async (order, days) => !!(await orders.transition(order.ref, 'cancelled',
-      { cancel_reason: 'stale', stale_days: days }, { from: [order.state] }))
+      { cancel_reason: 'stale', stale_days: days }, { from: [order.state] })),
+    onError: (order, e) => console.error('[order cleanup] could not cancel ' + order.ref + ': ' + (e && e.message ? e.message : e))
   }).then(r => {
-    if (r && r.cancelled) console.log('[order cleanup]', r.cancelled, 'cancelled');
+    if (r && r.cancelled) {
+      const refs = Array.isArray(r.refs) ? r.refs : [];
+      const shown = refs.slice(0, 200).join(', ');
+      console.log('[order cleanup] cancelled ' + r.cancelled + (refs.length ? ': ' + shown : '') +
+        (refs.length > 200 ? ' \u2026and ' + (refs.length - 200) + ' more' : ''));
+    }
   }).catch(e => console.error('[order cleanup]', e && e.message ? e.message : e));
 }, paymentReminders.SWEEP_INTERVAL_MS);
 if (orderCleanupTimer.unref) orderCleanupTimer.unref();

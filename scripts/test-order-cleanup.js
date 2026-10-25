@@ -81,10 +81,10 @@ const o = (ref, state, created_at, extra) => Object.assign({ ref, state, created
       listCandidates: async () => list,
       cancel: async (order, days) => { calls.push(order.ref + '@' + days); return order.ref !== 'PH-0013'; }
     });
-    assert.deepStrictEqual(await cleanup.runCleanup(deps({})), { examined: 3, cancelled: 1 });
+    assert.deepStrictEqual(await cleanup.runCleanup(deps({})), { examined: 3, cancelled: 1, refs: ["PH-0011"] });
     assert.deepStrictEqual(calls, ['PH-0011@30', 'PH-0013@30']);
     calls.length = 0;
-    assert.deepStrictEqual(await cleanup.runCleanup(deps({ cleanup_enabled: false })), { examined: 0, cancelled: 0 });
+    assert.deepStrictEqual(await cleanup.runCleanup(deps({ cleanup_enabled: false })), { examined: 0, cancelled: 0, refs: [] });
     assert.deepStrictEqual(calls, []);
   });
 
@@ -99,10 +99,30 @@ const o = (ref, state, created_at, extra) => Object.assign({ ref, state, created
       cancel: async order => { if (order.ref === 'PH-0021') throw new Error('db down'); done.push(order.ref); return true; }
     });
     const second = await cleanup.runCleanup({ now: NOW, settings: {}, listCandidates: async () => list, cancel: async () => true });
-    assert.deepStrictEqual(second, { examined: 0, cancelled: 0, overlapped: true });
+    assert.deepStrictEqual(second, { examined: 0, cancelled: 0, refs: [], overlapped: true });
     release();
-    assert.deepStrictEqual(await first, { examined: 2, cancelled: 1 });
+    assert.deepStrictEqual(await first, { examined: 2, cancelled: 1, refs: ['PH-0022'] });
     assert.deepStrictEqual(done, ['PH-0022']);
+  });
+
+  await ok('refs lists the cancelled orders in order; false cancels are left out; onError traces a throw and never stops the sweep', async () => {
+    const list = [
+      o('PH-0031', 'awaiting_payment', daysAgo(40)), o('PH-0032', 'awaiting_payment', daysAgo(40)),
+      o('PH-0033', 'waitlisted', daysAgo(40)), o('PH-0034', 'waitlisted', daysAgo(40))
+    ];
+    const errors = [];
+    const res = await cleanup.runCleanup({
+      now: NOW, settings: {},
+      listCandidates: async () => list,
+      cancel: async order => {
+        if (order.ref === 'PH-0032') return false;
+        if (order.ref === 'PH-0033') throw new Error('db down');
+        return true;
+      },
+      onError: (order, err) => { errors.push(order.ref + ':' + err.message); throw new Error('onError itself broke'); }
+    });
+    assert.deepStrictEqual(res, { examined: 4, cancelled: 2, refs: ['PH-0031', 'PH-0034'] });
+    assert.deepStrictEqual(errors, ['PH-0033:db down']);
   });
 
   console.log('\n' + passed + ' assertions passed\n');
