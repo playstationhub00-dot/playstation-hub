@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <%- include('partials/head', { page: 'how-to-sign-in' }) %>
+  <%- include('partials/head', { page: 'how-to-sign-in', jsonLd: signinJsonLd }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
 <body>
@@ -10,7 +10,7 @@
 
 <div class="ord-page">
   <h1 class="ord-title">How to sign in and send your QR</h1>
-  <p class="ord-sub">Pick your console below, follow the steps, then send the QR code here on Messenger.</p>
+  <p class="ord-sub">Pick your console below. The steps cover the sign-in QR, Trophy or PS4 Primary setup, and how to sign out when you return the account.</p>
 
   <div class="ord-card">
     <%- include('partials/signin-guide', { signinSteps, idPrefix: 'pub' }) %>

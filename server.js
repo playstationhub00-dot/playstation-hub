@@ -66,6 +66,7 @@ const genreMigration = require('./lib/genre-migration');
 const paymentCopy = require('./lib/payment-copy');
 const { normalizeCustomerPayments, priceDeltaPayment } = require('./lib/payments');
 const templates = require('./lib/templates');
+const signinStepsLib = require('./lib/signin-steps');
 const mongoConnection = require('./lib/mongo-connection');
 const supportFacts = require('./lib/support-facts');
 const supportThreads = require('./lib/support-threads');
@@ -277,26 +278,21 @@ db.defaults({
   loyalty_next_id: 1
 }).write();
 
-// Seed default sign-in steps on first run only — an owner who has already
-// edited/reordered these should never have them silently reset.
-if (!db.get('signin_steps').value().length) {
-  const DEFAULT_SIGNIN_STEPS = [
-    { console: 'ps5', text: 'On your PS5, go to Settings → Users and Accounts → Users' },
-    { console: 'ps5', text: 'Select your profile, then choose "Sign in with PS App" so the QR code appears on screen' },
-    { console: 'ps5', text: 'Take a photo of the QR code and send it to us' },
-    { console: 'ps4', text: 'On your PS4, go to Settings → Login Settings → Sign In' },
-    { console: 'ps4', text: 'Choose "Sign in with QR Code" so the QR code appears on screen' },
-    { console: 'ps4', text: 'Take a photo of the QR code and send it to us' }
-  ];
-  let nextId = db.get('nextSigninStepId').value();
-  const seeded = DEFAULT_SIGNIN_STEPS.map((s, i) => {
-    const byConsole = DEFAULT_SIGNIN_STEPS.filter(x => x.console === s.console);
+// Seed the poster steps on an empty guide, and replace a guide that is still
+// the old "Sign in with PS App" / "Login Settings" default. An owner who has
+// edited the wording keeps their version.
+(function syncSigninSteps() {
+  const decision = signinStepsLib.syncDecision(db.get('signin_steps').value());
+  if (!decision.replace) return;
+  let nextId = db.get('nextSigninStepId').value() || 1;
+  const seeded = decision.steps.map(s => {
+    const byConsole = decision.steps.filter(x => x.console === s.console);
     const rank = byConsole.indexOf(s);
-    return Object.assign({ id: nextId++, rank, image: null, created_at: new Date().toISOString() }, s);
+    return { id: nextId++, console: s.console, rank, text: s.text, image: null, created_at: new Date().toISOString() };
   });
   db.set('signin_steps', seeded).write();
   db.set('nextSigninStepId', nextId).write();
-}
+})();
 
 // Ensure accounts collection exists for pre-existing databases
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
@@ -1376,6 +1372,18 @@ function getSiteSettings() {
       db.set('site_settings.message_templates.expiry_today', fixed).write();
       s.message_templates.expiry_today = fixed;
     }
+    // Return steps used to say "Delete Account". The posters say Sign Out,
+    // after Console Sharing is disabled (Trophy) or Primary is deactivated
+    // (PS4 Primary). Replace only a stored copy that is still that old default.
+    ['return_steps_tr', 'return_steps_ps4', 'return_steps_nt'].forEach(key => {
+      const stored = s.message_templates[key];
+      const previous = templates.PREVIOUS_RETURN_STEPS[key];
+      if (typeof stored !== 'string' || typeof previous !== 'string') return;
+      if (stored.replace(/\r\n/g, '\n') !== previous.replace(/\r\n/g, '\n')) return;
+      const next = templates.DEFAULT_TEMPLATES[key];
+      db.set('site_settings.message_templates.' + key, next).write();
+      s.message_templates[key] = next;
+    });
   }
   // Payment methods start disabled: until the owner has uploaded a QR and
   // filled in the account details, showing a customer an empty GCash panel is
@@ -1748,8 +1756,10 @@ app.post('/requests/:slug/vote', async (req, res) => {
 });
 
 app.get('/how-to-sign-in', (req, res) => {
+  const signinSteps = getSigninSteps();
   res.render('how-to-sign-in', {
-    signinSteps: getSigninSteps(),
+    signinSteps,
+    signinJsonLd: signinStepsLib.howToBlocks(signinSteps),
     announcement: getAnnouncement(),
     announcements: getAnnouncements(),
     settings: getSiteSettings()
