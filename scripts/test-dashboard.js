@@ -89,6 +89,36 @@ check('an empty period reports zero without dividing by zero', () => {
   assert.strictEqual(s.rentalPct, 0);
 });
 
+check('a refund payment reduces what was collected, in the month it was sent', () => {
+  const rows = [{
+    status: 'renting',
+    payments: [
+      { amount: 1438, date: '2026-09-27', kind: 'rental' },
+      { amount: -819, date: '2026-10-25', kind: 'refund' }
+    ]
+  }];
+  const september = dash.collected(rows, dash.periodRange('month', NOW));
+  assert.strictEqual(september.total, 1438);
+  const october = dash.collected(rows, dash.periodRange('month', new Date('2026-10-25T12:00:00.000Z')));
+  assert.strictEqual(october.total, -819);
+  const all = dash.collected(rows, dash.periodRange('all', NOW));
+  assert.strictEqual(all.total, 619);
+});
+
+check('cancelling a purchase keeps the sale and the refund on the sales side', () => {
+  const rows = [{
+    status: 'cancelled',
+    cancellation: { prev_status: 'bought', gross: 2500 },
+    payments: [
+      { amount: 2500, date: '2026-09-06', kind: 'purchase' },
+      { amount: -500, date: '2026-09-20', kind: 'refund' }
+    ]
+  }];
+  const s = dash.rentalVsSales(rows, dash.periodRange('month', NOW));
+  assert.strictEqual(s.sales, 2000);
+  assert.strictEqual(s.rental, 0);
+});
+
 // ── deposits ─────────────────────────────────────────────────────────────────
 check('deposits held counts money taken that has not gone back', () => {
   const orders = [
@@ -237,6 +267,19 @@ check('dormant lists people whose last payment is older than the cutoff', () => 
   assert.ok(d[0].daysSince > 60);
 });
 
+check('a refund does not count as the customer having just paid', () => {
+  const rows = [{
+    customer_name: 'Cara Lim',
+    payments: [
+      { amount: 200, date: '2026-05-01', kind: 'rental' },
+      { amount: -200, date: '2026-09-06', kind: 'refund' }
+    ]
+  }];
+  const d = dash.dormant(rows, 60, NOW);
+  assert.strictEqual(d.length, 1);
+  assert.strictEqual(d[0].lastPaid, '2026-05-01');
+});
+
 // ── reviews ──────────────────────────────────────────────────────────────────
 check('review stats average only what is published, and count what is not', () => {
   const reviews = [
@@ -261,6 +304,16 @@ check('most rented counts rentals started in the period, biggest first', () => {
   const t = dash.topRented(dated, dash.periodRange('month', NOW), 5);
   assert.strictEqual(t[0][0], 'A');
   assert.strictEqual(t[0][1], 2);
+});
+
+check('a cancelled rental is not counted as still rented', () => {
+  const rows = [
+    { game_title: 'A', status: 'renting', start_date: '2026-09-03' },
+    { game_title: 'A', status: 'cancelled', start_date: '2026-09-04' },
+    { game_title: 'A', status: 'refunded', start_date: '2026-09-05' }
+  ];
+  const t = dash.topRented(rows, dash.periodRange('month', NOW), 5);
+  assert.deepStrictEqual(t, [['A', 1]]);
 });
 
 // Real records do go without a start date. All-time must still see them, or the
