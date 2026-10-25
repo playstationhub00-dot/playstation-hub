@@ -15,6 +15,7 @@ const orders = require('./lib/orders');
 const queueRules = require('./lib/queue');
 const { cleanFbName } = require('./lib/names');
 const needsYouBoard = require('./lib/needs-you-board');
+const orderCleanup = require('./lib/order-cleanup');
 const reviewRules = require('./lib/reviews');
 const gatewayRules = require('./lib/gateway');
 const paymongo = require('./lib/paymongo');
@@ -4745,6 +4746,25 @@ app.post('/admin/orders/:ref/rename', requireAuth, asyncRoute(async (req, res) =
   if (!name) return res.redirect('/admin?tab=orders&msg=order_name_bad');
   if (!(await orders.setName(order.ref, name))) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_renamed');
+}));
+
+// "Cancel selected" on the By game board: the owner ticked several unpaid
+// orders or free waiting-list entries. Each is read again and cancelled only
+// while lib/order-cleanup.js still allows it, pinned to the state just read,
+// so one that was paid or moved meanwhile is skipped rather than cancelled.
+// Cancelled, not deleted: the records stay in All orders.
+// See docs/superpowers/specs/2026-10-24-orders-bulk-cancel-and-cleanup-design.md.
+app.post('/admin/orders/bulk-cancel', requireAuth, asyncRoute(async (req, res) => {
+  const refs = orderCleanup.parseRefs(req.body.refs);
+  if (!refs.length) return res.redirect('/admin?tab=orders&msg=orders_bulk_none');
+  let cancelled = 0;
+  for (const ref of refs) {
+    const order = await orders.getByRef(ref);
+    if (!orderCleanup.isCancellable(order)) continue;
+    const r = await orders.transition(order.ref, 'cancelled', { cancel_reason: 'owner_bulk' }, { from: [order.state] });
+    if (r) cancelled++;
+  }
+  res.redirect('/admin?tab=orders&msg=orders_bulk_cancelled&n=' + cancelled + '&skipped=' + (refs.length - cancelled));
 }));
 
 // A game someone asked for over Messenger, never through the public request
