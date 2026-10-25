@@ -1,0 +1,268 @@
+<%# Cancel / Refund. One modal for the customers table and the edit page.
+    The row button carries the rental as JSON; this file only reads it.
+    Included once per page — a second copy would duplicate these ids. %>
+<div class="qa-overlay" id="rfOverlay">
+  <div class="qa-box">
+    <div class="qa-head">
+      <span class="qa-head-ic">↩</span>
+      <span class="qa-head-t" id="rfTitle">Cancel / Refund</span>
+      <button type="button" class="qa-x" onclick="rfClose()" aria-label="Close">✕</button>
+    </div>
+    <form class="qa-body" id="rfForm" method="POST" action="/admin/customers/0/refund" data-no-loading="1">
+      <input type="hidden" name="confirm" id="rfConfirm" value="">
+      <input type="hidden" name="action" id="rfAction" value="apply">
+      <input type="hidden" name="refund_id" id="rfRefundId" value="">
+      <input type="hidden" name="scope" id="rfScope" value="extension">
+      <input type="hidden" name="extension_key" id="rfKey" value="">
+      <div class="qa-err" id="rfErr" hidden></div>
+      <div class="xt-who" id="rfWho"></div>
+      <div class="qa-l" id="rfChoiceLabel">What are you refunding?</div>
+      <div class="rf-choices" id="rfChoices"></div>
+      <label class="qa-sub" id="rfDaysWrap" hidden>Days this extension added
+        <input class="qa-in" type="number" name="days" id="rfDays" min="1" max="364" inputmode="numeric">
+      </label>
+      <label class="qa-sub">Refund amount (₱)
+        <input class="qa-in" type="number" name="amount" id="rfAmount" min="0" step="1" inputmode="numeric">
+      </label>
+      <label class="qa-sub">Sent back via
+        <select class="qa-in" name="method" id="rfMethod">
+          <option value="">Choose</option>
+          <option value="gcash">GCash</option>
+          <option value="maya">Maya</option>
+          <option value="paypal">PayPal</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label class="qa-sub">Date
+        <input class="qa-in" type="date" name="date" id="rfDate">
+      </label>
+      <label class="qa-sub">Note (optional)
+        <input class="qa-in" type="text" name="note" id="rfNote" maxlength="240" placeholder="Optional">
+      </label>
+      <div class="rf-deposit" id="rfDeposit" hidden></div>
+      <div class="rf-preview" id="rfPreview"></div>
+    </form>
+    <div class="qa-foot">
+      <span class="qa-grow"></span>
+      <button type="button" class="qa-btn qa-ghost" onclick="rfClose()">Back</button>
+      <button type="button" class="qa-btn qa-gold" id="rfSubmit">Confirm refund</button>
+    </div>
+  </div>
+</div>
+<style>
+  .rf-choices { display:flex; flex-direction:column; gap:0.35rem; margin:0.35rem 0 0.85rem; }
+  .rf-choices[hidden] { display:none !important; }
+  .rf-choice { display:flex; gap:0.45rem; align-items:flex-start; font-size:0.8rem; line-height:1.35; color:#ddd; background:#0a0a0a; border:1px solid #222; border-radius:8px; padding:0.45rem 0.6rem; cursor:pointer; }
+  .rf-choice input { margin-top:0.15rem; }
+  .rf-deposit { font-size:0.75rem; line-height:1.4; color:#fbbf24; background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25); border-radius:8px; padding:0.5rem 0.65rem; margin-top:0.7rem; }
+  .rf-preview { font-size:0.78rem; color:#9ca3af; margin-top:0.7rem; line-height:1.4; }
+  .cst-refund { background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.4); border-radius:5px; padding:0.25rem 0.5rem; font-size:0.72rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .cst-refund:hover { background:#fbbf24; color:#1a1203; }
+  .cst-badge { border-radius:20px; padding:0.25rem 0.7rem; font-size:0.72rem; font-weight:700; white-space:nowrap; display:inline-block; }
+  .cst-badge-cancelled { background:#3a2a12; color:#fbbf24; }
+  .cst-badge-refunded { background:#3a1515; color:#fca5a5; }
+  .cst-refund-line { margin-top:0.28rem; font-size:0.68rem; color:#fbbf24; font-weight:650; line-height:1.35; }
+  .cst-refund-note { font-size:0.66rem; color:#888; margin-top:0.1rem; }
+  .cst-refund-actions { display:flex; gap:0.3rem; margin-top:0.2rem; }
+  .cst-refund-actions button, .cst-refund-actions .cst-refund { font-size:0.66rem; padding:0.12rem 0.4rem; }
+  .cst-undo { background:transparent; color:#aaa; border:1px solid #333; border-radius:5px; padding:0.12rem 0.4rem; font-size:0.66rem; font-weight:700; cursor:pointer; }
+  body.light-mode .rf-choice { background:#f7f9fa; border-color:#e4e7eb; color:#333; }
+</style>
+<script>
+(function () {
+  function el(id) { return document.getElementById(id); }
+  var RF = null;
+
+  function peso(n) {
+    var v = Math.round(Number(n) || 0);
+    return String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function addDays(ymd, n) {
+    var t = Date.parse(ymd + 'T00:00:00Z');
+    if (isNaN(t)) return '';
+    return new Date(t + n * 86400000).toISOString().slice(0, 10);
+  }
+  function methodLabel(m) {
+    return { gcash: 'GCash', maya: 'Maya', paypal: 'PayPal', other: 'Other' }[m] || '';
+  }
+  function showErr(text) {
+    var box = el('rfErr');
+    box.hidden = false;
+    box.textContent = text;
+  }
+  function selected() {
+    if (!RF) return null;
+    var key = el('rfKey').value;
+    if (key === 'rental') return { key: 'rental', rental: true, amount: RF.net };
+    if (key === 'manual') return { key: 'manual', manual: true, days: null, amount: null };
+    var rows = RF.choices || [];
+    for (var i = 0; i < rows.length; i++) if (rows[i].key === key) return rows[i];
+    return null;
+  }
+  function choiceText(c) {
+    if (c.inferred) {
+      return 'Extension payment ₱' + peso(c.amount) + (c.paidOn ? ' on ' + c.paidOn : '') + ' — the days were not saved separately';
+    }
+    var text = c.days + '-day extension · ₱' + peso(c.amount);
+    if (c.from) text += ' · was ending ' + c.from + (c.to ? ', extended to ' + c.to : '');
+    return text;
+  }
+  function renderChoices() {
+    var box = el('rfChoices');
+    var label = el('rfChoiceLabel');
+    box.textContent = '';
+    if (el('rfAction').value === 'edit') {
+      box.hidden = true;
+      label.hidden = true;
+      return;
+    }
+    box.hidden = false;
+    label.hidden = false;
+    var prefer = '';
+    (RF.choices || []).forEach(function (c) { if (!c.inferred) prefer = c.key; });
+    if (!prefer && RF.choices && RF.choices[0]) prefer = RF.choices[0].key;
+    if (!prefer && RF.manual) prefer = 'manual';
+    if (!prefer && RF.canRental) prefer = 'rental';
+
+    function add(key, text) {
+      var lab = document.createElement('label');
+      lab.className = 'rf-choice';
+      var input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'rfPick';
+      input.value = key;
+      input.checked = key === prefer;
+      input.addEventListener('change', function () {
+        el('rfKey').value = key;
+        el('rfScope').value = key === 'rental' ? 'rental' : 'extension';
+        syncFields(true);
+      });
+      lab.appendChild(input);
+      lab.appendChild(document.createTextNode(text));
+      box.appendChild(lab);
+    }
+    (RF.choices || []).forEach(function (c) { add(c.key, choiceText(c)); });
+    if (RF.manual) add('manual', 'Shorten this rental and refund part of it — no extension was saved separately');
+    if (RF.canRental) {
+      var whole = (RF.status === 'done' || RF.status === 'bought') ? 'Refund this whole record' : 'Cancel the whole rental';
+      add('rental', whole);
+    }
+    el('rfKey').value = prefer;
+    el('rfScope').value = prefer === 'rental' ? 'rental' : 'extension';
+  }
+  function syncFields(resetAmount) {
+    var choice = selected();
+    var needDays = !!(choice && !choice.rental && (choice.inferred || choice.manual || choice.days == null));
+    el('rfDaysWrap').hidden = !needDays;
+    if (!needDays) el('rfDays').value = '';
+    if (resetAmount && el('rfAction').value !== 'edit') {
+      if (choice && choice.rental) el('rfAmount').value = String(RF.net || 0);
+      else if (choice && choice.amount != null) el('rfAmount').value = String(choice.amount);
+      else el('rfAmount').value = '';
+    }
+    var dep = el('rfDeposit');
+    var showDep = !!(choice && choice.rental && (RF.accountType === 'tr' || RF.accountType === 'ps4'));
+    dep.hidden = !showDep;
+    if (showDep) {
+      dep.textContent = 'If this Trophy or PS4 rental still has its refundable deposit on the order, cancelling marks that deposit refunded. The deposit is not part of the price above and is not subtracted from revenue — send it back separately if you are still holding it.';
+    }
+    var preview = el('rfPreview');
+    preview.textContent = '';
+    if (el('rfAction').value === 'edit') {
+      preview.textContent = 'Updates this refund only. The days and the end date stay as they are.';
+      return;
+    }
+    if (choice && choice.rental) {
+      preview.textContent = 'Leaves Renting and Reservation, and frees the account slot. The record is kept, with the original price still shown.';
+      return;
+    }
+    var days = (choice && choice.days) || parseInt(el('rfDays').value, 10) || 0;
+    var end = (choice && choice.restoreEnd) || '';
+    if (!end && RF.end && days) end = addDays(RF.end, -days);
+    var bits = ['Stays Renting'];
+    if (days && RF.days) bits.push((RF.days - days) + ' days left');
+    if (end) bits.push('ends ' + end);
+    preview.textContent = bits.join(' · ');
+  }
+
+  window.rfClose = function () { el('rfOverlay').classList.remove('open'); };
+
+  function openRefund(raw, editId) {
+    RF = raw || {};
+    el('rfForm').action = '/admin/customers/' + RF.id + '/refund';
+    el('rfConfirm').value = '';
+    el('rfErr').hidden = true;
+    var who = el('rfWho');
+    who.textContent = '';
+    var name = document.createElement('b');
+    name.textContent = RF.name || '';
+    var meta = document.createElement('span');
+    meta.textContent = (RF.game || '') + (RF.end ? ' · ends ' + RF.end : '') + ' · ₱' + peso(RF.price) + (Number(RF.net) !== Number(RF.price) ? ' · net collected ₱' + peso(RF.net) : '');
+    who.appendChild(name);
+    who.appendChild(meta);
+
+    var found = null;
+    if (editId) {
+      (RF.refunds || []).forEach(function (r) { if (r.id === editId) found = r; });
+    }
+    if (found) {
+      el('rfAction').value = 'edit';
+      el('rfRefundId').value = found.id;
+      el('rfScope').value = found.scope || 'rental';
+      el('rfAmount').value = String(found.amount);
+      el('rfMethod').value = found.method || '';
+      el('rfDate').value = found.date || RF.today || '';
+      el('rfNote').value = found.note || '';
+      el('rfTitle').textContent = 'Edit refund';
+      el('rfSubmit').textContent = 'Save refund';
+    } else {
+      el('rfAction').value = 'apply';
+      el('rfRefundId').value = '';
+      el('rfMethod').value = '';
+      el('rfDate').value = RF.today || '';
+      el('rfNote').value = '';
+      el('rfTitle').textContent = 'Cancel / Refund';
+      el('rfSubmit').textContent = 'Confirm refund';
+    }
+    renderChoices();
+    syncFields(!found);
+    el('rfOverlay').classList.add('open');
+  }
+
+  el('rfDays').addEventListener('input', function () { syncFields(false); });
+  el('rfSubmit').addEventListener('click', function () {
+    var method = methodLabel(el('rfMethod').value);
+    var amount = el('rfAmount').value;
+    if (!method) return showErr('Pick how the refund was sent.');
+    if (amount === '' || Number(amount) < 0) return showErr('Enter the refund amount.');
+    if (!el('rfDate').value) return showErr('Enter the refund date.');
+    var choice = selected();
+    var editing = el('rfAction').value === 'edit';
+    if (!editing && choice && (choice.inferred || choice.manual) && !(parseInt(el('rfDays').value, 10) > 0)) {
+      return showErr('Enter how many days to take off the end date.');
+    }
+    var msg;
+    if (editing) msg = 'Update this refund to ₱' + peso(amount) + ' via ' + method + '?';
+    else if (choice && choice.rental) {
+      msg = 'Cancel this rental and refund ₱' + peso(amount) + ' via ' + method + '? It leaves the active lists and its account slot is freed. The record is kept.';
+    } else {
+      var days = (choice && choice.days) || parseInt(el('rfDays').value, 10) || 0;
+      var end = (choice && choice.restoreEnd) || (RF.end && days ? addDays(RF.end, -days) : '');
+      msg = 'Cancel this extension and refund ₱' + peso(amount) + ' via ' + method + '? The rental stays active' + (end ? ' and ends ' + end : '') + '.';
+    }
+    if (!confirm(msg)) return;
+    el('rfErr').hidden = true;
+    el('rfConfirm').value = 'yes';
+    HTMLFormElement.prototype.submit.call(el('rfForm'));
+  });
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.cst-refund');
+    if (!btn) return;
+    var raw;
+    try { raw = JSON.parse(btn.getAttribute('data-refund') || ''); }
+    catch (err) { return; }
+    openRefund(raw, btn.getAttribute('data-edit') || '');
+  });
+})();
+</script>

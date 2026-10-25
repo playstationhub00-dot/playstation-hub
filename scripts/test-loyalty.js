@@ -99,6 +99,28 @@ ok('an extension is the same rental, not a second punch', () => {
   assert.strictEqual(built.profiles[0].punches, 1);
 });
 
+ok('refunding an extension leaves the punch; cancelling the rental removes it', () => {
+  const extended = L.build([
+    rental({ status: 'renting', payments: [
+      { amount: 619, date: '2026-09-27', kind: 'rental' },
+      { amount: 819, date: '2026-10-01', kind: 'extension' },
+      { amount: -819, date: '2026-10-25', kind: 'refund' }
+    ] })
+  ], { today: '2026-10-25' });
+  assert.strictEqual(extended.profiles[0].punches, 1);
+  const cancelled = L.build([
+    rental({ status: 'cancelled', payments: [
+      { amount: 1438, date: '2026-09-27', kind: 'rental' },
+      { amount: -819, date: '2026-10-25', kind: 'refund' }
+    ] }),
+    rental({ id: 2, status: 'refunded', payments: [
+      { amount: 199, date: '2026-02-01', kind: 'rental' },
+      { amount: -199, date: '2026-02-02', kind: 'refund' }
+    ] })
+  ], { today: '2026-10-25' });
+  assert.strictEqual(cancelled.profiles.length, 0);
+});
+
 console.log('\npunch card');
 
 ok('every 5th paid rental earns one free 7-day rental, then progress resets', () => {

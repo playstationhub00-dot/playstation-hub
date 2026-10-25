@@ -53,6 +53,7 @@ const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const extensions = require('./lib/extensions');
+const refunds = require('./lib/refunds');
 const rentAudit = require('./lib/rent-audit');
 const buyPricing = require('./lib/buy-pricing');
 const buyView = require('./lib/buy-view');
@@ -976,6 +977,7 @@ function normalizeCustomer(c) {
   if (!c) return c;
   c.swap_history = Array.isArray(c.swap_history) ? c.swap_history : [];
   c.extensions = Array.isArray(c.extensions) ? c.extensions : [];
+  c.refunds = Array.isArray(c.refunds) ? c.refunds : [];
   normalizeCustomerPayments(c);
   return c;
 }
@@ -5384,6 +5386,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     return bd.localeCompare(ad);
   });
   res.locals.loyaltyIndex = loyaltySnapshot();
+  res.locals.refunds = refunds;
   // Live rentals that never took an account slot, on games where the accounts
   // system governs availability. Each one is a slot the site still advertises
   // as free while somebody is in it — the Onimusha trophy case. Surfaced here
@@ -6865,6 +6868,29 @@ function applyAccountAssignment(assignStr, { customerId, customerName, status, e
 // never matched here — there is no customer-side event that could correspond to freeing them,
 // and this app has no automated/expiry-based sweep for ANY slot type (linked or free-text).
 // Freeing a free-text slot today is a manual admin action via /admin/accounts/:id/slot/:type.
+// Legacy per-game counters, the same direction the status route uses: +1 when
+// a rental stops occupying a slot, -1 when it takes one again. Upcoming games
+// don't use these counters (reservations are subtracted separately).
+function adjustLegacySlots(customer, delta) {
+  if (!customer || String(customer.game_id).startsWith('upcoming_')) return;
+  const game = getGame(customer.game_id);
+  if (!game) return;
+  db.get('games').find({ id: game.id }).assign({
+    available_slots: Math.max(0, (game.available_slots || 0) + delta)
+  }).write();
+  if (customer.account_type === 'tr') adjustTrophySlots(game.id, delta);
+  else if (customer.account_type === 'ps4') adjustPs4Slots(game.id, delta);
+  else adjustNtSlots(game.id, delta);
+}
+
+function slotIsOpen(assignStr) {
+  if (!assignStr || !String(assignStr).includes(':')) return false;
+  const [idPart, type] = String(assignStr).split(':');
+  const account = getAccount(idPart);
+  const slot = account && account.slots && account.slots[type];
+  return !!(slot && slot.enabled && slot.status === 'open' && !slot.renter_id);
+}
+
 function freeAccountSlotsForCustomer(customerId) {
   let anyChanged = false;
   getAccounts().forEach(acc => {
@@ -7048,6 +7074,7 @@ app.get('/admin/customers/edit/:id', requireAuth, (req, res) => {
   // Same extendTierFor() the /admin list uses, for the one customer this page
   // renders — the Extend button here prices off the identical number.
   const extendTier = extendTierFor(customer, getSiteSettings().promo || {});
+  res.locals.refunds = refunds;
   res.render('edit-customer', {
     customer, games, upcoming: getUpcoming(), settings: getSiteSettings(), accounts: getAccounts(), currentAssign,
     extendTier, todayManila: orders.manilaDate()
@@ -7337,6 +7364,168 @@ app.post('/admin/customers/:id/extend', requireAuth, async (req, res) => {
     message
   });
 });
+
+// One customer write. Customers are critical state, so this schedules the same
+// 2s Mongo flush every other customer or payment save already uses. Slot and
+// game-counter writes above it coalesce into that same flush.
+const REFUND_MSG = {
+  no_extension: 'refund_no_extension',
+  bad_days: 'refund_bad_days',
+  bad_amount: 'refund_bad_amount',
+  too_much: 'refund_too_much',
+  bad_method: 'refund_bad_method',
+  bad_date: 'refund_bad_date',
+  whole_rental: 'refund_whole',
+  bad_status: 'refund_bad_status',
+  already: 'refund_already',
+  missing: 'refund_missing',
+  changed: 'refund_changed'
+};
+
+function stampRefundOrder(result, order) {
+  if (!result || result.kind !== 'rental' || !order || !result.entry) return;
+  const mark = (Number(order.deposit_due) || 0) > 0 && !order.deposit_refunded;
+  const extra = {
+    order_state: order.state || '',
+    order_amount: order.amount_due,
+    deposit_marked: mark,
+    prev_assign: result.entry.prev_assign || ''
+  };
+  Object.assign(result.entry, extra);
+  const rows = result.patch && result.patch.refunds;
+  if (Array.isArray(rows)) {
+    const row = rows.find(r => r && r.id === result.entry.id);
+    if (row) Object.assign(row, extra);
+  }
+  if (result.patch && result.patch.cancellation && result.patch.cancellation.id === result.entry.id) {
+    Object.assign(result.patch.cancellation, extra);
+  }
+}
+
+async function syncRefundOrder(orderRef, result) {
+  if (!orderRef || !result || !result.patch) return;
+  const patch = result.patch;
+  const entry = result.entry || {};
+  try {
+    if (result.kind === 'extension' || result.kind === 'undo-extension') {
+      await orders.setRentalWindow(orderRef, {
+        end_date: patch.end_date, days: patch.days, amount_due: patch.price
+      });
+      return;
+    }
+    if (result.kind === 'edit' && entry.scope === 'extension') {
+      await orders.setRentalWindow(orderRef, { amount_due: patch.price });
+      return;
+    }
+    if (result.kind === 'edit' && entry.scope === 'rental') {
+      await orders.applyRefund(orderRef, {
+        amount_due: patch.price,
+        state: (Number(patch.price) || 0) <= 0 ? 'cancelled' : 'closed'
+      });
+      return;
+    }
+    if (result.kind === 'rental') {
+      const net = Number(patch.price) || 0;
+      await orders.applyRefund(orderRef, {
+        amount_due: net,
+        state: net <= 0 ? 'cancelled' : 'closed',
+        deposit_refunded: entry.deposit_marked ? true : undefined
+      });
+      return;
+    }
+    if (result.kind === 'undo-rental') {
+      const restore = {
+        amount_due: patch.price,
+        days: patch.days,
+        end_date: patch.end_date
+      };
+      if (entry.order_state) restore.state = entry.order_state;
+      if (entry.deposit_marked) restore.deposit_refunded = false;
+      await orders.applyRefund(orderRef, restore);
+    }
+  } catch (e) {
+    console.error('[refund -> order]', orderRef, e.message);
+  }
+}
+
+app.post('/admin/customers/:id/refund', requireAuth, asyncRoute(async (req, res) => {
+  const existing = getCustomer(req.params.id);
+  if (!existing) return res.redirect('/admin?tab=customers&msg=error');
+  const body = req.body || {};
+  if (body.confirm !== 'yes') return res.redirect('/admin?tab=customers&msg=refund_unconfirmed');
+
+  let order = null;
+  if (existing.order_ref) {
+    try { order = await orders.getByRef(existing.order_ref); } catch (e) { order = null; }
+  }
+
+  const action = String(body.action || 'apply');
+  let result;
+  if (action === 'undo') result = refunds.undo(existing, body.refund_id);
+  else if (action === 'edit') result = refunds.edit(existing, body);
+  else if (body.scope === 'rental' || body.extension_key === 'rental') result = refunds.applyRental(existing, body);
+  else result = refunds.applyExtension(existing, body);
+
+  if (!result.ok) {
+    return res.redirect('/admin?tab=customers&msg=' + (REFUND_MSG[result.error] || 'refund_rejected'));
+  }
+
+  const wasActive = existing.status === 'renting' || existing.status === 'bought';
+  const upcoming = String(existing.game_id).startsWith('upcoming_');
+  let slotMissing = false;
+
+  if (result.kind === 'rental') {
+    const assign = wasActive ? (findAccountAssignmentForCustomer(existing.id) || '') : '';
+    result.entry.prev_assign = assign;
+    stampRefundOrder(result, order);
+    if (wasActive && !upcoming) {
+      adjustLegacySlots(existing, +1);
+      freeAccountSlotsForCustomer(existing.id);
+    }
+  } else if (result.kind === 'undo-rental') {
+    const entry = result.entry || {};
+    const backActive = entry.prev_status === 'renting' || entry.prev_status === 'bought';
+    if (backActive && !upcoming) {
+      const taken = entry.prev_assign && !slotIsOpen(entry.prev_assign);
+      if (taken) slotMissing = true;
+      else {
+        adjustLegacySlots(existing, -1);
+        if (entry.prev_assign) {
+          applyAccountAssignment(entry.prev_assign, {
+            customerId: existing.id,
+            customerName: existing.customer_name,
+            status: entry.prev_status,
+            endDate: result.patch.end_date
+          });
+        }
+      }
+    }
+  }
+
+  db.get('customers').find({ id: existing.id }).assign(result.patch).write();
+
+  if (result.kind === 'extension' || result.kind === 'undo-extension') {
+    const assign = findAccountAssignmentForCustomer(existing.id);
+    if (assign) {
+      refreshAccountAssignment(assign, {
+        customerName: existing.customer_name,
+        endDate: result.patch.end_date,
+        status: 'renting'
+      });
+    }
+  }
+
+  await syncRefundOrder(existing.order_ref, result);
+
+  const msg = slotMissing ? 'refund_undone_no_slot'
+    : result.kind === 'edit' ? 'refund_edited'
+    : result.kind.indexOf('undo') === 0 ? 'refund_undone'
+    : 'refund_saved';
+  const back = body.return_to === 'edit'
+    ? '/admin/customers/edit/' + existing.id + '?msg=' + msg
+    : '/admin?tab=customers&msg=' + msg;
+  res.redirect(back);
+}));
 
 app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
   const { status } = req.body;
