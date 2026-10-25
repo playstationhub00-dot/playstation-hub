@@ -468,6 +468,9 @@
           const prOn = pr.enabled !== false;
           const prCancel = pr.auto_cancel === true;
           const prHours = (pr.hold_hours === 0 || pr.hold_hours) ? pr.hold_hours : 24;
+          // The By game board's cleanup: on at 30 days unless saved otherwise.
+          const prClean = pr.cleanup_enabled !== false;
+          const prCleanDays = Number(pr.cleanup_days) || 30;
         %>
         <form method="POST" action="/admin/settings/payment-reminders">
           <label class="oq-alert-row">
@@ -488,6 +491,17 @@
               <span class="oq-alert-name">Auto-cancel when the hold ends</span>
               <span class="oq-alert-note">Off unless you tick this. The order is cancelled only after both reminders have gone out.</span>
             </span>
+          </label>
+          <label class="oq-alert-row">
+            <input type="checkbox" name="cleanup_enabled" <%= prClean ? 'checked' : '' %>>
+            <span>
+              <span class="oq-alert-name">Clean up old entries</span>
+              <span class="oq-alert-note">Cancels unpaid orders and free waiting-list entries with no activity for this many days. Priority (paid) entries and unpaid Quick Adds are never touched. The records stay in All orders.</span>
+            </span>
+          </label>
+          <label class="pm-field" style="margin-top:0.5rem;">
+            <span>Clean up after (days)</span>
+            <input type="number" name="cleanup_days" min="7" max="365" step="1" value="<%= prCleanDays %>">
           </label>
           <button type="submit" class="oq-alert-btn" style="margin-top:0.5rem;">Save reminder settings</button>
         </form>

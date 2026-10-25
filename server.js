@@ -8439,7 +8439,11 @@ app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
   db.set('site_settings.payment_reminders', {
     enabled: req.body.enabled === 'on',
     hold_hours: hold,
-    auto_cancel: req.body.auto_cancel === 'on'
+    auto_cancel: req.body.auto_cancel === 'on',
+    // The By game board's cleanup (lib/order-cleanup.js) is saved here too —
+    // this object is rewritten whole, so leaving them out would reset them.
+    cleanup_enabled: req.body.cleanup_enabled === 'on',
+    cleanup_days: orderCleanup.normalizeCleanup({ cleanup_days: req.body.cleanup_days }).days
   }).write();
   res.redirect('/admin?tab=settings&msg=reminders_saved');
 });
@@ -8776,6 +8780,25 @@ const paymentReminderTimer = setInterval(() => {
   }).catch(e => console.error('[payment reminder]', e && e.message ? e.message : e));
 }, paymentReminders.SWEEP_INTERVAL_MS);
 if (paymentReminderTimer.unref) paymentReminderTimer.unref();
+
+// The By game board's cleanup: unpaid orders and free waiting-list entries with
+// no activity for the set number of days (Settings → Payment reminders, on at
+// 30 unless switched off) are cancelled — never deleted, never a priority entry
+// or an unpaid Quick Add (lib/order-cleanup.js). Its own timer, so a failure
+// here never stops the reminders; each cancel is pinned to the state the order
+// was read in.
+const orderCleanupTimer = setInterval(() => {
+  orderCleanup.runCleanup({
+    now: new Date(),
+    settings: getSiteSettings().payment_reminders,
+    listCandidates: () => orders.listByStates(orderCleanup.CANCELLABLE_STATES.slice()),
+    cancel: async (order, days) => !!(await orders.transition(order.ref, 'cancelled',
+      { cancel_reason: 'stale', stale_days: days }, { from: [order.state] }))
+  }).then(r => {
+    if (r && r.cancelled) console.log('[order cleanup]', r.cancelled, 'cancelled');
+  }).catch(e => console.error('[order cleanup]', e && e.message ? e.message : e));
+}, paymentReminders.SWEEP_INTERVAL_MS);
+if (orderCleanupTimer.unref) orderCleanupTimer.unref();
 
 function listen() {
   app.listen(PORT, () => {

@@ -95,7 +95,10 @@
            const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
            const dates = o.start_date ? fmt(o.start_date) + (o.end_date ? ' – ' + fmt(o.end_date) : '') : '—';
            const stCls = grp === 'cancelled' ? 'oq-st-dead' : grp === 'unpaid' ? 'oq-st-wait' : out ? 'oq-st-live' : 'oq-st-done';
-           const stLbl = o.state === 'cancelled' ? (o.slot_given_at ? '✅ Slot given' : 'Cancelled')
+           const stLbl = o.state === 'cancelled'
+                         ? (o.slot_given_at ? '✅ Slot given'
+                           : o.cancel_reason === 'stale' ? 'Cancelled · ' + (o.stale_days || 30) + '+ days'
+                           : 'Cancelled')
                        : o.state === 'payment_rejected' ? 'Payment rejected'
                        : o.state === 'awaiting_payment' ? 'Awaiting payment'
                        : o.state === 'closed' ? 'Completed'
