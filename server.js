@@ -279,22 +279,6 @@ db.defaults({
   loyalty_next_id: 1
 }).write();
 
-// Seed the poster steps on an empty guide, and replace a guide that is still
-// the old "Sign in with PS App" / "Login Settings" default. An owner who has
-// edited the wording keeps their version.
-(function syncSigninSteps() {
-  const decision = signinStepsLib.syncDecision(db.get('signin_steps').value());
-  if (!decision.replace) return;
-  let nextId = db.get('nextSigninStepId').value() || 1;
-  const seeded = decision.steps.map(s => {
-    const byConsole = decision.steps.filter(x => x.console === s.console);
-    const rank = byConsole.indexOf(s);
-    return { id: nextId++, console: s.console, rank, text: s.text, image: null, created_at: new Date().toISOString() };
-  });
-  db.set('signin_steps', seeded).write();
-  db.set('nextSigninStepId', nextId).write();
-})();
-
 // Ensure accounts collection exists for pre-existing databases
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
 if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
@@ -916,6 +900,24 @@ db.write = function() {
 // syncs, so publish this snapshot — otherwise a boot-time migration would
 // sit only on the local disk until some later admin edit.
 stateSync.afterWrite();
+
+// One-time sign-in poster. After the write hook, so this single save is the
+// critical Mongo sync (signin_steps is not a deferred key). The migrations
+// flag stops a later boot from putting the poster back over an admin edit.
+try {
+  const poster = signinStepsLib.apply(db.getState());
+  if (poster.write) {
+    db.set('signin_steps', poster.signin_steps)
+      .set('nextSigninStepId', poster.nextSigninStepId)
+      .set('migrations', poster.migrations)
+      .write();
+    console.log(poster.replaced
+      ? '[signin] replaced stored steps with the poster guide'
+      : '[signin] sign-in poster already stored');
+  }
+} catch (e) {
+  console.log('[signin] poster migration failed:', e.message);
+}
 
 // One-time genre list. After the write hook, so games.json and the MongoDB
 // state blob get the new genres and the marker in the same save. The marker
