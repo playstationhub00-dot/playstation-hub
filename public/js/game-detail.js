@@ -441,7 +441,10 @@ function updateReserveLinks() {
   let totalLine = '';
   if (selectedType && selectedDays) {
     const rt = computeRentTotal(selectedType, selectedDays);
-    totalLine = 'Total: ₱' + rt.total;
+    // The rent the duration cards show; the deposit follows as its own part.
+    // rt.total already includes the deposit, so naming it again after rt.total
+    // used to count it twice (₱249 rent read as "₱349 + ₱100").
+    totalLine = 'Total: ₱' + (rt.base - rt.discount);
     if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
     if (rt.deposit  > 0) totalLine += ' + ₱' + rt.deposit + ' refundable deposit';
   }

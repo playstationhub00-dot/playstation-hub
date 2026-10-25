@@ -149,7 +149,14 @@ async function main() {
     const p = loadPage({ allUnavail: false, avail: { nt: true, tr: true, ps4: false } });
     p.run("selectedType = 'tr'; selectedDays = 30; updateReserveLinks()");
     assert.strictEqual(p.els.ctaMsgPreview.textContent,
-      'Hi! I want to RENT a game 🎮\nGame: Zzyzx Open Game\nAccount Type: Trophy Account\nDuration: 30 Days\nTotal: ₱819 (incl. 10% promo discount) + ₱100 refundable deposit');
+      'Hi! I want to RENT a game 🎮\nGame: Zzyzx Open Game\nAccount Type: Trophy Account\nDuration: 30 Days\nTotal: ₱719 (incl. 10% promo discount) + ₱100 refundable deposit');
+  });
+  await okAsync('the message total is the rent the cards show; the deposit is added once, not twice', async () => {
+    const p = loadPage({ allUnavail: false, avail: { nt: true, tr: true, ps4: false } });
+    p.run("selectedType = 'tr'; selectedDays = 7; updateReserveLinks()");
+    assert.ok(p.els.ctaMsgPreview.textContent.endsWith('\nTotal: ₱399 + ₱100 refundable deposit'), p.els.ctaMsgPreview.textContent);
+    p.run("selectedType = 'nt'; selectedDays = 7; updateReserveLinks()");
+    assert.ok(p.els.ctaMsgPreview.textContent.endsWith('\nTotal: ₱399'), 'no deposit on Non-Trophy: ' + p.els.ctaMsgPreview.textContent);
   });
   await okAsync('picking a full type switches the wording to a next-slot question', async () => {
     const p = loadPage({ allUnavail: false, avail: { nt: true, tr: false, ps4: false } });
