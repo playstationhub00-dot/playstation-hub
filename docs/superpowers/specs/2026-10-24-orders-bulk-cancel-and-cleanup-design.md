@@ -1,6 +1,6 @@
 # Orders: bulk "Cancel selected" and a 30-day cleanup — Design
 
-Date: 2026-10-24 · Status: approved by owner
+Date: 2026-10-24 · Status: approved by owner; amended after the plan's dry run (2026-10-25)
 
 ## Problem
 
@@ -51,16 +51,24 @@ Facts that shape the design:
     step with the ticks.
 - **Route** `POST /admin/orders/bulk-cancel` (admin only), body `refs` (one or many):
   - Takes at most 200 refs. Any ref that is not `PH-<digits>` is ignored.
-  - For each order it re-reads the order and cancels only when the single Cancel /
-    Remove would allow it: state `awaiting_payment`, `payment_rejected` or
-    `waitlisted`. The transition is pinned to the state it read
+  - For each order it re-reads the order and cancels only when
+    `lib/order-cleanup.js` `isCancellable` allows it: state `awaiting_payment`,
+    `payment_rejected` or `waitlisted`, and not an owner-recorded unpaid Quick Add.
+    That is the same rule the cleanup uses, and one step stricter than the single
+    Cancel. A Quick Add never shows on the board anyway, so only a hand-made request
+    could ask for one. The transition is pinned to the state it read
     (`orders.transition(ref, 'cancelled', { cancel_reason: 'owner_bulk' }, { from:
     [state] })`), so an order that was paid or moved in the meantime is skipped.
-  - Redirects to `/admin?tab=orders&msg=orders_bulk_cancelled&n=<cancelled>&skipped=<k>`.
+  - Redirects to `/admin?tab=orders&msg=orders_bulk_cancelled&n=<cancelled>&skipped=<k>`,
+    where `k` is every usable ref that was not cancelled: already cancelled, paid,
+    priority, or not found.
   - Toast: `🚫 Cancelled <n> order(s).`, plus ` <k> skipped — they changed meanwhile.`
     when any were skipped.
-  - Nothing ticked: redirects with `msg=orders_bulk_none`, toast `Nothing was
-    selected.`
+  - Nothing ticked, or only unusable refs: redirects with `msg=orders_bulk_none`,
+    toast `Nothing was selected.`
+  - The confirm uses the singular for one (`Cancel 1 selected order?`).
+  - Each "Select all" box goes half-ticked when only some of its card's rows are
+    ticked.
 
 ## 2 · Automatic cleanup
 
@@ -82,8 +90,12 @@ Facts that shape the design:
     `state_history[].at`, or `created_at` when there is no history; an unreadable date
     is never stale.
   - ⭐ `reserved` is never in scope.
-- **Run:** every 5 minutes, alongside the payment-reminder sweep. It is a separate
-  call, so one failing does not stop the other.
+- **Run:** every 5 minutes, on its own timer beside the payment-reminder timer, so one
+  failing never stops the other. The first run is about 5 minutes after the server
+  starts. An order that fails to cancel does not stop the rest, and a sweep that
+  starts while one is still running does nothing.
+- The days entered in Settings are saved through the same rule (`normalizeCleanup`),
+  so the form always shows a value between 7 and 365.
   - Each stale order is cancelled with `{ cancel_reason: 'stale', stale_days: <days> }`,
     pinned to the state it was read in.
   - It logs `[order cleanup] <n> cancelled` when it cancels any.
@@ -125,6 +137,13 @@ and orders, a made-up password).
 - Settings: the form shows the switch and days; saving keeps them alongside the
   reminder fields.
 - Browser check on a throwaway instance at 1280px and 375px.
+- Test files:
+  - `scripts/test-order-cleanup.js`: the rules and the sweep, with fakes.
+  - `scripts/test-orders-bulk-cancel.js`: the real route.
+  - `scripts/test-order-cleanup-wiring.js`: it catches the server's timers and runs
+    only the cleanup one, then checks the setting and the ledger label.
+  - `scripts/test-orders-template.js`: the markup.
+  - `scripts/test-admin-orders-filter.js`: the bar's wording.
 - Full suite green except the known `scripts/test-upcoming-psn-page-public.js`.
 
 ## Out of scope
