@@ -111,6 +111,8 @@
             <option value="reservation" <%= customer.status === 'reservation' ? 'selected' : '' %>>🔖 Reservation</option>
             <option value="done" <%= customer.status === 'done' ? 'selected' : '' %>>✅ Done</option>
             <option value="bought" <%= customer.status === 'bought' ? 'selected' : '' %>>🛒 Bought</option>
+            <option value="cancelled" <%= customer.status === 'cancelled' ? 'selected' : '' %>>↩ Cancelled</option>
+            <option value="refunded" <%= customer.status === 'refunded' ? 'selected' : '' %>>Refunded</option>
           </select>
         </div>
 
@@ -148,12 +150,17 @@
           data-end="<%= customer.end_date || '' %>" data-p7="<%= extendTier.p7 %>" data-p30="<%= extendTier.p30 %>"
           data-today="<%= todayManila %>">⏩ Extend</button>
         <% } %>
+        <% const editRefundPayload = (typeof refunds !== 'undefined' && refunds.formPayload) ? JSON.stringify(refunds.formPayload(customer, todayManila)).replace(/</g, '\\u003c') : ''; %>
+        <% if (editRefundPayload) { %>
+        <button type="button" class="cst-refund" <% if (customer.cancellation && (customer.status === 'cancelled' || customer.status === 'refunded')) { %>data-edit="<%= customer.cancellation.id %>"<% } %> data-refund="<%= editRefundPayload %>"><%= (customer.status === 'cancelled' || customer.status === 'refunded') ? 'Edit refund' : 'Cancel / Refund' %></button>
+        <% } %>
       </div>
     </form>
   </div>
 </div>
 
 <%- include('partials/admin/extend') %>
+<%- include('partials/admin/refund') %>
 
 <script>
 const CUST_ORIGINAL_GAME_ID = <%- JSON.stringify(String(customer.game_id)) %>;

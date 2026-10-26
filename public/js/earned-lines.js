@@ -15,7 +15,7 @@
   // days, a swap top-up, a reservation's balance.
   var LABELS = {
     rental: 'Rental', rent: 'Rental', purchase: 'Purchase', reservation: 'Reservation',
-    extension: 'Extra payment', adjustment: 'Price correction'
+    extension: 'Extra payment', adjustment: 'Price correction', refund: 'Refund'
   };
 
   function kindLabel(kind) { return LABELS[kind] || 'Payment'; }

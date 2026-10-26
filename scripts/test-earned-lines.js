@@ -27,8 +27,8 @@ ok('each payment says what it was and when', () => {
 });
 
 ok('every kind has a plain label; a price edited down is a correction', () => {
-  const kinds = ['rental', 'rent', 'purchase', 'reservation', 'extension', 'adjustment', undefined, 'something-new'];
-  assert.deepStrictEqual(kinds.map(E.kindLabel), ['Rental', 'Rental', 'Purchase', 'Reservation', 'Extra payment', 'Price correction', 'Payment', 'Payment']);
+  const kinds = ['rental', 'rent', 'purchase', 'reservation', 'extension', 'adjustment', 'refund', undefined, 'something-new'];
+  assert.deepStrictEqual(kinds.map(E.kindLabel), ['Rental', 'Rental', 'Purchase', 'Reservation', 'Extra payment', 'Price correction', 'Refund', 'Payment', 'Payment']);
   const cj = row('CJ Rejusam', 'Mafia The Old Country', 300, [
     { amount: 349, date: '2026-10-02', kind: 'rental' }, { amount: -49, date: '2026-10-02', kind: 'adjustment' }
   ]);
