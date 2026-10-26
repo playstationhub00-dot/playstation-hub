@@ -172,6 +172,17 @@ async function main() {
     const how = slice(home, 'id="how"', '<footer');
     assert.ok(how.includes('Do I need to give you my PSN password?') && how.includes('When do I get my ₱100 deposit back?'));
   });
+  await okAsync('a short start-here bar under the games links the rental guides with plain anchors', async () => {
+    const at = home.indexOf('id="startHere"');
+    assert.ok(home.indexOf('class="game-card') < at && at < home.indexOf('id="how"'));
+    const bar = slice(home, 'id="startHere"', 'id="how"');
+    assert.ok(bar.includes('New to renting? Start here'));
+    assert.ok(bar.includes('<a href="/how-it-works">How renting works</a>'));
+    assert.ok(bar.includes('<a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary</a>'));
+    assert.ok(bar.includes('<a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a>'));
+    assert.strictEqual((home.match(/<a href="\/guides" class="">Guides<\/a>/g) || []).length, 2, 'desktop menu and phone drawer');
+    assert.ok(home.includes('<a href="/guides">Guides</a>'), 'footer');
+  });
   await okAsync('the page loads its own styles and banner script; the old phone re-ordering is gone', async () => {
     assert.ok(/<link rel="stylesheet" href="\/css\/home\.css\?v=[^"]+">/.test(home) && /<script src="\/js\/home\.js\?v=[^"]+"><\/script>/.test(home));
     assert.strictEqual((await call('GET', '/css/home.css')).status, 200);
