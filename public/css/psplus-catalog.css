@@ -7,6 +7,9 @@
 .ppc-title { margin: 0.15rem 0 0.3rem; font-size: 2rem; font-weight: 900; letter-spacing: 0.02em; color: #fff; }
 .ppc-title span { color: #FFD700; }
 .ppc-lead { margin: 0; color: #aaa; font-size: 0.92rem; }
+.ppc-compare { margin: 0.4rem 0 0; font-size: 0.82rem; color: #aaa; }
+.ppc-compare a { color: #FFD700; font-weight: 700; text-decoration: none; }
+.ppc-compare a:hover { text-decoration: underline; }
 .ppc-hero-side { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
 .ppc-stats { display: flex; gap: 0.5rem; }
 .ppc-stat { background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 0.45rem 0.8rem; text-align: center; min-width: 70px; }
