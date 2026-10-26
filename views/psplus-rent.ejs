@@ -15,20 +15,25 @@
   "Or order here on the website" fold, with the same element ids, so it runs
   on the game page's own script (public/js/game-detail.js) and cannot drift
   from it. What stays PS Plus's own: the checkout (/order/create-psplus), its
-  prices, its waiting line (game_id 'psplus') and two account types — Trophy
-  / PS4 Primary ('tr', with the deposit) and Non-Trophy ('nt'). Rent only.
+  prices and its waiting line (game_id 'psplus'). Like a game page it has
+  Trophy ('tr'), Non-Trophy ('nt') and PS4 Primary ('ps4', at the Trophy
+  price), with the deposit on Trophy and PS4 Primary. Rent only.
   See docs/superpowers/specs/2026-10-26-psplus-rent-page-like-game-page-design.md.
 %>
 <%
   const ntSlots  = slots.nt_slots || 0;
   const trSlots  = slots.tr_slots || 0;
+  const ps4Slots = slots.ps4_slots || 0;
   const trAvail  = trSlots > 0;
   const ntAvail  = ntSlots > 0;
-  const allUnavail = !trAvail && !ntAvail;
-  const totalSlots = trSlots + ntSlots;
+  const ps4Avail = ps4Slots > 0;
+  const allUnavail = !trAvail && !ntAvail && !ps4Avail;
+  const totalSlots = trSlots + ntSlots + ps4Slots;
   const isLastSlot = totalSlots === 1;
-  const psNext = (typeof nextDays !== 'undefined' && nextDays) ? nextDays : { tr: null, nt: null };
-  const trNext = psNext.tr, ntNext = psNext.nt;
+  const psNext = (typeof nextDays !== 'undefined' && nextDays) ? nextDays : {};
+  const trNext = psNext.tr != null ? psNext.tr : null;
+  const ntNext = psNext.nt != null ? psNext.nt : null;
+  const ps4Next = psNext.ps4 != null ? psNext.ps4 : null;
   const psStatus = allUnavail
     ? { label: 'Sold Out', cls: 'usd-badge-off' }
     : (isLastSlot ? { label: 'Last Slot', cls: 'usd-badge-warn' } : { label: 'Available', cls: 'usd-badge-ok' });
@@ -94,7 +99,7 @@
         <h2 class="gpa-h">About this subscription</h2>
         <div class="gpa-text" id="gpaText">
           <p><%- include('partials/swap-line') %></p>
-          <p>Access hundreds of games including monthly titles. Trophy or Non-Trophy — your choice.</p>
+          <p>Access hundreds of games including monthly titles. Trophy, Non-Trophy or PS4 Primary — your choice.</p>
         </div>
         <h2 class="gpa-h">Info</h2>
         <table class="gpa-info">
@@ -133,7 +138,7 @@
           <label class="gd-type-card gd-type-pill" id="label-tr">
             <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🏆</span>
-            <span class="gd-type-name">Trophy / PS4 Primary</span>
+            <span class="gd-type-name">Trophy</span>
             <% if (trAvail) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
             <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
           </label>
@@ -144,6 +149,13 @@
             <% if (ntAvail) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
             <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
           </label>
+          <label class="gd-type-card gd-type-pill" id="label-ps4">
+            <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
+            <span class="gd-type-icon">🕹️</span>
+            <span class="gd-type-name">PS4 Primary</span>
+            <% if (ps4Avail) { %><span class="gd-slots-left"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full Slot' %></span>
+          </label>
         </div>
 
         <%
@@ -151,7 +163,8 @@
           // lands under its own card (same reasoning as views/game-detail.ejs).
           const soonSlots = [
             (!trAvail && trNext != null && trNext > 0) ? { icon: '🏆', days: trNext } : null,
-            (!ntAvail && ntNext != null && ntNext > 0) ? { icon: '🎮', days: ntNext } : null
+            (!ntAvail && ntNext != null && ntNext > 0) ? { icon: '🎮', days: ntNext } : null,
+            (!ps4Avail && ps4Next != null && ps4Next > 0) ? { icon: '🕹️', days: ps4Next } : null
           ];
         %>
         <% if (soonSlots.some(s => s)) { %>
@@ -172,7 +185,7 @@
         </button>
         <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
           <div class="gd-setup-block" id="setup-tr">
-            <p>✅ Play on <strong>YOUR OWN account</strong> and earn trophies on your profile. Includes PS4 Primary access.</p>
+            <p>✅ Play on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
             <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
             <% if (!trAvail && trNext != null && trNext > 0) { %>
             <p class="gd-avail-soon">📅 Next available in <strong><%= trNext %> day<%= trNext !== 1 ? 's' : '' %></strong></p>
@@ -184,6 +197,13 @@
             <p style="color:#888;">On PS4, choose <strong>Do Not Activate</strong> if you are prompted.</p>
             <% if (!ntAvail && ntNext != null && ntNext > 0) { %>
             <p class="gd-avail-soon">📅 Next available in <strong><%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+          </div>
+          <div class="gd-setup-block" id="setup-ps4">
+            <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
+            <p style="color:#22c55e;">Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
+            <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
+            <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
             <% } %>
           </div>
         </div>
@@ -273,10 +293,11 @@
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 // The globals public/js/game-detail.js reads, filled with PS Plus's own
-// prices: two types (no separate PS4 Primary) and nothing to buy.
+// prices: PS4 Primary at the Trophy price, like a game page, and nothing to buy.
 const PRICES = {
   nt: { 7: <%= prices.nt_price_7d %>, 30: <%= prices.nt_price_30d %> },
-  tr: { 7: <%= prices.tr_price_7d %>, 30: <%= prices.tr_price_30d %> }
+  tr: { 7: <%= prices.tr_price_7d %>, 30: <%= prices.tr_price_30d %> },
+  ps4: { 7: <%= prices.tr_price_7d %>, 30: <%= prices.tr_price_30d %> }
 };
 const BUY_PRICES = { nt: 0, tr: 0 };
 const PROMO = {
@@ -284,9 +305,9 @@ const PROMO = {
   discounts: { 7: <%= gameDiscountPct(prices, 7, promo) %>, 30: <%= gameDiscountPct(prices, 30, promo) %> },
   deposit: <%= promo.deposit %>
 };
-const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %>, ps4: false };
+const AVAIL = { nt: <%= ntAvail ? 'true' : 'false' %>, tr: <%= trAvail ? 'true' : 'false' %>, ps4: <%= ps4Avail ? 'true' : 'false' %> };
 const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
-const NEXT_DAYS = <%- JSON.stringify({ tr: trNext != null ? trNext : null, nt: ntNext != null ? ntNext : null, ps4: null }) %>;
+const NEXT_DAYS = <%- JSON.stringify({ tr: trNext, nt: ntNext, ps4: ps4Next }) %>;
 const gameTitle = 'PS Plus Deluxe';
 const gdSlideCount = 0;
 </script>

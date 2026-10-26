@@ -1805,23 +1805,25 @@ app.get('/ps-plus/rent', async (req, res) => {
   const prices = getPsplusPrices();
   const rawSlots = getPsplusSlots();
   const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
-  const slots = psplusGame
-    ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
-    : rawSlots;
+  // Open slots and "Available in N days" come from the accounts linked to the
+  // PS Plus row, counted the way a game page counts them (lib/availability.js).
+  // The row's own non_trophy_slots / trophy_slots / ps4_primary_slots are only
+  // the fallback for a type with no linked account: read on their own, those
+  // hand-entered numbers went stale and showed 9 open slots while every
+  // Trophy and Non-Trophy slot was rented.
+  let slots = rawSlots;
+  let nextDays = { tr: null, nt: null, ps4: null };
+  if (psplusGame) {
+    const a = computeAvailability(psplusGame, gameAccountSummary(psplusGame.id));
+    slots = { nt_slots: a.ntSlots, tr_slots: a.trSlots, ps4_slots: a.ps4Slots };
+    nextDays = { tr: a.trNext, nt: a.ntNext, ps4: a.ps4Next };
+  }
   const settings = getSiteSettings();
   // Use the catalogue entry's real cover. The view previously hardcoded
   // /images/psplus-deluxe-cover.jpg, which has never existed on this deploy —
   // it 404'd on every page load and only looked right because of the onerror
   // fallback underneath it.
   const psplusCover = psplusGame && psplusGame.cover_image ? psplusGame.cover_image : '';
-  // Days until each type frees up — "Available in N days" under a full type and
-  // in the get-in-line card — from the catalogue row's linked accounts: the same
-  // numbers a game page shows (lib/availability.js).
-  let nextDays = { tr: null, nt: null };
-  if (psplusGame) {
-    const a = computeAvailability(psplusGame, gameAccountSummary(psplusGame.id));
-    nextDays = { tr: a.trNext != null ? a.trNext : null, nt: a.ntNext != null ? a.ntNext : null };
-  }
   // PS Plus waitlist entries are created with the literal game_id 'psplus' by
   // POST /order/reserve, so the same queue rules apply with no special-casing.
   let queues = { nt: [], tr: [], ps4: [] };
@@ -3033,21 +3035,23 @@ app.post('/order/create-psplus', async (req, res) => {
   }
   const { account_type, days, fb_name } = req.body;
   const name = (fb_name || '').trim();
-  const type = ['nt', 'tr'].includes(account_type) ? account_type : null;
+  const type = ['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null;
   const d = parseInt(days);
   if (!name || !type || !PROMO_DURATIONS.includes(d)) {
     return res.redirect('/ps-plus/rent?order_error=1');
   }
 
+  // PS4 Primary has no price field of its own: it is the Trophy price, with
+  // the deposit, the same as on a game page.
   const prices = getPsplusPrices();
-  const base = prices[type + '_price_' + d + 'd'] || 0;
+  const base = rentPricing.listPrice(prices, type, d);
   if (!base) return res.redirect('/ps-plus/rent?order_error=1');
 
   const s = getSiteSettings();
   const promo = s.promo || {};
   const pct = getPromoDiscountPct(promo, d);
   const amountDue = pct > 0 ? base - Math.round(base * pct / 100) : base;
-  const depositDue = type === 'tr' ? (promo.deposit || 0) : 0;
+  const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
 
   try {
     const order = await createOrderNotified({
@@ -3105,7 +3109,7 @@ app.post('/order/reserve', async (req, res) => {
       : orderErrorPath(game);
 
   const name = (fb_name || '').trim();
-  const type = (isUpcoming || isPsplus)
+  const type = isUpcoming
     ? (['nt', 'tr'].includes(account_type) ? account_type : null)
     : (['nt', 'tr', 'ps4'].includes(account_type) ? account_type : null);
   const d = parseInt(days);
@@ -3168,12 +3172,11 @@ app.post('/order/reserve', async (req, res) => {
     // them — computed the same way the paid path computes it, minus the ₱100
     // priority fee subtraction those paths do (there is no fee here).
     if (isPsplus) {
-      const prices = getPsplusPrices();
-      const base = prices[type + '_price_' + d + 'd'] || 0;
+      const base = rentPricing.listPrice(getPsplusPrices(), type, d);
       if (!base) return res.redirect(errRedirect);
       const pct = getPromoDiscountPct(promo, d);
       const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
-      const psplusDeposit = type === 'tr' ? (promo.deposit || 0) : 0;
+      const psplusDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
       remainingDue = rentAfterPromo + psplusDeposit;
     } else {
       const resolved = resolveGamePrices(game);
@@ -3189,12 +3192,11 @@ app.post('/order/reserve', async (req, res) => {
     releaseDate = '';
     upcomingGameId = null;
   } else if (isPsplus) {
-    const prices = getPsplusPrices();
-    const base = prices[type + '_price_' + d + 'd'] || 0;
+    const base = rentPricing.listPrice(getPsplusPrices(), type, d);
     if (!base) return res.redirect(errRedirect);
     const pct = getPromoDiscountPct(promo, d);
     const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
-    const psplusDeposit = type === 'tr' ? (promo.deposit || 0) : 0;
+    const psplusDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
     amountDue = 100;
     depositDue = 0;
     remainingDue = Math.max(0, rentAfterPromo - amountDue) + psplusDeposit;
@@ -3414,9 +3416,7 @@ function priorityUpgradePatch(order) {
   // stored when they joined the line — a promo may have started or ended since,
   // and every paid path quotes today's price. A PS4 Primary rental uses the
   // Trophy price, same as checkout.
-  const base = isPsplus
-    ? (getPsplusPrices()[order.account_type + '_price_' + order.days + 'd'] || 0)
-    : rentPricing.listPrice(resolveGamePrices(game), order.account_type, order.days);
+  const base = rentPricing.listPrice(isPsplus ? getPsplusPrices() : resolveGamePrices(game), order.account_type, order.days);
   if (!base) return null;
   const pct = isPsplus ? getPromoDiscountPct(promo, order.days) : rentDiscountPct(game, order.days, promo);
   const rentAfterPromo = rentPricing.discounted(base, pct);
@@ -4524,10 +4524,11 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
       const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
       if (psplusGame) {
         if (order.account_type === 'tr') adjustTrophySlots(psplusGame.id, -1);
+        else if (order.account_type === 'ps4') adjustPs4Slots(psplusGame.id, -1);
         else adjustNtSlots(psplusGame.id, -1);
       } else {
         const psplusSlots = getPsplusSlots();
-        const key = order.account_type === 'tr' ? 'tr_slots' : 'nt_slots';
+        const key = order.account_type === 'tr' ? 'tr_slots' : order.account_type === 'ps4' ? 'ps4_slots' : 'nt_slots';
         db.set('psplus_slots.' + key, Math.max(0, (psplusSlots[key] || 0) - 1)).write();
       }
     } else if (game) {
