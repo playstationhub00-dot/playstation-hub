@@ -412,8 +412,9 @@
         <% if (!allUnavail) { %>
         <!-- Website order: the name field and the price button run as one
              action. Lives inside #gdOrderBlock, opened by #orderToggle. -->
-        <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm">
+        <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm" data-order-once>
           <input type="hidden" name="game_id" value="<%= game.id %>">
+          <%- include('partials/order-token') %>
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
@@ -528,8 +529,9 @@
              With every type full there is nothing selectedBuyType could ever
              become, so the button would just repeat "pick a type" forever. -->
         <% if (buyNt > 0 || buyTr > 0) { %>
-        <form method="POST" action="/order/buy" class="gd-order-form" id="gdBuyForm">
+        <form method="POST" action="/order/buy" class="gd-order-form" id="gdBuyForm" data-order-once>
           <input type="hidden" name="kind" value="game">
+          <%- include('partials/order-token') %>
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="buyOrderType" value="">
           <input type="text" name="fb_name" id="buyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">

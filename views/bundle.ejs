@@ -61,8 +61,9 @@
         const requested = requestedTier ? tiers.find(t => t.key === requestedTier && t.slot.open) : null;
         const preselected = requested || firstOpen;
       %>
-      <form method="POST" action="/order/buy" class="buy-bundle-foot">
+      <form method="POST" action="/order/buy" class="buy-bundle-foot" data-order-once>
         <input type="hidden" name="kind" value="bundle">
+        <%- include('partials/order-token') %>
         <input type="hidden" name="account_id" value="<%= bundle.id %>">
         <div class="buy-tier-row">
           <% tiers.forEach(t => { %>

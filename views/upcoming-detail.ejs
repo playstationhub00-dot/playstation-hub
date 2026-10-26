@@ -257,8 +257,9 @@
                • Remaining" header block that used to sit here is gone — every
                figure it carried now reads off the summary box directly above. -->
           <div id="ctaReserve">
-            <form method="POST" action="/order/reserve" class="gd-order-form" id="reserveForm" onsubmit="return handleReserveSubmit(event)">
+            <form method="POST" action="/order/reserve" class="gd-order-form" id="reserveForm" data-order-once onsubmit="return handleReserveSubmit(event)">
               <input type="hidden" name="game_id" value="<%= game.id %>">
+              <%- include('partials/order-token') %>
               <input type="hidden" name="account_type" id="reserveType" value="">
               <input type="hidden" name="days" id="reserveDays" value="">
               <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
@@ -363,8 +364,9 @@
               </div>
             </div>
 
-            <form method="POST" action="/order/reserve" class="gd-order-form" id="udBuyForm">
+            <form method="POST" action="/order/reserve" class="gd-order-form" id="udBuyForm" data-order-once>
               <input type="hidden" name="game_id" value="<%= game.id %>">
+              <%- include('partials/order-token') %>
               <input type="hidden" name="account_type" id="udBuyOrderType" value="">
               <input type="hidden" name="kind" value="buy">
               <input type="text" name="fb_name" id="udBuyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
