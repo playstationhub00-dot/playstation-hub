@@ -1,6 +1,6 @@
 # PS Plus Deluxe rent page, laid out like a game page — Design
 
-Date: 2026-10-26 · Status: approved by owner (approach A)
+Date: 2026-10-26 · Status: approved by owner (approach A); amended after the plan's dry run
 
 ## Problem
 
@@ -60,14 +60,16 @@ Normal game pages are not touched.
     - Catalogue: "See all games →" (`/ps-plus`)
 - **Right column**, the framed booking card (`gdh-card`):
   - No Rent / Buy Permanent toggle; PS Plus is rent only.
-  - Price header, starting "From ₱<cheapest weekly>".
+  - Price header, starting "From ₱<cheapest>": the lowest promo-applied rent
+    across both types and both durations, usually the Non-Trophy weekly. The
+    sticky bar starts with the same figure.
   - **Pills:**
     - 🏆 Trophy / PS4 Primary and 🎮 Non-Trophy, as `gd-type-card gd-type-pill`
       with a hidden `gd-type-radio`.
     - Each shows "N slots left" or "Full Slot", plus "Available in N days"
       under a full type when the PS Plus catalogue row's accounts know it.
-  - **How setup works:** the game page's Trophy text for `tr` and Non-Trophy
-    text for `nt`.
+  - **How setup works:** the game page's Trophy text for `tr`, which also says
+    "Includes PS4 Primary access.", and its Non-Trophy text for `nt`.
   - **Duration cards:** Weekly and Monthly, with the promo badge.
   - **Messenger button:** "💬 Message us about this game", with the message
     preview. The message reads:
@@ -88,8 +90,12 @@ Normal game pages are not touched.
 `queues` and `order_error`. It adds:
 
 - **`nextDays` (`{ tr, nt }`):** days until each type frees up, from
-  `computeAvailability(psplusGame, accountSummary)` `trNext` / `ntNext` when the
-  catalogue row exists, else `null`.
+  `computeAvailability(psplusGame, gameAccountSummary(psplusGame.id))` `trNext` /
+  `ntNext` when the catalogue row exists, else `null`.
+  - It reads the rented slots of the accounts linked to that row, the same
+    numbers a game page shows.
+  - The slot counts themselves stay as they are, from the row's
+    `non_trophy_slots` / `trophy_slots`.
 - **The globals game-detail.js reads**, written inline like the game page:
   - `PRICES { nt, tr }` from the PS Plus prices; there is no `ps4`.
   - `BUY_PRICES { nt: 0, tr: 0 }`.
@@ -114,7 +120,9 @@ Normal game pages are not touched.
 Throwaway instance only: a temp `DATA_DIR`, a blank `MONGODB_URI` and made-up
 games.
 
-- **Route test on `/ps-plus/rent`:**
+- **Route test on `/ps-plus/rent`** (`scripts/test-psplus-rent-page.js`). It
+  starts three throwaway servers: slots open, one slot left with Trophy rented out
+  through a linked account, and sold out. It checks:
   - The hero badges and title, and the bar text for the open, last-slot and
     sold-out cases.
   - The left About and Info, with the link to `/ps-plus`.
@@ -128,8 +136,8 @@ games.
     full.
   - The sticky bar.
   - It loads `messenger-text.js` and `game-detail.js`, not `psplus-rent.js`.
-- **Script test:** run the real `game-detail.js` in a vm with the PS Plus
-  globals and the page's element ids, and check that:
+- **Script test:** run the real `game-detail.js` in a vm with the inline globals
+  taken from the rendered page and the page's element ids, and check that:
   - picking Trophy, then Weekly, previews "Game: PS Plus Deluxe … Total: ₱<rent>
     + ₱100 refundable deposit";
   - Non-Trophy has no deposit;
@@ -139,6 +147,11 @@ games.
     `psplus-rent.js`.
   - In `scripts/test-game-detail-messenger.js`, change the "keeps its classic
     layout" case to the new card layout.
+  - In `scripts/test-psplus-rent-links.js`, the rent-page case expects the pills
+    (`<div class="gd-type-options" id="typeOptions">`) instead of the old stacked
+    cards.
+  - The old page's `.psr-types` styles in `public/css/style.css` have nothing
+    left to style, so they go too.
 - A browser check at 1280px and 375px.
 - The full suite stays green except the known
   `scripts/test-upcoming-psn-page-public.js`.
