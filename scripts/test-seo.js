@@ -1026,6 +1026,28 @@ async function main() {
     assert.strictEqual(guidePages.PATHS.trophy, '/guides/trophy-vs-non-trophy-vs-ps4-primary');
   });
 
+  await okAsync('nav, home, PS Plus, and account pickers link the guides with plain anchors', async () => {
+    const home = await call('/');
+    assert.strictEqual((home.body.match(/<a href="\/guides" class="">Guides<\/a>/g) || []).length, 2);
+    assert.ok(home.body.includes('<a href="/guides">Guides</a>'));
+    const bar = home.body.slice(home.body.indexOf('id="startHere"'), home.body.indexOf('id="how"'));
+    assert.ok(bar.includes('<a href="/how-it-works">How renting works</a>'));
+    assert.ok(bar.includes('<a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary</a>'));
+    assert.ok(bar.includes('<a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a>'));
+    const plus = await call('/ps-plus');
+    assert.ok(plus.body.slice(0, plus.body.indexOf('class="ppc-tabs"')).includes('<a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a>'));
+    const game = await call('/game/elden-ring');
+    assert.strictEqual(game.status, 200);
+    assert.ok(game.body.includes('<a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary</a>'));
+    const soon = await call('/upcoming/phantom-blade-5');
+    assert.strictEqual(soon.status, 200);
+    assert.ok(soon.body.includes('<a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary</a>'));
+    const guides = await call('/guides');
+    assert.strictEqual((guides.body.match(/<a href="\/guides" class="active">Guides<\/a>/g) || []).length, 2);
+    const trophy = await call('/guides/trophy-vs-non-trophy-vs-ps4-primary');
+    assert.ok(trophy.body.includes('<a href="/guides" class="active">Guides</a>'));
+  });
+
   console.log('\n' + passed + ' assertions passed\n');
   cleanup();
   process.exit(0);

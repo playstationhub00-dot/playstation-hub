@@ -195,7 +195,7 @@ nav {
 }
 .logo-text span { color: var(--ps-blue); }
 
-.nav-links { display: flex; gap: 1.85rem; align-items: center; }
+.nav-links { display: flex; gap: 1.35rem; align-items: center; }
 .nav-links a {
   color: var(--text-secondary);
   text-decoration: none;
@@ -227,6 +227,15 @@ nav {
 
 /* ── NAV ICONS (search toggle, admin, message pill) ───────────────────────── */
 .navicons { display: flex; align-items: center; gap: 1.1rem; flex-shrink: 0; }
+/* Seven links (Home through Guides) still fit between the logo and Message Us
+   on a laptop. Below that, tighten the row until the phone drawer takes over. */
+@media (min-width: 821px) and (max-width: 1100px) {
+  nav { padding: 0 1rem; }
+  .nav-links { gap: 0.7rem; }
+  .nav-links a { font-size: 0.78rem; }
+  .navicons { gap: 0.6rem; }
+  .nav-cta { padding: 0.45rem 0.8rem; font-size: 0.78rem; }
+}
 .navicon-btn {
   background: none; border: none; color: #ccc; cursor: pointer; text-decoration: none;
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
@@ -1037,6 +1046,10 @@ body.light-mode .psr-types .gd-type-card.gd-type-selected { background: #fff8e6;
 .gd-line-ask { display: block; text-align: center; margin-top: 0.7rem; font-size: 0.8rem; color: #9ca3af; text-decoration: none; }
 .gd-line-ask u { color: #93c5fd; }
 #ctaMsgWrap[hidden] { display: none; }
+
+.gd-type-guide { margin: 0.15rem 0 0.85rem; font-size: 0.75rem; line-height: 1.4; color: #888; }
+.gd-type-guide a { color: var(--ps-blue); font-weight: 700; text-decoration: none; }
+.gd-type-guide a:hover { text-decoration: underline; }
 
 .gd-setup-toggle {
   display: flex; align-items: center; gap: 0.35rem; margin-top: 0.6rem;

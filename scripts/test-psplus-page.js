@@ -86,6 +86,12 @@ ok('the game count, the weekly price and free slots, with one Rent button', () =
   assert.ok(html.includes('<a href="/ps-plus/rent" class="ppc-cta">Rent PS Plus Deluxe →</a>'));
 });
 
+ok('the hero links the PS Plus guide with a plain anchor above the tabs', () => {
+  const { html } = render();
+  const hero = html.slice(0, html.indexOf('class="ppc-tabs"'));
+  assert.ok(hero.includes('<a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a>'));
+});
+
 ok('the old playstation.com button and "PM us for the list" note are gone', () => {
   const { html } = render();
   assert.ok(!html.includes('Browse All PS Plus Games'));
