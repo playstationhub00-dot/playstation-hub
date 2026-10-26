@@ -989,16 +989,6 @@ nav {
 .gd-type-pill .gd-slots-left ~ .gd-type-status.gd-status-avail { display: none; }
 .gd-type-pill .gd-type-status { margin-left: auto; font-size: 0.66rem; white-space: nowrap; }
 .gd-type-pill.gd-type-selected { border-color: #f0a500; background: #1a1400; }
-/* PS Plus Deluxe rent page (views/psplus-rent.ejs): its type cards keep a
-   description line, so they stay stacked full-width cards rather than the
-   game page's pills — the #typeOptions row rule above would otherwise wrap
-   them side by side at uneven widths, and their radios use .gd-type-radio. */
-#typeOptions.psr-types { flex-direction: column; flex-wrap: nowrap; gap: 0.6rem; }
-.psr-types .gd-type-card { display: block; padding: 0.8rem 1rem; cursor: pointer; }
-.psr-types .gd-type-header { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; }
-.psr-types .gd-type-desc { color: #888; }
-.psr-types .gd-type-card.gd-type-selected { border-color: #f0a500; background: #1a1400; }
-body.light-mode .psr-types .gd-type-card.gd-type-selected { background: #fff8e6; }
 
 /* No-slot page: two equal Priority / Fall in Line options sharing one name
    field and button, reusing .gd-type-pill's selectable-card look so this

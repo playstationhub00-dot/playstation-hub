@@ -1814,13 +1814,21 @@ app.get('/ps-plus/rent', async (req, res) => {
   // it 404'd on every page load and only looked right because of the onerror
   // fallback underneath it.
   const psplusCover = psplusGame && psplusGame.cover_image ? psplusGame.cover_image : '';
+  // Days until each type frees up — "Available in N days" under a full type and
+  // in the get-in-line card — from the catalogue row's linked accounts: the same
+  // numbers a game page shows (lib/availability.js).
+  let nextDays = { tr: null, nt: null };
+  if (psplusGame) {
+    const a = computeAvailability(psplusGame, gameAccountSummary(psplusGame.id));
+    nextDays = { tr: a.trNext != null ? a.trNext : null, nt: a.ntNext != null ? a.ntNext : null };
+  }
   // PS Plus waitlist entries are created with the literal game_id 'psplus' by
   // POST /order/reserve, so the same queue rules apply with no special-casing.
   let queues = { nt: [], tr: [], ps4: [] };
   try {
     queues = queueRules.buildQueue(await orders.listQueueCandidates('psplus'), new Date(), req.sessionId);
   } catch (e) { console.error('[psplus queue]', e.message); }
-  res.render('psplus-rent', { prices, slots, psplusCover, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues });
+  res.render('psplus-rent', { prices, slots, psplusCover, nextDays, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues });
 });
 
 // PS Plus admin CRUD

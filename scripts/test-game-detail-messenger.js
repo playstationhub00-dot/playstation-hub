@@ -128,12 +128,12 @@ async function main() {
     assert.ok(!r.body.includes('id="reserveLinkAll"'));
     assert.ok(/var HIDE_STRIP = true;/.test(r.body), 'the separate queue strip stays hidden; the card shows the count');
   });
-  await okAsync('the PS Plus rent page shares these partials and keeps its classic layout', async () => {
+  await okAsync('the PS Plus rent page shares these partials in the same card layout', async () => {
     const r = await get('/ps-plus/rent');
     assert.strictEqual(r.status, 200);
-    assert.ok(!r.body.includes('gd-line-card'));
-    assert.ok(r.body.includes('or message us on Facebook instead') && r.body.includes('Reserve Now'));
-    assert.ok(/var HIDE_STRIP = false;/.test(r.body));
+    assert.ok(r.body.includes('gd-line-card'));
+    assert.ok(!r.body.includes('or message us on Facebook instead') && !r.body.includes('CHOOSE YOUR OPTION'));
+    assert.ok(/var HIDE_STRIP = true;/.test(r.body));
   });
 
   console.log('\ngame-detail.js, open game');

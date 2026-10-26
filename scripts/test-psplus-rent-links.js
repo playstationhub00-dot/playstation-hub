@@ -5,8 +5,8 @@
 // home search chips — open the rent page (/ps-plus/rent), not /ps-plus, which
 // opens on the games list. Search-engine surfaces (the 301 from the old game
 // URL, the search index, the product feed) keep /ps-plus. The rent page's
-// rental-type cards keep their own stacked look: hidden radios, padding, one
-// card per line. Boots a throwaway instance (temp DATA_DIR, blank MONGODB_URI).
+// rental-type cards are the game page's pills, with hidden radios. Boots a
+// throwaway instance (temp DATA_DIR, blank MONGODB_URI).
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
@@ -80,14 +80,12 @@ async function main() {
     assert.ok(ps.includes('<a class="bf-ps-lead" href="/ps-plus/rent">'), 'lead tile');
   });
 
-  await okAsync('the rent page: stacked type cards with hidden radios and their own styles', async () => {
+  await okAsync('the rent page: the game page type pills with hidden radios; the old stacked-card styles are gone', async () => {
     const r = await get('/ps-plus/rent');
     assert.strictEqual(r.status, 200);
-    assert.ok(r.body.includes('<div class="gd-type-options psr-types" id="typeOptions">'));
+    assert.ok(r.body.includes('<div class="gd-type-options" id="typeOptions">'));
     assert.strictEqual((r.body.match(/<input type="radio" name="rentalType" value="(tr|nt)" class="gd-type-radio" onchange="onTypeChange\(this\)">/g) || []).length, 2);
-    const css = read('public/css/style.css');
-    ['#typeOptions.psr-types {', '.psr-types .gd-type-card {', '.psr-types .gd-type-header {', '.psr-types .gd-type-card.gd-type-selected {']
-      .forEach(s => assert.ok(css.includes(s), s));
+    assert.ok(!read('public/css/style.css').includes('psr-types'));
   });
 
   await okAsync('search engines still go to /ps-plus', async () => {
