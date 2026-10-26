@@ -57,7 +57,7 @@
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
   const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
 %>
-<a href="<%= seo.gamePath(game.title) %>" class="game-card gc2-card gc2-split<%= allUnavail ? ' gc2-full' : '' %>">
+<a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card gc2-split<%= allUnavail ? ' gc2-full' : '' %>">
   <div class="gc2-art">
     <% if (game.cover_image) { %>
       <img <%- imgCard(game.cover_image) %> width="480" height="720" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">

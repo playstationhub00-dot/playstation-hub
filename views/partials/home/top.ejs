@@ -26,7 +26,7 @@
           <% home.banner.forEach(b => {
             const g = b.game;
             const tier = (!g.is_bundle && typeof gameTier === 'function') ? gameTier(g) : null; %>
-          <a class="hm-slide" href="<%= seo.gamePath(g.title) %>">
+          <a class="hm-slide" href="<%= seo.rentPath(g.title) %>">
             <img src="<%= g.cover_image %>" alt="" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
             <span class="hm-slide-shade"></span>
             <span class="hm-slide-body">
@@ -62,7 +62,7 @@
         <div class="hm-aside-head"><span aria-hidden="true" class="hm-mark hm-tri">△</span><b>Top rented</b><span>this month</span></div>
         <ol class="hm-board">
           <% home.topRented.slice(0, 10).forEach((t, i) => { %>
-          <li><a href="<%= seo.gamePath(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="" class="hm-board-cover" loading="lazy" decoding="async"><% } else { %><span class="hm-board-cover" aria-hidden="true"></span><% } %><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>
+          <li><a href="<%= seo.rentPath(t.game.title) %>"><span class="hm-rk hm-rk-<%= i + 1 %>"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="" class="hm-board-cover" loading="lazy" decoding="async"><% } else { %><span class="hm-board-cover" aria-hidden="true"></span><% } %><span class="hm-board-title"><%= t.game.title %></span><% if (t.weekly) { %><span class="hm-board-price">₱<%= t.weekly %></span><% } %></a></li>
           <% }) %>
         </ol>
         <a class="hm-board-all" href="/browse">View all games ›</a>

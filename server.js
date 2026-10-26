@@ -2648,7 +2648,7 @@ function browsePsplusData(accountSummaryMap) {
     avail = (sl.nt_slots || 0) + (sl.tr_slots || 0) + (sl.ps4_slots || 0) > 0;
     availPs4 = (sl.ps4_slots || 0) > 0;
   }
-  return { items, from: psplusFromWeekly(), avail, availPs4, rent: '/ps-plus' };
+  return { items, from: psplusFromWeekly(), avail, availPs4, rent: '/ps-plus/rent' };
 }
 
 app.get('/browse', (req, res) => {
