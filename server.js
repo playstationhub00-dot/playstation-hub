@@ -4520,6 +4520,7 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     if (order.account_id && order.slot_type) {
       const account = getAccount(order.account_id);
       if (account) {
+        const before = snapshotSlots(account);
         const slotKey = order.slot_type === 'tr' ? 'trophy' : 'non_trophy';
         const slot = account.slots[slotKey];
         slot.status = 'buyed';
@@ -4527,7 +4528,7 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
         slot.renter_name = order.fb_name;
         slot.start = ''; slot.end = '';
         account.slots[slotKey] = slot;
-        db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+        saveAccountSlots(account, before, { how: 'new' });
       }
     }
     const linked = await orders.setCustomerId(order.ref, customerId);
@@ -6913,19 +6914,22 @@ app.post('/admin/hero-slides/delete', requireAuth, (req, res) => {
 // Apply/clear an account slot from a customer assignment string "id:type"
 // Returns true on success, false if the target slot doesn't exist / is disabled (caller must
 // surface this rather than leaving the customer marked active with nothing actually reserved).
-function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate }) {
+function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate, history }) {
   if (!assignStr || !assignStr.includes(':')) return true;
   const [idPart, type] = assignStr.split(':');
   const account = getAccount(idPart);
   if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return false;
   const slot = account.slots[type];
   if (!slot || !slot.enabled) return false;
+  const before = snapshotSlots(account);
   if (status === 'bought') { slot.status = 'buyed'; slot.start = ''; slot.end = ''; }
   else { slot.status = 'rented'; slot.start = new Date().toISOString().slice(0, 10); slot.end = endDate || ''; }
   slot.renter_id = customerId;
   slot.renter_name = customerName;
   account.slots[type] = slot;
-  db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+  // `history` is the reason slot_history records (lib/slot-history.js diff());
+  // a plain assignment is someone new taking the slot.
+  saveAccountSlots(account, before, history || { how: 'new' });
   return true;
 }
 // Free any account slot currently linked to a given customer id.
@@ -6956,22 +6960,18 @@ function slotIsOpen(assignStr) {
   return !!(slot && slot.enabled && slot.status === 'open' && !slot.renter_id);
 }
 
-function freeAccountSlotsForCustomer(customerId) {
-  let anyChanged = false;
+// `history` is why they left, for slot_history: 'returned' unless the caller
+// says otherwise ('refunded', 'customer_deleted', 'moved' with the slot they
+// went to).
+function freeAccountSlotsForCustomer(customerId, history) {
   getAccounts().forEach(acc => {
-    let changed = false;
+    if (!ACCOUNT_SLOT_TYPES.some(t => acc.slots[t] && acc.slots[t].renter_id === customerId)) return;
+    const before = snapshotSlots(acc);
     ACCOUNT_SLOT_TYPES.forEach(t => {
-      if (acc.slots[t] && acc.slots[t].renter_id === customerId) {
-        acc.slots[t] = blankSlot(acc.slots[t].enabled);
-        changed = true;
-      }
+      if (acc.slots[t] && acc.slots[t].renter_id === customerId) acc.slots[t] = blankSlot(acc.slots[t].enabled);
     });
-    if (changed) {
-      db.get('accounts').find({ id: acc.id }).assign({ slots: acc.slots }).value();
-      anyChanged = true;
-    }
+    saveAccountSlots(acc, before, history || { how: 'returned' });
   });
-  if (anyChanged) db.write();
 }
 // Find the "accId:type" string of whichever slot is currently linked to a customer, or null
 // Which account slot type a customer's account_type consumes.
@@ -7008,20 +7008,22 @@ function findAccountAssignmentForCustomer(customerId) {
 }
 // Update renter_name/end date/status on an already-assigned slot WITHOUT resetting its start date.
 // Returns true on success, false if the target slot no longer exists/is disabled (caller should surface this).
-function refreshAccountAssignment(assignStr, { customerName, endDate, status }) {
+function refreshAccountAssignment(assignStr, { customerName, endDate, status, history }) {
   if (!assignStr || !assignStr.includes(':')) return true;
   const [idPart, type] = assignStr.split(':');
   const account = getAccount(idPart);
   if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return false;
   const slot = account.slots[type];
   if (!slot || !slot.enabled) return false;
+  const before = snapshotSlots(account);
   slot.renter_name = customerName;
   // Keep slot.status in sync when the customer toggles between renting ↔ bought on the same slot.
   if (status === 'bought' && slot.status !== 'buyed') { slot.status = 'buyed'; slot.end = ''; }
   else if (status === 'renting' && slot.status !== 'rented') { slot.status = 'rented'; if (endDate) slot.end = endDate; }
   else if (slot.status === 'rented' && endDate) slot.end = endDate;
   account.slots[type] = slot;
-  db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).write();
+  // Same renter: only a game swap (history.swap) or renting ↔ bought makes a line.
+  saveAccountSlots(account, before, history || {});
   return true;
 }
 
@@ -7175,18 +7177,36 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const priorAssign = findAccountAssignmentForCustomer(customerId);
   const submittedAssign = account_assign !== undefined ? (account_assign || null) : priorAssign;
   let slotAssignFailed = false;
+  // For the slot history: the game this edit leaves them on, and a swap when
+  // that is not the game they had (the free game change).
+  const editGame = !isUpcomingNew ? (getGame(game_id) || getGame(existing.game_id)) : null;
+  const editSwap = !wasUpcoming && editGame && editGame.id !== existing.game_id
+    ? { from: existing.game_title, to: editGame.title } : null;
+  const editGameTitle = editGame ? editGame.title : existing.game_title;
   if (!isActive) {
     // No longer renting/bought → free whatever slot was linked
-    if (priorAssign) freeAccountSlotsForCustomer(customerId);
+    if (priorAssign) freeAccountSlotsForCustomer(customerId, { how: 'returned' });
   } else if (submittedAssign !== priorAssign) {
-    // Assignment target changed (or game/type changed under it) → free old, apply new
-    if (priorAssign) freeAccountSlotsForCustomer(customerId);
+    // Assignment target changed (or game/type changed under it) → free old,
+    // apply new. Both slots record the move, with the game swap if there was one.
+    if (priorAssign) {
+      freeAccountSlotsForCustomer(customerId, submittedAssign
+        ? { how: 'moved', other: slotRef(submittedAssign), swap: editSwap }
+        : { how: 'cleared' });
+    }
     if (submittedAssign) {
-      slotAssignFailed = !applyAccountAssignment(submittedAssign, { customerId, customerName: finalCustomerName, status, endDate: finalEndDate });
+      slotAssignFailed = !applyAccountAssignment(submittedAssign, {
+        customerId, customerName: finalCustomerName, status, endDate: finalEndDate,
+        history: priorAssign
+          ? { how: 'moved', other: slotRef(priorAssign), swap: editSwap, game: editGameTitle }
+          : { how: 'new', game: editGameTitle }
+      });
     }
   } else if (priorAssign) {
     // Same slot as before → refresh name/end date/status (renting ↔ bought), keep original start date
-    slotAssignFailed = !refreshAccountAssignment(priorAssign, { customerName: finalCustomerName, endDate: finalEndDate, status });
+    slotAssignFailed = !refreshAccountAssignment(priorAssign, {
+      customerName: finalCustomerName, endDate: finalEndDate, status, history: { swap: editSwap }
+    });
   }
   if (slotAssignFailed) return res.redirect('/admin?tab=customers&msg=slot_unavailable');
 
@@ -7545,7 +7565,7 @@ app.post('/admin/customers/:id/refund', requireAuth, asyncRoute(async (req, res)
     stampRefundOrder(result, order);
     if (wasActive && !upcoming) {
       adjustLegacySlots(existing, +1);
-      freeAccountSlotsForCustomer(existing.id);
+      freeAccountSlotsForCustomer(existing.id, { how: 'refunded' });
     }
   } else if (result.kind === 'undo-rental') {
     const entry = result.entry || {};
@@ -7560,7 +7580,8 @@ app.post('/admin/customers/:id/refund', requireAuth, asyncRoute(async (req, res)
             customerId: existing.id,
             customerName: existing.customer_name,
             status: entry.prev_status,
-            endDate: result.patch.end_date
+            endDate: result.patch.end_date,
+            history: { how: 'restored' }
           });
         }
       }
@@ -7613,7 +7634,7 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
   }
   // Free linked account slot(s) when customer is no longer active
   if (wasActive && !isActive) {
-    freeAccountSlotsForCustomer(parseInt(req.params.id));
+    freeAccountSlotsForCustomer(parseInt(req.params.id), { how: 'returned' });
   } else if (wasActive && isActive && existing.status !== status) {
     // Toggling renting ↔ bought on the same linked slot — keep slot.status in sync
     const linkedAssign = findAccountAssignmentForCustomer(parseInt(req.params.id));
@@ -7645,7 +7666,7 @@ function removeCustomerRecord(id) {
       else adjustNtSlots(game.id, +1);
     }
   }
-  freeAccountSlotsForCustomer(parseInt(id));
+  freeAccountSlotsForCustomer(parseInt(id), { how: 'customer_deleted' });
   db.get('customers').remove({ id: parseInt(id) }).write();
   return existing;
 }
