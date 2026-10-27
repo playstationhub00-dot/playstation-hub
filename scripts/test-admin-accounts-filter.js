@@ -153,6 +153,25 @@ ok('plural', () => {
 
 console.log('\nwiring');
 
+console.log('\nhistoryRows()');
+
+ok('the slot popup shows the newest ten lines and offers the rest', () => {
+  const lines = Array.from({ length: 14 }, (_, i) => ({ date: 'Oct ' + (27 - i), title: 'line ' + i, detail: '' }));
+  const first = plain(F.historyRows({ lines }, false));
+  assert.strictEqual(first.rows.length, 10);
+  assert.strictEqual(first.rows[0].title, 'line 0');
+  assert.strictEqual(first.more, 'Show all (14)');
+  const all = plain(F.historyRows({ lines }, true));
+  assert.strictEqual(all.rows.length, 14);
+  assert.strictEqual(all.more, '');
+});
+
+ok('ten lines or fewer: no Show all; no history at all is an empty list', () => {
+  const ten = Array.from({ length: 10 }, (_, i) => ({ title: 'line ' + i }));
+  assert.strictEqual(plain(F.historyRows({ lines: ten }, false)).more, '');
+  assert.deepStrictEqual(plain(F.historyRows(null, false)), { rows: [], more: '' });
+});
+
 ok('admin.ejs loads admin-accounts.js with a cache-busting ?v=', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'views', 'admin.ejs'), 'utf8');
   assert.ok(/<script src="\/js\/admin-accounts\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(src));

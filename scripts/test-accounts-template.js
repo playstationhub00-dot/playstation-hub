@@ -133,6 +133,18 @@ ok('the account modal offers every catalogue game as a checkbox', () => {
   assert.ok(html.includes('name="game_ids" value="3" data-title="Tekken 8"'));
 });
 
+console.log('\nslot popup history');
+
+ok('the slot popup has the History section the script fills in, below the status form', () => {
+  const box = html.slice(html.indexOf('id="accSlotModal"'));
+  ['id="accSlotHistory"', 'id="accHistNow"', 'id="accHistList"', 'id="accHistStarted"', 'id="accHistMore"']
+    .forEach(s => assert.ok(box.includes(s), s));
+  assert.ok(box.indexOf('id="accSlotHistory"') > box.indexOf('</form>'), 'below the form');
+  assert.ok(/id="accHistNow"[^>]*hidden/.test(box), 'the Now line starts hidden');
+  assert.ok(/id="accHistMore"[^>]*hidden/.test(box), 'Show all starts hidden');
+  assert.ok(box.includes('aria-live="polite"'));
+});
+
 console.log('\nno accounts yet');
 
 ok('a friendly empty state, no list markup, and the Add modal still present', () => {

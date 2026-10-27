@@ -255,6 +255,17 @@
           <button type="submit" class="qa-btn qa-gold">Update slot</button>
         </div>
       </form>
+      <%# Filled in by public/js/admin-accounts.js from
+          GET /admin/accounts/:id/slot/:type/history when the popup opens. %>
+      <div class="acc-hist" id="accSlotHistory" aria-live="polite">
+        <div class="acc-hist-head">🕘 History</div>
+        <div class="acc-hist-now" id="accHistNow" hidden></div>
+        <ol class="acc-hist-list" id="accHistList"></ol>
+        <div class="acc-hist-foot">
+          <span id="accHistStarted"></span>
+          <button type="button" class="acc-hist-more" id="accHistMore" hidden></button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

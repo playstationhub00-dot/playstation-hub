@@ -4421,6 +4421,19 @@ button.slot-pill:hover { filter:brightness(1.15); }
 .acc-toggles { display:flex; gap:1rem; flex-wrap:wrap; font-size:0.82rem; color:#ccc; }
 .acc-toggles label { display:flex; align-items:center; gap:0.4rem; cursor:pointer; }
 .acc-public-name { margin-top:0.55rem; }
+/* Slot popup: the slot's renter history (lib/slot-history.js), fetched when
+   the popup opens. */
+.acc-hist { border-top:1px solid #1f1f1f; padding:0.85rem 1.1rem 1rem; }
+.acc-hist-head { font-size:0.63rem; text-transform:uppercase; letter-spacing:0.6px; color:#5a5a5a; font-weight:800; margin-bottom:0.5rem; }
+.acc-hist-now { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); color:#86efac; border-radius:8px; padding:0.45rem 0.65rem; font-size:0.78rem; margin-bottom:0.5rem; overflow-wrap:anywhere; }
+.acc-hist-list { list-style:none; margin:0; padding:0; }
+.acc-hist-line { display:grid; grid-template-columns:3.4rem minmax(0, 1fr); gap:0.5rem; padding:0.45rem 0; border-bottom:1px solid #1a1a1a; font-size:0.78rem; }
+.acc-hist-date { color:#666; white-space:nowrap; }
+.acc-hist-body b { color:#ddd; font-weight:700; }
+.acc-hist-detail { display:block; color:#888; margin-top:0.1rem; overflow-wrap:anywhere; }
+.acc-hist-empty { color:#666; font-size:0.78rem; padding:0.35rem 0; }
+.acc-hist-foot { display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-top:0.55rem; font-size:0.7rem; color:#555; }
+.acc-hist-more { background:none; border:0; padding:0; color:var(--ps-blue); font-weight:700; font-size:0.72rem; font-family:inherit; cursor:pointer; }
 
 @media (max-width: 640px) {
   .acc-head { align-items:flex-start; }
@@ -4460,6 +4473,10 @@ body.light-mode .acc-search, body.light-mode .acc-filters select, body.light-mod
 body.light-mode .acc-stat-total .val { color:#14171a; }
 body.light-mode .acc-name, body.light-mode .acc-s-acc b { color:#b45309; }
 body.light-mode .acc-act { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
+body.light-mode .acc-hist { border-top-color:#eef0f2; }
+body.light-mode .acc-hist-line { border-bottom-color:#f0f2f4; }
+body.light-mode .acc-hist-body b { color:#14171a; }
+body.light-mode .acc-hist-now { background:#ecfdf5; border-color:#a7f3d0; color:#166534; }
 
 /* Catalog cards (browse, buy, PS Plus most-played). Kept near 100–135px wide
    so a 720px landscape cover still covers the card on a 2x screen. Each

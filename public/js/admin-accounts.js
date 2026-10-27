@@ -67,6 +67,17 @@
 
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
+  var HISTORY_SHOWN = 10;
+
+  // The slot popup's History list: the newest ten lines unless "Show all" was
+  // pressed, and that button's label ('' when nothing is left to show).
+  function historyRows(view, showAll) {
+    var lines = (view && view.lines) || [];
+    var rows = showAll ? lines : lines.slice(0, HISTORY_SHOWN);
+    var more = !showAll && lines.length > HISTORY_SHOWN ? 'Show all (' + lines.length + ')' : '';
+    return { rows: rows, more: more };
+  }
+
   window.__accFilter = {
     normalizeState: normalizeState,
     statusMatches: statusMatches,
@@ -75,7 +86,8 @@
     accountMatches: accountMatches,
     activeFilterCount: activeFilterCount,
     isFiltering: isFiltering,
-    plural: plural
+    plural: plural,
+    historyRows: historyRows
   };
 
   // ── DOM wiring ───────────────────────────────────────────────────────────
@@ -256,6 +268,12 @@
     var gameChips = byId('accGameChips');
     var gameBoxes = toArray(accForm.querySelectorAll('input[name="game_ids"]'));
     var slotForm = byId('accSlotForm');
+    var hist = {
+      now: byId('accHistNow'), list: byId('accHistList'),
+      started: byId('accHistStarted'), more: byId('accHistMore')
+    };
+    var histView = null;
+    var histToken = 0;
 
     function open(overlay) { overlay.classList.add('open'); }
     function close(overlay) { overlay.classList.remove('open'); }
@@ -323,6 +341,85 @@
       byId('accSlotDatesWrap').hidden = st !== 'rented';
     }
 
+    // Built with textContent only: names and games are typed by hand and
+    // must show as text.
+    function histLine(line) {
+      var li = document.createElement('li');
+      li.className = 'acc-hist-line';
+      var date = document.createElement('span');
+      date.className = 'acc-hist-date';
+      date.textContent = line.date || '';
+      var body = document.createElement('span');
+      body.className = 'acc-hist-body';
+      var title = document.createElement('b');
+      title.textContent = line.title || '';
+      body.appendChild(title);
+      if (line.detail) {
+        var detail = document.createElement('span');
+        detail.className = 'acc-hist-detail';
+        detail.textContent = line.detail;
+        body.appendChild(detail);
+      }
+      li.appendChild(date);
+      li.appendChild(body);
+      return li;
+    }
+
+    function histMessage(text) {
+      histView = null;
+      hist.now.hidden = true;
+      hist.list.textContent = '';
+      var li = document.createElement('li');
+      li.className = 'acc-hist-empty';
+      li.textContent = text;
+      hist.list.appendChild(li);
+      hist.more.hidden = true;
+      hist.started.textContent = '';
+    }
+
+    function renderHistory(view, showAll) {
+      histView = view;
+      hist.now.textContent = '';
+      hist.now.hidden = !view.now;
+      if (view.now) {
+        var label = document.createElement('b');
+        label.textContent = 'Now: ';
+        hist.now.appendChild(label);
+        hist.now.appendChild(document.createTextNode(view.now.title + (view.now.detail ? ' · ' + view.now.detail : '')));
+      }
+      var shown = historyRows(view, showAll);
+      hist.list.textContent = '';
+      shown.rows.forEach(function (line) { hist.list.appendChild(histLine(line)); });
+      if (!shown.rows.length) {
+        var empty = document.createElement('li');
+        empty.className = 'acc-hist-empty';
+        empty.textContent = 'Nothing recorded yet.';
+        hist.list.appendChild(empty);
+      }
+      hist.more.textContent = shown.more;
+      hist.more.hidden = !shown.more;
+      hist.started.textContent = view.started ? 'History starts ' + view.started : '';
+    }
+
+    // Asks the server for this slot's history. A popup reopened on another
+    // slot before the answer came back ignores the stale answer.
+    function loadHistory(id, type) {
+      if (!hist.list || typeof fetch !== 'function') return;
+      var token = ++histToken;
+      histMessage('Loading…');
+      fetch('/admin/accounts/' + encodeURIComponent(id) + '/slot/' + encodeURIComponent(type) + '/history', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function (view) {
+        if (token === histToken) renderHistory(view, false);
+      }).catch(function () {
+        if (token === histToken) histMessage("Couldn't load history");
+      });
+    }
+
     function openSlot(id, type) {
       var a = data.accounts[id];
       var s = a && a.slots[type];
@@ -334,10 +431,16 @@
       slotForm.elements.days.value = '';
       slotForm.elements.end_date.value = s.end || '';
       syncSlotFields();
+      loadHistory(id, type);
       open(slotModal);
     }
 
     slotForm.elements.status.addEventListener('change', syncSlotFields);
+    if (hist.more) {
+      hist.more.addEventListener('click', function () {
+        if (histView) renderHistory(histView, true);
+      });
+    }
     slotForm.elements.days.addEventListener('input', function () {
       if (slotForm.elements.days.value) slotForm.elements.end_date.value = '';
     });
