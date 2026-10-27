@@ -1,6 +1,6 @@
 # Account slot renter history — Design
 
-Date: 2026-10-27 · Status: approved by owner (approach A)
+Date: 2026-10-27 · Status: approved by owner (approach A); amended after the plan's dry run
 
 ## Problem
 
@@ -42,6 +42,8 @@ Clicking a slot chip opens the slot popup as now. Under the status form, a new
   `start`, ends `end` (or "bought" for a bought slot).
 - The 10 newest lines, newest first, then **Show all (N)** for the rest.
 - At the bottom: "History starts <date>", the day the log began.
+- A slot with nothing recorded says "Nothing recorded yet." While loading it
+  says "Loading…".
 
 Each line has a date and a short text. The wording:
 
@@ -52,6 +54,7 @@ Each line has a date and a short text. The wording:
 | A renter moved in from another slot | **Name moved in** from `<account> · <type>` |
 | The rental was marked done | **Name left** — returned · rented `start` → `date` · game |
 | The renter was put on another slot | **Name moved** to `<account> · <type>` · rented `start` → `date` |
+| …and their game changed in the same edit | both move lines add "swapped `old` → `new`" |
 | The owner cleared the renter in the popup | **Name left** — cleared by hand · rented `start` → `date` |
 | The rental was refunded | **Name left** — refunded · rented `start` → `date` |
 | A refund was undone | **Name came back** — refund undone |
@@ -91,8 +94,11 @@ entry per line:
   - `diff(before, after, ctx)` turns a slot's before and after into entries;
   - the line wording;
   - the trim.
-- **Save step:** `saveAccountSlots(account, ctx)` in `server.js` writes the
-  slots and appends the entries `diff` returns for each slot type.
+- **Save step:** `saveAccountSlots(account, before, ctx)` in `server.js` writes
+  the slots and appends the entries `diff` returns for each slot type.
+  - `before` is `snapshotSlots(account)`, taken before any slot is touched.
+  - `getAccount()` returns the stored row itself, so the slots change in place
+    and "before" can't be read back from the database afterwards.
 - **`ctx` carries:**
   - `how`;
   - for moves, the other account and slot;
@@ -114,13 +120,17 @@ entry per line:
 |---|---|
 | The slot popup (`POST /admin/accounts/:id/slot/:type`) | `cleared` for the old renter; `new`, or `bought` for a Bought status, for a new one; a `status` line otherwise |
 | Customers add, Quick Add (`applyAccountAssignment`) | `new` / `bought` |
-| Customers edit, slot changed | `moved` on both slots (old: to the new slot; new: from the old slot) |
+| Customers edit, slot changed | `moved` on both slots (old: to the new slot; new: from the old slot), with the game swap when the game changed too |
+| Customers edit, slot removed while still renting | `cleared` |
 | Customers edit, game changed on the same slot | `swap` |
 | Customers edit or status change to done (`freeAccountSlotsForCustomer`) | `returned` |
 | Refund (`freeAccountSlotsForCustomer`) / undo refund (`applyAccountAssignment`) | `refunded` / `restored` |
 | Customer delete (`removeCustomerRecord`) | `customer_deleted` |
 | A paid web purchase of a bundle slot (order advance) | `bought` |
 
+- **One fix in the slot popup:** a different renter set there now starts
+  today. It used to carry the previous renter's start date over, which would
+  have made the Now line's "since" wrong.
 - **Not recorded:**
   - extensions (the Now line shows the current end date);
   - name-spelling fixes;
@@ -153,16 +163,26 @@ session store, a made-up admin password and made-up names.
   - an end-date-only change;
   - the line wording;
   - trimming to 100.
-- **`scripts/test-slot-history-routes.js`** tests the real routes:
-  - the slot popup sets a renter, then clears it;
+- **`scripts/test-slot-history-routes.js`** tests the slot popup and the
+  history request:
+  - the popup sets a renter, then clears it, then a new renter takes over;
+  - deleting an account (its entries go);
+  - the history request returns the lines newest first, with the Now line and
+    the start date, refuses a request that isn't logged in, and gives a 404
+    for an unknown slot.
+- **`scripts/test-slot-history-customers.js`** tests the customer flows:
   - adding a customer onto a slot;
   - editing that customer onto another account's slot (a `moved` line on both);
   - editing only the game (a `swap` line);
+  - a game swap that also moves the slot;
+  - renting → bought;
   - marking them done (`returned`);
+  - a refund and its undo;
   - deleting a customer;
-  - deleting an account (its entries go);
-  - the history request returns the lines newest first, with the Now line and
-    the start date, and refuses a request that isn't logged in.
+  - a paid bundle purchase.
+- **`scripts/test-accounts-template.js`** and
+  **`scripts/test-admin-accounts-filter.js`** gain the popup's History markup
+  and the "newest ten, then Show all" rule.
 - **A browser check** at 1280px and 375px: open a slot, see Now and the
   history, use "Show all".
 - **The full suite** stays green except the known
