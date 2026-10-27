@@ -52,6 +52,7 @@ const homeView = require('./lib/home-view');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
+const slotHistory = require('./lib/slot-history');
 const extensions = require('./lib/extensions');
 const refunds = require('./lib/refunds');
 const rentAudit = require('./lib/rent-audit');
@@ -282,6 +283,12 @@ db.defaults({
 // Ensure accounts collection exists for pre-existing databases
 if (db.get('accounts').value() === undefined) db.set('accounts', []).write();
 if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).write();
+// Renter history for account slots (lib/slot-history.js). The start date is
+// stamped once, the first time the server runs with it, for the slot popup's
+// "History starts …" line: nothing before it was recorded.
+if (db.get('slot_history').value() === undefined) db.set('slot_history', []).write();
+if (db.get('nextSlotHistoryId').value() === undefined) db.set('nextSlotHistoryId', 1).write();
+if (!db.get('slot_history_started_at').value()) db.set('slot_history_started_at', new Date().toISOString()).write();
 if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
 if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
 if (db.get('loyalty_identity').value() === undefined) db.set('loyalty_identity', { aliases: {}, rows: {} }).write();
@@ -1112,6 +1119,43 @@ function newAccountId() {
   const id = db.get('nextAccountId').value() || 1;
   db.set('nextAccountId', id + 1).write();
   return id;
+}
+
+// A copy of an account's slots to compare against after a change. Take it
+// before touching any slot: getAccount() hands back the stored row itself, so
+// its slots change in place the moment a caller edits them.
+function snapshotSlots(account) {
+  return JSON.parse(JSON.stringify((account && account.slots) || {}));
+}
+
+// Saves an account's slots and records what changed in slot_history. Every
+// write to accounts[].slots goes through here, so the renter history sees each
+// change whichever screen made it. `before` is snapshotSlots() from before the
+// change; `ctx` says why (lib/slot-history.js diff()).
+function saveAccountSlots(account, before, ctx) {
+  const at = new Date().toISOString();
+  const gameOf = id => { const c = getCustomer(id); return c ? (c.game_title || '') : ''; };
+  const lines = [];
+  ACCOUNT_SLOT_TYPES.forEach(t => {
+    slotHistory.diff(before && before[t], account.slots[t], ctx || {}, gameOf)
+      .forEach(e => lines.push(Object.assign({ account_id: account.id, slot: t, at }, e)));
+  });
+  db.get('accounts').find({ id: account.id }).assign({ slots: account.slots }).value();
+  if (lines.length) {
+    let list = (db.get('slot_history').value() || []).slice();
+    let nextId = db.get('nextSlotHistoryId').value() || 1;
+    lines.forEach(e => { list.push(Object.assign({ id: nextId++ }, e)); });
+    new Set(lines.map(e => e.slot)).forEach(t => { list = slotHistory.trim(list, account.id, t); });
+    db.set('slot_history', list).set('nextSlotHistoryId', nextId).value();
+  }
+  db.write();
+}
+
+// "accId:type" → the other side of a move, the way slot_history stores it.
+function slotRef(assignStr) {
+  const [idPart, type] = String(assignStr || '').split(':');
+  const account = getAccount(idPart);
+  return { account_id: account ? account.id : parseInt(idPart), account_label: account ? account.label : '', slot: type };
 }
 
 // ── Month logs (dashboard drill-down: ad count/spend + screenshots per YYYY-MM) ──
@@ -7927,6 +7971,7 @@ app.post('/admin/accounts/delete/:id', requireAuth, (req, res) => {
     });
   }
   db.get('accounts').remove({ id: parseInt(req.params.id) }).write();
+  db.get('slot_history').remove(e => e.account_id === parseInt(req.params.id)).write();
   res.redirect('/admin?tab=accounts&msg=account_deleted');
 });
 
@@ -7936,6 +7981,7 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
   const type = req.params.type;
   const account = getAccount(req.params.id);
   if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return res.redirect('/admin?tab=accounts&msg=account_error');
+  const before = snapshotSlots(account);
   const slot = account.slots[type];
   const newStatus = ACCOUNT_STATUSES.includes(status) ? status : slot.status;
 
@@ -7950,7 +7996,10 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
         const d = new Date(); d.setDate(d.getDate() + (parseInt(days) || 0));
         slot.end = d.toISOString().slice(0, 10);
       }
-      slot.start = slot.start || new Date().toISOString().slice(0, 10);
+      // A different renter starts today; the same one keeps their start date.
+      // (It used to carry the previous renter's start over to the new one.)
+      const sameRenter = slotHistory.renterKey(before[type]) === slotHistory.renterKey(slot);
+      slot.start = (sameRenter && slot.start) || new Date().toISOString().slice(0, 10);
     } else { slot.start = ''; slot.end = ''; }
   } else {
     // open / na / maintenance → clear renter + dates
@@ -7958,8 +8007,29 @@ app.post('/admin/accounts/:id/slot/:type', requireAuth, (req, res) => {
     slot.renter_id = null; slot.renter_name = ''; slot.start = ''; slot.end = '';
   }
   account.slots[type] = slot;
-  db.get('accounts').find({ id: parseInt(req.params.id) }).assign({ slots: account.slots }).write();
+  // A change made here is the owner's own: a renter it takes off was cleared
+  // by hand.
+  saveAccountSlots(account, before, { how: 'cleared' });
   res.redirect('/admin?tab=accounts&msg=slot_updated');
+});
+
+// The slot popup's History section (public/js/admin-accounts.js asks for it
+// when the popup opens): this slot's lines newest first, its current renter
+// and the day the log began.
+app.get('/admin/accounts/:id/slot/:type/history', requireAuth, (req, res) => {
+  const account = getAccount(req.params.id);
+  const type = req.params.type;
+  if (!account || !ACCOUNT_SLOT_TYPES.includes(type)) return res.status(404).json({ error: 'not_found' });
+  const entries = (db.get('slot_history').value() || [])
+    .filter(e => e.account_id === account.id && e.slot === type)
+    .reverse();
+  const slot = account.slots[type];
+  const renter = slot && slot.renter_id ? getCustomer(slot.renter_id) : null;
+  res.json(slotHistory.historyView({
+    entries, slot,
+    game: renter ? (renter.game_title || '') : '',
+    startedAt: db.get('slot_history_started_at').value()
+  }));
 });
 
 // ── Month Logs (dashboard drill-down: ad count/spend + screenshots) ───────────
