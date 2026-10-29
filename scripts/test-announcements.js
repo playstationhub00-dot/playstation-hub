@@ -204,6 +204,7 @@ fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   ],
   site_settings: {
     title: 'PlayStation Hub',
+    themes: { base: 'classic', presets: { halloween: { start: '', end: '', line1: '', highlight: '', line2: '' }, christmas: { start: '', end: '', line1: '', highlight: '', line2: '' } } },
     promo: { enabled: false, discounts: { 7: 0, 30: 0 }, deposit: 100 },
     hero_text: { line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games', subtitle: '', title_size: 55, highlight_color: '#F0A500', subtitle_color: '#aaaaaa' },
     loyalty: { punch_enabled: false, rebook_enabled: false }
