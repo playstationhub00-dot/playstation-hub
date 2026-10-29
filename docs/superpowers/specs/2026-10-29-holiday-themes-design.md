@@ -1,6 +1,6 @@
 # Holiday themes (Halloween, Christmas) — Design
 
-Date: 2026-10-29 · Status: approved by owner
+Date: 2026-10-29 · Status: approved by owner; amended after the plan's dry run
 
 ## Goal
 
@@ -14,7 +14,8 @@ The owner can dress the public site for a holiday — **Halloween** or
 - **Strength:** "Festive" (option B of the mockups):
   - holiday colours on buttons, links and price highlights;
   - a darker holiday tint in the header and footer;
-  - a thin holiday-coloured outline on game covers;
+  - a thin holiday-coloured outline on every catalogue card (`.game-card`)
+    and the game page poster (`.gd-cover`);
   - a small 🎃 / 🎄 beside the logo;
   - a few slowly drifting bats (Halloween) or snowflakes (Christmas).
 - **Where:** public pages only. The admin panel never shows a theme.
@@ -34,7 +35,9 @@ The owner can dress the public site for a holiday — **Halloween** or
   - adds `<link rel="stylesheet" href="/css/theme-<name>.css?v=<assetV>">`;
   - marks the page with `<html data-theme="<name>">`, set by one inline line
     before the page paints, so no page template changes.
-  - The admin pages don't load the theme.
+  - The admin pages don't load the theme: `lib/site-theme.js` `themeFor()` gives
+    `''` for any path starting `/admin` (the admin login too), and the
+    request's theme rides in `res.locals.siteTheme`.
 - **Styles:** each theme is its own file,
   `public/css/theme-halloween.css` and `public/css/theme-christmas.css`.
   - Every rule is scoped to `html[data-theme="<name>"]`, and they only add on
@@ -48,7 +51,10 @@ The owner can dress the public site for a holiday — **Halloween** or
   - Phones get fewer, smaller pieces.
 - **Colours:**
   - Halloween: orange `#f97316` with purple `#7c3aed`.
-  - Christmas: red `#dc2626` with green `#16a34a` and white snow.
+  - Christmas: red `#ef4444` (light enough for the dark button text) with
+    green `#14532d` / `#16a34a` and white snow (grey in light mode).
+  - The colours come from overriding the site accent `--ps-blue`, so every
+    button, link and price that uses it follows.
   - Text on coloured buttons keeps readable contrast.
 
 ## Not changing
