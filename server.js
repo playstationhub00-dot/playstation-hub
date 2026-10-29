@@ -37,6 +37,7 @@ const upcomingPsn = require('./lib/upcoming-psn');
 const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
 const imageVariants = require('./lib/image-variants');
+const brandLogo = require('./lib/brand-logo');
 const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
@@ -246,7 +247,7 @@ db.defaults({
   nextAnnouncementId: 1,
   site_settings: {
     title: 'PlayStation Hub',
-    logo_path: '/logo.svg',
+    logo_path: '/logo-hub-light.png',
     favicon_path: '/favicon.svg',
     hero_bg: { type: 'default', path: '' },
     hero_text: {
@@ -1309,6 +1310,17 @@ function getSiteSettings() {
   if (!s.favicon_path) {
     db.set('site_settings.favicon_path', '/favicon.svg').write();
     s.favicon_path = '/favicon.svg';
+  }
+  // The header used to be /uploads/logo-custom.png (a black plate) or the
+  // older /logo.svg. Swap those for the built-in transparent wordmark once.
+  // logo_builtin_at is the latch: after it is set, an admin upload back to
+  // logo-custom.png is their logo, not the old plate, and is left alone.
+  // The view does the same check, so the new file shows even on the request
+  // that writes this.
+  if (!s.logo_builtin_at) {
+    brandLogo.applyMigration(db);
+    s.logo_path = db.get('site_settings.logo_path').value();
+    s.logo_builtin_at = db.get('site_settings.logo_builtin_at').value();
   }
   if (!s.hero_bg) {
     db.set('site_settings.hero_bg', { type: 'default', path: '', overlay: 50 }).write();
@@ -6876,7 +6888,11 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
     favicon_path = '/uploads/' + destName;
   }
 
-  // Handle logo upload
+  // Handle logo upload. Still saved as logo-custom<ext> so a replacement
+  // keeps the short cache (UNVERSIONED_UPLOAD_NAMES) instead of a year-long
+  // immutable one. getSiteSettings() above rewrites that historical name to
+  // the built-in wordmark only while logo_builtin_at is unset, which this
+  // request already stamped. A file chosen here is stored and kept.
   const logoFile = req.files && req.files['logo'] && req.files['logo'][0];
   if (logoFile) {
     const ext = path.extname(logoFile.originalname) || '.png';

@@ -98,7 +98,7 @@
             <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
           <% } %>
         </div>
-        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand" width="230" height="56">
+        <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'usd-hero-brand', logoAlt: '', logoHidden: true }) %>
       </div>
     </div>
   </div>

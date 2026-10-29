@@ -27,7 +27,12 @@
     /* ── Poster (1080x1350, rendered at native size; scaled only for on-screen preview) ── */
     .poster { width: 1080px; height: 1350px; background: linear-gradient(170deg,#080818 0%,#100228 45%,#07101a 100%); color: #fff; font-family: Arial, sans-serif; padding: 50px 54px; box-sizing: border-box; position: relative; overflow: hidden; }
     .poster-header { text-align: center; margin-bottom: 22px; }
-    .poster-logo { width: 100px; mix-blend-mode: screen; margin-bottom: 8px; }
+    .poster-logo { width: 100px; height: auto; margin-bottom: 8px; }
+    .poster-logo.brand-logo { width: 95px; }
+    /* The old logo was a black plate. Screen blend knocked that plate out.
+       The transparent wordmark must not be screened — it would erase the
+       cross. A custom upload still gets the blend, via .poster-logo-custom. */
+    .poster-logo-custom { mix-blend-mode: screen; }
     .poster-cat-title { font-size: 40px; font-weight: 900; color: #FFD700; letter-spacing: 1px; }
     .poster-cat-sub { font-size: 18px; color: rgba(255,255,255,0.55); margin-top: 4px; }
     .poster-promo { background: linear-gradient(90deg,#3730a3,#6d28d9); border-radius: 12px; padding: 14px 22px; text-align: center; font-size: 20px; font-weight: 800; margin-bottom: 12px; }
@@ -138,7 +143,7 @@
       <div class="pg-preview-scaler">
         <div class="poster" id="poster-<%= gi %>-<%= pi %>" style="<%= posterBgStyle %>">
           <div class="poster-header">
-            <img class="poster-logo" src="<%= settings.logo_path %>" alt="logo">
+            <%- include('../brand-logo', { logoVariant: 'light', logoClass: 'poster-logo', logoAlt: 'logo' }) %>
             <div class="poster-cat-title"><%= grp.name %></div>
             <div class="poster-cat-sub">PS5 &amp; PS4 Digital Game Rentals</div>
           </div>

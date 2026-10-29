@@ -19,7 +19,18 @@
   var pagePath = (typeof canonicalPath !== 'undefined') ? canonicalPath : (base.canonicalPath || '/');
   var canonical = seoApi.canonicalUrl(pagePath);
   var noindexPage = !!((typeof noindex !== 'undefined' && noindex) || (typeof seoNoindex !== 'undefined' && seoNoindex));
-  var img = (typeof image !== 'undefined' && image) ? image : (base.image || ((typeof settings !== 'undefined' && settings && settings.logo_path) || '/logo.svg'));
+  // Social image stays /logo.svg for the built-in wordmark. The transparent
+  // header file is white and vanishes on a light share card. A custom admin
+  // upload (logo_path after logo_builtin_at) is still used. Pages that pass
+  // their own image, and static pages whose base.image is /logo.svg, win first.
+  var rawLogo = (typeof settings !== 'undefined' && settings && settings.logo_path) || '';
+  var logoStamped = typeof settings !== 'undefined' && settings && settings.logo_builtin_at;
+  var stockLogo = !rawLogo || rawLogo === '/logo.svg' || rawLogo === '/logo.png'
+    || rawLogo === '/logo-hub-light.png' || rawLogo === '/logo-hub-light-4x.png'
+    || rawLogo === '/logo-hub-dark.png' || rawLogo === '/logo-hub-dark-4x.png'
+    || (/^\/uploads\/logo-custom\./.test(rawLogo) && !logoStamped);
+  var socialLogo = stockLogo ? '/logo.svg' : rawLogo;
+  var img = (typeof image !== 'undefined' && image) ? image : (base.image || socialLogo);
   var ogImage = seoApi.absoluteUrl(img);
   var ogType = (typeof type !== 'undefined' && type) ? type : (base.type || 'website');
   var blocks = [];

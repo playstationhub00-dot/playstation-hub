@@ -15,6 +15,7 @@
       text-align:center;
     }
     .login-box img { height:48px; width:auto; margin-bottom:1.5rem; }
+    .login-box img.brand-logo { height:39px; }
     .login-box h1 { font-size:1.25rem; font-weight:800; margin-bottom:0.4rem; }
     .login-box p { color:var(--text-secondary); font-size:0.875rem; margin-bottom:1.75rem; }
     .login-input {
@@ -58,7 +59,7 @@
 </head>
 <body>
   <div class="login-box">
-    <a href="/"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>"></a>
+    <a href="/"><%- include('partials/brand-logo') %></a>
     <h1>Admin Panel</h1>
     <p>Enter your password to continue</p>
 
