@@ -277,6 +277,22 @@ body .hr-chips, body .hm-start-links, body .hr-cats, body .hr-guides { position:
   flex: 1 1 auto;
 }
 .hr-tile > .game-card:hover { border-color: transparent; }
+/* Hover: the tile lifts, the cover zooms a little, the border takes the accent.
+   Mouse/trackpad only; keyboard focus gets the same look. */
+.hr-tile { transition: transform 0.22s ease, border-color 0.22s ease; }
+.hr-tile .gc2-cover,
+.hr-tile .cs-cover-img { transition: transform 0.35s ease; }
+@media (hover: hover) {
+  .hr-tile:hover { transform: translateY(-6px); border-color: var(--theme-btn, #F5B800); }
+  .hr-tile:hover .gc2-cover,
+  .hr-tile:hover .cs-cover-img { transform: scale(1.06); }
+}
+.hr-tile:focus-within { border-color: var(--theme-btn, #F5B800); }
+@media (prefers-reduced-motion: reduce) {
+  .hr-tile, .hr-tile .gc2-cover, .hr-tile .cs-cover-img { transition: none; }
+  .hr-tile:hover { transform: none; }
+  .hr-tile:hover .gc2-cover, .hr-tile:hover .cs-cover-img { transform: none; }
+}
 /* The diagonal Full ribbon is clipped to "LL" on a five-across card and sits
    on top of Just added. A small pill in the corner keeps both readable. */
 .hr-tile .card-ribbon {
