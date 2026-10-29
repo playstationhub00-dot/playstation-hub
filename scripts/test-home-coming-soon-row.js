@@ -103,7 +103,7 @@ async function main() {
     assert.deepStrictEqual(upcomingIds(soon), [1, 2, 3, 5, 6]);
     const linked = [...soon.matchAll(/href="\/upcoming\/[a-z0-9-]+-(\d+)"/g)].map(m => Number(m[1]));
     const unique = linked.filter((id, i) => linked.indexOf(id) === i);
-    assert.deepStrictEqual(unique, [1, 2, 3, 5, 6, 7, 4]);
+    assert.deepStrictEqual(unique, [1, 2, 3, 5, 6], 'no "Also coming" text links for the rest');
   });
   ok('no arrows, no slider, nothing to drift', () => {
     ['upcomingSlider', 'upcoming-slider', 'slider-arrow', 'slideUpcoming', 'upcomingBody'].forEach(t => assert.ok(!soon.includes(t), t));

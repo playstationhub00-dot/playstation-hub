@@ -1,7 +1,7 @@
 <%#
-  New releases and Coming soon, five each, with the rest linked as text so
-  those game URLs stay on the page. Cards keep the catalogue card; the
-  action sits under it. Coming soon shows no price.
+  New releases and Coming soon, five each; "View all" covers the rest.
+  Cards keep the catalogue card; the action sits under it. Coming soon
+  shows no price.
 %>
 <%
   function hrSeen(list) {
@@ -44,9 +44,6 @@
         </div>
         <% }) %>
       </div>
-      <% if (hrNew.length > 5) { %>
-      <p class="hr-also">Also new: <% hrNew.slice(5).forEach(function (game, i) { %><% if (i) { %>, <% } %><a href="<%= seo.rentPath(game.title) %>"><%= game.title %></a><% }) %></p>
-      <% } %>
     </div>
     <div class="hr-panel hr-panel-soon">
       <h2 class="hm-title" id="comingSoon"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse?tab=coming-soon">View all ›</a></h2>
@@ -58,9 +55,6 @@
         </div>
         <% }) %>
       </div>
-      <% if (hrSoon.length > 5) { %>
-      <p class="hr-also">Also coming: <% hrSoon.slice(5).forEach(function (game, i) { %><% if (i) { %>, <% } %><a href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>"><%= game.title %></a><% }) %></p>
-      <% } %>
     </div>
   </div>
 </section>
