@@ -20,6 +20,12 @@
       transition:width 0.18s ease, transform 0.2s ease; }
     .asb-brand { display:flex; align-items:center; gap:0.55rem; padding:0 0.85rem; height:56px; flex-shrink:0; border-bottom:1px solid #161616; box-sizing:border-box; overflow:hidden; }
     .asb-brand img { height:28px; width:auto; display:block; flex-shrink:0; }
+    .asb-brand img.brand-logo { height:23px; }
+    /* Sidebar is black, and white in light mode. The dark wordmark is the
+       one with #111 text; it stays hidden until the sidebar is white. */
+    .asb-brand .brand-logo-for-light { display: none; }
+    body.light-mode .asb-brand .brand-logo-for-dark { display: none; }
+    body.light-mode .asb-brand .brand-logo-for-light { display: block; }
     .asb-brand-txt { font-size:0.8rem; font-weight:800; color:#fff; white-space:nowrap; letter-spacing:0.2px; }
     .asb-scroll { flex:1 1 auto; overflow-y:auto; overflow-x:hidden; padding:0.55rem 0.5rem 1rem; }
     .asb-foot { flex-shrink:0; border-top:1px solid #161616; padding:0.45rem 0.5rem; display:flex; flex-direction:column; gap:0.2rem; }
@@ -129,7 +135,10 @@
     64px flex row for the storefront's top bar, and it would restyle this. %>
 <div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="Admin sections">
   <div class="asb-brand">
-    <a href="/" title="View site"><img src="<%= settings.logo_path %>" alt="<%= settings.title %>"></a>
+    <a href="/" title="View site" class="asb-logo">
+      <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'brand-logo-for-dark' }) %>
+      <%- include('partials/brand-logo', { logoVariant: 'dark', logoClass: 'brand-logo-for-light' }) %>
+    </a>
     <span class="asb-brand-txt">Admin</span>
   </div>
 

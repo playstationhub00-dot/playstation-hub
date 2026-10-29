@@ -125,7 +125,7 @@
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <div class="usd-hero-foot">
         <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>
-        <img src="<%= settings.logo_path %>" alt="" aria-hidden="true" class="usd-hero-brand" width="230" height="56">
+        <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'usd-hero-brand', logoAlt: '', logoHidden: true }) %>
       </div>
     </div>
   </div>

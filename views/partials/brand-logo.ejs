@@ -1,0 +1,33 @@
+<%
+  // Header / footer / hero wordmark. Stock paths (missing, the old SVG, or
+  // /uploads/logo-custom.* before the one-time migration) render the built-in
+  // transparent files. After site_settings.logo_builtin_at is set, logo-custom.*
+  // is an admin upload and is shown as stored. Keep this in lockstep with
+  // lib/brand-logo.js — scripts/test-brand-logo.js compares the two.
+  var _s = (typeof settings !== 'undefined' && settings) ? settings : {};
+  var _path = _s.logo_path || '';
+  var _stamped = !!_s.logo_builtin_at;
+  var _legacy = !_path || _path === '/logo.svg' || _path === '/logo.png' || /^\/uploads\/logo-custom\.[A-Za-z0-9]+$/.test(_path);
+  var _builtin = _path === '/logo-hub-light.png' || _path === '/logo-hub-light-4x.png' || _path === '/logo-hub-dark.png' || _path === '/logo-hub-dark-4x.png';
+  var _stock = _builtin || !_path || (_legacy && !_stamped);
+  var _variant = (typeof logoVariant !== 'undefined' && logoVariant) || 'light';
+  var _src, _srcset, _w, _h;
+  if (!_stock) {
+    _src = _path; _srcset = ''; _w = 230; _h = 56;
+  } else if (_variant === 'dark') {
+    _src = '/logo-hub-dark.png';
+    _srcset = '/logo-hub-dark.png 1x, /logo-hub-dark-4x.png 4x';
+    _w = 409; _h = 111;
+  } else {
+    _src = '/logo-hub-light.png';
+    _srcset = '/logo-hub-light.png 1x, /logo-hub-light-4x.png 4x';
+    _w = 409; _h = 111;
+  }
+  var _alt = (typeof logoAlt !== 'undefined') ? logoAlt : (_s.title || 'PlayStation Hub');
+  var _extra = (typeof logoClass !== 'undefined' && logoClass) ? logoClass : '';
+  var _cls = (_stock ? 'brand-logo' : '') + (_extra ? (_stock ? ' ' : '') + _extra : '');
+  if (!_stock && _extra.indexOf('poster-logo') !== -1) _cls += ' poster-logo-custom';
+  var _style = (typeof logoStyle !== 'undefined' && logoStyle) ? logoStyle : '';
+  var _hidden = typeof logoHidden !== 'undefined' && logoHidden;
+%>
+<img src="<%= _src %>"<% if (_srcset) { %> srcset="<%= _srcset %>"<% } %> alt="<%= _alt %>" width="<%= _w %>" height="<%= _h %>"<% if (_cls) { %> class="<%= _cls %>"<% } %><% if (_style) { %> style="<%= _style %>"<% } %><% if (_hidden) { %> aria-hidden="true"<% } %>>
