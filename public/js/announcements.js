@@ -66,7 +66,7 @@
   function wireRotator(root, selector) {
     if (!root) return;
     pick(root, selector);
-    var close = root.querySelector('.announcement-close, .ann-banner-close');
+    var close = root.querySelector('.announcement-close');
     if (close) close.addEventListener('click', function () {
       var current = root.querySelector(selector + '.on');
       if (!current) return;

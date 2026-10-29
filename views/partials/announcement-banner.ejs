@@ -7,7 +7,7 @@
 <section class="ann-banner" id="annBanner" aria-label="Highlights"<% if (bannerMany) { %> role="region" aria-roledescription="carousel" tabindex="0"<% } %>>
   <%- include('theme-decor') %>
   <% bannerSlides.forEach(function (slide, i) { %>
-  <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (bannerMany) { %> aria-roledescription="slide" aria-label="<%= i + 1 %> of <%= bannerSlides.length %>"<% } %><% if (i !== 0) { %> aria-hidden="true"<% } %>>
+  <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (bannerMany) { %> aria-roledescription="slide" aria-label="<%= i + 1 %> of <%= bannerSlides.length %>"<% } %><% if (i !== 0) { %> aria-hidden="true"<% } %>>
     <% if (slide.image || slide.imageMobile) { %>
     <div class="ann-banner-media">
       <picture>
@@ -41,7 +41,6 @@
     <% }) %>
   </div>
   <% } %>
-  <button type="button" class="ann-banner-close" aria-label="Dismiss announcement">&times;</button>
 </section>
 <script>
 (function () {

@@ -180,7 +180,7 @@ html[data-visitor="returning"] .ann-aud-new { display: none !important; }
 .ann-banner .ann-dot { width: 22px; }
 .ann-banner .ann-dot::after { width: 8px; height: 4px; left: 0; top: 7px; border-radius: 99px; background: #6b6b6b; opacity: 1; }
 .ann-banner .ann-dot.on::after { width: 22px; background: var(--theme-btn, #F5B800); opacity: 1; }
-.announcement-close, .ann-banner-close {
+.announcement-close {
   position: absolute;
   right: 6px;
   top: 50%;
@@ -198,8 +198,7 @@ html[data-visitor="returning"] .ann-aud-new { display: none !important; }
   align-items: center;
   justify-content: center;
 }
-.announcement-close:hover, .ann-banner-close:hover { background: rgba(0, 0, 0, 0.12); }
-.ann-banner-close { top: 8px; transform: none; color: var(--text-primary, #fff); }
+.announcement-close:hover { background: rgba(0, 0, 0, 0.12); }
 .announcement-bar :focus-visible,
 .ann-bell-btn:focus-visible,
 .ann-bell-panel :focus-visible,
