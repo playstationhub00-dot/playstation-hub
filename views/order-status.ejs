@@ -91,6 +91,8 @@
     <span class="ord-ref-code"><%= order.ref %></span>
   </div>
 
+  <% if (msg === 'placed') { %><div class="ord-flash">Order placed. Message us on Messenger so this order stays linked to your chat.</div><% } %>
+  <% if (msg === 'already') { %><div class="ord-flash">This order was already placed — here's the same one, not a second copy.</div><% } %>
   <% if (msg === 'payment_submitted') { %><div class="ord-flash">Thanks — we'll confirm your payment shortly.</div><% } %>
   <% if (msg === 'no_file') { %><div class="ord-flash ord-flash-warn">Pick an image first, or use the Messenger option.</div><% } %>
   <% if (msg === 'qr_sent') { %><div class="ord-flash">Sign-in received — hold tight.</div><% } %>
@@ -117,6 +119,14 @@
   <div class="ord-newslot">🆕 We're adding a new <%= order.account_type === 'tr' ? 'Trophy' : 'Non-Trophy' %> slot for you — we'll message you on Facebook when it's ready.</div>
   <% } %>
 
+  <% if (mmLink && !order.psid && (order.state === 'awaiting_payment' || order.state === 'payment_rejected')) { %>
+  <div class="ord-step ord-confirm" id="ordMessengerConfirm">
+    <div class="ord-step-label">Message us on Messenger to confirm</div>
+    <p class="ord-help">This links your chat to order <strong><%= order.ref %></strong>, so we can reach you if the payment is still open. Tap the button — you don't need to type the reference.</p>
+    <a class="ord-btn-primary" target="_blank" rel="noopener" href="<%= mmLink %>">Message us on Messenger</a>
+  </div>
+  <% } %>
+
   <div class="ord-card">
     <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>
     <div class="ord-row"><span>Account type</span><span><%= typeLabel %></span></div>
@@ -141,7 +151,8 @@
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
     <% } %>
     <% if (order.is_reservation && order.remaining_due > 0 && !order.slot_given_at) { %>
-    <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.released_at ? 'before we sign you in' : order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %>.</div>
+    <% const depLater = !order.deposit_due && (order.account_type === 'tr' || order.account_type === 'ps4') && settings && settings.promo && settings.promo.deposit; %>
+    <div class="ord-refund-note">📅 ₱<%= order.remaining_due %> remaining, due <%= order.released_at ? 'before we sign you in' : order.upcoming_game_id ? 'when ' + order.game_title + ' releases' + (order.release_date ? ' (' + order.release_date + ')' : '') : 'once your slot opens' %><%= depLater ? ', including the ₱' + settings.promo.deposit + ' refundable deposit' : '' %>.</div>
     <% } %>
   </div>
 

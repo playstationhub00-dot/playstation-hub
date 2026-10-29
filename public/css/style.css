@@ -4666,3 +4666,8 @@ body.light-mode .acc-hist-now { background:#ecfdf5; border-color:#a7f3d0; color:
 }
 .guide-account-note strong { color: #888; }
 .guide-account-note a { color: var(--ps-blue); }
+
+.ord-confirm {
+  border: 2px solid #f0a500;
+  background: rgba(240, 165, 0, 0.08);
+}

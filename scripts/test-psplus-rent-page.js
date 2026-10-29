@@ -215,9 +215,10 @@ async function main() {
     assert.ok(open.body.includes('YOUR MESSAGE WILL SAY') && open.body.includes('id="ctaMsgPreview"'));
     assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
     assert.ok(/<div id="gdOrderBlock" hidden>/.test(open.body));
-    assert.ok(open.body.includes('<form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm">'));
+    assert.ok(open.body.includes('<form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" data-order-once>'));
     assert.ok(open.body.includes('name="account_type" id="orderType"') && open.body.includes('name="days" id="orderDays"') && open.body.includes('name="fb_name" id="orderFbName"'));
     const form = open.body.slice(open.body.indexOf('id="gdOrderForm"'), open.body.indexOf('</form>', open.body.indexOf('id="gdOrderForm"')));
+    assert.ok(form.includes('name="client_token"'), 'a double submit of this form has to carry the token');
     assert.ok(!form.includes('name="game_id"'), 'no game id on the PS Plus checkout');
     assert.ok(!open.body.includes('or message us on Facebook instead') && !open.body.includes('id="ctaHint"'));
   });

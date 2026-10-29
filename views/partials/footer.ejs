@@ -1,3 +1,9 @@
+<script src="/js/order-submit.js?v=<%= assetV %>"></script>
+<script>
+document.addEventListener('submit', function (e) {
+  if (window.PHOrderSubmit) PHOrderSubmit.guardOrderSubmit(e.target, e);
+}, false);
+</script>
 <!-- Game title auto-fit -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
