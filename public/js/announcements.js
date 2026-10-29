@@ -105,6 +105,26 @@
     } catch (e) {}
   }
 
+  document.querySelectorAll('[data-countdown]').forEach(function (box) {
+    var end = Date.parse(box.getAttribute('data-countdown'));
+    if (!end) return;
+    var parts = { d: box.querySelector('[data-part="d"]'), h: box.querySelector('[data-part="h"]'), m: box.querySelector('[data-part="m"]'), s: box.querySelector('[data-part="s"]') };
+    function tick() {
+      var ms = end - Date.now();
+      if (ms < 0) ms = 0;
+      var d = Math.floor(ms / 86400000); ms -= d * 86400000;
+      var h = Math.floor(ms / 3600000); ms -= h * 3600000;
+      var m = Math.floor(ms / 60000); ms -= m * 60000;
+      var s = Math.floor(ms / 1000);
+      if (parts.d) parts.d.textContent = String(d);
+      if (parts.h) parts.h.textContent = String(h);
+      if (parts.m) parts.m.textContent = String(m);
+      if (parts.s) parts.s.textContent = String(s);
+    }
+    tick();
+    if (!reduced) setInterval(tick, 1000);
+  });
+
   var btn = document.getElementById('annBellBtn');
   var panel = document.getElementById('annBellPanel');
   if (!btn || !panel) return;

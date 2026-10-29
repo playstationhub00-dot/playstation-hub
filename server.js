@@ -1004,6 +1004,21 @@ try {
   console.log('[announcements] migration failed:', e.message);
 }
 
+// Homepage bar lines and the GTA VI hero. Appends only rows whose source_key
+// is not already stored, then records the flag. One small write.
+try {
+  const homeAnn = announcementsLib.applyHomepage(db.getState(), new Date());
+  if (homeAnn.write) {
+    db.set('announcements', homeAnn.announcements)
+      .set('nextAnnouncementId', homeAnn.nextAnnouncementId)
+      .set('migrations', homeAnn.migrations)
+      .write();
+    console.log('[announcements] homepage lines seeded' + (homeAnn.countdownFrom ? ' (countdown ' + homeAnn.countdownFrom + ')' : ' (no GTA VI release date in the catalogue)'));
+  }
+} catch (e) {
+  console.log('[announcements] homepage seed failed:', e.message);
+}
+
 // The four slug-typo families only (assasins, calisto, berseker, triology).
 // Idempotent: a second boot finds nothing to write, so it does not sync the
 // blob. Ids, stored slugs, prices, and order documents are not touched.

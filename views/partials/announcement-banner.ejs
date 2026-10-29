@@ -4,6 +4,7 @@
 %>
 <% if (bannerSlides.length) { %>
 <section class="ann-banner" id="annBanner" aria-label="Highlights">
+  <%- include('theme-decor') %>
   <% bannerSlides.forEach(function (slide, i) { %>
   <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (i !== 0) { %> aria-hidden="true"<% } %>>
     <% if (slide.image || slide.imageMobile) { %>
@@ -18,9 +19,22 @@
       <% if (slide.label) { %><span class="ann-banner-label"><%= slide.label %></span><% } %>
       <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %></h2><% } %>
       <% if (slide.text) { %><p class="ann-banner-text"><%= slide.text %></p><% } %>
-      <% if (slide.buttonUrl) { %>
-      <a class="ann-banner-cta" href="<%= slide.buttonUrl %>"<% if (slide.external) { %> target="_blank" rel="noopener"<% } %>><%= slide.buttonLabel || 'Learn more' %> →</a>
+      <% if (slide.countdown) { %>
+      <div class="hr-count" data-countdown="<%= slide.countdown.at %>" aria-label="Time remaining">
+        <span><b data-part="d"><%= slide.countdown.days %></b><small>days</small></span>
+        <span><b data-part="h"><%= slide.countdown.hours %></b><small>hours</small></span>
+        <span><b data-part="m"><%= slide.countdown.minutes %></b><small>min</small></span>
+        <span><b data-part="s"><%= slide.countdown.seconds %></b><small>sec</small></span>
+      </div>
       <% } %>
+      <div class="ann-banner-actions">
+        <% if (slide.buttonUrl) { %>
+        <a class="ann-banner-cta" href="<%= slide.buttonUrl %>"<% if (slide.external) { %> target="_blank" rel="noopener"<% } %>><%= slide.buttonLabel || 'Learn more' %> →</a>
+        <% } %>
+        <% if (slide.button2Url) { %>
+        <a class="ann-banner-cta ann-banner-cta-ghost" href="<%= slide.button2Url %>"<% if (slide.button2External) { %> target="_blank" rel="noopener"<% } %>><%= slide.button2Label || 'Learn more' %></a>
+        <% } %>
+      </div>
     </div>
   </article>
   <% }) %>

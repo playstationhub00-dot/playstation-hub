@@ -1,0 +1,41 @@
+<%#
+  Top rented (first 6 cards, the rest as links), the PS Plus Deluxe card,
+  and category tiles. Locals: home, psplusPopular, psplusSlug.
+%>
+<section class="hm-wrap hm-sec" id="topRented">
+  <h2 class="hr-title">Popular right now</h2>
+  <h2 class="hr-subhead">Top rented <span class="hm-sub">this month</span> <a class="hm-viewall" href="/browse?tab=most-rented">View all ›</a></h2>
+  <% if (home.topRented.length) { %>
+  <div class="hr-row">
+    <% home.topRented.slice(0, 6).forEach(function (t) { %>
+    <div class="hr-tile"><%- include('../game-card', { game: t.game, dealPrice: false }) %></div>
+    <% }) %>
+  </div>
+  <% if (home.topRented.length > 6) { %>
+  <p class="hr-also">Also rented: <% home.topRented.slice(6, 10).forEach(function (t, i) { %><% if (i) { %>, <% } %><a href="<%= seo.rentPath(t.game.title) %>"><%= t.game.title %></a><% }) %></p>
+  <% } %>
+  <% } %>
+  <div class="hr-popular-foot">
+    <a class="hr-psplus" id="psplus" href="/ps-plus/rent">
+      <h2 class="hm-title hm-title-plain">PS Plus Deluxe</h2>
+      <p>A whole catalogue on one rental.<% if (home.prices.psplus) { %> from <b>₱<%= home.prices.psplus %></b> / week<% } %></p>
+      <span class="hm-btn">Rent PS Plus</span>
+    </a>
+    <% if (psplusSlug) { %><a href="/game/<%= psplusSlug %>">PS Plus on the game page</a><% } %>
+    <a href="/ps-plus">See the games</a>
+    <% if (psplusPopular && psplusPopular.length) { %>
+    <ul class="hr-ps-names">
+      <% psplusPopular.slice(0, 6).forEach(function (row) { %><li><a href="/ps-plus"><%= row.title %></a></li><% }) %>
+    </ul>
+    <% } %>
+  </div>
+  <nav class="hr-tiles" aria-label="Categories">
+    <a href="/browse?tab=new">New releases</a>
+    <a href="/browse?tab=coming-soon">Coming soon</a>
+    <a href="/browse?tab=most-rented">Top rented</a>
+    <a href="/browse?price=low">Under ₱<%= home.bands.low %></a>
+    <% if (home.hasPs4) { %><a href="/browse?console=ps4">PS4</a><% } %>
+    <% home.quickGenres.forEach(function (gn) { %><a href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %></a><% }) %>
+    <% if (home.prices.buy) { %><a href="/buy">Buy</a><% } %>
+  </nav>
+</section>

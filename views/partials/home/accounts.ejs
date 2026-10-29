@@ -1,0 +1,37 @@
+<%#
+  Account comparison. Prices are the cheapest catalogue weekly/monthly figure
+  (lib/home-view.js). Fallbacks are the published examples when the catalogue
+  has no price. PS4 Primary shows no price. Locals: home, promo.
+%>
+<%
+  const hrDep = (promo && promo.deposit != null && promo.deposit !== '') ? Number(promo.deposit) : 100;
+  const hrLate = (promo && promo.late_fee_per_day != null && promo.late_fee_per_day !== '') ? Number(promo.late_fee_per_day) : 20;
+  const hrNt = home.prices.nonTrophy || 199;
+  const hrTr = home.prices.trophy || 249;
+%>
+<section class="hm-wrap hm-sec" id="players">
+  <h2 class="hr-title">Choose your player</h2>
+  <div class="hr-accounts">
+    <a class="hr-account hr-account-on" href="/browse">
+      <span class="hr-account-name">Non-Trophy</span>
+      <span class="hr-account-price">from ₱<%= hrNt %></span>
+      <span class="hr-account-line">Free 3-hour try. No deposit. No late fee.</span>
+    </a>
+    <a class="hr-account" href="/browse">
+      <span class="hr-account-name">Trophy</span>
+      <span class="hr-account-price">from ₱<%= hrTr %></span>
+      <span class="hr-account-line">₱<%= hrDep %> refundable deposit. ₱<%= hrLate %> per late day.</span>
+    </a>
+    <a class="hr-account" href="/guides/trophy-vs-non-trophy-vs-ps4-primary">
+      <span class="hr-account-name">PS4 Primary</span>
+      <span class="hr-account-ask">Ask about PS4 Primary</span>
+      <span class="hr-account-line">₱<%= hrDep %> refundable deposit.</span>
+    </a>
+  </div>
+  <% if (home.prices.buy) { %>
+  <p class="hr-account-more"><a href="/buy">Buy a game</a> from ₱<%= home.prices.buy %>. <a href="/how-it-works">See how it works</a></p>
+  <% } else { %>
+  <p class="hr-account-more"><a href="/how-it-works">See how it works</a></p>
+  <% } %>
+  <p class="hm-foot">You never give us your password — you sign our account into your console with a code from your own screen. <a href="/how-it-works">See how it works</a></p>
+</section>
