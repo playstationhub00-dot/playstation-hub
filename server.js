@@ -776,8 +776,11 @@ app.use((req, res, next) => {
   res.locals.ga4Id = seo.cleanGa4Id(process.env.GA4_MEASUREMENT_ID);
   res.locals.googleSiteVerification = seo.cleanSiteVerification(process.env.GOOGLE_SITE_VERIFICATION);
   res.locals.seoNoindex = req.path.startsWith('/admin');
-  // The holiday theme views/partials/head.ejs loads; never on admin pages.
-  res.locals.siteTheme = siteTheme.themeFor(req.path, getSiteSettings());
+  // The storefront theme is chosen once, earlier, by lib/themes.js and stored
+  // on res.locals.siteTheme as an object. Do not replace it with the holiday
+  // string from site_settings.theme (lib/site-theme.js). That string used to
+  // win this middleware and made every page load public/css/theme-*.css
+  // instead of the scheduled presets.
   // The floating support chat is for customers. Admin pages include the
   // public footer on a few edit screens, and the widget does not belong there.
   res.locals.showSupportChat = !req.path.startsWith('/admin');
@@ -8801,8 +8804,9 @@ app.post('/admin/settings/alerts', requireAuth, (req, res) => {
   res.redirect('/admin?tab=orders&msg=alerts_saved');
 });
 
-// Holiday theme for the public site (lib/site-theme.js). An unknown value
-// saves as '' — no theme.
+// Records the old Holiday theme dropdown (site_settings.theme). Visitors do
+// not read this key anymore — the schedule in site_settings.themes does — so
+// a save here cannot wipe a headline or a date. An unknown value stores ''.
 app.post('/admin/settings/theme', requireAuth, (req, res) => {
   db.set('site_settings.theme', siteTheme.normalizeTheme(req.body.theme)).write();
   res.redirect('/admin?tab=settings&msg=theme_saved');

@@ -26,6 +26,7 @@ fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: TEST_PASSWORD,
   migrations: ['theme-presets-2026-10-29'],
   site_settings: {
+    themes: { base: 'classic', presets: { halloween: { start: '', end: '', line1: '', highlight: '', line2: '' }, christmas: { start: '', end: '', line1: '', highlight: '', line2: '' } } },
     promo: { enabled: true, discounts: { 7: 0, 30: 10 }, deposit: 100 },
     hero_text: { line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games', subtitle: 'Old subtitle', title_size: 55, highlight_color: '#F0A500', subtitle_color: '#aaaaaa' },
     hero_slides: [{ id: 1, path: '/uploads/promo.png', caption: 'Summer sale', link: '/browse' }],

@@ -24,6 +24,12 @@
       <div style="font-weight:800;color:#fff;margin-bottom:0.25rem;">Live now<% if (live.nowLabel) { %> · <%= live.nowLabel %> Manila<% } %></div>
       <div style="color:#ddd;font-size:0.92rem;line-height:1.45;"><%= live.why || 'Hub Classic' %></div>
     </div>
+    <%
+      const savedPick = (typeof settings !== 'undefined' && settings && settings.theme) ? String(settings.theme) : '';
+    %>
+    <% if (savedPick === 'halloween' || savedPick === 'christmas') { %>
+    <p style="color:#aaa;font-size:0.82rem;line-height:1.45;margin:0 0 1rem;">Your earlier holiday pick (<strong style="color:#fff;"><%= savedPick %></strong>) is still saved and was not deleted. Visitors follow the schedule on this card. The old Halloween and Christmas stylesheets stay in the project and are not loaded.</p>
+    <% } %>
 
     <form method="POST" action="/admin/themes" enctype="multipart/form-data">
       <div class="form-grid">

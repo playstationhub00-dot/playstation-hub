@@ -476,7 +476,8 @@ fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   psplus_popular: [
     { id: 1, title: 'Ghost of Tsushima', platform: 'PS5', rank: 1, cover_image: '' }
   ],
-  customers: [], visitors: [], migrations: ['genre-by-slug-2026-10-14', 'theme-presets-2026-10-29']
+  customers: [], visitors: [], migrations: ['genre-by-slug-2026-10-14', 'theme-presets-2026-10-29'],
+  site_settings: { themes: { base: 'classic', presets: { halloween: { start: '', end: '' }, christmas: { start: '', end: '' } } } }
 }));
 process.env.PORT = String(PORT);
 process.env.DATA_DIR = DATA_DIR;
