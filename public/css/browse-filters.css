@@ -100,3 +100,20 @@ body.bf-lock { overflow: hidden; }
 
 /* Column count lives with .games-grid in style.css (3 up to 10). A second
    rule here used to cap browse at 6 wider cards, which upscaled the covers. */
+/* Hover, same as the homepage cards: the card lifts, the cover zooms a little,
+   the border takes the theme accent. Mouse/trackpad only; keyboard focus gets
+   the outline; reduced motion keeps the cards still. The rank badge sits
+   outside the card, so it rides up with it. */
+#bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, .bf-rank { transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
+#bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover { transition: transform 0.35s ease; }
+@media (hover: hover) {
+  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover { transform: translateY(-6px); border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover { transform: scale(1.06); }
+  #bfGrid .bf-item:hover .bf-rank { transform: translateY(-6px); }
+}
+#bfGrid .game-card:focus-visible, #bfSoonGrid .game-card:focus-visible, #bfPsGrid .game-card:focus-visible { border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); outline: none; }
+@media (prefers-reduced-motion: reduce) {
+  #bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, .bf-rank, #bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover { transition: none; }
+  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover, #bfGrid .bf-item:hover .bf-rank { transform: none; }
+  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover { transform: none; }
+}
