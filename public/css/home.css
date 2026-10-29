@@ -413,10 +413,10 @@ body.home2 .ann-banner-slide {
   border-radius: 22px;
   border-width: 1px;
   background: var(--hr-hero-bg);
-  min-height: 380px;
+  min-height: 240px;
 }
-body.home2 .ann-banner-slide.on { min-height: 380px; background: var(--hr-hero-bg); align-items: stretch; }
-body.home2 .ann-banner-media { flex: 0 0 44%; min-height: 380px; }
+body.home2 .ann-banner-slide.on { min-height: 240px; background: var(--hr-hero-bg); align-items: stretch; }
+body.home2 .ann-banner-media { flex: 0 0 40%; min-height: 240px; }
 body.home2 .ann-banner-media::after {
   content: '';
   position: absolute;
@@ -424,10 +424,10 @@ body.home2 .ann-banner-media::after {
   background: linear-gradient(90deg, transparent 52%, var(--hr-hero-bg));
   pointer-events: none;
 }
-body.home2 .ann-banner-copy { padding: 48px 56px 56px 40px; }
-body.home2 .ann-banner-title { font-size: clamp(1.9rem, 3.5vw, 3.1rem); line-height: 1.05; letter-spacing: -0.04em; margin: 16px 0 12px; }
-body.home2 .ann-banner-text { font-size: 1.05rem; }
-body.home2 .ann-banner-actions { margin-top: 26px; }
+body.home2 .ann-banner-copy { padding: 28px 48px 52px 28px; }
+body.home2 .ann-banner-title { font-size: clamp(1.45rem, 2.6vw, 2.15rem); line-height: 1.15; letter-spacing: -0.03em; margin: 12px 0 8px; }
+body.home2 .ann-banner-text { font-size: 1.02rem; }
+body.home2 .ann-banner-actions { margin-top: 18px; }
 body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
 .ann-banner-accent { display: block; color: var(--theme-accent-text, var(--theme-btn, #F5B800)); }
 .ann-banner-count { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-secondary, #a8a8a8); font-weight: 700; font-size: 0.92rem; }
