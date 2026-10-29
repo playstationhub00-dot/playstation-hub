@@ -145,6 +145,9 @@ const RENTAL_DURATIONS = [
 ];
 const PROMO_DURATIONS = RENTAL_DURATIONS.map(d => d.days); // [7, 30]
 app.locals.RENTAL_DURATIONS = RENTAL_DURATIONS;
+// One token per form render. A double-clicked submit posts the same value,
+// and the order create routes treat that as the order they already saved.
+app.locals.orderClientToken = () => require('crypto').randomBytes(9).toString('hex');
 // src / srcset strings for catalog cards and tiny thumbnails. Game-page
 // posters keep the original file — see lib/image-variants.js.
 app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
@@ -959,6 +962,7 @@ try {
 // Orders persist as their own MongoDB documents, reusing the connection the
 // blob sync already maintains rather than opening a second pool.
 orders.init(_getMongoDb);
+orders.ensureIndexes().catch(e => console.error('[orders] ensureIndexes', e.message));
 
 // Game requests are customer-written too, so they follow orders onto MongoDB
 // rather than the blob. The unique slug index is what stops two simultaneous
@@ -2959,7 +2963,7 @@ app.post('/order/create', async (req, res) => {
   };
 
   try {
-    const order = await createOrderNotified({
+    const placed = await createOrderNotified({
       game_id: game.id,
       game_title: game.title,
       account_type: type,
@@ -2969,9 +2973,10 @@ app.post('/order/create', async (req, res) => {
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
-      session_id: req.sessionId || null
+      session_id: req.sessionId || null,
+      client_token: orders.cleanClientToken(req.body.client_token)
     });
-    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+    redirectPlacedOrder(res, placed);
   } catch (e) {
     console.error('[order create]', e.message);
     res.redirect(orderErrorPath(game));
@@ -3004,7 +3009,7 @@ app.post('/order/buy', async (req, res) => {
     const price = type === 'tr' ? account.price_permanent_tr : account.price_permanent_nt;
     if (!price) return res.redirect('/buy?order_error=1');
     try {
-      const order = await createOrderNotified({
+      const placed = await createOrderNotified({
         game_id: 'bundle_' + account.id,
         game_title: account.public_name || account.label,
         account_type: type,
@@ -3015,9 +3020,10 @@ app.post('/order/buy', async (req, res) => {
         session_id: req.sessionId || null,
         is_buy: true,
         account_id: account.id,
-        slot_type: type
+        slot_type: type,
+        client_token: orders.cleanClientToken(req.body.client_token)
       });
-      res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+      redirectPlacedOrder(res, placed);
     } catch (e) {
       console.error('[order buy bundle]', e.message);
       res.redirect('/buy?order_error=1');
@@ -3049,7 +3055,7 @@ app.post('/order/buy', async (req, res) => {
   const price = (promo.buy_promo_enabled && promo.buy_promo_pct > 0)
     ? Math.round(base * (1 - promo.buy_promo_pct / 100)) : base;
   try {
-    const order = await createOrderNotified({
+    const placed = await createOrderNotified({
       game_id: game.id,
       game_title: game.title,
       account_type: type,
@@ -3059,9 +3065,10 @@ app.post('/order/buy', async (req, res) => {
       fb_name: name,
       session_id: req.sessionId || null,
       is_buy: true,
+      client_token: orders.cleanClientToken(req.body.client_token),
       ...(option.newSlot ? { new_slot: true } : {})
     });
-    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+    redirectPlacedOrder(res, placed);
   } catch (e) {
     console.error('[order buy single]', e.message);
     res.redirect('/buy?order_error=1');
@@ -3098,7 +3105,7 @@ app.post('/order/create-psplus', async (req, res) => {
   const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
 
   try {
-    const order = await createOrderNotified({
+    const placed = await createOrderNotified({
       game_id: 'psplus',
       game_title: 'PS Plus Deluxe',
       account_type: type,
@@ -3107,9 +3114,10 @@ app.post('/order/create-psplus', async (req, res) => {
       deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
-      is_psplus: true
+      is_psplus: true,
+      client_token: orders.cleanClientToken(req.body.client_token)
     });
-    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+    redirectPlacedOrder(res, placed);
   } catch (e) {
     console.error('[order create-psplus]', e.message);
     res.redirect('/ps-plus/rent?order_error=1');
@@ -3240,10 +3248,13 @@ app.post('/order/reserve', async (req, res) => {
     if (!base) return res.redirect(errRedirect);
     const pct = getPromoDiscountPct(promo, d);
     const rentAfterPromo = pct > 0 ? base - Math.round(base * pct / 100) : base;
+    // PS4 Primary carries the same refundable deposit as Trophy (e195c3d).
+    // The ₱100 now is the priority fee; the deposit stays in the balance.
     const psplusDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
-    amountDue = 100;
-    depositDue = 0;
-    remainingDue = Math.max(0, rentAfterPromo - amountDue) + psplusDeposit;
+    const psplusFee = reservations.priorityFeeSplit(rentAfterPromo, psplusDeposit);
+    amountDue = psplusFee.amountDue;
+    depositDue = psplusFee.depositDue;
+    remainingDue = psplusFee.remainingDue;
     releaseDate = '';
     upcomingGameId = null;
   } else {
@@ -3255,9 +3266,11 @@ app.post('/order/reserve', async (req, res) => {
     const gameDeposit = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
     // Flat ₱100 priority fee, matching the site's existing reservation copy —
     // not a percentage of the total, and independent of the promo/deposit math.
-    amountDue = 100;
-    depositDue = 0;
-    remainingDue = Math.max(0, rentAfterPromo - amountDue) + gameDeposit;
+    // The deposit stays in the balance (remainingDue), not in depositDue.
+    const gameFee = reservations.priorityFeeSplit(rentAfterPromo, gameDeposit);
+    amountDue = gameFee.amountDue;
+    depositDue = gameFee.depositDue;
+    remainingDue = gameFee.remainingDue;
     releaseDate = '';
     upcomingGameId = null;
   }
@@ -3274,6 +3287,7 @@ app.post('/order/reserve', async (req, res) => {
       deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
+      client_token: orders.cleanClientToken(req.body.client_token),
       is_reservation: !isWaitlist,
       is_psplus: isPsplus,
       upcoming_game_id: upcomingGameId,
@@ -3287,8 +3301,8 @@ app.post('/order/reserve', async (req, res) => {
     // NOT skip an explicit `undefined` value, so the key is omitted rather
     // than set to `state: undefined` (which would overwrite the default).
     if (isWaitlist) orderFields.state = 'waitlisted';
-    const order = await createOrderNotified(orderFields);
-    res.redirect('/order/' + order.ref + '?k=' + order.url_key);
+    const placed = await createOrderNotified(orderFields);
+    redirectPlacedOrder(res, placed);
   } catch (e) {
     console.error('[order reserve]', e.message);
     res.redirect(errRedirect);
@@ -3465,16 +3479,17 @@ function priorityUpgradePatch(order) {
   const pct = isPsplus ? getPromoDiscountPct(promo, order.days) : rentDiscountPct(game, order.days, promo);
   const rentAfterPromo = rentPricing.discounted(base, pct);
   const deposit = (order.account_type === 'tr' || order.account_type === 'ps4') ? (promo.deposit || 0) : 0;
+  const fee = reservations.priorityFeeSplit(rentAfterPromo, deposit);
   return {
-    amount_due: 100,
-    deposit_due: 0,
+    amount_due: fee.amountDue,
+    deposit_due: fee.depositDue,
     is_reservation: true,
     is_waitlist: false,
     // Keeps this order in the queue at its original free position while the
     // ₱100 is in flight, so an upgrading customer never disappears from the
     // line. lib/queue.js reads this flag.
     upgraded_from_waitlist: true,
-    remaining_due: Math.max(0, rentAfterPromo - 100) + deposit
+    remaining_due: fee.remainingDue
   };
 }
 
@@ -3631,7 +3646,16 @@ function notifyOwnerRequest(request) {
 // Used by the five customer-facing creation routes; /admin/orders/create-manual
 // deliberately does NOT use it, because alerting the owner about an order they
 // just typed themselves is pure noise.
+function redirectPlacedOrder(res, placed) {
+  const order = placed && placed.order ? placed.order : placed;
+  const msg = placed && placed.reused ? 'already' : 'placed';
+  res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=' + msg);
+}
+
 async function createOrderNotified(fields) {
+  const token = orders.cleanClientToken(fields && fields.client_token);
+  if (token) fields.client_token = token;
+  else if (fields) delete fields.client_token;
   try {
     const ctx = promoContext();
     const profile = fields && fields.fb_name ? loyaltySnapshot().profileFor({ name: fields.fb_name }) : null;
@@ -3640,7 +3664,9 @@ async function createOrderNotified(fields) {
   } catch (e) {
     console.error('[promo order]', e.message);
   }
-  const order = await orders.create(fields);
+  const placed = await orders.createOrReuse(fields);
+  if (placed.reused) return placed;
+  const order = placed.order;
   if (order && Array.isArray(order.promo_ids) && order.promo_ids.length) {
     try { recordPromoEvent({ kind: 'order', promo_id: order.promo_ids[0], session_id: order.session_id || '' }); }
     catch (e) { console.error('[promo order]', e.message); }
@@ -3654,7 +3680,7 @@ async function createOrderNotified(fields) {
   } catch (e) {
     console.error('[payment reminder hold]', e.message);
   }
-  return order;
+  return placed;
 }
 
 function notifyOwnerSignin(order, code) {
@@ -8545,14 +8571,7 @@ app.post('/webhook', (req, res) => {
 
   const events = supportMessenger.inboundEvents(req.body);
   events.forEach(event => {
-    if (event.referral) {
-      const orderRef = orders.parseOrderRef(event.referral);
-      if (orderRef) {
-        orders.linkPsid(orderRef, event.psid)
-          .then(ok => console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order'))
-          .catch(e => console.error('[order psid]', e.message));
-      }
-    }
+    linkOrderFromReferral(event).catch(e => console.error('[order psid]', e && e.message ? e.message : e));
     const paused = supportThreadStore().isPaused('messenger', event.psid);
     const handover = supportMessenger.handoverEnabled(process.env);
     const action = supportMessenger.decideInbound(event, paused, handover);
@@ -8588,6 +8607,31 @@ function rememberMessengerContact(psid) {
   } else {
     db.get('messenger_contacts').find({ psid }).assign({ last_seen: new Date().toISOString() }).write();
   }
+}
+
+// m.me?ref=PH-1234 is the only way an order learns its PSID. The click may
+// arrive with no message at all (messaging_referrals) or tucked inside the
+// first message the customer sends. Either way we link before the bot
+// decides whether to answer. A click with no text gets a short confirmation
+// so the 24-hour window is a real thread, not a silent open.
+async function linkOrderFromReferral(event) {
+  if (!event || !event.referral || !event.psid) return;
+  const orderRef = orders.parseOrderRef(event.referral);
+  if (!orderRef) return;
+  rememberMessengerContact(event.psid);
+  const existing = await orders.getByRef(orderRef);
+  if (!existing) {
+    console.log('[order psid]', orderRef, 'no matching order');
+    return;
+  }
+  const first = !existing.psid;
+  const ok = await orders.linkPsid(orderRef, event.psid);
+  console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order');
+  if (!ok || !first || event.reply) return;
+  const link = SITE_URL + '/order/' + existing.ref + '?k=' + existing.url_key;
+  const text = 'Hi! Nakalink na namin ang order ' + existing.ref
+    + ' sa chat na ito. Pay here: ' + link + ' — reply here if you need anything.';
+  await deliverMessengerText(event.psid, text);
 }
 
 // Standby means Page Inbox still owns the thread after an earlier

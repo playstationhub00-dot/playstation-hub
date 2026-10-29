@@ -248,7 +248,8 @@
         </div>
 
         <% if (!allUnavail) { %>
-        <form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm">
+        <form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" data-order-once>
+          <%- include('partials/order-token') %>
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">

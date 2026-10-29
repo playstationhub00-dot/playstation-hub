@@ -934,6 +934,19 @@ async function main() {
     assert.strictEqual(events[1].text, '');
     assert.strictEqual(events[2].referral, 'PH-1001');
     assert.strictEqual(events[2].reply, false);
+    const withMessage = messenger.inboundEvents({
+      object: 'page',
+      entry: [{
+        messaging: [{
+          sender: { id: '5' },
+          message: { text: 'Hi! I paid for order PH-1002.', referral: { ref: 'PH-1002', source: 'SHORTLINK', type: 'OPEN_THREAD' } }
+        }]
+      }]
+    });
+    assert.strictEqual(withMessage.length, 1);
+    assert.strictEqual(withMessage[0].referral, 'PH-1002');
+    assert.strictEqual(withMessage[0].reply, true);
+    assert.strictEqual(withMessage[0].text, 'Hi! I paid for order PH-1002.');
   });
 
   await ok('standby messages and handover events are not dropped', () => {
