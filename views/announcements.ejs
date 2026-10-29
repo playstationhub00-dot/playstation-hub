@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { page: 'announcements' }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body>
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+
+<%
+  const archive = (typeof announcementFeed !== 'undefined' && announcementFeed && announcementFeed.archive) ? announcementFeed.archive : [];
+%>
+<main class="ann-archive">
+  <h1>What's New</h1>
+  <p class="ann-archive-lead">News and offers from PlayStation Hub. Dates are Philippines time.</p>
+  <% if (!archive.length) { %>
+  <p class="ann-archive-empty">There are no announcements right now.</p>
+  <% } %>
+  <% archive.forEach(function (item) { %>
+  <article class="ann-archive-item">
+    <% if (item.image) { %>
+    <span class="ann-bell-ico" aria-hidden="true"><img src="<%= item.image %>" alt=""></span>
+    <% } else if (item.icon) { %>
+    <span class="ann-bell-ico" aria-hidden="true"><%= item.icon %></span>
+    <% } %>
+    <div>
+      <% if (item.dateLabel) { %><div class="ann-bell-date"><%= item.dateLabel %><% if (item.isNew) { %> <span class="ann-new">NEW</span><% } %></div><% } %>
+      <h2><%= item.title || item.text %></h2>
+      <% if (item.title && item.text) { %><p><%= item.text %></p><% } %>
+      <% if (item.buttonUrl) { %>
+      <p><a href="<%= item.buttonUrl %>"<% if (item.external) { %> target="_blank" rel="noopener"<% } %>><%= item.buttonLabel || 'Learn more' %></a></p>
+      <% } %>
+    </div>
+  </article>
+  <% }) %>
+</main>
+
+<%- include('partials/footer') %>
+</body>
+</html>

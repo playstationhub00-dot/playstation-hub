@@ -1,18 +1,9 @@
 <%#
-  Top-of-page theme chrome: the Christmas garland and the promo strip.
-  Included from the announcement partial so every customer page gets it.
+  Christmas garland only. The theme promo sentence shares the announcement
+  bar (views/partials/announcement.ejs) so the two strips do not stack.
   Locals: siteTheme (res.locals).
 %>
 <% const _th = (typeof siteTheme !== 'undefined' && siteTheme) ? siteTheme : null; %>
 <% if (_th && _th.garland) { %>
 <div class="theme-garland" aria-hidden="true"></div>
-<% } %>
-<% if (_th && _th.promo && _th.promo.show && _th.promo.text) {
-  const _pt = _th.promo.text;
-  const _pc = _th.promo.code || '';
-  const _pi = _pc ? _pt.indexOf(_pc) : -1;
-%>
-<div class="theme-promo-strip">
-  <% if (_pi === -1) { %><%= _pt %><% } else { %><%= _pt.slice(0, _pi) %><b><%= _pc %></b><%= _pt.slice(_pi + _pc.length) %><% } %>
-</div>
 <% } %>

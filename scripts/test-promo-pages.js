@@ -118,7 +118,7 @@ async function main() {
 
   await okAsync('the loyalty offers are the banner, the promos page, checkout, and the FAQ', async () => {
     assert.strictEqual(home.status, 200);
-    assert.ok(home.body.includes('promo-banner'));
+    assert.ok(home.body.includes('data-ann-bind="promo-banner"'));
     assert.ok(home.body.includes('Free 7-day rental'));
     const page = await call('GET', '/promos', { headers: { Cookie: sid } });
     assert.strictEqual(page.status, 200);
@@ -183,7 +183,7 @@ async function main() {
     });
     assert.ok(saved.headers.location.includes('loyalty_saved'));
     const quiet = await call('GET', '/');
-    assert.ok(!quiet.body.includes('promo-banner'), 'banner still present');
+    assert.ok(!quiet.body.includes('data-ann-bind="promo-banner"'), 'offers banner still present');
     assert.ok(!quiet.body.includes('Free 7-day rental'));
     assert.ok(!quiet.body.includes('href="/promos"'));
     const faq = await call('GET', '/faq');
@@ -220,7 +220,7 @@ async function main() {
     assert.ok(live.headers.location.includes('offers_saved'));
 
     const site = await call('GET', '/', { headers: { Cookie: sid } });
-    assert.ok(site.body.includes('promo-banner'));
+    assert.ok(site.body.includes('data-ann-bind="promo-banner"'));
     assert.ok(site.body.includes('Elden week'));
     assert.ok(!site.body.includes('Ghost sale'));
     assert.ok(!site.body.includes('Secret off'));
