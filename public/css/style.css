@@ -186,6 +186,15 @@ nav {
   text-decoration: none;
 }
 .logo img { height: 44px; width: auto; display: block; }
+/* Stock wordmark is 409×111, with no black plate. The old header file was
+   432×137 and, at the 44px nav height, the mark inside that plate was about
+   36px tall. 36px here keeps that same mark. width/height on the img reserve
+   the 409:111 ratio before the file arrives. A custom upload has no
+   .brand-logo class and stays on the 44px rule above. */
+img.brand-logo { aspect-ratio: 409 / 111; }
+.logo img.brand-logo { height: 36px; }
+.footer-brand .logo img.brand-logo { height: 29px; }
+.usd-hero-brand.brand-logo { width: 133px; }
 /* fallback text logo */
 .logo-text {
   font-size: 1.4rem;
@@ -846,12 +855,11 @@ nav {
 /* Banner footer: countdown left, logo right, separated from the title by a
    hairline rule. The logo sits at full opacity here — it is a deliberate
    sign-off, not the faded watermark it replaced. Natural aspect ratio only:
-   the wordmark is 3.27:1 and distorts if ever stretched to fill. */
+   the wordmark is 409:111 and distorts if ever stretched to fill. */
 /* Solid black bar, full-bleed to the banner edges and flush with its bottom.
-   The logo PNG carries its own black background, so anything other than black
-   here leaves it sitting on a visible rectangle. The negative margins cancel
-   .usd-hero-in's padding, which is re-applied inside so the content still
-   lines up with the title above. */
+   The light wordmark is transparent, so the bar is what it sits on. The
+   negative margins cancel .usd-hero-in's padding, which is re-applied inside
+   so the content still lines up with the title above. */
 .usd-hero-foot {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   background: #000;
@@ -1083,6 +1091,7 @@ nav {
      as a watermark, so it stays on mobile — just narrower, and the countdown
      sits beside it instead of colliding. */
   .usd-hero-brand { width: 92px; }
+  .usd-hero-brand.brand-logo { width: 87px; }
   /* These margins must cancel .usd-hero-in's MOBILE padding (1.1rem 1rem),
      not the desktop clamp() — mismatching them breaks the full-bleed and
      pushes the bar past the banner edge. */

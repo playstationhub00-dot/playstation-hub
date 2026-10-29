@@ -1,0 +1,112 @@
+<%#
+  Settings → Themes. Extends site_settings (hero text stays the Hub Classic
+  headline until a theme fills its own) and the :root color variables.
+  Locals: themeSettings, siteTheme, themeCatalog (app.locals).
+%>
+<%
+  const th = themeSettings || { base: 'classic', promo: { text: '', code: '', mode: 'auto' }, presets: {} };
+  const live = siteTheme || { why: '', nowLabel: '', states: {} };
+  const rows = (typeof themeCatalog !== 'undefined' && themeCatalog) ? themeCatalog : [];
+  const stateLabel = { active: 'Covers now', upcoming: 'Upcoming', ended: 'Ended', none: 'No schedule' };
+%>
+<div class="adm-card" id="sec-themes">
+  <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎨</div>
+      <div>
+        <div class="sa-title">Themes</div>
+        <div class="sa-desc">Five presets. A schedule in Asia/Manila wins over the base theme.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body">
+    <div style="background:#14120a;border:1px solid #3a3010;border-radius:12px;padding:0.9rem 1rem;margin-bottom:1rem;">
+      <div style="font-weight:800;color:#fff;margin-bottom:0.25rem;">Live now<% if (live.nowLabel) { %> · <%= live.nowLabel %> Manila<% } %></div>
+      <div style="color:#ddd;font-size:0.92rem;line-height:1.45;"><%= live.why || 'Hub Classic' %></div>
+    </div>
+
+    <form method="POST" action="/admin/themes" enctype="multipart/form-data">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Base theme <span style="color:#555;font-size:0.75rem;">(used when no schedule includes now)</span></label>
+          <select name="base">
+            <% rows.forEach(p => { %>
+            <option value="<%= p.id %>"<%= th.base === p.id ? ' selected' : '' %>><%= p.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Promo strip</label>
+          <select name="promo_mode">
+            <option value="auto"<%= th.promo.mode === 'auto' ? ' selected' : '' %>>On for Sale Mode only</option>
+            <option value="on"<%= th.promo.mode === 'on' ? ' selected' : '' %>>On for every theme</option>
+            <option value="off"<%= th.promo.mode === 'off' ? ' selected' : '' %>>Off</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Promo text</label>
+          <input type="text" name="promo_text" maxlength="180" value="<%= th.promo.text %>">
+        </div>
+        <div class="form-group">
+          <label>Code to highlight <span style="color:#555;font-size:0.75rem;">(matched inside the text)</span></label>
+          <input type="text" name="promo_code" maxlength="40" value="<%= th.promo.code %>">
+        </div>
+      </div>
+
+      <% rows.forEach(p => {
+        const row = (th.presets && th.presets[p.id]) || {};
+        const st = live.states ? live.states[p.id] : 'none';
+      %>
+      <div style="margin-top:1.1rem;padding-top:1rem;border-top:1px solid #2a2a2a;">
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <strong style="color:#fff;"><%= p.name %></strong>
+          <span style="font-size:0.75rem;font-weight:700;color:#111;background:<%= p.colors.accent %>;border-radius:99px;padding:0.12rem 0.5rem;"><%= stateLabel[st] || st %></span>
+          <span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;background:<%= p.colors.bg %>;box-shadow:inset 0 0 0 1px #444;"></span>
+          <span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;background:<%= p.colors.accent %>;"></span>
+          <span aria-hidden="true" style="width:14px;height:14px;border-radius:4px;background:<%= p.colors.accentText %>;"></span>
+          <a href="/?theme=<%= p.id %>" target="_blank" rel="noopener" style="margin-left:auto;font-size:0.8rem;font-weight:700;color:var(--ps-blue);">Preview</a>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Starts <span style="color:#555;font-size:0.75rem;">(Manila, optional)</span></label>
+            <input type="datetime-local" name="<%= p.id %>_start" value="<%= row.start || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Ends <span style="color:#555;font-size:0.75rem;">(Manila, optional — not included)</span></label>
+            <input type="datetime-local" name="<%= p.id %>_end" value="<%= row.end || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Headline, before the highlight</label>
+            <input type="text" name="<%= p.id %>_line1" maxlength="80" value="<%= row.line1 || '' %>" placeholder="<%= p.id === 'classic' ? 'Blank keeps Hero Text' : '' %>">
+          </div>
+          <div class="form-group">
+            <label>Highlighted words</label>
+            <input type="text" name="<%= p.id %>_highlight" maxlength="80" value="<%= row.highlight || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Headline, after the highlight</label>
+            <input type="text" name="<%= p.id %>_line2" maxlength="80" value="<%= row.line2 || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Hero image <span style="color:#555;font-size:0.75rem;">(first slide on the homepage banner)</span></label>
+            <% if (row.hero_image) { %>
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;">
+              <img src="<%= row.hero_image %>" alt="" style="height:42px;width:74px;object-fit:cover;border-radius:6px;">
+              <label style="display:flex;align-items:center;gap:0.35rem;color:#e74c3c;font-size:0.82rem;">
+                <input type="checkbox" name="<%= p.id %>_hero_clear"> Remove
+              </label>
+            </div>
+            <% } %>
+            <input type="file" name="hero_<%= p.id %>" accept="image/*">
+          </div>
+        </div>
+      </div>
+      <% }) %>
+
+      <div class="form-actions" style="margin-top:1rem;">
+        <button type="submit" class="btn btn-primary">Save themes</button>
+      </div>
+      <p style="color:#777;font-size:0.78rem;margin:0.75rem 0 0;line-height:1.45;">Leave a theme’s headline blank to keep the Hero Text from Site content (Hub Classic does this). Times are Asia/Manila. The end minute is not included. If two schedules overlap, the one that started later is shown. The logo follows the background: light wordmark on these dark presets, and never the dark wordmark on brand yellow.</p>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,23 @@
+<%#
+  Bats, cobweb and snow inside the homepage banner. The elements exist only
+  for the preset that uses them, so a cached stylesheet cannot turn them on.
+%>
+<% const _dec = (typeof siteTheme !== 'undefined' && siteTheme) ? siteTheme.decor : ''; %>
+<% if (_dec === 'halloween' || _dec === 'christmas') { %>
+<div class="theme-deco" aria-hidden="true">
+  <% if (_dec === 'halloween') { %>
+  <div class="theme-web"></div>
+  <div class="theme-glow"></div>
+  <div class="theme-bats">
+    <svg class="bat-a" viewBox="0 0 64 28"><path d="M32 8c2-3 3-3 4-6 0 3 1 4 2 5 6-5 14-6 26-4-7 1-10 5-10 10-3-3-7-3-9 0-2-2-5-2-7 2-1-2-3-3-6-4-3 1-5 2-6 4-2-4-5-4-7-2-2-3-6-3-9 0C10 8 7 4 0 3c12-2 20-1 26 4 1-1 2-2 2-5 1 3 2 3 4 6z" fill="#120700"/></svg>
+    <svg class="bat-b" viewBox="0 0 64 28"><path d="M32 8c2-3 3-3 4-6 0 3 1 4 2 5 6-5 14-6 26-4-7 1-10 5-10 10-3-3-7-3-9 0-2-2-5-2-7 2-1-2-3-3-6-4-3 1-5 2-6 4-2-4-5-4-7-2-2-3-6-3-9 0C10 8 7 4 0 3c12-2 20-1 26 4 1-1 2-2 2-5 1 3 2 3 4 6z" fill="#120700"/></svg>
+    <svg class="bat-c" viewBox="0 0 64 28"><path d="M32 8c2-3 3-3 4-6 0 3 1 4 2 5 6-5 14-6 26-4-7 1-10 5-10 10-3-3-7-3-9 0-2-2-5-2-7 2-1-2-3-3-6-4-3 1-5 2-6 4-2-4-5-4-7-2-2-3-6-3-9 0C10 8 7 4 0 3c12-2 20-1 26 4 1-1 2-2 2-5 1 3 2 3 4 6z" fill="#120700"/></svg>
+  </div>
+  <% } %>
+  <% if (_dec === 'christmas') { %>
+  <div class="theme-snow"></div>
+  <div class="theme-snow theme-snow-2"></div>
+  <div class="theme-snowcap"></div>
+  <% } %>
+</div>
+<% } %>

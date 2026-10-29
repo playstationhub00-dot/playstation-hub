@@ -30,7 +30,7 @@
         <span>No Image</span>
       </div>
     <% } %>
-    <div class="cs-badge">Coming Soon</div>
+    <div class="cs-badge<%= (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.decor === 'halloween') ? ' theme-pumpkin' : '' %>">Reserve</div>
     <% if (game.rank) { %><div class="cs-hot">🔥 #<%= game.rank %></div><% } %>
     <%# A full game trades its countdown badge for the FULL ribbon — both live
         in the top-right corner and would otherwise overlap. %>

@@ -8,21 +8,41 @@
   Locals: home, settings, featured.
 %>
 <%
-  const hmText = settings.hero_text || {};
+  const hmBase = settings.hero_text || {};
+  const hmCustom = (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.headline) ? siteTheme.headline : null;
+  const hmText = hmCustom || hmBase;
+  const hmThemeSlide = (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.heroImage) ? siteTheme.heroImage : '';
   const hmPromoSlides = (settings.hero_slides || []).filter(sl => sl && sl.path);
-  const hmSlideCount = home.banner.length + hmPromoSlides.length;
+  const hmSlideCount = (hmThemeSlide ? 1 : 0) + home.banner.length + hmPromoSlides.length;
+  const hmHeadline = [hmText.line1, hmText.highlight, hmText.line2].filter(Boolean).join(' ');
 %>
 <section class="hm-top">
   <div class="hm-wrap">
     <div class="hm-head">
+      <% if (hmCustom) { %>
+      <h1 class="hm-tagline">PlayStation Hub · <%= hmText.line1 %> <span class="hm-hl"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
+      <% } else { %>
       <h1 class="hm-tagline">PlayStation Hub · <%= hmText.line1 %> <span style="color:<%= hmText.highlight_color || '#F0A500' %>;"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
+      <% } %>
       <%- include('../home-search', { featured, compact: true }) %>
     </div>
     <% if (hmSlideCount || home.topRented.length) { %>
     <div class="hm-stage<%= hmSlideCount ? '' : ' hm-stage-solo' %>">
       <% if (hmSlideCount) { %>
       <div class="hm-banner" id="hmBanner" role="region" aria-roledescription="carousel" aria-label="Now playing">
+        <%- include('../theme-decor') %>
         <div class="hm-slides" id="hmSlides">
+          <% if (hmThemeSlide) { %>
+          <a class="hm-slide hm-slide-theme" href="/browse">
+            <img src="<%= hmThemeSlide %>" alt="">
+            <span class="hm-slide-shade"></span>
+            <span class="hm-slide-body">
+              <span class="hm-kicker"><%= siteTheme.kicker %></span>
+              <span class="hm-slide-title"><%= hmHeadline %></span>
+              <span class="hm-btn">Rent now</span>
+            </span>
+          </a>
+          <% } %>
           <% home.banner.forEach(b => {
             const g = b.game;
             const tier = (!g.is_bundle && typeof gameTier === 'function') ? gameTier(g) : null; %>

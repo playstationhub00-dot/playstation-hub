@@ -37,6 +37,8 @@ const upcomingPsn = require('./lib/upcoming-psn');
 const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
 const imageVariants = require('./lib/image-variants');
+const brandLogo = require('./lib/brand-logo');
+const themes = require('./lib/themes');
 const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
@@ -246,7 +248,7 @@ db.defaults({
   nextAnnouncementId: 1,
   site_settings: {
     title: 'PlayStation Hub',
-    logo_path: '/logo.svg',
+    logo_path: '/logo-hub-light.png',
     favicon_path: '/favicon.svg',
     hero_bg: { type: 'default', path: '' },
     hero_text: {
@@ -522,6 +524,7 @@ app.locals.assetV = (() => {
     return String(Date.now());
   }
 })();
+app.locals.themeCatalog = themes.CATALOG;
 
 // Whether online checkout is available, exposed to every view. The footer
 // renders on 18 pages and lists what the shop accepts, so passing this from
@@ -531,6 +534,20 @@ app.locals.assetV = (() => {
 // read from the environment the same way the checkout routes read it.
 app.use((req, res, next) => {
   res.locals.payViaGateway = !!process.env.PAYMONGO_SECRET_KEY;
+  next();
+});
+
+// Active storefront theme. Read from the lowdb document already in memory
+// (no Mongo). The HTML carries the variables; cached CSS does not.
+app.use((req, res, next) => {
+  const settings = db.get('site_settings').value() || {};
+  const stored = themes.normalize(settings.themes);
+  let preview = '';
+  if (req.method === 'GET' && !req.path.startsWith('/admin') && req.query && typeof req.query.theme === 'string') {
+    preview = req.query.theme;
+  }
+  res.locals.themeSettings = stored;
+  res.locals.siteTheme = themes.resolve(stored, new Date(), preview);
   next();
 });
 
@@ -945,6 +962,20 @@ try {
   console.log('[genre] migration failed:', e.message);
 }
 
+// One-time theme presets. Fills schedules and placeholder headlines only
+// where site_settings.themes does not already have a value, then records
+// the flag so a later boot cannot put the seed back over an admin edit.
+// A handful of object fields — nothing that waits on Mongo.
+try {
+  const themeSeed = themes.apply(db.getState(), new Date());
+  if (themeSeed.write) {
+    db.set('site_settings.themes', themeSeed.themes).set('migrations', themeSeed.migrations).write();
+    console.log('[themes] seeded theme presets');
+  }
+} catch (e) {
+  console.log('[themes] migration failed:', e.message);
+}
+
 // The four slug-typo families only (assasins, calisto, berseker, triology).
 // Idempotent: a second boot finds nothing to write, so it does not sync the
 // blob. Ids, stored slugs, prices, and order documents are not touched.
@@ -1309,6 +1340,17 @@ function getSiteSettings() {
   if (!s.favicon_path) {
     db.set('site_settings.favicon_path', '/favicon.svg').write();
     s.favicon_path = '/favicon.svg';
+  }
+  // The header used to be /uploads/logo-custom.png (a black plate) or the
+  // older /logo.svg. Swap those for the built-in transparent wordmark once.
+  // logo_builtin_at is the latch: after it is set, an admin upload back to
+  // logo-custom.png is their logo, not the old plate, and is left alone.
+  // The view does the same check, so the new file shows even on the request
+  // that writes this.
+  if (!s.logo_builtin_at) {
+    brandLogo.applyMigration(db);
+    s.logo_path = db.get('site_settings.logo_path').value();
+    s.logo_builtin_at = db.get('site_settings.logo_builtin_at').value();
   }
   if (!s.hero_bg) {
     db.set('site_settings.hero_bg', { type: 'default', path: '', overlay: 50 }).write();
@@ -6876,7 +6918,11 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
     favicon_path = '/uploads/' + destName;
   }
 
-  // Handle logo upload
+  // Handle logo upload. Still saved as logo-custom<ext> so a replacement
+  // keeps the short cache (UNVERSIONED_UPLOAD_NAMES) instead of a year-long
+  // immutable one. getSiteSettings() above rewrites that historical name to
+  // the built-in wordmark only while logo_builtin_at is unset, which this
+  // request already stamped. A file chosen here is stored and kept.
   const logoFile = req.files && req.files['logo'] && req.files['logo'][0];
   if (logoFile) {
     const ext = path.extname(logoFile.originalname) || '.png';
@@ -6911,6 +6957,22 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings.hero_bg', hero_bg).write();
   db.set('site_settings.section_gap', section_gap).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+app.post('/admin/themes', requireAuth, upload.fields(themes.IDS.map(id => ({ name: 'hero_' + id, maxCount: 1 }))), async (req, res) => {
+  try {
+    const images = {};
+    for (const id of themes.IDS) {
+      const file = req.files && req.files['hero_' + id] && req.files['hero_' + id][0];
+      if (file) images[id] = await processUploadedImage(file, 1600);
+    }
+    const next = themes.applyAdminSave(db.get('site_settings.themes').value(), req.body, images);
+    db.set('site_settings.themes', next).write();
+    res.redirect('/admin?tab=settings&msg=themes_saved');
+  } catch (e) {
+    console.error('[themes] save failed:', e.message);
+    res.redirect('/admin?tab=settings&msg=themes_failed');
+  }
 });
 
 // Hero Slides

@@ -1,0 +1,161 @@
+/* Storefront themes. Which preset is live is NOT in this file — Cloudflare
+   caches it with ?v=. The HTML sets the variables (style#site-theme) and
+   data-theme on <html>. Rules below only describe how those variables land
+   on the existing layout. body beats the single-class
+   rules in style.css and home.css, which are linked after this file. */
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+body nav,
+body .nav-drawer {
+  background: var(--bg-dark);
+  border-bottom-color: var(--border);
+}
+body footer {
+  background: var(--theme-footer);
+  border-top-color: var(--border);
+}
+body .nav-cta,
+body .nav-drawer a.nav-cta,
+body .btn-primary,
+body .hm-btn {
+  background: var(--theme-btn);
+  color: var(--theme-btn-fg);
+}
+body .nav-cta:hover,
+body .btn-primary:hover,
+body .hm-btn:hover {
+  background: var(--theme-btn-hover);
+  color: var(--theme-btn-fg);
+}
+body .nav-links a.active,
+body .nav-drawer a.active,
+body .hm-kicker,
+body .hm-viewall,
+body .hm-board-price,
+body .hm-board-all,
+body .hm-power-tag,
+body .hm-power-go,
+body .hm-player-price,
+body .hm-trophy b,
+body .hm-psplus-price b,
+body .hm-tagline .hm-hl {
+  color: var(--theme-accent-text);
+}
+body .nav-links a.active::after,
+body .hm-dot.on {
+  background: var(--theme-accent-text);
+}
+body .hm-banner,
+body .hm-aside,
+body .hm-player,
+body .hm-start-bar {
+  background: var(--bg-card);
+  border-color: var(--border);
+}
+body .hm-power,
+body .hm-trophy {
+  background: color-mix(in srgb, var(--theme-accent-text) 12%, transparent);
+  border-color: color-mix(in srgb, var(--theme-accent-text) 42%, transparent);
+}
+body .gc2-badge-new {
+  background: var(--badge-new-bg);
+  color: var(--badge-new-fg);
+  box-shadow: none;
+}
+body .card-ribbon {
+  background: var(--badge-sold-bg);
+  color: var(--badge-sold-fg);
+}
+body .cs-badge {
+  background: var(--badge-reserve-bg);
+  color: var(--badge-reserve-fg);
+  border-color: var(--badge-reserve-fg);
+}
+body .cs-badge.theme-pumpkin::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 6c-.2-1.6.4-3 1.8-3.6l.5.9c-1 .5-1.3 1.4-1.2 2.7z' fill='%233d7a2a'/%3E%3Cellipse cx='7.5' cy='14' rx='5' ry='7' fill='%23FF7A00'/%3E%3Cellipse cx='16.5' cy='14' rx='5' ry='7' fill='%23FF7A00'/%3E%3Cellipse cx='12' cy='14' rx='5.2' ry='7.6' fill='%23ff8f26'/%3E%3Cpath d='M8.3 12.2l1.8 1.6H6.6zM15.7 12.2l1.8 1.6h-3.5zM8 17c1.5 1.3 6.5 1.3 8 0l-1.2 1.5-1.4-.8-1.4.9-1.4-.9-1.4.8z' fill='%232a1200'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* Promo strip. Same red on every theme so a sale reads as a sale. */
+.theme-garland {
+  height: 8px;
+  background: repeating-linear-gradient(90deg, #C8102E 0 28px, #F2C14E 28px 36px, #1f7a4a 36px 64px, #F2C14E 64px 72px);
+}
+.theme-promo-strip {
+  background: #D7263D;
+  color: #fff;
+  text-align: center;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.theme-promo-strip b {
+  display: inline-block;
+  background: #fff;
+  color: #B3122A;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  margin: 0 0.2rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* Hero decorations. The elements are only in the HTML for that preset. */
+.hm-banner .theme-deco { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.theme-web {
+  position: absolute; right: 0; top: 0; width: 140px; height: 140px; opacity: 0.35;
+  background:
+    repeating-radial-gradient(circle at 100% 0, transparent 0 18px, #fff 18px 19px),
+    conic-gradient(from 180deg at 100% 0, transparent 0 10deg, #fff 10deg 11deg, transparent 11deg 30deg, #fff 30deg 31deg, transparent 31deg 50deg, #fff 50deg 51deg, transparent 51deg 70deg, #fff 70deg 71deg, transparent 71deg);
+  -webkit-mask: radial-gradient(circle at 100% 0, #000 0 135px, transparent 136px);
+  mask: radial-gradient(circle at 100% 0, #000 0 135px, transparent 136px);
+}
+.theme-glow {
+  position: absolute; inset: 0;
+  box-shadow: inset 0 -100px 120px -70px rgba(255, 122, 0, 0.45);
+}
+.theme-bats { position: absolute; top: 18px; right: 18%; width: 180px; height: 90px; }
+.theme-bats svg { position: absolute; filter: drop-shadow(0 0 6px rgba(255, 122, 0, 0.9)); }
+.theme-bats .bat-a { width: 78px; top: 8px; left: 0; }
+.theme-bats .bat-b { width: 48px; top: 46px; left: 62px; opacity: 0.9; }
+.theme-bats .bat-c { width: 32px; top: 0; left: 108px; opacity: 0.85; }
+.theme-snow,
+.theme-snow-2 {
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle, #fff 1.4px, transparent 1.8px),
+    radial-gradient(circle, #fff 1px, transparent 1.4px);
+  background-size: 70px 70px, 43px 43px;
+  background-position: 0 0, 20px 30px;
+  opacity: 0.55;
+  animation: theme-snow-fall 16s linear infinite;
+}
+.theme-snow-2 {
+  opacity: 0.3;
+  background-size: 110px 110px, 57px 57px;
+  background-position: 35px 15px, 7px 41px;
+  animation-duration: 22s;
+  animation-direction: reverse;
+}
+.theme-snowcap {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 22px; opacity: 0.9;
+  background: radial-gradient(ellipse 40px 16px at 20px 22px, #f4f8f5 98%, transparent) repeat-x;
+  background-size: 60px 22px;
+}
+@keyframes theme-snow-fall {
+  from { background-position: 0 0, 20px 30px; }
+  to { background-position: 40px 140px, 60px 170px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-snow,
+  .theme-snow-2 { animation: none; }
+}

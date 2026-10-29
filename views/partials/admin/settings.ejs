@@ -1,6 +1,7 @@
   <div class="tab-panel" id="tab-settings">
 
     <div class="adm-jump">
+      <a href="#sec-themes">Themes</a>
       <a href="#sec-site">Site</a>
       <a href="#sec-promo">Promo & pricing</a>
       <a href="#sec-game-discounts">Game discounts</a>
@@ -11,7 +12,7 @@
       <a href="#sec-images">Images</a>
     </div>
 
-
+    <%- include('themes') %>
 
     <!-- SITE SETTINGS -->
     <div class="adm-card" id="sec-site">
@@ -35,7 +36,7 @@
           <div class="form-group full">
             <label>Logo Image <span style="color:#555;font-size:0.75rem;">(PNG, JPG or SVG — blank keeps current)</span></label>
             <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:0.75rem;">
-              <img src="<%= settings.logo_path %>" alt="Current logo" style="height:44px;width:auto;background:#000;border-radius:8px;padding:6px 10px;">
+              <%- include('../brand-logo', { logoAlt: 'Current logo', logoStyle: 'height:36px;width:auto;background:#000;border-radius:8px;padding:6px 10px;' }) %>
               <span style="color:#555;font-size:0.8rem;">Current logo</span>
             </div>
             <input type="file" name="logo" accept="image/*,.svg" style="padding:0.5rem;">

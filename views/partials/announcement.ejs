@@ -1,3 +1,4 @@
+<%- include('theme-strip') %>
 <% const activeAnnouncements = (announcements || []).filter(a => a.active && a.text); %>
 <% if (activeAnnouncements.length > 0) { %>
 <div class="announcement-bar" id="announcementBar">
