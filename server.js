@@ -38,6 +38,7 @@ const upcomingPsnFeed = require('./lib/upcoming-psn-feed');
 const remoteImage = require('./lib/remote-image');
 const imageVariants = require('./lib/image-variants');
 const brandLogo = require('./lib/brand-logo');
+const themes = require('./lib/themes');
 const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
@@ -519,6 +520,7 @@ app.locals.assetV = (() => {
     return String(Date.now());
   }
 })();
+app.locals.themeCatalog = themes.CATALOG;
 
 // Whether online checkout is available, exposed to every view. The footer
 // renders on 18 pages and lists what the shop accepts, so passing this from
@@ -528,6 +530,20 @@ app.locals.assetV = (() => {
 // read from the environment the same way the checkout routes read it.
 app.use((req, res, next) => {
   res.locals.payViaGateway = !!process.env.PAYMONGO_SECRET_KEY;
+  next();
+});
+
+// Active storefront theme. Read from the lowdb document already in memory
+// (no Mongo). The HTML carries the variables; cached CSS does not.
+app.use((req, res, next) => {
+  const settings = db.get('site_settings').value() || {};
+  const stored = themes.normalize(settings.themes);
+  let preview = '';
+  if (req.method === 'GET' && !req.path.startsWith('/admin') && req.query && typeof req.query.theme === 'string') {
+    preview = req.query.theme;
+  }
+  res.locals.themeSettings = stored;
+  res.locals.siteTheme = themes.resolve(stored, new Date(), preview);
   next();
 });
 
@@ -938,6 +954,20 @@ try {
   }
 } catch (e) {
   console.log('[genre] migration failed:', e.message);
+}
+
+// One-time theme presets. Fills schedules and placeholder headlines only
+// where site_settings.themes does not already have a value, then records
+// the flag so a later boot cannot put the seed back over an admin edit.
+// A handful of object fields — nothing that waits on Mongo.
+try {
+  const themeSeed = themes.apply(db.getState(), new Date());
+  if (themeSeed.write) {
+    db.set('site_settings.themes', themeSeed.themes).set('migrations', themeSeed.migrations).write();
+    console.log('[themes] seeded theme presets');
+  }
+} catch (e) {
+  console.log('[themes] migration failed:', e.message);
 }
 
 // The four slug-typo families only (assasins, calisto, berseker, triology).
@@ -6898,6 +6928,22 @@ app.post('/admin/site-settings', requireAuth, upload.fields([{ name: 'logo', max
   db.set('site_settings.hero_bg', hero_bg).write();
   db.set('site_settings.section_gap', section_gap).write();
   res.redirect('/admin?msg=settings_saved');
+});
+
+app.post('/admin/themes', requireAuth, upload.fields(themes.IDS.map(id => ({ name: 'hero_' + id, maxCount: 1 }))), async (req, res) => {
+  try {
+    const images = {};
+    for (const id of themes.IDS) {
+      const file = req.files && req.files['hero_' + id] && req.files['hero_' + id][0];
+      if (file) images[id] = await processUploadedImage(file, 1600);
+    }
+    const next = themes.applyAdminSave(db.get('site_settings.themes').value(), req.body, images);
+    db.set('site_settings.themes', next).write();
+    res.redirect('/admin?tab=settings&msg=themes_saved');
+  } catch (e) {
+    console.error('[themes] save failed:', e.message);
+    res.redirect('/admin?tab=settings&msg=themes_failed');
+  }
 });
 
 // Hero Slides

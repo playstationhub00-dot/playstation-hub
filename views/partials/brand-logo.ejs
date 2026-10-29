@@ -10,7 +10,8 @@
   var _legacy = !_path || _path === '/logo.svg' || _path === '/logo.png' || /^\/uploads\/logo-custom\.[A-Za-z0-9]+$/.test(_path);
   var _builtin = _path === '/logo-hub-light.png' || _path === '/logo-hub-light-4x.png' || _path === '/logo-hub-dark.png' || _path === '/logo-hub-dark-4x.png';
   var _stock = _builtin || !_path || (_legacy && !_stamped);
-  var _variant = (typeof logoVariant !== 'undefined' && logoVariant) || 'light';
+  var _themeLogo = (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.logo) ? siteTheme.logo : '';
+  var _variant = (typeof logoVariant !== 'undefined' && logoVariant) ? logoVariant : (_themeLogo || 'light');
   var _src, _srcset, _w, _h;
   if (!_stock) {
     _src = _path; _srcset = ''; _w = 230; _h = 56;

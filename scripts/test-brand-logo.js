@@ -163,6 +163,26 @@ ok('the favicon and the svg file are untouched', () => {
   assert.ok(head.includes("favicon_path) || '/favicon.svg'"));
 });
 
+console.log('\nbackground');
+
+ok('a light page uses the dark wordmark, and brand yellow never does', () => {
+  assert.strictEqual(brand.variantForBackground('#ffffff'), 'dark');
+  assert.strictEqual(brand.variantForBackground('#f4f6f8'), 'dark');
+  assert.strictEqual(brand.variantForBackground('#F5B800'), 'light');
+  assert.strictEqual(brand.variantForBackground('#F0A500'), 'light');
+  assert.strictEqual(brand.variantForBackground('#FFD700'), 'light');
+  assert.strictEqual(brand.variantForBackground('#0a0a0a'), 'light');
+  assert.strictEqual(brand.isBrandYellow('#ffffff'), false);
+});
+
+ok('the header follows the theme logo unless the caller names one', () => {
+  const fromTheme = render({ logo_path: '/logo.svg' }, { siteTheme: { logo: 'dark' } });
+  assert.ok(fromTheme.includes('src="/logo-hub-dark.png"'));
+  const forced = render({ logo_path: '/logo.svg' }, { siteTheme: { logo: 'dark' }, logoVariant: 'light' });
+  assert.ok(forced.includes('src="/logo-hub-light.png"'));
+  assert.ok(!forced.includes('logo-hub-dark.png'));
+});
+
 console.log('\nfiles');
 
 ok('the four pngs are the approved sizes', () => {

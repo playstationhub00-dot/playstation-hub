@@ -24,6 +24,7 @@ const game = (id, title, extra) => Object.assign({
 }, prices, extra || {});
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: TEST_PASSWORD,
+  migrations: ['theme-presets-2026-10-29'],
   site_settings: {
     promo: { enabled: true, discounts: { 7: 0, 30: 10 }, deposit: 100 },
     hero_text: { line1: 'Rent the Latest', highlight: 'PS5 & PS4', line2: 'Games', subtitle: 'Old subtitle', title_size: 55, highlight_color: '#F0A500', subtitle_color: '#aaaaaa' },

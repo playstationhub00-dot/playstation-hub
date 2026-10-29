@@ -410,7 +410,7 @@ function switchTab(name) {
     customer_added:'customers', customer_updated:'customers', customer_deleted:'customers', refund_saved:'customers', refund_edited:'customers', refund_undone:'customers', refund_undone_no_slot:'customers', refund_rejected:'customers', refund_unconfirmed:'customers', refund_no_extension:'customers', refund_bad_days:'customers', refund_bad_amount:'customers', refund_too_much:'customers', refund_bad_method:'customers', refund_bad_date:'customers', refund_whole:'customers', refund_bad_status:'customers', refund_already:'customers', refund_missing:'customers', refund_changed:'customers', swap_waived:'customers', swap_waive_none:'customers', purchase_fixed:'customers', end_date_synced:'customers', extended:'customers',
     loyalty_saved:'loyalty', loyalty_redeemed:'loyalty', loyalty_redeem_rejected:'loyalty', loyalty_link_saved:'loyalty', loyalty_link_rejected:'loyalty', loyalty_link_removed:'loyalty',
     month_log_saved:'dashboard', month_log_deleted:'dashboard',
-    settings_saved:'settings', promo_saved:'settings', game_discounts_saved:'settings', price_bands_saved:'settings', price_bands_invalid:'settings', popup_saved:'content', home_banner_saved:'content', buy_spotlight_saved:'content', password_changed:'settings',
+    settings_saved:'settings', promo_saved:'settings', themes_saved:'settings', themes_failed:'settings', game_discounts_saved:'settings', price_bands_saved:'settings', price_bands_invalid:'settings', popup_saved:'content', home_banner_saved:'content', buy_spotlight_saved:'content', password_changed:'settings',
     wrong_password:'settings', password_mismatch:'settings', password_too_short:'settings',
     signin_step_saved:'content', signin_step_deleted:'content',
     signin_example_saved:'content', signin_example_removed:'content', signin_example_error:'content', signin_step_error:'content', signin_step_missing:'content',
@@ -459,6 +459,8 @@ function switchTab(name) {
       psnCount('info') ? 'got info for ' + psnPlural(psnCount('info'), 'game') : ''
     ].filter(Boolean).join(' · ') || 'nothing changed';
     messages.loyalty_saved = '🎁 Loyalty offers saved';
+    messages.themes_saved = '🎨 Theme settings saved';
+    messages.themes_failed = '❌ Could not save themes — try again';
     messages.offers_saved = '📣 Promo saved';
     messages.offers_deleted = '🗑 Promo deleted';
     messages.offers_invalid = 'Promo not saved — add a title and short text, and keep the end date on or after the start';
@@ -503,7 +505,7 @@ function switchTab(name) {
 (function() {
   const overlay = document.getElementById('loadingOverlay');
   const loadingText = document.getElementById('loadingText');
-  const messages = { '/admin/announcement':'📢 Saving announcement...', '/admin/announcements':'📢 Saving announcement...', '/admin/site-settings':'⚙️ Saving settings...', '/admin/hero-text':'✏️ Saving hero text...', '/admin/change-password':'🔒 Changing password...', '/admin/psplus/prices':'💰 Saving PS Plus prices...', '/admin/add':'🎮 Adding game...', '/admin/upcoming/add':'🔜 Adding upcoming game...', '/admin/upcoming/psn/refresh':'🔄 Checking PlayStation...', '/admin/upcoming/psn/apply':'⏳ Adding games from PlayStation — this can take a minute...', '/admin/psplus/add':'⭐ Adding PS Plus entry...', '/admin/psplus/popular/add':'🔥 Adding Most Played game...', '/admin/price-categories':'🏷️ Saving category...' };
+  const messages = { '/admin/announcement':'📢 Saving announcement...', '/admin/announcements':'📢 Saving announcement...', '/admin/site-settings':'⚙️ Saving settings...', '/admin/themes':'🎨 Saving themes...', '/admin/hero-text':'✏️ Saving hero text...', '/admin/change-password':'🔒 Changing password...', '/admin/psplus/prices':'💰 Saving PS Plus prices...', '/admin/add':'🎮 Adding game...', '/admin/upcoming/add':'🔜 Adding upcoming game...', '/admin/upcoming/psn/refresh':'🔄 Checking PlayStation...', '/admin/upcoming/psn/apply':'⏳ Adding games from PlayStation — this can take a minute...', '/admin/psplus/add':'⭐ Adding PS Plus entry...', '/admin/psplus/popular/add':'🔥 Adding Most Played game...', '/admin/price-categories':'🏷️ Saving category...' };
   document.addEventListener('submit', function(e) {
     if (e.target.dataset.noLoading) return;
     const action = e.target.action || '';
