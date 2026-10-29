@@ -116,3 +116,28 @@
 @media (min-width: 601px) { .shop-grid-boxes { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1000px) { .shop-grid-boxes { grid-template-columns: repeat(3, 1fr); } }
 .shop-item { padding: 0.7rem 0.5rem 0.75rem; border-bottom: 10px solid var(--shop-wood); box-shadow: 0 7px 0 var(--shop-wood-dark); }
+
+/* Hover, same feel as the homepage and Browse cards: the item lifts, the cover
+   gets the theme outline and its art zooms a little. The cover can't clip (the
+   best-seller sticker hangs past its corner), so the image clips itself: at
+   scale(1.06) an inset of 2.83% (= (1 - 1/1.06) / 2) keeps exactly the
+   original frame. Box sets lift and outline their border. Mouse/trackpad
+   only; keyboard focus gets the outline; reduced motion keeps them still. */
+.shop-card, .shop-box { transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
+.shop-cover { transition: box-shadow 0.22s ease; }
+.shop-cover img { clip-path: inset(0 round 6px); transition: transform 0.35s ease, clip-path 0.35s ease; }
+.shop-row { padding-top: 1.1rem; }
+@media (hover: hover) {
+  .shop-card:hover, .shop-box:hover { transform: translateY(-6px); }
+  .shop-card:hover .shop-cover { box-shadow: 0 0 0 2px var(--theme-btn, #F5B800), 0 8px 18px rgba(0,0,0,0.45); }
+  .shop-card:hover .shop-cover img { transform: scale(1.06); clip-path: inset(2.83% round 5.66px); }
+  .shop-box:hover { border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+}
+.shop-card:focus-visible { outline: none; }
+.shop-card:focus-visible .shop-cover { box-shadow: 0 0 0 2px var(--theme-btn, #F5B800), 0 8px 18px rgba(0,0,0,0.45); }
+.shop-box:focus-visible { outline: none; border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+@media (prefers-reduced-motion: reduce) {
+  .shop-card, .shop-box, .shop-cover, .shop-cover img { transition: none; }
+  .shop-card:hover, .shop-box:hover { transform: none; }
+  .shop-card:hover .shop-cover img { transform: none; clip-path: inset(0 round 6px); }
+}
