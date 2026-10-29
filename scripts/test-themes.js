@@ -175,6 +175,23 @@ ok('a theme Michael already set is not overwritten; missing presets are filled',
   assert.strictEqual(first.themes.presets.classic.line1, '');
 });
 
+ok('a stored flag with the presets missing seeds them again and leaves a saved holiday pick alone', () => {
+  const now = new Date('2026-10-29T02:00:00.000Z');
+  const result = themes.apply({
+    migrations: ['genre-by-slug-2026-10-14', themes.MIGRATION_ID],
+    site_settings: { theme: 'halloween' }
+  }, now);
+  assert.strictEqual(result.write, true);
+  assert.strictEqual(result.themes.presets.halloween.line1, 'Dare to Play');
+  assert.strictEqual(result.themes.presets.halloween.end, themes.HALLOWEEN_END);
+  assert.strictEqual(result.themes.base, 'classic');
+  const again = themes.apply({
+    migrations: result.migrations,
+    site_settings: { theme: 'halloween', themes: result.themes }
+  }, now);
+  assert.strictEqual(again.write, false);
+});
+
 ok('a migrations value that is not a list is left untouched', () => {
   const state = { migrations: 'nope', site_settings: { themes: { base: 'sale' } } };
   const result = themes.apply(state, AT_HALLOWEEN);

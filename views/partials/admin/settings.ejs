@@ -558,32 +558,6 @@
     </div>
     </div>
 
-    <!-- HOLIDAY THEME -->
-    <%# lib/site-theme.js; the styles are public/css/theme-<name>.css. %>
-    <% const themeNow = (settings && settings.theme) || ''; %>
-    <div class="adm-card" id="sec-theme">
-      <div class="adm-card-head" style="border-left:3px solid #f97316;">
-        <div class="sa-left">
-          <div class="sa-icon" style="background:rgba(249,115,22,0.15);">🎨</div>
-          <div>
-            <div class="sa-title">Holiday Theme</div>
-            <div class="sa-desc">Dress the public site for a holiday. The admin panel never changes.</div>
-          </div>
-        </div>
-      </div>
-      <div class="adm-card-body">
-        <form method="POST" action="/admin/settings/theme">
-          <select name="theme" id="themeSelect" class="qa-in" data-ss-skip style="max-width:260px;">
-            <option value=""<%= themeNow === '' ? ' selected' : '' %>>None</option>
-            <option value="halloween"<%= themeNow === 'halloween' ? ' selected' : '' %>>🎃 Halloween</option>
-            <option value="christmas"<%= themeNow === 'christmas' ? ' selected' : '' %>>🎄 Christmas</option>
-          </select>
-          <button type="submit" class="oq-alert-btn" style="margin-left:0.5rem;">Save theme</button>
-          <div class="oq-alert-msg" style="margin-top:0.4rem;">Holiday colours, a small icon by the logo, and drifting bats or snow. The announcement bar keeps your text. Stays on until you set it back to None.</div>
-        </form>
-      </div>
-    </div>
-
     <!-- IMAGE OPTIMIZATION -->
     <div class="adm-card" id="sec-images">
       <div class="adm-card-head" style="border-left:3px solid #22c55e;">

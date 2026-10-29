@@ -1,13 +1,11 @@
 // Run: node scripts/test-site-theme.js
 //
-// Holiday themes (Halloween, Christmas) for the public site. The owner picks
-// one in Admin → Settings (POST /admin/settings/theme); public pages then mark
-// <html data-theme> and load public/css/theme-<name>.css, and the admin panel
-// never does. Also checks both theme stylesheets keep every rule scoped to
-// their theme and stop the animation for visitors who ask for less motion.
-//
-// Throwaway only: a temp DATA_DIR, a blank MONGODB_URI, an in-memory session
-// store, a made-up admin password and made-up games.
+// The holiday pick Michael saved (site_settings.theme) used to be what the
+// homepage rendered, via html[data-theme] and public/css/theme-<name>.css.
+// The scheduled presets are the one system now. This boots the real homepage
+// with that saved pick still set and checks the approved Halloween design,
+// the ?theme= preview, and that the old stylesheets are not linked.
+// The old CSS files stay in the repo; their rules stay scoped.
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
@@ -22,10 +20,15 @@ const ROOT = path.join(__dirname, '..');
 
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: TEST_PASSWORD,
+  site_settings: { theme: 'halloween' },
   games: [
     { id: 4, title: 'PS Plus Deluxe', platform: 'PS4/PS5', nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799, non_trophy_slots: 1, trophy_slots: 1 },
-    { id: 5, title: 'Zzyzx Racer', platform: 'PS5', genre: 'Racing', nt_price_7d: 349, nt_price_30d: 799, tr_price_7d: 399, tr_price_30d: 899, non_trophy_slots: 1, trophy_slots: 1 }
-  ]
+    { id: 5, title: 'Zzyzx Racer', platform: 'PS5', genre: 'Racing', cover_image: '/uploads/racer.png', release_date: '2026-10-20', created_at: '2026-10-22T00:00:00.000Z', nt_price_7d: 349, nt_price_30d: 799, tr_price_7d: 399, tr_price_30d: 899, non_trophy_slots: 1, trophy_slots: 1 }
+  ],
+  upcoming: [{
+    id: 1, title: 'Zzyzx Soon', platform: 'PS5', release_date: '2026-11-20', cover_image: '/uploads/soon.png',
+    non_trophy_slots: 1, trophy_slots: 1, nt_price_7d: 349, nt_price_30d: 799
+  }]
 }));
 process.env.PORT = String(PORT);
 process.env.DATA_DIR = DATA_DIR;
@@ -121,56 +124,63 @@ function selectors(css) {
   assert.ok(up, 'server did not come up within 15s');
 
   try {
-    console.log('\nthe site');
-    await ok('no theme set: public pages look as they did, with no theme mark or stylesheet', async () => {
-      for (const p of PUBLIC) {
-        const r = await call('GET', p);
-        assert.strictEqual(r.status, 200, p);
-        assert.ok(!r.body.includes('data-theme') && !r.body.includes('/css/theme-'), p);
-      }
+    console.log('\nthe homepage, with the saved holiday pick still set');
+    await ok('a fresh boot keeps site_settings.theme and renders the scheduled Halloween design', async () => {
+      assert.strictEqual(ledger().site_settings.theme, 'halloween');
+      assert.strictEqual(ledger().site_settings.themes.presets.halloween.line1, 'Dare to Play');
+      const home = await call('GET', '/');
+      assert.strictEqual(home.status, 200);
+      assert.ok(home.body.includes('<body class="home2">'));
+      assert.ok(home.body.includes('Dare to Play'));
+      assert.ok(home.body.includes('After Dark'));
+      assert.ok(home.body.includes('#FF7A00'));
+      assert.ok(home.body.includes('class="theme-web"'));
+      assert.ok(home.body.includes('theme-pumpkin'));
+      assert.ok(home.body.includes('>Reserve</div>'));
+      assert.ok(!home.body.includes('/css/theme-halloween.css'), 'old stylesheet');
+      assert.ok(!home.body.includes("setAttribute('data-theme'"));
+      assert.ok(!home.body.includes('#fdba74') && !home.body.includes('#f97316') && !home.body.includes('#4c1d95'));
+      assert.ok(!home.body.includes('Rent the Latest'));
     });
-    await ok('saving refuses anyone not logged in', async () => {
-      const r = await call('POST', '/admin/settings/theme', { headers: FORM, body: form({ theme: 'halloween' }) });
-      assert.ok(r.status === 302 || r.status === 401, String(r.status));
-      assert.ok(!ledger().site_settings || !ledger().site_settings.theme);
+    await ok('?theme= previews Christmas and PS Blue without saving or loading the old files', async () => {
+      const christmas = await call('GET', '/?theme=christmas');
+      assert.ok(christmas.body.includes('Unwrap a'));
+      assert.ok(christmas.body.includes('New Adventure'));
+      assert.ok(christmas.body.includes('#C8102E'));
+      assert.ok(christmas.body.includes('class="theme-garland"'));
+      assert.ok(!christmas.body.includes('/css/theme-christmas.css'));
+      assert.ok(!christmas.body.includes('Dare to Play'));
+      const blue = await call('GET', '/?theme=blue');
+      assert.ok(blue.body.includes('#0070D1'));
+      assert.ok(blue.body.includes('#4DA6FF'));
+      assert.ok(blue.body.includes('Rent the Latest'));
+      assert.ok(!blue.body.includes('/css/theme-blue.css'));
+      assert.strictEqual(ledger().site_settings.theme, 'halloween');
+      assert.strictEqual(ledger().site_settings.themes.base, 'classic');
     });
-
-    const login = await call('POST', '/admin/login', { headers: FORM, body: form({ password: TEST_PASSWORD }) });
-    const cookie = (login.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
-    assert.ok(cookie, 'logged in');
-    const save = async theme => {
-      const r = await call('POST', '/admin/settings/theme', { headers: Object.assign({ Cookie: cookie }, FORM), body: form({ theme }) });
+    await ok('the admin panel does not load a public theme stylesheet', async () => {
+      const login = await call('POST', '/admin/login', { headers: FORM, body: form({ password: TEST_PASSWORD }) });
+      const cookie = (login.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+      const r = await call('GET', '/admin?tab=settings', { headers: { Cookie: cookie } });
+      assert.strictEqual(r.status, 200);
+      assert.ok(r.body.includes('id="sec-themes"'));
+      assert.ok(r.body.includes('still saved'));
+      assert.ok(!r.body.includes('<form method="POST" action="/admin/settings/theme">'));
+      assert.ok(!r.body.includes('/css/theme-halloween.css'));
+      assert.ok(!r.body.includes('id="site-theme"'));
+    });
+    await ok('the old save route still records the pick and does not clear the schedule', async () => {
+      const login = await call('POST', '/admin/login', { headers: FORM, body: form({ password: TEST_PASSWORD }) });
+      const cookie = (login.headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ');
+      const r = await call('POST', '/admin/settings/theme', { headers: Object.assign({ Cookie: cookie }, FORM), body: form({ theme: 'christmas' }) });
       assert.strictEqual(r.status, 302);
-      assert.strictEqual(r.headers.location, '/admin?tab=settings&msg=theme_saved');
-    };
-
-    for (const name of siteTheme.THEMES) {
-      await ok(name + ': saved, then every public page marks it and loads its stylesheet', async () => {
-        await save(name);
-        assert.strictEqual(ledger().site_settings.theme, name);
-        for (const p of PUBLIC) {
-          const r = await call('GET', p);
-          assert.ok(r.body.includes("<script>document.documentElement.setAttribute('data-theme', '" + name + "');</script>"), p);
-          assert.ok(new RegExp('<link rel="stylesheet" href="/css/theme-' + name + '\\.css\\?v=[^"]+">').test(r.body), p);
-        }
-      });
-      await ok(name + ': the admin panel stays plain, and Settings shows it picked', async () => {
-        const r = await call('GET', '/admin', { headers: { Cookie: cookie } });
-        assert.strictEqual(r.status, 200);
-        assert.ok(!r.body.includes('/css/theme-') && !r.body.includes("setAttribute('data-theme'"));
-        assert.ok(r.body.includes('<form method="POST" action="/admin/settings/theme">'));
-        assert.ok(r.body.includes('<option value="' + name + '" selected>'), 'picked in the form');
-        assert.ok(r.body.includes("theme_saved:'🎨 Theme saved.'"));
-        const css = await call('GET', '/css/theme-' + name + '.css');
-        assert.strictEqual(css.status, 200);
-      });
-    }
-
-    await ok('an unknown value saves as no theme, and the site goes back to normal', async () => {
-      await save('easter');
-      assert.strictEqual(ledger().site_settings.theme, '');
-      const r = await call('GET', '/');
-      assert.ok(!r.body.includes('data-theme') && !r.body.includes('/css/theme-'));
+      assert.strictEqual(ledger().site_settings.theme, 'christmas');
+      assert.strictEqual(ledger().site_settings.themes.presets.halloween.line1, 'Dare to Play');
+      assert.strictEqual(ledger().site_settings.themes.presets.halloween.end, '2026-11-01T00:00');
+      const home = await call('GET', '/');
+      assert.ok(home.body.includes('Dare to Play'));
+      assert.ok(home.body.includes('#FF7A00'));
+      assert.ok(!home.body.includes('/css/theme-christmas.css'));
     });
 
     console.log('\n' + passed + ' assertions passed\n');
