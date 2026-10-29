@@ -59,9 +59,10 @@ ok('power-up: the biggest promo discount, the longer duration on a tie, nothing 
 });
 
 ok('trust figures: recommend % and renters, missing or zero left out', () => {
-  assert.deepStrictEqual(H.trust({ up: 11, total: 11, pct: 100 }, { n: 300, plus: true }), { recommendPct: 100, renters: '300+' });
-  assert.deepStrictEqual(H.trust({ up: 0, total: 0, pct: 0 }, { n: 0, plus: false }), { recommendPct: null, renters: null });
-  assert.deepStrictEqual(H.trust(null, { n: 1200, plus: true }), { recommendPct: null, renters: '1,200+' });
+  assert.deepStrictEqual(H.trust({ up: 11, total: 11, pct: 100, backed: true }, { n: 300, plus: true }), { recommendPct: 100, reviewCount: null, renters: '300+' });
+  assert.deepStrictEqual(H.trust({ up: 0, total: 0, pct: 0, backed: false }, { n: 0, plus: false }, { reviews: 4 }), { recommendPct: null, reviewCount: 4, renters: null });
+  assert.deepStrictEqual(H.trust({ up: 0, total: 0, pct: 0 }, { n: 0, plus: false }), { recommendPct: null, reviewCount: null, renters: null });
+  assert.deepStrictEqual(H.trust(null, { n: 1200, plus: true }), { recommendPct: null, reviewCount: null, renters: '1,200+' });
 });
 
 ok('player prices: lowest trophy, non-trophy, buy and PS Plus weekly', () => {

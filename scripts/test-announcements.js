@@ -71,6 +71,13 @@ ok('bar, bell, and banner each keep only their own entries, up to 3 on the bar',
   assert.strictEqual(feed.banner.length, 1);
   assert.strictEqual(feed.banner[0].device, 'mobile');
   assert.strictEqual(feed.banner[0].title, 'GTA VI reservations are open');
+  const withCover = announcements.present({
+    entries: rows,
+    now: NOW,
+    catalog: { upcoming: [{ title: 'Grand Theft Auto VI Ultimate Edition', cover_image: '/uploads/gta-cover.webp' }], games: [] }
+  });
+  assert.strictEqual(withCover.banner[0].image, '/uploads/gta-cover.webp');
+  assert.strictEqual(feed.banner[0].image, '', 'an uploaded image is not invented when the catalogue is absent');
   assert.ok(!feed.bar.some(s => s.device === 'mobile'));
 });
 

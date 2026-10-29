@@ -22,7 +22,7 @@ ok('canonical is www, with the query string and a trailing slash removed', () =>
   assert.strictEqual(seo.canonicalUrl('/browse'), 'https://www.playstation-hub.com/browse');
   assert.strictEqual(seo.canonicalUrl('/browse/'), 'https://www.playstation-hub.com/browse');
   assert.strictEqual(seo.canonicalUrl('/browse?utm_source=google'), 'https://www.playstation-hub.com/browse');
-  assert.strictEqual(seo.canonicalUrl('/'), 'https://www.playstation-hub.com');
+  assert.strictEqual(seo.canonicalUrl('/'), 'https://www.playstation-hub.com/');
   assert.strictEqual(seo.canonicalUrl('/game/elden-ring/'), 'https://www.playstation-hub.com/game/elden-ring');
 });
 
@@ -317,7 +317,7 @@ ok('PS Plus Deluxe is one public path, and its JSON-LD uses the prices it is giv
     ['Trophy · Monthly', '799', 'PHP', 'https://schema.org/OutOfStock']
   ]);
   assert.deepStrictEqual(crumbs.itemListElement.map(c => c.name), ['Home', 'PS Plus']);
-  assert.strictEqual(crumbs.itemListElement[0].item, 'https://www.playstation-hub.com');
+  assert.strictEqual(crumbs.itemListElement[0].item, 'https://www.playstation-hub.com/');
   assert.strictEqual(crumbs.itemListElement[1].item, 'https://www.playstation-hub.com/ps-plus');
   blocks.forEach(b => assert.deepStrictEqual(JSON.parse(seo.jsonLdScript(b))['@type'], b['@type']));
   const stored = seo.psplusJsonLd({
@@ -378,7 +378,7 @@ ok('sitemap is XML and lists every game, upcoming title, and public page', () =>
   assert.ok(xml.includes('<lastmod>2026-03-01</lastmod>'));
   assert.ok(!xml.includes('<lastmod></lastmod>'));
   ['/', '/browse', '/faq', '/promos', '/ps-plus', '/how-it-works', '/buy', '/terms', '/privacy'].forEach(p => {
-    const loc = p === '/' ? 'https://www.playstation-hub.com' : 'https://www.playstation-hub.com' + p;
+    const loc = p === '/' ? 'https://www.playstation-hub.com/' : 'https://www.playstation-hub.com' + p;
     assert.ok(xml.includes('<loc>' + loc + '</loc>'), p);
   });
   seo.assertWellFormedXml(xml);
@@ -610,7 +610,7 @@ async function main() {
       assert.ok(!res.body.includes('Playstation Hub'), p + ' still says Playstation Hub');
       assert.ok(title.includes(titleBit) || res.body.includes(titleBit), p + ' ' + title);
       const canon = canonicalOf(res.body);
-      const expect = p === '/' ? 'https://www.playstation-hub.com' : 'https://www.playstation-hub.com' + p;
+      const expect = p === '/' ? 'https://www.playstation-hub.com/' : 'https://www.playstation-hub.com' + p;
       assert.strictEqual(canon, expect, p);
       assert.ok(!canon.includes('?'), p);
       assert.ok(res.body.includes('name="description"'), p);
@@ -662,7 +662,7 @@ async function main() {
     assert.strictEqual(site.name, 'PlayStation Hub');
     assert.strictEqual(site.alternateName, 'PS HUB');
     assert.strictEqual(site.url, 'https://www.playstation-hub.com/');
-    assert.strictEqual(canonicalOf(home.body), 'https://www.playstation-hub.com');
+    assert.strictEqual(canonicalOf(home.body), 'https://www.playstation-hub.com/');
     assert.ok(!/name="robots"[^>]*noindex/i.test(home.body));
     assert.ok(!home.headers['x-robots-tag']);
     ['/browse', '/ps-plus', '/how-it-works', '/faq'].forEach(href => {

@@ -156,6 +156,7 @@ app.locals.orderClientToken = () => require('crypto').randomBytes(9).toString('h
 // posters keep the original file — see lib/image-variants.js.
 app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
 app.locals.imgThumb = (url) => imageVariants.thumbAttrs(url);
+app.locals.imgHero = (url) => imageVariants.heroAttrs(url);
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -795,7 +796,11 @@ app.use((req, res, next) => {
       entries: db.get('announcements').value() || [],
       now: new Date(),
       banner: ctx.banner,
-      themePromo: res.locals.siteTheme && res.locals.siteTheme.promo
+      themePromo: res.locals.siteTheme && res.locals.siteTheme.promo,
+      catalog: {
+        games: db.get('games').value() || [],
+        upcoming: db.get('upcoming').value() || []
+      }
     });
     res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
     res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
@@ -1077,7 +1082,7 @@ function getCustomers() { return (db.get('customers').value() || []).map(normali
 // gameTitle floats reviews naming that game to the top; pass '' on pages that
 // list many games at once (there is no single title to prefer there).
 function reviewBlockLocals(gameTitle) {
-  const all = db.get('reviews').value() || [];
+  const all = reviewRules.uniqueReviews(db.get('reviews').value() || []);
   const published = all.filter(r => r && r.visible === true && !r.private);
   // A one-tap 👍 leaves no words behind. It still counts toward "would
   // recommend us" — that is the whole point of counting the ratio separately —
@@ -2464,7 +2469,7 @@ app.get('/', (req, res) => {
       if (line && line.days === 30 && !promos.monthlyDiscountLive(promoContext().live)) return null;
       return line;
     })(),
-    trust: homeView.trust(homeReviews.recommend, homeReviews.renterCount),
+    trust: homeView.trust(reviewRules.backedRecommend(reviewRules.uniqueReviews(db.get('reviews').value() || [])), homeReviews.renterCount, { reviews: homeReviews.reviews.length }),
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,

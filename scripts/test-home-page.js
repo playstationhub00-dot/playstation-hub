@@ -144,8 +144,13 @@ async function main() {
     assert.ok(!find.includes('recommend us'), 'no reviews yet, so no recommend figure');
   });
   await okAsync('quick picks jump to the blocks and open filtered Browse', async () => {
-    const picks = [...slice(home, 'aria-label="Quick picks"', '</nav>').matchAll(/href="([^"]+)"/g)].map(m => m[1]);
+    const picksNav = slice(home, 'aria-label="Quick picks"', '</nav>');
+    const picks = [...picksNav.matchAll(/href="([^"]+)"/g)].map(m => m[1]);
     assert.deepStrictEqual(picks, ['#newReleasesSection', '#specialDealsSection', '#psplus', '#comingSoon', '/browse?price=low', '/browse?console=ps4', '/browse?genre=Action', '/browse?genre=Horror']);
+    ['New releases', 'Deals', 'PS Plus', 'Coming soon', 'Plays on PS4', 'Action', 'Horror'].forEach(label => {
+      assert.ok(picksNav.includes('>' + label + '</a>'), label);
+    });
+    assert.ok(!/<a\b[^>]*>\s*<\/a>/.test(picksNav), 'every chip has text');
   });
 
   console.log('\nshelves and blocks');

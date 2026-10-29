@@ -17,6 +17,7 @@
   // Cheapest configured price across every duration/type, for the "from ₱X" line.
   const csPrices = [game.nt_price_7d, game.nt_price_30d, game.tr_price_7d, game.tr_price_30d].filter(p => p > 0);
   const csFromPrice = csPrices.length ? Math.min(...csPrices) : null;
+  const csHidePrice = typeof hidePrice !== 'undefined' && hidePrice;
 %>
 <a href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>" class="game-card upcoming-card gc2-split game-card-link<%= csFull ? ' cs-full' : '' %>" data-title="<%= game.title.toLowerCase() %>" data-genre="<%= (game.genre||'').toLowerCase() %>">
   <div class="gc2-art">
@@ -47,7 +48,7 @@
   <div class="cs-body">
     <div class="cs-title"><%= game.title %></div>
     <div class="gc2-tags">
-      <% if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
+      <% if (csHidePrice) { %><div class="gc2-price"><span class="cs-price">Coming soon</span></div><% } else if (csFromPrice) { %><div class="cs-price">from <b>₱<%= csFromPrice %></b></div><% } else { %><div class="cs-price">Pricing TBA</div><% } %>
     </div>
   </div>
 </a>

@@ -37,7 +37,7 @@
   // table lives on the game page.
   const gcAllPricePairs = [[game.nt_price_7d,7],[game.nt_price_30d,30],
     ...(hasTrophy ? [[game.tr_price_7d,7],[game.tr_price_30d,30]] : [])]
-    .filter(([base]) => base > 0).map(([base, d]) => ({ base, final: gcFinal(base, d) }));
+    .filter(([base]) => base > 0).map(([base, d]) => ({ base, final: gcFinal(base, d), days: d }));
   const gcCheapest = gcAllPricePairs.length ? gcAllPricePairs.reduce((a, b) => b.final < a.final ? b : a) : null;
   const gcStartPrice = gcCheapest ? gcCheapest.final : null;
   const gcStartWas = gcCheapest && gcCheapest.final < gcCheapest.base ? gcCheapest.base : null;
@@ -96,7 +96,7 @@
       <% const gcDealBase = Math.min(...[game['nt_price_' + gcDeal.days + 'd'], hasTrophy ? game['tr_price_' + gcDeal.days + 'd'] : 0].filter(p => p > 0)); %>
       <div class="gc2-price"><%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %> <b>₱<%= gcFinal(gcDealBase, gcDeal.days) %></b><s class="gc2-price-was">₱<%= gcDealBase %></s></div>
       <% } else if (gcStartPrice) { %>
-      <div class="gc2-price">from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
+      <div class="gc2-price"><% if (typeof showWeekly !== 'undefined' && showWeekly && gcCheapest && gcCheapest.days === 7) { %>Weekly <% } %>from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
       <% } else { %>
       <div class="gc2-price">See pricing</div>
       <% } %>

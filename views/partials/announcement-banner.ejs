@@ -1,22 +1,23 @@
 <%
   const bannerFeed = (typeof announcementFeed !== 'undefined' && announcementFeed) ? announcementFeed : null;
   const bannerSlides = bannerFeed && bannerFeed.banner ? bannerFeed.banner : [];
+  const bannerMany = bannerSlides.length > 1;
 %>
 <% if (bannerSlides.length) { %>
-<section class="ann-banner" id="annBanner" aria-label="Highlights">
+<section class="ann-banner" id="annBanner" aria-label="Highlights"<% if (bannerMany) { %> role="region" aria-roledescription="carousel" tabindex="0"<% } %>>
   <%- include('theme-decor') %>
   <% bannerSlides.forEach(function (slide, i) { %>
-  <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (i !== 0) { %> aria-hidden="true"<% } %>>
+  <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (bannerMany) { %> aria-roledescription="slide" aria-label="<%= i + 1 %> of <%= bannerSlides.length %>"<% } %><% if (i !== 0) { %> aria-hidden="true"<% } %>>
     <% if (slide.image || slide.imageMobile) { %>
     <div class="ann-banner-media">
       <picture>
         <% if (slide.imageMobile) { %><source media="(max-width: 820px)" srcset="<%= slide.imageMobile %>"><% } %>
-        <img src="<%= slide.image || slide.imageMobile %>" alt="">
+        <img <%- imgHero(slide.image || slide.imageMobile) %> alt="" width="1400" height="788" decoding="async"<% if (i === 0) { %> fetchpriority="high"<% } %>>
       </picture>
     </div>
     <% } %>
     <div class="ann-banner-copy">
-      <% if (slide.label) { %><span class="ann-banner-label"><%= slide.label %></span><% } %>
+      <% if (slide.label) { %><span class="ann-banner-label"><svg class="ann-banner-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M8 3.5V7M16 3.5V7M3.5 10h17"/></svg><%= slide.label %></span><% } %>
       <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %><% if (slide.titleAccent) { %> <span class="ann-banner-accent"><%= slide.titleAccent %></span><% } %></h2><% } %>
       <% if (slide.text) { %><p class="ann-banner-text"><%= slide.text %></p><% } %>
       <div class="ann-banner-actions">
@@ -28,15 +29,15 @@
         <% } %>
       </div>
       <% if (slide.countdown) { %>
-      <p class="ann-banner-count" data-countdown="<%= slide.countdown.at %>">⏳ Countdown: <b data-part="d"><%= slide.countdown.days %></b> days</p>
+      <p class="ann-banner-count" data-countdown="<%= slide.countdown.at %>"><span class="ann-banner-glass" aria-hidden="true">⏳</span> Countdown: <b data-part="d"><%= slide.countdown.days %></b> days</p>
       <% } %>
     </div>
   </article>
   <% }) %>
-  <% if (bannerSlides.length > 1) { %>
-  <div class="ann-banner-dots">
+  <% if (bannerMany) { %>
+  <div class="ann-banner-dots" role="group" aria-label="Banner slides">
     <% bannerSlides.forEach(function (slide, i) { %>
-    <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="Banner <%= i + 1 %> of <%= bannerSlides.length %>"></button>
+    <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="Banner <%= i + 1 %> of <%= bannerSlides.length %>"<% if (i === 0) { %> aria-current="true"<% } %>></button>
     <% }) %>
   </div>
   <% } %>
@@ -59,7 +60,7 @@
   if (first < 0) { root.setAttribute('hidden', ''); return; }
   slides[first].classList.add('on');
   slides[first].removeAttribute('aria-hidden');
-  if (dots[first]) dots[first].classList.add('on');
+  if (dots[first]) { dots[first].classList.add('on'); dots[first].setAttribute('aria-current', 'true'); }
 })();
 </script>
 <% } %>
