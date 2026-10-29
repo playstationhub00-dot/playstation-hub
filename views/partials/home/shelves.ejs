@@ -18,11 +18,16 @@
   const hrSoon = hrSeen(upcoming);
 %>
 <section class="hr-shelves hm-wrap hm-sec" id="shelves">
+  <div class="hr-sec-head">
+    <h2 class="hr-title"><span class="hr-mark">△</span> New &amp; Coming Soon</h2>
+    <p class="hr-sec-sub">Newest games show even when they're full. Join the line or reserve early.</p>
+    <a class="hm-viewall" href="/browse">View all ›</a>
+  </div>
   <div class="hr-tabs">
     <input type="radio" name="hrtab" id="hrTabNew" checked>
     <input type="radio" name="hrtab" id="hrTabSoon">
     <div class="hr-tablist">
-      <label for="hrTabNew">New</label>
+      <label for="hrTabNew">New releases</label>
       <label for="hrTabSoon">Coming soon</label>
     </div>
     <div class="hr-panel hr-panel-new">
@@ -59,9 +64,16 @@
             </div>
             <div class="gc2-body">
               <div class="gc2-title"><%= game.title %></div>
+              <div class="gc2-price">Coming soon<% 
+                if (game.release_date && game.release_date !== 'TBA') {
+                  const rel = new Date(game.release_date + 'T00:00:00');
+                  const today = new Date(); today.setHours(0,0,0,0);
+                  const days = Math.ceil((rel - today) / 86400000);
+                  if (days > 0) { %> · <%= days %> days<% }
+                } %></div>
             </div>
           </a>
-          <a class="hr-act" href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>">Reserve a slot</a>
+          <a class="hr-act hr-act-reserve" href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>">Reserve a slot</a>
         </div>
         <% }) %>
       </div>

@@ -14,7 +14,10 @@
   <% } else { %>
   <h1 class="hm-tagline">PlayStation Hub · <%= hmText.line1 %> <span style="color:<%= hmText.highlight_color || '#F0A500' %>;"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
   <% } %>
-  <%- include('../home-search', { featured, compact: true }) %>
+  <div class="hr-search">
+    <%- include('../home-search', { featured, compact: true }) %>
+    <label class="hr-search-go" for="hsInput">Search</label>
+  </div>
   <% if (home.powerUp) { %>
   <a class="hm-power" href="/browse"><span class="hm-power-tag">Power-up</span><span class="hm-power-text">Rent <%= home.powerUp.days %> days → <b><%= home.powerUp.pct %>% off</b><%= home.powerUp.days === 30 ? ' while the monthly promo is on' : ', automatically' %></span><span class="hm-power-go">See games ›</span></a>
   <% } %>

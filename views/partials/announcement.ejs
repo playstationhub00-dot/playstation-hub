@@ -64,7 +64,9 @@
       <% } else { %>
         <% if (slide.label) { %><span class="ann-bar-chip"><%= slide.label %></span><% } %>
         <% if (slide.title) { %><strong><%= slide.title %></strong><% } %>
-        <% if (slide.title && slide.text) { %> — <% } %><%= slide.text %>
+        <% if (slide.title && slide.text) { %> — <% } %>
+        <% const codeAt = slide.text ? slide.text.indexOf('MONTHLY10') : -1; %>
+        <% if (codeAt === -1) { %><%= slide.text %><% } else { %><%= slide.text.slice(0, codeAt) %><span class="ann-bar-chip">MONTHLY10</span><%= slide.text.slice(codeAt + 'MONTHLY10'.length) %><% } %>
       <% } %>
     </span>
     <% if (slide.buttonUrl) { %>

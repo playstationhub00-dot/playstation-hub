@@ -133,7 +133,7 @@ async function main() {
     assert.ok(row.includes('Rent now'));
   });
   await okAsync('Top rented this month: last 30 days first, then all-time renters', async () => {
-    const titles = cardSlugs(slice(home, 'id="topRented"', 'id="psplus"'));
+    const titles = [...slice(home, 'id="topRented"', 'id="psplus"').matchAll(/href="\/game\/([a-z0-9-]+)"/g)].map(m => m[1]);
     assert.deepStrictEqual(titles, ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-echo', 'zzyzx-charlie'], 'Delta has never been rented');
   });
   await okAsync('the trust line is under the search, with no recommend figure yet', async () => {

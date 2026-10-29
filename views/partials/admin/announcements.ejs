@@ -91,6 +91,10 @@
             <label>Title</label>
             <input type="text" name="title" maxlength="120" value="<%= ann.title || '' %>" placeholder="<%= bound ? 'Blank keeps the live promo' : '' %>">
           </div>
+          <div class="form-group">
+            <label>Highlighted title words <span style="color:#555;font-size:0.75rem;">(banner, accent colour)</span></label>
+            <input type="text" name="title_accent" maxlength="80" value="<%= ann.title_accent || '' %>">
+          </div>
           <div class="form-group full">
             <label>Text</label>
             <textarea name="text" rows="2" maxlength="400" placeholder="<%= bound ? 'Blank keeps the live promo' : 'Short message' %>"><%= ann.text || '' %></textarea>

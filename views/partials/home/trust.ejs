@@ -1,6 +1,6 @@
 <%#
-  Real reviews only (the published list). Four questions on the page; the
-  head still gets the full homepage FAQ list for JSON-LD.
+  Stats, up to three published reviews, four questions, and the guide chips.
+  JSON-LD still uses the full homepage FAQ list from the head.
 %>
 <%
   const hrQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); }).slice(0, 3);
@@ -8,27 +8,34 @@
   const hmStart = [home.prices.nonTrophy, home.prices.trophy].filter(Boolean);
 %>
 <section class="hm-wrap hm-sec" id="reviewsSection">
-  <h2 class="hr-title">Players trust us</h2>
-  <h2 class="hr-subhead">Achievements unlocked</h2>
-  <div class="hm-trophies">
-    <% if (home.trust.recommendPct != null) { %><div class="hm-trophy"><b><%= home.trust.recommendPct %>%</b><span>would recommend us</span></div><% } %>
-    <% if (home.trust.renters) { %><div class="hm-trophy"><b><%= home.trust.renters %></b><span>players served</span></div><% } %>
-    <div class="hm-trophy"><b><%= games.length %></b><span>games to play</span></div>
-    <% if (hmStart.length) { %><div class="hm-trophy"><b>₱<%= Math.min(...hmStart) %></b><span>starting price</span></div><% } %>
+  <div class="hr-sec-head">
+    <h2 class="hr-title"><span class="hr-mark">△</span> Players trust us</h2>
+  </div>
+  <h2 class="hm-sr">Achievements unlocked</h2>
+  <div class="hr-stats">
+    <% if (home.trust.renters) { %><div class="hr-stat"><b><%= home.trust.renters %></b><span>players served</span></div><% } %>
+    <% if (home.trust.recommendPct != null) { %><div class="hr-stat"><b><%= home.trust.recommendPct %>%</b><span>would recommend us</span></div><% } %>
+    <div class="hr-stat"><b><%= games.length %></b><span>games to play</span></div>
+    <% if (hmStart.length) { %><div class="hr-stat"><b>₱<%= Math.min.apply(null, hmStart) %></b><span>starting price</span></div><% } %>
   </div>
   <% if (hrQuotes.length) { %>
   <ul class="hr-quotes">
     <% hrQuotes.forEach(function (r) { %>
     <li>
-      <blockquote><%= r.text %></blockquote>
-      <cite><%= reviewDisplayName(r) %></cite>
+      <blockquote>“<%= r.text %>”</blockquote>
+      <cite>👍 <%= reviewDisplayName(r) %></cite>
     </li>
     <% }) %>
   </ul>
   <% } %>
-  <h2 class="hr-subhead">Questions</h2>
+  <h2 class="hm-sr">Questions</h2>
   <div class="faq-list">
     <%- include('../faq-items', { items: hrFaqs }) %>
   </div>
-  <p class="hr-allfaqs"><a href="/faq">All FAQs</a></p>
+  <nav class="hr-guides" aria-label="Rental guides">
+    <a href="/how-it-works">How renting works</a>
+    <a href="/how-to-sign-in">How to sign in</a>
+    <a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a>
+    <a href="/faq">All FAQs ›</a>
+  </nav>
 </section>

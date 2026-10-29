@@ -17,16 +17,8 @@
     <% } %>
     <div class="ann-banner-copy">
       <% if (slide.label) { %><span class="ann-banner-label"><%= slide.label %></span><% } %>
-      <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %></h2><% } %>
+      <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %><% if (slide.titleAccent) { %> <span class="ann-banner-accent"><%= slide.titleAccent %></span><% } %></h2><% } %>
       <% if (slide.text) { %><p class="ann-banner-text"><%= slide.text %></p><% } %>
-      <% if (slide.countdown) { %>
-      <div class="hr-count" data-countdown="<%= slide.countdown.at %>" aria-label="Time remaining">
-        <span><b data-part="d"><%= slide.countdown.days %></b><small>days</small></span>
-        <span><b data-part="h"><%= slide.countdown.hours %></b><small>hours</small></span>
-        <span><b data-part="m"><%= slide.countdown.minutes %></b><small>min</small></span>
-        <span><b data-part="s"><%= slide.countdown.seconds %></b><small>sec</small></span>
-      </div>
-      <% } %>
       <div class="ann-banner-actions">
         <% if (slide.buttonUrl) { %>
         <a class="ann-banner-cta" href="<%= slide.buttonUrl %>"<% if (slide.external) { %> target="_blank" rel="noopener"<% } %>><%= slide.buttonLabel || 'Learn more' %> →</a>
@@ -35,6 +27,9 @@
         <a class="ann-banner-cta ann-banner-cta-ghost" href="<%= slide.button2Url %>"<% if (slide.button2External) { %> target="_blank" rel="noopener"<% } %>><%= slide.button2Label || 'Learn more' %></a>
         <% } %>
       </div>
+      <% if (slide.countdown) { %>
+      <p class="ann-banner-count" data-countdown="<%= slide.countdown.at %>">⏳ Countdown: <b data-part="d"><%= slide.countdown.days %></b> days</p>
+      <% } %>
     </div>
   </article>
   <% }) %>
