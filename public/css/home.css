@@ -219,6 +219,9 @@ body.home2 .ann-banner { padding-top: 16px; }
 body.home2 .ann-banner .theme-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
 .hr-find { padding-top: 1.25rem; }
 .hr-find .hm-tagline { font-size: clamp(1.35rem, 2.4vw, 1.8rem); font-weight: 800; letter-spacing: -0.03em; margin: 0 0 0.8rem; }
+/* These are <nav>s: undo the site header's nav rules (sticky, 64px tall, spread out, border)
+   so they don't stick over the header while scrolling. */
+body .hr-chips, body .hm-start-links, body .hr-cats, body .hr-guides { position: static; height: auto; padding: 0; background: none; border: 0; justify-content: flex-start; z-index: auto; }
 .hr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0.9rem 0; }
 .hr-chips a, .hr-tiles a {
   border: 1px solid var(--border, #262626);
@@ -231,7 +234,9 @@ body.home2 .ann-banner .theme-deco { position: absolute; inset: 0; z-index: 2; p
   background: var(--bg-card, #141414);
 }
 .hr-chips a:hover, .hr-tiles a:hover { border-color: var(--theme-btn, #F5B800); }
-.hr-find .hm-trust { margin: 0.2rem 0 0; }
+.hr-find .hr-chips a { padding: 6px 14px; font-size: 0.8rem; background: #1a1a1a; border-color: #2a2a2a; }
+.hr-find .hm-trust { margin: 0.2rem 0 0; gap: 0.35rem 1.75rem; font-size: 0.78rem; }
+.hm-tick { color: var(--theme-btn, #F5B800); font-weight: 800; margin-right: 0.2rem; }
 .hr-title { font-size: clamp(1.35rem, 2.5vw, 1.7rem); font-weight: 800; margin: 0 0 0.8rem; letter-spacing: -0.03em; }
 .hr-subhead { font-size: 1rem; font-weight: 800; margin: 0 0 0.7rem; color: var(--text-secondary, #a8a8a8); }
 .hr-tabs { position: relative; }

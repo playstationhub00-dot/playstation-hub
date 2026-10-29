@@ -140,7 +140,7 @@ async function main() {
     const find = slice(home, 'id="find"', 'id="shelves"');
     assert.ok(!find.includes('10% off'), 'the 10% line stays hidden until a monthly promo is live');
     assert.ok(!home.includes(', automatically'));
-    assert.ok(find.includes('<li>✓ Ready in minutes</li>') && /<li>✓ \d+ players<\/li>/.test(find));
+    assert.ok(find.includes('<li><span class="hm-tick" aria-hidden="true">✓</span> Ready in minutes</li>') && /<li><span class="hm-tick" aria-hidden="true">✓<\/span> \d+ players<\/li>/.test(find));
     assert.ok(!find.includes('recommend us'), 'no reviews yet, so no recommend figure');
   });
   await okAsync('quick picks jump to the blocks and open filtered Browse', async () => {
@@ -232,7 +232,7 @@ async function main() {
     assert.ok(!on.includes(', automatically'));
     await call('POST', '/admin/promo', { headers: { 'Content-Type': 'application/x-www-form-urlencoded', Cookie: cookie }, body: 'discount_7=0&discount_30=10&deposit=100' });
     const off = (await call('GET', '/')).body;
-    assert.ok(!off.includes('class="hm-power"') && off.includes('<li>✓ Ready in minutes</li>'));
+    assert.ok(!off.includes('class="hm-power"') && off.includes('<li><span class="hm-tick" aria-hidden="true">✓</span> Ready in minutes</li>'));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

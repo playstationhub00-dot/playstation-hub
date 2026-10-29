@@ -7,9 +7,9 @@
   <a class="hm-power" href="/browse"><span class="hm-power-tag">⚡ Power-up</span><span class="hm-power-text">Rent <%= home.powerUp.days %> days → <b><%= home.powerUp.pct %>% off</b><%= home.powerUp.days === 30 ? ' while the monthly promo is on' : ', automatically' %></span><span class="hm-power-go">See games ›</span></a>
   <% } %>
   <ul class="hm-trust">
-    <% if (home.trust.renters) { %><li>✓ <%= home.trust.renters %> players</li><% } %>
-    <% if (home.trust.recommendPct != null) { %><li>✓ <%= home.trust.recommendPct %>% recommend us</li><% } %>
-    <li>✓ Ready in minutes</li>
-    <li>✓ No password needed</li>
+    <% if (home.trust.renters) { %><li><span class="hm-tick" aria-hidden="true">✓</span> <%= home.trust.renters %> players</li><% } %>
+    <% if (home.trust.recommendPct != null) { %><li><span class="hm-tick" aria-hidden="true">✓</span> <%= home.trust.recommendPct %>% recommend us</li><% } %>
+    <li><span class="hm-tick" aria-hidden="true">✓</span> Ready in minutes</li>
+    <li><span class="hm-tick" aria-hidden="true">✓</span> No password needed</li>
   </ul>
 </section>
