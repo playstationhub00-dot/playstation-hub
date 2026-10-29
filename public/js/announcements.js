@@ -47,7 +47,11 @@
       } else {
         slides[i].setAttribute('aria-hidden', 'true');
       }
-      if (dots[i]) dots[i].classList.toggle('on', on);
+      if (dots[i]) {
+        dots[i].classList.toggle('on', on);
+        if (on) dots[i].setAttribute('aria-current', 'true');
+        else dots[i].removeAttribute('aria-current');
+      }
     }
     if (!chosen) pick(root, selector);
   }
@@ -77,18 +81,40 @@
         showIndex(root, selector, parseInt(dot.getAttribute('data-index'), 10) || 0);
       });
     });
-    if (reduced) return;
-    var timer = setInterval(function () {
-      if (root.hasAttribute('hidden')) return;
+    var timer = null;
+    function step(dir) {
       var ids = eligibleIndexes(root, selector);
       if (ids.length < 2) return;
       var slides = root.querySelectorAll(selector);
-      var current = 0;
+      var current = ids[0];
       for (var i = 0; i < slides.length; i++) if (slides[i].classList.contains('on')) current = i;
       var pos = ids.indexOf(current);
-      showIndex(root, selector, ids[(pos + 1) % ids.length]);
-    }, 6000);
-    root.addEventListener('mouseenter', function () { clearInterval(timer); timer = null; });
+      if (pos < 0) pos = 0;
+      showIndex(root, selector, ids[(pos + (dir || 1) + ids.length) % ids.length]);
+    }
+    function start() {
+      if (reduced || timer) return;
+      if (eligibleIndexes(root, selector).length < 2) return;
+      timer = setInterval(function () {
+        if (root.hasAttribute('hidden') || document.hidden) return;
+        step(1);
+      }, 6000);
+    }
+    function stop() { clearInterval(timer); timer = null; }
+    start();
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('focusout', function (e) {
+      if (!root.contains(e.relatedTarget)) start();
+    });
+    root.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (eligibleIndexes(root, selector).length < 2) return;
+      e.preventDefault();
+      stop();
+      step(e.key === 'ArrowLeft' ? -1 : 1);
+    });
   }
 
   wireRotator(document.getElementById('announcementBar'), '.ann-bar-slide');

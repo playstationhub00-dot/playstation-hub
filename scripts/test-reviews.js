@@ -428,6 +428,27 @@ check('null entries do not inflate the total', () => {
   assert.strictEqual(s.pct, 100);
 });
 
+check('a blank review is not a recommend vote, so it cannot publish 100%', () => {
+  const mixed = reviews.backedRecommend([{}, { text: 'nice' }, { sentiment: 'up' }]);
+  assert.strictEqual(mixed.total, 1);
+  assert.strictEqual(mixed.backed, true);
+  assert.strictEqual(mixed.pct, 100);
+  const blank = reviews.backedRecommend([{}, { text: 'nice' }]);
+  assert.strictEqual(blank.total, 0);
+  assert.strictEqual(blank.backed, false);
+  assert.strictEqual(blank.pct, 0);
+});
+
+check('the same words from the same name are one review', () => {
+  const rows = reviews.uniqueReviews([
+    { id: 1, name: 'Gemry T.', text: 'Sulit nga pala sir' },
+    { id: 2, name: 'Gemry T.', text: 'Sulit nga pala sir' },
+    { id: 3, name: 'Jc S.', text: 'easy assist' },
+    { id: 4, name: 'Ana R.', text: 'Sulit nga pala sir' }
+  ]);
+  assert.deepStrictEqual(rows.map(r => r.id), [1, 3, 4]);
+});
+
 check('percentages are whole numbers', () => {
   const s = reviews.recommendStats([{ sentiment: 'up' }, { sentiment: 'up' }, { sentiment: 'down' }]);
   assert.strictEqual(s.pct, 67);

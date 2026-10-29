@@ -39,8 +39,8 @@
           const full = av.totalSlots === 0;
         %>
         <div class="hr-tile">
-          <%- include('../game-card', { game: game, dealPrice: false }) %>
-          <a class="hr-act<%= full ? ' hr-act-full' : '' %>" href="<%= seo.rentPath(game.title) %>"><%= full ? 'Full · Join line' : 'Rent now' %></a>
+          <%- include('../game-card', { game: game, dealPrice: false, showWeekly: true }) %>
+          <a class="hr-act<%= full ? ' hr-act-full' : '' %>" href="<%= seo.rentPath(game.title) %>"><%= full ? 'Join the line' : 'Rent now' %></a>
         </div>
         <% }) %>
       </div>
@@ -53,26 +53,7 @@
       <div class="hr-row">
         <% hrSoon.slice(0, 5).forEach(function (game) { %>
         <div class="hr-tile">
-          <a href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>" class="game-card upcoming-card gc2-split game-card-link">
-            <div class="gc2-art">
-              <% if (game.cover_image) { %>
-              <img <%- imgCard(game.cover_image) %> width="480" height="720" alt="<%= game.title %>" class="cs-cover-img" loading="lazy" decoding="async">
-              <% } else { %>
-              <div class="cs-cover-placeholder"><span>No Image</span></div>
-              <% } %>
-              <div class="cs-badge<%= (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.decor === 'halloween') ? ' theme-pumpkin' : '' %>">Reserve</div>
-            </div>
-            <div class="gc2-body">
-              <div class="gc2-title"><%= game.title %></div>
-              <div class="gc2-price">Coming soon<% 
-                if (game.release_date && game.release_date !== 'TBA') {
-                  const rel = new Date(game.release_date + 'T00:00:00');
-                  const today = new Date(); today.setHours(0,0,0,0);
-                  const days = Math.ceil((rel - today) / 86400000);
-                  if (days > 0) { %> · <%= days %> days<% }
-                } %></div>
-            </div>
-          </a>
+          <%- include('../upcoming-card', { game: game, hidePrice: true }) %>
           <a class="hr-act hr-act-reserve" href="/upcoming/<%= seo.slug(game.title) %>-<%= game.id %>">Reserve a slot</a>
         </div>
         <% }) %>

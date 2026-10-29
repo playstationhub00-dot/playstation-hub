@@ -21,18 +21,26 @@
   <% if (home.powerUp) { %>
   <a class="hm-power" href="/browse"><span class="hm-power-tag">Power-up</span><span class="hm-power-text">Rent <%= home.powerUp.days %> days → <b><%= home.powerUp.pct %>% off</b><%= home.powerUp.days === 30 ? ' while the monthly promo is on' : ', automatically' %></span><span class="hm-power-go">See games ›</span></a>
   <% } %>
+  <%
+    const hrChips = [];
+    if (home.newGames.length) hrChips.push({ href: '#newReleasesSection', label: 'New releases' });
+    if (specialDeals.length) hrChips.push({ href: '#specialDealsSection', label: 'Deals' });
+    if (home.prices.psplus || psplusPopular.length) hrChips.push({ href: '#psplus', label: 'PS Plus' });
+    if (upcoming.length) hrChips.push({ href: '#comingSoon', label: 'Coming soon' });
+    hrChips.push({ href: '/browse?price=low', label: 'Under ₱' + home.bands.low });
+    if (home.hasPs4) hrChips.push({ href: '/browse?console=ps4', label: 'Plays on PS4' });
+    (home.quickGenres || []).forEach(function (gn) {
+      if (gn) hrChips.push({ href: '/browse?genre=' + encodeURIComponent(gn), label: String(gn) });
+    });
+  %>
   <nav class="hr-chips" aria-label="Quick picks">
-    <% if (home.newGames.length) { %><a href="#newReleasesSection">New releases</a><% } %>
-    <% if (specialDeals.length) { %><a href="#specialDealsSection">Deals</a><% } %>
-    <% if (home.prices.psplus || psplusPopular.length) { %><a href="#psplus">PS Plus</a><% } %>
-    <% if (upcoming.length) { %><a href="#comingSoon">Coming soon</a><% } %>
-    <a href="/browse?price=low">Under ₱<%= home.bands.low %></a>
-    <% if (home.hasPs4) { %><a href="/browse?console=ps4">Plays on PS4</a><% } %>
-    <% home.quickGenres.forEach(function (gn) { %><a href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %></a><% }) %>
+    <% hrChips.forEach(function (chip) { %>
+    <a class="hr-chip" href="<%= chip.href %>"><%= chip.label %></a>
+    <% }) %>
   </nav>
   <ul class="hm-trust">
     <% if (home.trust.renters) { %><li>✓ <%= home.trust.renters %> players</li><% } %>
-    <% if (home.trust.recommendPct != null) { %><li>✓ <%= home.trust.recommendPct %>% recommend us</li><% } %>
+    <% if (home.trust.recommendPct != null) { %><li>✓ <%= home.trust.recommendPct %>% recommend us</li><% } else if (home.trust.reviewCount) { %><li>✓ <%= home.trust.reviewCount %> player reviews</li><% } %>
     <li>✓ Ready in minutes</li>
     <li>✓ No password needed</li>
   </ul>

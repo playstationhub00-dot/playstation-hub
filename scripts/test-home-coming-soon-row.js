@@ -92,14 +92,18 @@ async function main() {
   const browse = (await get('/browse?tab=coming-soon')).body;
 
   console.log('\nhomepage');
-  const soon = slice(home, '<section class="hm-wrap hm-sec" id="comingSoon">', '</section>');
+  const soon = slice(home, 'id="comingSoon"', 'id="specialDealsSection"');
   ok('a still shelf like New releases, with the Coming soon heading and View all', () => {
-    assert.ok(soon.includes('<h2 class="hm-title"><span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon <span class="hm-sub">reserve a slot</span><a class="hm-viewall" href="/browse?tab=coming-soon">View all ›</a></h2>'));
-    assert.ok(soon.includes('<div class="hm-row">'));
-    assert.strictEqual((soon.match(/<div class="hm-cell">\s*<a href="\/upcoming\//g) || []).length, 7);
+    assert.ok(soon.includes('<span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon'));
+    assert.ok(soon.includes('href="/browse?tab=coming-soon"'));
+    assert.ok(soon.includes('Reserve a slot'));
+    assert.strictEqual((soon.match(/class="game-card upcoming-card/g) || []).length, 5);
   });
   ok('the ranked one first, then soonest release, TBA last', () => {
-    assert.deepStrictEqual(upcomingIds(soon), [1, 2, 3, 5, 6, 7, 4]);
+    assert.deepStrictEqual(upcomingIds(soon), [1, 2, 3, 5, 6]);
+    const linked = [...soon.matchAll(/href="\/upcoming\/[a-z0-9-]+-(\d+)"/g)].map(m => Number(m[1]));
+    const unique = linked.filter((id, i) => linked.indexOf(id) === i);
+    assert.deepStrictEqual(unique, [1, 2, 3, 5, 6, 7, 4]);
   });
   ok('no arrows, no slider, nothing to drift', () => {
     ['upcomingSlider', 'upcoming-slider', 'slider-arrow', 'slideUpcoming', 'upcomingBody'].forEach(t => assert.ok(!soon.includes(t), t));
@@ -121,10 +125,21 @@ async function main() {
     assert.deepStrictEqual(upcomingIds(slice(browse, 'id="bfSoonGrid"', 'id="bfPsplus"')), [1, 2, 3, 5, 6, 7, 4]);
     assert.ok(!browse.includes('id="upcomingSlider"') && !browse.includes('slideUpcoming'));
   });
-  ok('both pages draw the same card', () => {
-    [2, 5].forEach(id => assert.strictEqual(card(home, id), card(browse, id), 'card ' + id));
+  ok('both pages draw the same card art; the homepage line says Coming soon, not a price', () => {
+    [2, 5].forEach(id => {
+      const homeCard = card(home, id);
+      const browseCard = card(browse, id);
+      assert.ok(homeCard.includes('cs-cover-img') && browseCard.includes('cs-cover-img'), 'card ' + id);
+      const homeImg = homeCard.match(/src="([^"]+)"/);
+      const browseImg = browseCard.match(/src="([^"]+)"/);
+      assert.strictEqual(homeImg && homeImg[1], browseImg && browseImg[1], 'same cover ' + id);
+      assert.ok(!homeCard.includes('₱'), 'homepage card ' + id + ' has no price');
+      assert.ok(homeCard.includes('Coming soon'));
+    });
     assert.ok(card(home, 5).includes('cs-full') && card(home, 5).includes('<div class="card-ribbon">Full</div>'));
+    assert.ok(card(browse, 5).includes('<div class="card-ribbon">Full</div>'));
     assert.ok(card(home, 2).includes('<span class="cs-cd-n">5</span><span class="cs-cd-u">days</span>'));
+    assert.ok(card(browse, 2).includes('<span class="cs-cd-n">5</span><span class="cs-cd-u">days</span>'));
   });
   ok('no Coming soon games → no homepage section', () => {
     const file = path.join(__dirname, '..', 'views', 'partials', 'home', 'upcoming-row.ejs');

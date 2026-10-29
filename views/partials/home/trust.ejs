@@ -14,7 +14,7 @@
   <h2 class="hm-sr">Achievements unlocked</h2>
   <div class="hr-stats">
     <% if (home.trust.renters) { %><div class="hr-stat"><b><%= home.trust.renters %></b><span>players served</span></div><% } %>
-    <% if (home.trust.recommendPct != null) { %><div class="hr-stat"><b><%= home.trust.recommendPct %>%</b><span>would recommend us</span></div><% } %>
+    <% if (home.trust.recommendPct != null) { %><div class="hr-stat"><b><%= home.trust.recommendPct %>%</b><span>would recommend us</span></div><% } else if (home.trust.reviewCount) { %><div class="hr-stat"><b><%= home.trust.reviewCount %></b><span>player reviews</span></div><% } %>
     <div class="hr-stat"><b><%= games.length %></b><span>games to play</span></div>
     <% if (hmStart.length) { %><div class="hr-stat"><b>₱<%= Math.min.apply(null, hmStart) %></b><span>starting price</span></div><% } %>
   </div>
