@@ -407,7 +407,8 @@ body.home2 .hr-find .hs-input::placeholder { color: #8a8a8a; font-weight: 500; }
   font-weight: 800; border-radius: 10px; padding: 0 22px; cursor: pointer;
   height: 54px; display: inline-flex; align-items: center; box-sizing: border-box; flex: none;
 }
-body.home2 .ann-banner { padding-top: 24px; }
+body.home2 .ann-banner { padding-top: 24px; max-width: 1400px; margin: 0 auto; box-sizing: border-box; }
+@media (min-width: 821px) { body.home2 .ann-banner .ann-banner-close { top: 34px; right: calc(2rem + 10px); } }
 body.home2 .ann-banner-slide {
   --hr-hero-bg: #0c0c0c;
   border-radius: 22px;
