@@ -102,77 +102,79 @@ async function main() {
   await okAsync('the blocks render in order, the same on every screen size', async () => {
     assert.strictEqual(r.status, 200);
     assert.ok(home.includes('<body class="home2">'));
-    const marks = ['class="hm-top"', 'class="hm-wrap hm-power-wrap"', 'aria-label="Quick picks"', 'id="topRented"', 'id="newReleasesSection"',
-      'id="specialDealsSection"', 'id="comingSoon"', 'id="psplus"', 'id="players"', 'id="reviewsSection"', 'id="how"', '<footer'];
+    const marks = ['id="announcementBar"', '<nav>', 'id="annBanner"', 'class="hm-tagline"', 'id="homeSearch"', 'id="newReleasesSection"',
+      'id="comingSoon"', 'id="specialDealsSection"', 'id="how"', 'id="players"', 'id="topRented"', 'id="psplus"', 'id="reviewsSection"', '<footer'];
     const at = marks.map(m => home.indexOf(m));
     at.forEach((x, i) => assert.ok(x > 0 && (i === 0 || x > at[i - 1]), marks[i] + ' in order'));
   });
-  await okAsync('the old sections are gone, and payment methods are listed only in the footer', async () => {
-    ['Which account type is for you?', 'Three ways to play', 'Why Rent From Us', 'Ways to Pay', 'Browse by Price Tier', 'Most Popular', 'hero-v2', 'Rent Longer. Save More.', 'spotlight-section']
+  await okAsync('the old sections are gone, and the reservation hero has no price', async () => {
+    ['Which account type is for you?', 'Three ways to play', 'Why Rent From Us', 'Ways to Pay', 'Browse by Price Tier', 'Most Popular', 'hero-v2', 'Rent Longer. Save More.', 'spotlight-section', 'id="hmBanner"', '100% safe', 'no risk', 'always 10% off']
       .forEach(t => assert.ok(!home.includes(t), t));
-    const visible = home.slice(home.indexOf('<body'));
-    assert.ok(visible.indexOf('GCash') > visible.indexOf('<footer'), 'GCash only after the footer starts');
+    const hero = slice(home, 'id="annBanner"', 'id="find"');
+    assert.ok(!hero.includes('₱'), 'no price on the reservation card');
+    assert.ok(hero.includes('Reserve on Messenger') && hero.includes('Browse new games'));
   });
   await okAsync('a game card is on the page before "Choose your player"', async () => {
     assert.ok(home.indexOf('class="game-card') > 0 && home.indexOf('class="game-card') < home.indexOf('id="players"'));
   });
 
   console.log('\ntop');
-  await okAsync('one-line tagline from the hero text, with the compact search beside it', async () => {
-    const head = slice(home, 'class="hm-head"', 'class="hm-stage');
-    assert.ok(head.includes('<h1 class="hm-tagline">PlayStation Hub · Rent the Latest <span style="color:#F0A500;">PS5 &amp; PS4</span> Games</h1>'));
-    assert.ok(head.includes('class="hs hs-compact" id="homeSearch"') && head.includes('id="hsInput"'));
+  await okAsync('one-line tagline from the hero text, with the compact search under the hero', async () => {
+    assert.ok(home.includes('<h1 class="hm-tagline">PlayStation Hub · Rent the Latest <span style="color:#F0A500;">PS5 &amp; PS4</span> Games</h1>'));
+    assert.ok(home.includes('class="hs hs-compact" id="homeSearch"') && home.includes('id="hsInput"'));
     assert.ok(!home.includes('class="hs-chip"') && !home.includes('Old subtitle'));
+    assert.ok(home.includes('Sold out? Fall in line for free'));
+    assert.ok(home.includes('Every 5th paid rental is a free 7-day rental.'));
   });
-  await okAsync('banner: the pinned game first, then the newest releases with cover art, then the owner\'s slides', async () => {
-    const banner = slice(home, 'id="hmBanner"', '<aside');
-    const slides = [...banner.matchAll(/<a class="hm-slide" href="\/game\/([a-z-]+)"/g)].map(m => m[1]);
-    assert.deepStrictEqual(slides, ['zzyzx-delta', 'zzyzx-alpha', 'zzyzx-bravo'], 'unknown pin and the coverless game skipped');
-    assert.ok(banner.includes('<a class="hm-slide hm-slide-promo" href="/browse"><img src="/uploads/promo.png" alt="Summer sale"><span class="hm-slide-caption">Summer sale</span></a>'));
-    assert.strictEqual((banner.match(/class="hm-dot( on)?"/g) || []).length, 4, '3 games + 1 owner slide');
-    assert.ok(slice(banner, 'href="/game/zzyzx-alpha"', '</a>').includes('<span class="tier-pill tier-blue">New Games</span>'));
-    assert.ok(slice(banner, 'href="/game/zzyzx-alpha"', '</a>').includes('Weekly from <b>₱349</b>'));
+  await okAsync('the Now playing slider is gone; new releases keep cover art and the tier', async () => {
+    const row = slice(home, 'id="newReleasesSection"', 'id="comingSoon"');
+    assert.ok(row.includes('href="/game/zzyzx-alpha"'));
+    assert.ok(row.includes('<span class="tier-pill tier-blue">New Games</span>'));
+    assert.ok(row.includes('Rent now'));
   });
-  await okAsync('Top rented beside the banner: last 30 days first, then all-time renters, top 5', async () => {
-    const board = slice(home, 'class="hm-board"', '</ol>');
-    const titles = [...board.matchAll(/class="hm-board-title">([^<]+)</g)].map(m => m[1]);
-    assert.deepStrictEqual(titles, ['Zzyzx Alpha', 'Zzyzx Bravo', 'Zzyzx Echo', 'Zzyzx Charlie'], 'Delta has never been rented');
-    assert.ok(board.includes('<span class="hm-rk hm-rk-1">1</span>'));
-    assert.deepStrictEqual(cardSlugs(slice(home, 'id="topRented"', 'id="newReleasesSection"')), ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-echo', 'zzyzx-charlie']);
-    assert.ok(slice(home, 'id="topRented"', 'id="newReleasesSection"').includes('<span class="hm-medal hm-rk-1">#1</span>'));
+  await okAsync('Top rented this month: last 30 days first, then all-time renters', async () => {
+    const titles = [...slice(home, 'id="topRented"', 'id="psplus"').matchAll(/href="\/game\/([a-z0-9-]+)"/g)].map(m => m[1]);
+    assert.deepStrictEqual(titles, ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-echo', 'zzyzx-charlie'], 'Delta has never been rented');
   });
-  await okAsync('Power-up from the site promo, and the trust line', async () => {
-    const power = slice(home, 'class="hm-wrap hm-power-wrap"', '</section>');
-    assert.ok(!power.includes('10% off'), 'the 10% line stays hidden until a monthly promo is live');
+  await okAsync('the trust line is under the search, with no recommend figure yet', async () => {
+    const find = slice(home, 'id="find"', 'id="shelves"');
+    assert.ok(!find.includes('10% off'), 'the 10% line stays hidden until a monthly promo is live');
     assert.ok(!home.includes(', automatically'));
-    assert.ok(power.includes('<li>✓ Ready in minutes</li>') && /<li>✓ \d+ players<\/li>/.test(power));
-    assert.ok(!power.includes('recommend us'), 'no reviews yet, so no recommend figure');
+    assert.ok(find.includes('<li>✓ Ready in minutes</li>') && /<li>✓ \d+ players<\/li>/.test(find));
+    assert.ok(!find.includes('recommend us'), 'no reviews yet, so no recommend figure');
   });
   await okAsync('quick picks jump to the blocks and open filtered Browse', async () => {
-    const picks = [...slice(home, 'aria-label="Quick picks"', '</div>').matchAll(/href="([^"]+)"/g)].map(m => m[1]);
+    const picks = [...slice(home, 'aria-label="Quick picks"', '</nav>').matchAll(/href="([^"]+)"/g)].map(m => m[1]);
     assert.deepStrictEqual(picks, ['#newReleasesSection', '#specialDealsSection', '#psplus', '#comingSoon', '/browse?price=low', '/browse?console=ps4', '/browse?genre=Action', '/browse?genre=Horror']);
   });
 
   console.log('\nshelves and blocks');
-  await okAsync('new releases newest first; deals at their deal price; Coming soon with its marker', async () => {
-    assert.deepStrictEqual(cardSlugs(slice(home, 'id="newReleasesSection"', 'id="specialDealsSection"')), ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-charlie']);
+  await okAsync('new releases newest first; deals at their deal price; Coming soon with its marker and no price', async () => {
+    assert.deepStrictEqual(cardSlugs(slice(home, 'id="newReleasesSection"', 'id="comingSoon"')), ['zzyzx-alpha', 'zzyzx-bravo', 'zzyzx-charlie']);
     assert.ok(slice(home, 'id="newReleasesSection"', '</h2>').includes('<a class="hm-viewall" href="/browse?tab=new">View all ›</a>'), 'View all opens the New releases tab');
-    assert.ok(slice(home, 'id="specialDealsSection"', '<!-- UPCOMING GAMES').includes('Monthly <b>₱599</b>'));
+    assert.ok(slice(home, 'id="specialDealsSection"', 'id="how"').includes('Monthly <b>₱599</b>'));
     assert.ok(slice(home, 'id="comingSoon"', '</h2>').includes('<span aria-hidden="true" class="hm-mark hm-sq">□</span>Coming soon'));
+    const soon = slice(home, 'id="comingSoon"', 'id="specialDealsSection"');
+    assert.ok(soon.includes('Reserve a slot') && soon.includes('>Reserve</div>'));
+    assert.ok(!soon.includes('₱'), 'coming soon cards have no price');
   });
   await okAsync('PS Plus card with its weekly price and most-played strip', async () => {
-    const ps = slice(home, 'id="psplus"', 'id="players"');
-    assert.ok(ps.includes('from <b>₱159</b> / week') && ps.includes('<span>God of War</span>'));
+    const ps = slice(home, 'id="psplus"', 'id="reviewsSection"');
+    assert.ok(ps.includes('from <b>₱159</b> / week') && ps.includes('>God of War</a>'));
+    assert.ok(ps.includes('href="/ps-plus/rent"') && ps.includes('href="/ps-plus"'));
   });
-  await okAsync('Choose your player: starting prices and the deposit', async () => {
-    const pl = slice(home, 'id="players"', 'id="reviewsSection"');
-    ['from ₱399', 'from ₱349', 'from ₱999', 'from ₱159/week', '₱100 refundable deposit'].forEach(t => assert.ok(pl.includes(t), t));
+  await okAsync('Choose your player: catalogue prices, the deposit, and no PS4 price', async () => {
+    const pl = slice(home, 'id="players"', 'id="topRented"');
+    ['from ₱399', 'from ₱349', 'from ₱999', '₱100 refundable deposit', 'Ask about PS4 Primary', 'Free 3-hour try'].forEach(t => assert.ok(pl.includes(t), t));
+    assert.ok(pl.includes('from <b>₱159</b> / week') === false);
+    const ps4 = pl.slice(pl.indexOf('PS4 Primary'));
+    assert.ok(!ps4.slice(0, ps4.indexOf('</a>')).includes('from ₱'), 'PS4 Primary card has no price');
   });
-  await okAsync('Achievements: games count and starting price; How to play with the questions', async () => {
-    const ach = slice(home, 'id="reviewsSection"', 'id="how"');
+  await okAsync('Achievements: games count and starting price; questions stay on the page', async () => {
+    const ach = slice(home, 'id="reviewsSection"', 'class="hr-cta"');
     assert.ok(ach.includes('<b>5</b><span>games to play</span>') && ach.includes('<b>₱349</b><span>starting price</span>'));
-    const how = slice(home, 'id="how"', '<footer');
-    assert.ok(how.includes('Do I need to give you my PSN password?') && how.includes('When do I get my ₱100 deposit back?'));
+    assert.ok(ach.includes('Do I need to give you my PSN password?') && ach.includes('When do I get my ₱100 deposit back?'));
+    assert.ok(ach.includes('href="/faq"'));
   });
   await okAsync('a short start-here bar under the games links the rental guides with plain anchors', async () => {
     const at = home.indexOf('id="startHere"');
@@ -191,6 +193,28 @@ async function main() {
     assert.strictEqual((await call('GET', '/js/home.js')).status, 200);
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
     assert.ok(!css.includes('.home-page #newReleasesSection { order'), 'no order re-sorting left');
+  });
+
+  console.log('\nseo parity');
+  await okAsync('internal links, headings, and JSON-LD types from the previous homepage are still there', async () => {
+    [
+      'href="/"', 'href="/browse"', 'href="/buy"', 'href="/ps-plus"', 'href="/ps-plus/rent"', 'href="/requests"',
+      'href="/how-it-works"', 'href="/how-to-sign-in"', 'href="/guides"', 'href="/faq"', 'href="/announcements"',
+      'href="/guides/trophy-vs-non-trophy-vs-ps4-primary"', 'href="/guides/ps-plus-deluxe-vs-renting"',
+      'href="/browse?tab=new"', 'href="/browse?tab=coming-soon"', 'href="/browse?tab=most-rented"',
+      'href="/browse?price=low"', 'href="/browse?console=ps4"', 'href="/#how"',
+      'https://m.me/PlaystationHub00', 'https://facebook.com/PlaystationHub00',
+      'class="social-icon facebook"', 'class="social-icon messenger"'
+    ].forEach(t => assert.ok(home.includes(t), t));
+    [
+      'PlayStation Hub', 'What game are you looking for?', 'New releases', 'Coming soon', 'Loot drops',
+      'PS Plus Deluxe', 'Choose your player', 'Achievements unlocked', 'New to renting? Start here',
+      'How to play', 'How renting works', 'Questions', 'Top rented', 'Players trust us'
+    ].forEach(t => assert.ok(home.includes(t), t));
+    const types = [...home.matchAll(/"@type":"([^"]+)"/g)].map(m => m[1]);
+    ['FAQPage', 'OnlineStore', 'WebSite', 'Question'].forEach(t => assert.ok(types.includes(t), t));
+    assert.ok(home.includes('Do I need to give you my PSN password?'));
+    assert.ok(home.includes('Can I try a game before I pay?'));
   });
 
   console.log('\npromo off');

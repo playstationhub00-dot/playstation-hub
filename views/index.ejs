@@ -1,7 +1,8 @@
 ﻿<%
+  var hrLate = (typeof promo !== 'undefined' && promo && promo.late_fee_per_day != null && promo.late_fee_per_day !== '') ? Number(promo.late_fee_per_day) : 20;
   var faqItems = faqPages.homeItems({
     deposit: (typeof promo !== 'undefined' && promo && promo.deposit) || 0,
-    lateFee: (typeof promo !== 'undefined' && promo && promo.late_fee_per_day) || 0
+    lateFee: hrLate
   });
 %>
 <!DOCTYPE html>
@@ -24,32 +25,14 @@
 <%- include('partials/popup') %>
 <%- include('partials/nav', { active: 'home' }) %>
 <%- include('partials/announcement-banner') %>
-
-<%- include('partials/home/top', { home, settings, featured }) %>
-<%- include('partials/home/power', { home }) %>
-<%- include('partials/home/quick-picks', { home, specialDeals, upcoming, psplusPopular }) %>
-
-<%# Phones only — on computers the same list sits beside the banner. %>
-<% if (home.topRented.length) { %>
-<%- include('partials/home/game-row', { id: 'topRented', mark: 'tri', title: 'Top rented', sub: 'this month', games: home.topRented.map(t => t.game), viewAll: '/browse?tab=most-rented', ranked: true, dealPrice: false, extraClass: 'hm-phone-only' }) %>
-<% } %>
-
-<% if (home.newGames.length) { %>
-<%- include('partials/home/game-row', { id: 'newReleasesSection', mark: 'tri', title: 'New releases', sub: '', games: home.newGames, viewAll: '/browse?tab=new', ranked: false, dealPrice: false }) %>
-<% } %>
-
-<% if (specialDeals.length) { %>
-<%- include('partials/home/game-row', { id: 'specialDealsSection', mark: 'cir', title: 'Loot drops', sub: 'special deals', games: specialDeals, viewAll: '', ranked: false, dealPrice: true }) %>
-<% } %>
-
-<!-- UPCOMING GAMES (COMING SOON) -->
-<%- include('partials/home/upcoming-row', { upcoming }) %>
-
-<%- include('partials/home/psplus', { home, psplusPopular, psplusSlug }) %>
-<%- include('partials/home/players', { home, promo }) %>
-<%- include('partials/home/achievements', { home, games, reviews, reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge, reviewDisplayName, renterCount }) %>
+<%- include('partials/home/find', { home, settings, featured }) %>
+<%- include('partials/home/shelves', { home, upcoming, specialDeals }) %>
 <%- include('partials/home/start-here') %>
-<%- include('partials/home/how-faq', { promo: promo, faqItems: faqItems }) %>
+<%- include('partials/home/how') %>
+<%- include('partials/home/accounts', { home, promo }) %>
+<%- include('partials/home/popular', { home, psplusPopular, psplusSlug }) %>
+<%- include('partials/home/trust', { home, games, reviews, faqItems }) %>
+<%- include('partials/home/cta') %>
 
 <%- include('partials/footer') %>
 

@@ -91,6 +91,10 @@
             <label>Title</label>
             <input type="text" name="title" maxlength="120" value="<%= ann.title || '' %>" placeholder="<%= bound ? 'Blank keeps the live promo' : '' %>">
           </div>
+          <div class="form-group">
+            <label>Highlighted title words <span style="color:#555;font-size:0.75rem;">(banner, accent colour)</span></label>
+            <input type="text" name="title_accent" maxlength="80" value="<%= ann.title_accent || '' %>">
+          </div>
           <div class="form-group full">
             <label>Text</label>
             <textarea name="text" rows="2" maxlength="400" placeholder="<%= bound ? 'Blank keeps the live promo' : 'Short message' %>"><%= ann.text || '' %></textarea>
@@ -102,6 +106,18 @@
           <div class="form-group">
             <label>Button link</label>
             <input type="text" name="button_url" maxlength="300" value="<%= ann.button_url || '' %>" placeholder="/promos or https://">
+          </div>
+          <div class="form-group">
+            <label>Second button label</label>
+            <input type="text" name="button2_label" maxlength="40" value="<%= ann.button2_label || '' %>" placeholder="Browse new games">
+          </div>
+          <div class="form-group">
+            <label>Second button link</label>
+            <input type="text" name="button2_url" maxlength="300" value="<%= ann.button2_url || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Countdown target <span style="color:#555;font-size:0.75rem;">(Manila). GTA VI’s release date is filled in only when that game is already in Games or Coming soon. Otherwise set it here. Blank means no countdown.</span></label>
+            <input type="datetime-local" name="countdown_at" value="<%= ann.countdown_at || '' %>">
           </div>
           <div class="form-group">
             <label>Starts <span style="color:#555;font-size:0.75rem;">(Manila, optional)</span></label>
@@ -238,6 +254,18 @@
           <div class="form-group">
             <label>Button link</label>
             <input type="text" name="button_url" maxlength="300" placeholder="/browse">
+          </div>
+          <div class="form-group">
+            <label>Second button label</label>
+            <input type="text" name="button2_label" maxlength="40" placeholder="Browse new games">
+          </div>
+          <div class="form-group">
+            <label>Second button link</label>
+            <input type="text" name="button2_url" maxlength="300">
+          </div>
+          <div class="form-group">
+            <label>Countdown target (Manila)</label>
+            <input type="datetime-local" name="countdown_at">
           </div>
           <div class="form-group">
             <label>Starts (Manila)</label>

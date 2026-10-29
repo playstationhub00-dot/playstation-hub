@@ -1,0 +1,60 @@
+<%#
+  Account comparison, laid out like the redesign. Weekly "from" prices come
+  from the catalogue. ₱199 and ₱249 are only the fallback. PS4 Primary shows
+  no price. "Choose your player" stays in the HTML for the old heading.
+%>
+<%
+  const hrDep = (promo && promo.deposit != null && promo.deposit !== '') ? Number(promo.deposit) : 100;
+  const hrLate = (promo && promo.late_fee_per_day != null && promo.late_fee_per_day !== '') ? Number(promo.late_fee_per_day) : 20;
+  const weekMin = (key) => {
+    const vals = (typeof games !== 'undefined' ? games : []).map(g => Number(g[key]) || 0).filter(p => p > 0);
+    return vals.length ? Math.min.apply(null, vals) : null;
+  };
+  const hrNt = weekMin('nt_price_7d') || home.prices.nonTrophy || 199;
+  const hrTr = weekMin('tr_price_7d') || home.prices.trophy || 249;
+%>
+<section class="hm-wrap hm-sec" id="players">
+  <div class="hr-sec-head">
+    <h2 class="hr-title"><span class="hr-mark">✕</span> Choose your account type</h2>
+    <p class="hr-sec-sub">Not sure? We'll help you pick on Messenger.</p>
+  </div>
+  <h2 class="hm-sr">Choose your player</h2>
+  <div class="hr-accounts">
+    <a class="hr-account hr-account-on" href="/browse">
+      <span class="hr-pop">Try before you pay</span>
+      <span class="hr-account-name">Non-Trophy</span>
+      <span class="hr-account-price">from ₱<%= hrNt %><span class="hr-per"> / week</span></span>
+      <ul class="hr-ticks">
+        <li>Plays on our account</li>
+        <li>Free 3-hour try before you pay</li>
+        <li>No deposit, no late fee</li>
+        <li class="hr-tick-no">Trophies don't go to your profile</li>
+      </ul>
+      <span class="hr-account-btn">Rent Non-Trophy</span>
+    </a>
+    <a class="hr-account" href="/browse">
+      <span class="hr-account-name">Trophy</span>
+      <span class="hr-account-price">from ₱<%= hrTr %><span class="hr-per"> / week</span></span>
+      <ul class="hr-ticks">
+        <li>Plays on your own profile</li>
+        <li>Trophies and saves stay yours</li>
+        <li>₱<%= hrDep %> refundable deposit</li>
+        <li class="hr-tick-no">No free try · ₱<%= hrLate %> per late day</li>
+      </ul>
+      <span class="hr-account-btn hr-account-btn-ghost">Rent Trophy</span>
+    </a>
+    <a class="hr-account" href="https://m.me/PlaystationHub00" target="_blank" rel="noopener">
+      <span class="hr-account-name">PS4 Primary</span>
+      <span class="hr-account-price"><b>For PS4 players</b></span>
+      <ul class="hr-ticks">
+        <li>Play on your own PSN account</li>
+        <li>Earn trophies on your profile</li>
+        <li>₱<%= hrDep %> refundable deposit</li>
+        <li class="hr-tick-no">No free try · ₱<%= hrLate %> per late day</li>
+      </ul>
+      <span class="hr-account-btn hr-account-btn-ghost">Ask about PS4 Primary</span>
+    </a>
+  </div>
+  <p class="hr-account-more">Want to keep a game for good? <% if (home.prices.buy) { %><a href="/buy">Buy from ₱<%= home.prices.buy %></a><% } else { %><a href="/buy">Buy a game</a><% } %> · <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy vs PS4 Primary guide</a></p>
+  <p class="hm-foot">You never give us your password — you sign our account into your console with a code from your own screen. <a href="/how-it-works">See how it works</a></p>
+</section>

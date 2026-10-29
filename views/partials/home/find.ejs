@@ -1,0 +1,39 @@
+<%#
+  Under the hero: the page H1 (hero text), the search, category chips, and
+  the trust line. The search heading stays in the HTML for the same query
+  the old strip answered. Locals: home, settings, featured.
+%>
+<%
+  const hmBase = settings.hero_text || {};
+  const hmCustom = (typeof siteTheme !== 'undefined' && siteTheme && siteTheme.headline) ? siteTheme.headline : null;
+  const hmText = hmCustom || hmBase;
+%>
+<section class="hr-find hm-wrap" id="find">
+  <% if (hmCustom) { %>
+  <h1 class="hm-tagline">PlayStation Hub · <%= hmText.line1 %> <span class="hm-hl"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
+  <% } else { %>
+  <h1 class="hm-tagline">PlayStation Hub · <%= hmText.line1 %> <span style="color:<%= hmText.highlight_color || '#F0A500' %>;"><%= hmText.highlight %></span> <%= hmText.line2 %></h1>
+  <% } %>
+  <div class="hr-search">
+    <%- include('../home-search', { featured, compact: true }) %>
+    <label class="hr-search-go" for="hsInput">Search</label>
+  </div>
+  <% if (home.powerUp) { %>
+  <a class="hm-power" href="/browse"><span class="hm-power-tag">Power-up</span><span class="hm-power-text">Rent <%= home.powerUp.days %> days → <b><%= home.powerUp.pct %>% off</b><%= home.powerUp.days === 30 ? ' while the monthly promo is on' : ', automatically' %></span><span class="hm-power-go">See games ›</span></a>
+  <% } %>
+  <nav class="hr-chips" aria-label="Quick picks">
+    <% if (home.newGames.length) { %><a href="#newReleasesSection">New releases</a><% } %>
+    <% if (specialDeals.length) { %><a href="#specialDealsSection">Deals</a><% } %>
+    <% if (home.prices.psplus || psplusPopular.length) { %><a href="#psplus">PS Plus</a><% } %>
+    <% if (upcoming.length) { %><a href="#comingSoon">Coming soon</a><% } %>
+    <a href="/browse?price=low">Under ₱<%= home.bands.low %></a>
+    <% if (home.hasPs4) { %><a href="/browse?console=ps4">Plays on PS4</a><% } %>
+    <% home.quickGenres.forEach(function (gn) { %><a href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %></a><% }) %>
+  </nav>
+  <ul class="hm-trust">
+    <% if (home.trust.renters) { %><li>✓ <%= home.trust.renters %> players</li><% } %>
+    <% if (home.trust.recommendPct != null) { %><li>✓ <%= home.trust.recommendPct %>% recommend us</li><% } %>
+    <li>✓ Ready in minutes</li>
+    <li>✓ No password needed</li>
+  </ul>
+</section>

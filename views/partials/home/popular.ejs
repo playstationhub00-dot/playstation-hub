@@ -1,0 +1,45 @@
+<%#
+  Top rented as a ranked list (first 6, the rest linked), beside the PS Plus
+  Deluxe card and category tiles. Locals: home, psplusPopular, psplusSlug.
+%>
+<section class="hm-wrap hm-sec" id="topRented">
+  <div class="hr-sec-head">
+    <h2 class="hr-title"><span class="hr-mark">□</span> Popular right now</h2>
+    <a class="hm-viewall" href="/browse">View all games ›</a>
+  </div>
+  <h2 class="hr-subhead">Top rented <span class="hm-sub">this month</span> <a class="hm-viewall" href="/browse?tab=most-rented">View all ›</a></h2>
+  <div class="hr-two">
+    <div class="hr-panel">
+      <% if (home.topRented.length) { %>
+      <ol class="hr-rank">
+        <% home.topRented.slice(0, 6).forEach(function (t, i) { %>
+        <li><a href="<%= seo.rentPath(t.game.title) %>"><span class="hr-rank-n"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="" width="42" height="42"><% } %><span class="hr-rank-t"><%= t.game.title %></span><% if (t.weekly) { %><span class="hr-rank-p">₱<%= t.weekly %></span><% } %></a></li>
+        <% }) %>
+      </ol>
+      <% } %>
+      <% if (home.topRented.length > 6) { %>
+      <p class="hr-also">Also rented: <% home.topRented.slice(6, 10).forEach(function (t, i) { %><% if (i) { %>, <% } %><a href="<%= seo.rentPath(t.game.title) %>"><%= t.game.title %></a><% }) %></p>
+      <% } %>
+    </div>
+    <div class="hr-psplus" id="psplus">
+      <span class="ann-banner-label">PS Plus Deluxe</span>
+      <h2 class="hm-title hm-title-plain">Hundreds of games, one rental</h2>
+      <p>Play any of them for the length of your rental.<% if (psplusPopular && psplusPopular.length) { %> <%= psplusPopular.slice(0, 3).map(function (row) { return row.title; }).join(', ') %> and more.<% } %></p>
+      <% if (home.prices.psplus) { %><p class="hr-psplus-price">from <b>₱<%= home.prices.psplus %></b> / week</p><% } %>
+      <a class="hm-btn" href="/ps-plus">See the games</a>
+      <a class="hr-psplus-rent" href="/ps-plus/rent">Rent PS Plus</a>
+      <% if (psplusSlug) { %><a href="/game/<%= psplusSlug %>">PS Plus on the game page</a><% } %>
+      <% if (psplusPopular && psplusPopular.length) { %>
+      <ul class="hr-ps-names">
+        <% psplusPopular.slice(0, 6).forEach(function (row) { %><li><a href="/ps-plus"><%= row.title %></a></li><% }) %>
+      </ul>
+      <% } %>
+      <nav class="hr-cats" aria-label="Categories">
+        <% home.quickGenres.forEach(function (gn) { %><a href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %><small>Browse genre</small></a><% }) %>
+        <% if (home.hasPs4) { %><a href="/browse?console=ps4">Plays on PS4<small>PS4 compatible</small></a><% } %>
+        <a href="/browse?price=low">Under ₱<%= home.bands.low %><small>Budget picks</small></a>
+        <% if (home.prices.buy) { %><a href="/buy">Buy<small>Keep it</small></a><% } %>
+      </nav>
+    </div>
+  </div>
+</section>

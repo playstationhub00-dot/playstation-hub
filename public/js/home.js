@@ -47,3 +47,16 @@
     }, 6000);
   }
 })();
+
+(function () {
+  function arm(hash, id) {
+    document.querySelectorAll('a[href="' + hash + '"]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        var box = document.getElementById(id);
+        if (box) box.checked = true;
+      });
+    });
+  }
+  arm('#comingSoon', 'hrTabSoon');
+  arm('#newReleasesSection', 'hrTabNew');
+})();

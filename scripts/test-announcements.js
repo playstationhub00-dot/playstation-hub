@@ -189,7 +189,7 @@ const TEST_PASSWORD = 'throwaway-' + Math.random().toString(36).slice(2);
 const prices = { nt_price_7d: 349, nt_price_30d: 799, tr_price_7d: 399, tr_price_30d: 899 };
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: TEST_PASSWORD,
-  migrations: ['theme-presets-2026-10-29', 'announcements-2026-10-29'],
+  migrations: ['theme-presets-2026-10-29', 'announcements-2026-10-29', 'homepage-redesign-2026-10-29'],
   nextAnnouncementId: 10,
   announcements: [
     { id: 1, enabled: true, title: 'Keep', text: 'Michael wrote this', place_bar: true, place_bell: true, place_banner: false, priority: 1, sort: 1, audience: 'all', device: 'all', bell_new_days: 0, updated_at: '2026-10-01T00:00', created_at: '2026-10-01T00:00' },
@@ -275,10 +275,11 @@ async function main() {
     const bellAt = body.indexOf('id="annBellBtn"');
     const navEnd = body.indexOf('</nav>');
     const bannerAt = body.indexOf('id="annBanner"');
-    const heroAt = body.indexOf('class="hm-top"');
+    const heroAt = body.indexOf('id="find"');
     assert.ok(barAt > 0 && barAt < navAt, 'bar above the header');
     assert.ok(bellAt > navAt && bellAt < navEnd, 'bell inside the header');
-    assert.ok(bannerAt > navEnd && bannerAt < heroAt, 'banner under the header and above the existing hero');
+    assert.ok(bannerAt > navEnd && bannerAt < heroAt, 'banner under the header and above the search');
+    assert.ok(!body.includes('id="hmBanner"'));
     assert.ok(body.indexOf('Read this first') < body.indexOf('Michael wrote this'));
     assert.ok(body.includes('class="ann-bar-slide on'));
     assert.ok(body.includes('ann-dev-mobile'));
@@ -292,7 +293,7 @@ async function main() {
     assert.ok(body.indexOf('Pinned note') < body.indexOf('Later note'));
     assert.ok(body.includes('>NEW<'));
     ['Ended offer', 'Not started', 'Hidden offer', 'This ended'].forEach(t => assert.ok(!body.includes(t), t));
-    assert.ok(body.includes('class="hm-top"'));
+    assert.ok(body.includes('id="find"'));
     assert.ok(body.includes('Rent the Latest'));
   });
 

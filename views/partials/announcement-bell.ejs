@@ -17,7 +17,7 @@
       <% bellItems.forEach(function (item) {
         const bellHref = item.buttonUrl || '/announcements';
       %>
-      <a class="ann-bell-item ann-aud-<%= item.audience %> ann-dev-<%= item.device %>" href="<%= bellHref %>"<% if (item.external) { %> target="_blank" rel="noopener"<% } %> data-seen="<%= item.dismissKey %>" data-audience="<%= item.audience %>" data-device="<%= item.device %>">
+      <a class="ann-bell-item ann-aud-<%= item.audience %> ann-dev-<%= item.device %>" href="<%= bellHref %>"<% if (item.external) { %> target="_blank" rel="noopener"<% } %> data-seen="<%= item.dismissKey %>" data-audience="<%= item.audience %>" data-device="<%= item.device %>"<% if (item.bind) { %> data-ann-bind="<%= item.bind %>"<% } %><% if (item.promoId) { %> data-promo-id="<%= item.promoId %>"<% } %>>
         <span class="ann-bell-ico" aria-hidden="true">
           <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } else { %><%= item.icon || '📣' %><% } %>
         </span>
