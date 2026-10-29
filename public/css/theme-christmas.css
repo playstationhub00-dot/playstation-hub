@@ -1,0 +1,67 @@
+/* Christmas theme (Admin → Settings → Holiday theme). Loaded only while it is
+   on, by views/partials/head.ejs, which also sets html[data-theme]. Every rule
+   is scoped to html[data-theme="christmas"] and only adds on top of style.css,
+   so switching the theme off leaves the site exactly as it was. */
+
+/* The site's accent (buttons, links, prices) turns Christmas red. Text on it
+   stays dark (style.css), so the light red keeps it readable. */
+html[data-theme="christmas"] { --ps-blue: #ef4444; --ph-snow: rgba(255, 255, 255, 0.75); }
+html[data-theme="christmas"] .btn-primary:hover { background: #f87171; }
+
+html[data-theme="christmas"] .announcement-bar {
+  background: linear-gradient(90deg, #14532d 0%, #b91c1c 50%, #14532d 100%);
+  background-size: 200% auto;
+}
+
+html[data-theme="christmas"] body:not(.light-mode) { background-color: #06120b; }
+html[data-theme="christmas"] body:not(.light-mode) nav { background: #0a1f12; box-shadow: inset 0 -1px 0 rgba(22, 163, 74, 0.4); }
+html[data-theme="christmas"] body:not(.light-mode) footer { background: #0a1f12; border-top-color: rgba(22, 163, 74, 0.4); }
+html[data-theme="christmas"] body.light-mode { --ph-snow: rgba(148, 163, 184, 0.7); }
+html[data-theme="christmas"] body.light-mode nav { box-shadow: inset 0 -2px 0 #86efac; }
+html[data-theme="christmas"] body.light-mode footer { border-top: 2px solid #fca5a5; }
+
+html[data-theme="christmas"] nav .logo { position: relative; }
+html[data-theme="christmas"] nav .logo::after {
+  content: '🎄';
+  position: absolute; right: -1.5rem; top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem; line-height: 1;
+  pointer-events: none;
+}
+
+/* A thin holiday outline on every catalogue card and the game page poster. */
+html[data-theme="christmas"] .game-card,
+html[data-theme="christmas"] .gd-cover { outline: 1px solid rgba(239, 68, 68, 0.55); outline-offset: -1px; }
+
+/* Snow: tiny dots drawn with gradients (nothing to download) in a fixed layer
+   under the page's content. It never takes a click, and shows only where the
+   page background does. */
+html[data-theme="christmas"] body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, var(--ph-snow), transparent),
+    radial-gradient(2px 2px at 140px 90px, var(--ph-snow), transparent),
+    radial-gradient(3px 3px at 230px 170px, var(--ph-snow), transparent),
+    radial-gradient(2px 2px at 320px 40px, var(--ph-snow), transparent),
+    radial-gradient(1.5px 1.5px at 90px 200px, var(--ph-snow), transparent);
+  background-size: 360px 240px;
+  animation: phSnowFall 22s linear infinite;
+}
+
+@keyframes phSnowFall {
+  from { background-position: 0 0; }
+  to { background-position: 80px 240px; }
+}
+
+/* Phones get sparser snow. */
+@media (max-width: 640px) {
+  html[data-theme="christmas"] body::before { background-size: 300px 320px; }
+  html[data-theme="christmas"] nav .logo::after { right: -1.2rem; font-size: 0.95rem; }
+}
+
+/* Visitors who ask for less motion get no snow at all. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="christmas"] body::before { animation: none; display: none; }
+}

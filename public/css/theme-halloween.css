@@ -1,0 +1,66 @@
+/* Halloween theme (Admin → Settings → Holiday theme). Loaded only while it is
+   on, by views/partials/head.ejs, which also sets html[data-theme]. Every rule
+   is scoped to html[data-theme="halloween"] and only adds on top of style.css,
+   so switching the theme off leaves the site exactly as it was. */
+
+/* The site's accent (buttons, links, prices) turns pumpkin orange. */
+html[data-theme="halloween"] { --ps-blue: #f97316; }
+html[data-theme="halloween"] .btn-primary:hover { background: #fb923c; }
+
+html[data-theme="halloween"] .announcement-bar {
+  background: linear-gradient(90deg, #4c1d95 0%, #c2410c 50%, #4c1d95 100%);
+  background-size: 200% auto;
+}
+
+html[data-theme="halloween"] body:not(.light-mode) { background-color: #0c0712; }
+html[data-theme="halloween"] body:not(.light-mode) nav { background: #120a1c; box-shadow: inset 0 -1px 0 rgba(124, 58, 237, 0.35); }
+html[data-theme="halloween"] body:not(.light-mode) footer { background: #120a1c; border-top-color: rgba(124, 58, 237, 0.35); }
+html[data-theme="halloween"] body.light-mode nav { box-shadow: inset 0 -2px 0 #fdba74; }
+html[data-theme="halloween"] body.light-mode footer { border-top: 2px solid #fdba74; }
+
+html[data-theme="halloween"] nav .logo { position: relative; }
+html[data-theme="halloween"] nav .logo::after {
+  content: '🎃';
+  position: absolute; right: -1.5rem; top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.1rem; line-height: 1;
+  pointer-events: none;
+}
+
+/* A thin holiday outline on every catalogue card and the game page poster. */
+html[data-theme="halloween"] .game-card,
+html[data-theme="halloween"] .gd-cover { outline: 1px solid rgba(249, 115, 22, 0.55); outline-offset: -1px; }
+
+/* Two bats drifting across, in a fixed layer under the page's content: it
+   never takes a click, and shows only where the page background does. */
+html[data-theme="halloween"] body::before,
+html[data-theme="halloween"] body::after {
+  content: '🦇';
+  position: fixed; z-index: -1;
+  pointer-events: none;
+  font-size: 1.6rem; opacity: 0.55;
+  animation: phBatFly 26s linear infinite;
+}
+html[data-theme="halloween"] body::before { top: 18vh; left: -3rem; }
+html[data-theme="halloween"] body::after { top: 62vh; left: -3rem; font-size: 1.2rem; animation-duration: 34s; animation-delay: -12s; }
+
+@keyframes phBatFly {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(28vw, -4vh); }
+  50% { transform: translate(55vw, 3vh); }
+  75% { transform: translate(80vw, -3vh); }
+  100% { transform: translate(110vw, 0); }
+}
+
+/* Phones get one smaller bat. */
+@media (max-width: 640px) {
+  html[data-theme="halloween"] body::after { display: none; }
+  html[data-theme="halloween"] body::before { font-size: 1.2rem; }
+  html[data-theme="halloween"] nav .logo::after { right: -1.2rem; font-size: 0.95rem; }
+}
+
+/* Visitors who ask for less motion get no bats at all. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="halloween"] body::before,
+  html[data-theme="halloween"] body::after { animation: none; display: none; }
+}

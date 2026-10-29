@@ -60,6 +60,12 @@
 <% if (verify) { %>
 <meta name="google-site-verification" content="<%= verify %>">
 <% } %>
+<% if (typeof siteTheme !== 'undefined' && siteTheme) { %>
+<%# Holiday theme (Admin → Settings → Holiday theme, lib/site-theme.js): set
+    before the page paints, so every public page picks it up. %>
+<script>document.documentElement.setAttribute('data-theme', '<%= siteTheme %>');</script>
+<link rel="stylesheet" href="/css/theme-<%= siteTheme %>.css?v=<%= assetV %>">
+<% } %>
 <% blocks.forEach(function (block) { %>
 <script type="application/ld+json"><%- seoApi.jsonLdScript(block) %></script>
 <% }); %>

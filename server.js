@@ -53,6 +53,7 @@ const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
 const slotHistory = require('./lib/slot-history');
+const siteTheme = require('./lib/site-theme');
 const extensions = require('./lib/extensions');
 const refunds = require('./lib/refunds');
 const rentAudit = require('./lib/rent-audit');
@@ -755,6 +756,8 @@ app.use((req, res, next) => {
   res.locals.ga4Id = seo.cleanGa4Id(process.env.GA4_MEASUREMENT_ID);
   res.locals.googleSiteVerification = seo.cleanSiteVerification(process.env.GOOGLE_SITE_VERIFICATION);
   res.locals.seoNoindex = req.path.startsWith('/admin');
+  // The holiday theme views/partials/head.ejs loads; never on admin pages.
+  res.locals.siteTheme = siteTheme.themeFor(req.path, getSiteSettings());
   // The floating support chat is for customers. Admin pages include the
   // public footer on a few edit screens, and the widget does not belong there.
   res.locals.showSupportChat = !req.path.startsWith('/admin');
@@ -8690,6 +8693,13 @@ app.post('/admin/settings/alerts', requireAuth, (req, res) => {
   telegram.ALERT_KINDS.forEach(k => { next[k] = req.body['alert_' + k] === 'on'; });
   db.set('site_settings.alerts', next).write();
   res.redirect('/admin?tab=orders&msg=alerts_saved');
+});
+
+// Holiday theme for the public site (lib/site-theme.js). An unknown value
+// saves as '' — no theme.
+app.post('/admin/settings/theme', requireAuth, (req, res) => {
+  db.set('site_settings.theme', siteTheme.normalizeTheme(req.body.theme)).write();
+  res.redirect('/admin?tab=settings&msg=theme_saved');
 });
 
 app.post('/admin/settings/payment-reminders', requireAuth, (req, res) => {
