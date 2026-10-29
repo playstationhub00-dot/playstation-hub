@@ -1,0 +1,167 @@
+// Bar rotation, banner slides, and the What's New bell. First paint is handled
+// by the inline script in the announcement partial (dismiss + audience), so
+// this file only wires clicks. It does nothing on pages without those nodes.
+(function () {
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function read(name) {
+    try { return JSON.parse(localStorage.getItem(name) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function write(name, value) {
+    try { localStorage.setItem(name, JSON.stringify(value)); } catch (e) {}
+  }
+  function pick(root, selector) {
+    if (!root || !window.phAnnOk) return;
+    var slides = root.querySelectorAll(selector);
+    var dots = root.querySelectorAll('.ann-dot');
+    var first = -1;
+    for (var i = 0; i < slides.length; i++) {
+      var show = window.phAnnOk(slides[i]);
+      slides[i].classList.toggle('on', false);
+      slides[i].setAttribute('aria-hidden', 'true');
+      if (dots[i]) dots[i].hidden = !show;
+      if (show && first < 0) first = i;
+    }
+    if (first < 0) {
+      root.setAttribute('hidden', '');
+      return;
+    }
+    root.removeAttribute('hidden');
+    slides[first].classList.add('on');
+    slides[first].removeAttribute('aria-hidden');
+    if (dots[first]) dots[first].classList.add('on');
+    for (var d = 0; d < dots.length; d++) if (d !== first) dots[d].classList.remove('on');
+  }
+  window.phAnnPick = pick;
+
+  function showIndex(root, selector, index) {
+    var slides = root.querySelectorAll(selector);
+    var dots = root.querySelectorAll('.ann-dot');
+    var chosen = null;
+    for (var i = 0; i < slides.length; i++) {
+      var on = i === index && window.phAnnOk(slides[i]);
+      slides[i].classList.toggle('on', on);
+      if (on) {
+        slides[i].removeAttribute('aria-hidden');
+        chosen = slides[i];
+      } else {
+        slides[i].setAttribute('aria-hidden', 'true');
+      }
+      if (dots[i]) dots[i].classList.toggle('on', on);
+    }
+    if (!chosen) pick(root, selector);
+  }
+
+  function eligibleIndexes(root, selector) {
+    var slides = root.querySelectorAll(selector);
+    var out = [];
+    for (var i = 0; i < slides.length; i++) if (window.phAnnOk(slides[i])) out.push(i);
+    return out;
+  }
+
+  function wireRotator(root, selector) {
+    if (!root) return;
+    pick(root, selector);
+    var close = root.querySelector('.announcement-close, .ann-banner-close');
+    if (close) close.addEventListener('click', function () {
+      var current = root.querySelector(selector + '.on');
+      if (!current) return;
+      var key = current.getAttribute('data-dismiss') || '';
+      var map = read('phAnnDismiss');
+      if (key) map[key] = 1;
+      write('phAnnDismiss', map);
+      pick(root, selector);
+    });
+    root.querySelectorAll('.ann-dot').forEach(function (dot) {
+      dot.addEventListener('click', function () {
+        showIndex(root, selector, parseInt(dot.getAttribute('data-index'), 10) || 0);
+      });
+    });
+    if (reduced) return;
+    var timer = setInterval(function () {
+      if (root.hasAttribute('hidden')) return;
+      var ids = eligibleIndexes(root, selector);
+      if (ids.length < 2) return;
+      var slides = root.querySelectorAll(selector);
+      var current = 0;
+      for (var i = 0; i < slides.length; i++) if (slides[i].classList.contains('on')) current = i;
+      var pos = ids.indexOf(current);
+      showIndex(root, selector, ids[(pos + 1) % ids.length]);
+    }, 6000);
+    root.addEventListener('mouseenter', function () { clearInterval(timer); timer = null; });
+  }
+
+  wireRotator(document.getElementById('announcementBar'), '.ann-bar-slide');
+  wireRotator(document.getElementById('annBanner'), '.ann-banner-slide');
+
+  var promo = document.querySelector('#announcementBar .ann-bar-slide.on[data-promo-id]');
+  if (promo && promo.getAttribute('data-promo-id')) {
+    try {
+      fetch('/api/track/promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: promo.getAttribute('data-promo-id') })
+      });
+    } catch (e) {}
+  }
+
+  var btn = document.getElementById('annBellBtn');
+  var panel = document.getElementById('annBellPanel');
+  if (!btn || !panel) return;
+
+  function seenMap() { return read('phAnnSeen'); }
+  function refreshDot() {
+    var seen = seenMap();
+    var unread = false;
+    panel.querySelectorAll('[data-seen]').forEach(function (el) {
+      if (el.offsetParent === null && window.getComputedStyle(el).display === 'none') return;
+      if (!seen[el.getAttribute('data-seen')]) unread = true;
+    });
+    var dot = document.getElementById('annBellDot');
+    if (dot) dot.hidden = !unread;
+    btn.classList.toggle('has-unread', unread);
+    btn.setAttribute('aria-label', unread ? "What's new, unread announcements" : "What's new");
+  }
+  refreshDot();
+
+  function closePanel(focusBtn) {
+    if (panel.hidden) return;
+    panel.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    if (focusBtn) btn.focus();
+  }
+  function openPanel() {
+    panel.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    panel.focus();
+  }
+  btn.addEventListener('click', function () {
+    if (panel.hidden) openPanel(); else closePanel(false);
+  });
+  document.addEventListener('click', function (e) {
+    if (panel.hidden) return;
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    closePanel(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) {
+      e.preventDefault();
+      closePanel(true);
+    }
+  });
+  var mark = document.getElementById('annMarkRead');
+  if (mark) mark.addEventListener('click', function () {
+    var seen = seenMap();
+    panel.querySelectorAll('[data-seen]').forEach(function (el) { seen[el.getAttribute('data-seen')] = 1; });
+    write('phAnnSeen', seen);
+    refreshDot();
+  });
+  panel.querySelectorAll('[data-seen]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var seen = seenMap();
+      seen[el.getAttribute('data-seen')] = 1;
+      write('phAnnSeen', seen);
+      refreshDot();
+    });
+  });
+})();

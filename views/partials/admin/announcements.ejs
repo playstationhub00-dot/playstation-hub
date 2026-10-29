@@ -1,0 +1,297 @@
+<%#
+  Settings → Announcements. One entry can feed the top bar, the What's New
+  bell, and the homepage banner. The Loyalty promo row stays bound to
+  Loyalty → Promos until someone types their own words.
+%>
+<%
+  const annRows = (announcements || []).slice().sort(function (a, b) {
+    return ((a.sort || 0) - (b.sort || 0)) || ((a.id || 0) - (b.id || 0));
+  });
+  const annNow = (typeof announcementNow !== 'undefined' && announcementNow) ? announcementNow : '';
+  const liveOffer = (typeof liveBanner !== 'undefined' && liveBanner && liveBanner.title) ? liveBanner : null;
+  function annOn(a) { return a.enabled !== undefined ? a.enabled !== false : a.active !== false; }
+  function annStatus(a) {
+    if (!annOn(a)) return 'Off';
+    if (a.starts_at && annNow && a.starts_at > annNow) return 'Scheduled';
+    if (a.ends_at && annNow && a.ends_at <= annNow) return 'Ended';
+    return 'Live';
+  }
+%>
+<div class="adm-card" id="sec-announcements">
+  <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(240,165,0,0.15);">📣</div>
+      <div>
+        <div class="sa-title">Announcements</div>
+        <div class="sa-desc">Top bar, the What's New bell, and a homepage banner. One entry can feed any of them.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body">
+    <p style="color:#aaa;font-size:0.85rem;line-height:1.5;margin:0 0 1rem;">
+      Times are Philippines time. An entry hides itself at the end time. The bar shows the three highest-priority messages.
+      The promo code from Themes shares that same bar, so it does not sit on top of it.
+      Leave the Loyalty row's title and text blank and it keeps showing whatever is live under Loyalty → Promos.
+    </p>
+
+    <% if (!annRows.length) { %>
+    <p style="color:#666;font-size:0.85rem;">No announcements yet.</p>
+    <% } %>
+
+    <% annRows.forEach(function (ann, index) {
+      const on = annOn(ann);
+      const bound = ann.bind === 'promo-banner';
+    %>
+    <div style="border:1px solid #2a2a2a;border-radius:12px;padding:0.9rem 1rem;margin-bottom:0.9rem;background:#0e0e0e;">
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+        <strong style="color:#fff;"><%= ann.title || ann.text || (bound ? 'Loyalty promo' : 'Untitled') %></strong>
+        <span style="font-size:0.72rem;font-weight:800;color:#111;background:<%= annStatus(ann) === 'Live' ? '#22c55e' : (annStatus(ann) === 'Off' || annStatus(ann) === 'Ended' ? '#555' : '#f0a500') %>;border-radius:99px;padding:0.1rem 0.5rem;"><%= annStatus(ann) %></span>
+        <% if (bound) { %><span style="font-size:0.72rem;font-weight:700;color:#9ecbff;">Follows Loyalty → Promos</span><% } %>
+        <% if (ann.place_bar) { %><span style="font-size:0.72rem;color:#ccc;">Bar</span><% } %>
+        <% if (ann.place_bell) { %><span style="font-size:0.72rem;color:#ccc;">Bell<% if (ann.bell_pin) { %> · pinned<% } %></span><% } %>
+        <% if (ann.place_banner) { %><span style="font-size:0.72rem;color:#ccc;">Banner</span><% } %>
+        <span style="margin-left:auto;display:flex;gap:0.35rem;">
+          <% if (index > 0) { %>
+          <form method="POST" action="/admin/announcements/move" style="display:inline;">
+            <input type="hidden" name="id" value="<%= ann.id %>">
+            <input type="hidden" name="dir" value="up">
+            <button type="submit" class="btn btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;" aria-label="Move up">Up</button>
+          </form>
+          <% } %>
+          <% if (index < annRows.length - 1) { %>
+          <form method="POST" action="/admin/announcements/move" style="display:inline;">
+            <input type="hidden" name="id" value="<%= ann.id %>">
+            <input type="hidden" name="dir" value="down">
+            <button type="submit" class="btn btn-outline" style="padding:0.25rem 0.55rem;font-size:0.75rem;" aria-label="Move down">Down</button>
+          </form>
+          <% } %>
+        </span>
+      </div>
+
+      <form method="POST" action="/admin/announcements/save" enctype="multipart/form-data">
+        <input type="hidden" name="id" value="<%= ann.id %>">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Show on the site</label>
+            <label class="toggle-switch"><input type="checkbox" name="enabled" <%= on ? 'checked' : '' %>><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group">
+            <label>Where it shows</label>
+            <label style="display:flex;gap:0.8rem;flex-wrap:wrap;font-size:0.85rem;color:#ddd;">
+              <span><input type="checkbox" name="place_bar" <%= ann.place_bar ? 'checked' : '' %>> Top bar</span>
+              <span><input type="checkbox" name="place_bell" <%= ann.place_bell ? 'checked' : '' %>> What's New bell</span>
+              <span><input type="checkbox" name="place_banner" <%= ann.place_banner ? 'checked' : '' %>> Homepage banner</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Label <span style="color:#555;font-size:0.75rem;">(banner chip, e.g. Now open)</span></label>
+            <input type="text" name="label" maxlength="32" value="<%= ann.label || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" maxlength="120" value="<%= ann.title || '' %>" placeholder="<%= bound ? 'Blank keeps the live promo' : '' %>">
+          </div>
+          <div class="form-group full">
+            <label>Text</label>
+            <textarea name="text" rows="2" maxlength="400" placeholder="<%= bound ? 'Blank keeps the live promo' : 'Short message' %>"><%= ann.text || '' %></textarea>
+          </div>
+          <div class="form-group">
+            <label>Button label</label>
+            <input type="text" name="button_label" maxlength="40" value="<%= ann.button_label || '' %>" placeholder="Learn more">
+          </div>
+          <div class="form-group">
+            <label>Button link</label>
+            <input type="text" name="button_url" maxlength="300" value="<%= ann.button_url || '' %>" placeholder="/promos or https://">
+          </div>
+          <div class="form-group">
+            <label>Starts <span style="color:#555;font-size:0.75rem;">(Manila, optional)</span></label>
+            <input type="datetime-local" name="starts_at" value="<%= ann.starts_at || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Ends <span style="color:#555;font-size:0.75rem;">(Manila, optional — hidden at this time)</span></label>
+            <input type="datetime-local" name="ends_at" value="<%= ann.ends_at || '' %>">
+          </div>
+          <div class="form-group">
+            <label>Priority <span style="color:#555;font-size:0.75rem;">(higher shows first)</span></label>
+            <input type="number" name="priority" min="-100" max="100" value="<%= ann.priority || 0 %>">
+          </div>
+          <div class="form-group">
+            <label>Icon <span style="color:#555;font-size:0.75rem;">(optional)</span></label>
+            <input type="text" name="icon" maxlength="8" value="<%= ann.icon || '' %>" placeholder="📣">
+          </div>
+          <div class="form-group">
+            <label>Who sees it</label>
+            <select name="audience">
+              <% ['all', 'new', 'returning'].forEach(function (key) { %>
+              <option value="<%= key %>"<%= (ann.audience || 'all') === key ? ' selected' : '' %>><%= key === 'all' ? 'Everyone' : (key === 'new' ? 'New visitors' : 'Returning visitors') %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Screen</label>
+            <select name="device">
+              <% ['all', 'desktop', 'mobile'].forEach(function (key) { %>
+              <option value="<%= key %>"<%= (ann.device || 'all') === key ? ' selected' : '' %>><%= key === 'all' ? 'Desktop and mobile' : (key === 'desktop' ? 'Desktop only' : 'Mobile only') %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>NEW tag for how many days <span style="color:#555;font-size:0.75rem;">(bell, 0 hides it)</span></label>
+            <input type="number" name="bell_new_days" min="0" max="60" value="<%= ann.bell_new_days != null ? ann.bell_new_days : 0 %>">
+          </div>
+          <div class="form-group">
+            <label>Pin to the top of What's New</label>
+            <label class="toggle-switch"><input type="checkbox" name="bell_pin" <%= ann.bell_pin ? 'checked' : '' %>><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group">
+            <label>Image <span style="color:#555;font-size:0.75rem;">(banner and bell)</span></label>
+            <% if (ann.image) { %>
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem;">
+              <img src="<%= ann.image %>" alt="" style="height:48px;width:86px;object-fit:cover;border-radius:6px;">
+              <label style="color:#e74c3c;font-size:0.82rem;"><input type="checkbox" name="image_clear"> Remove</label>
+            </div>
+            <% } %>
+            <input type="file" name="image" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label>Mobile image <span style="color:#555;font-size:0.75rem;">(separate crop)</span></label>
+            <% if (ann.image_mobile) { %>
+            <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem;">
+              <img src="<%= ann.image_mobile %>" alt="" style="height:48px;width:86px;object-fit:cover;border-radius:6px;">
+              <label style="color:#e74c3c;font-size:0.82rem;"><input type="checkbox" name="image_mobile_clear"> Remove</label>
+            </div>
+            <% } %>
+            <input type="file" name="image_mobile" accept="image/*">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:0.6rem;display:flex;gap:0.5rem;align-items:center;">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+      <form method="POST" action="/admin/announcements/delete/<%= ann.id %>" style="margin-top:0.45rem;" onsubmit="return confirm('Delete this announcement?');">
+        <button type="submit" class="btn btn-outline" style="border-color:#7f1d1d;color:#ef4444;padding:0.35rem 0.8rem;font-size:0.8rem;">Delete</button>
+      </form>
+
+      <div class="ann-admin-preview" style="margin-top:0.8rem;">
+        <div style="font-size:0.72rem;font-weight:800;letter-spacing:0.06em;color:#888;text-transform:uppercase;margin-bottom:0.4rem;">Preview</div>
+        <% if (ann.place_bar || bound) { %>
+        <div class="announcement-bar" style="position:relative;border-radius:8px;margin-bottom:0.45rem;">
+          <span class="ann-bar-copy">
+            <% if (ann.label) { %><span class="ann-bar-chip"><%= ann.label %></span><% } %>
+            <% if (bound && !ann.title && !ann.text) { %>
+              <strong><%= liveOffer ? liveOffer.title : 'Live promo' %></strong><% if (liveOffer && liveOffer.text) { %> — <%= liveOffer.text %><% } %>
+            <% } else { %>
+              <% if (ann.title) { %><strong><%= ann.title %></strong><% } %><% if (ann.title && ann.text) { %> — <% } %><%= ann.text %>
+            <% } %>
+          </span>
+          <% if (ann.button_url || bound) { %><span class="ann-bar-more" style="text-decoration:underline;font-weight:800;"><%= ann.button_label || 'Learn more' %></span><% } %>
+        </div>
+        <% } %>
+        <% if (ann.place_banner && (ann.image || ann.title || ann.text)) { %>
+        <div class="ann-banner" style="padding:0;">
+          <div class="ann-banner-slide on" style="min-height:140px;">
+            <% if (ann.image) { %><div class="ann-banner-media" style="min-height:140px;"><img src="<%= ann.image %>" alt=""></div><% } %>
+            <div class="ann-banner-copy" style="padding:16px;">
+              <% if (ann.label) { %><span class="ann-banner-label"><%= ann.label %></span><% } %>
+              <% if (ann.title) { %><div class="ann-banner-title" style="font-size:1.25rem;"><%= ann.title %></div><% } %>
+              <% if (ann.text) { %><p class="ann-banner-text"><%= ann.text %></p><% } %>
+            </div>
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </div>
+    <% }) %>
+
+    <div style="border:1px dashed #333;border-radius:12px;padding:0.9rem 1rem;">
+      <div style="font-weight:800;color:#fff;margin-bottom:0.7rem;">New announcement</div>
+      <form method="POST" action="/admin/announcements/save" enctype="multipart/form-data">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Show on the site</label>
+            <label class="toggle-switch"><input type="checkbox" name="enabled" checked><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group">
+            <label>Where it shows</label>
+            <label style="display:flex;gap:0.8rem;flex-wrap:wrap;font-size:0.85rem;color:#ddd;">
+              <span><input type="checkbox" name="place_bar" checked> Top bar</span>
+              <span><input type="checkbox" name="place_bell" checked> What's New bell</span>
+              <span><input type="checkbox" name="place_banner"> Homepage banner</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label>Label</label>
+            <input type="text" name="label" maxlength="32" placeholder="Now open">
+          </div>
+          <div class="form-group">
+            <label>Title</label>
+            <input type="text" name="title" maxlength="120">
+          </div>
+          <div class="form-group full">
+            <label>Text *</label>
+            <textarea name="text" rows="2" maxlength="400" placeholder="Short message customers will read"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Button label</label>
+            <input type="text" name="button_label" maxlength="40" placeholder="Learn more">
+          </div>
+          <div class="form-group">
+            <label>Button link</label>
+            <input type="text" name="button_url" maxlength="300" placeholder="/browse">
+          </div>
+          <div class="form-group">
+            <label>Starts (Manila)</label>
+            <input type="datetime-local" name="starts_at">
+          </div>
+          <div class="form-group">
+            <label>Ends (Manila)</label>
+            <input type="datetime-local" name="ends_at">
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <input type="number" name="priority" min="-100" max="100" value="0">
+          </div>
+          <div class="form-group">
+            <label>Icon</label>
+            <input type="text" name="icon" maxlength="8">
+          </div>
+          <div class="form-group">
+            <label>Who sees it</label>
+            <select name="audience">
+              <option value="all">Everyone</option>
+              <option value="new">New visitors</option>
+              <option value="returning">Returning visitors</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Screen</label>
+            <select name="device">
+              <option value="all">Desktop and mobile</option>
+              <option value="desktop">Desktop only</option>
+              <option value="mobile">Mobile only</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>NEW tag for days</label>
+            <input type="number" name="bell_new_days" min="0" max="60" value="7">
+          </div>
+          <div class="form-group">
+            <label>Pin to the top of What's New</label>
+            <label class="toggle-switch"><input type="checkbox" name="bell_pin"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="form-group">
+            <label>Image</label>
+            <input type="file" name="image" accept="image/*">
+          </div>
+          <div class="form-group">
+            <label>Mobile image</label>
+            <input type="file" name="image_mobile" accept="image/*">
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top:0.7rem;">
+          <button type="submit" class="btn btn-primary">Add announcement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

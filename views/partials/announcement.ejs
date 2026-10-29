@@ -1,40 +1,97 @@
 <%- include('theme-strip') %>
-<% const activeAnnouncements = (announcements || []).filter(a => a.active && a.text); %>
-<% if (activeAnnouncements.length > 0) { %>
-<div class="announcement-bar" id="announcementBar">
-  <span id="announcementText"><%= activeAnnouncements[0].text %></span>
-  <% if (activeAnnouncements.length > 1) { %>
-    <span id="announcementPager" style="opacity:0.6;font-size:0.78rem;margin-left:0.5rem;">1 / <%= activeAnnouncements.length %></span>
+<%
+  const annFeed = (typeof announcementFeed !== 'undefined' && announcementFeed) ? announcementFeed : { bar: [], bell: [], banner: [], archive: [] };
+  const annBar = annFeed.bar || [];
+%>
+<script>
+(function () {
+  try {
+    var ret = localStorage.getItem('ph_visit') === '1';
+    document.documentElement.setAttribute('data-visitor', ret ? 'returning' : 'new');
+    if (!ret) localStorage.setItem('ph_visit', '1');
+  } catch (e) {}
+  window.phAnnOk = function (el) {
+    if (!el) return false;
+    var aud = el.getAttribute('data-audience') || 'all';
+    var dev = el.getAttribute('data-device') || 'all';
+    var vis = document.documentElement.getAttribute('data-visitor') || 'new';
+    if (aud !== 'all' && aud !== vis) return false;
+    var mobile = window.matchMedia('(max-width: 820px)').matches;
+    if (dev === 'mobile' && !mobile) return false;
+    if (dev === 'desktop' && mobile) return false;
+    var key = el.getAttribute('data-dismiss') || '';
+    if (!key) return true;
+    try {
+      var map = JSON.parse(localStorage.getItem('phAnnDismiss') || '{}');
+      if (map[key]) return false;
+    } catch (err) {}
+    return true;
+  };
+  try {
+    var map = JSON.parse(localStorage.getItem('phAnnDismiss') || '{}');
+    var css = '';
+    Object.keys(map).forEach(function (k) {
+      if (!map[k]) return;
+      var safe = String(k).replace(/[^a-zA-Z0-9@._:-]/g, '');
+      if (safe) css += '[data-dismiss="' + safe + '"]{display:none!important}';
+    });
+    if (css) {
+      var style = document.createElement('style');
+      style.appendChild(document.createTextNode(css));
+      document.head.appendChild(style);
+    }
+  } catch (e2) {}
+})();
+</script>
+<% if (annBar.length) { %>
+<div class="announcement-bar" id="announcementBar" role="region" aria-label="Announcements">
+  <% if (annBar.length > 1) { %>
+  <div class="ann-bar-dots">
+    <% annBar.forEach(function (slide, i) { %>
+    <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="Announcement <%= i + 1 %> of <%= annBar.length %>"></button>
+    <% }) %>
+  </div>
   <% } %>
-  <button class="announcement-close" onclick="dismissAnnouncement()" title="Dismiss">✕</button>
+  <% annBar.forEach(function (slide, i) { %>
+  <div class="ann-bar-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (slide.bind) { %> data-ann-bind="<%= slide.bind %>"<% } %><% if (slide.promoId) { %> data-promo-id="<%= slide.promoId %>"<% } %><% if (i !== 0) { %> aria-hidden="true"<% } %>>
+    <% if (slide.icon) { %><span class="ann-bar-icon" aria-hidden="true"><%= slide.icon %></span><% } %>
+    <span class="ann-bar-copy">
+      <% if (slide.kind === 'theme') {
+        const code = slide.code || '';
+        const at = code ? slide.text.indexOf(code) : -1;
+      %>
+      <span class="theme-promo-strip"><% if (at === -1) { %><%= slide.text %><% } else { %><%= slide.text.slice(0, at) %><b><%= code %></b><%= slide.text.slice(at + code.length) %><% } %></span>
+      <% } else { %>
+        <% if (slide.label) { %><span class="ann-bar-chip"><%= slide.label %></span><% } %>
+        <% if (slide.title) { %><strong><%= slide.title %></strong><% } %>
+        <% if (slide.title && slide.text) { %> — <% } %><%= slide.text %>
+      <% } %>
+    </span>
+    <% if (slide.buttonUrl) { %>
+    <a class="ann-bar-more" href="<%= slide.buttonUrl %>"<% if (slide.external) { %> target="_blank" rel="noopener"<% } %>><%= slide.buttonLabel || 'Learn more' %></a>
+    <% } %>
+  </div>
+  <% }) %>
+  <button type="button" class="announcement-close" aria-label="Dismiss announcement">&times;</button>
 </div>
 <script>
-(function(){
-  const items = <%- JSON.stringify(activeAnnouncements.map(a => a.text)).replace(/</g, '\\u003c') %>;
-  let idx = 0;
-  const textEl = document.getElementById('announcementText');
-  const pagerEl = document.getElementById('announcementPager');
-  if (items.length > 1) {
-    setInterval(function() {
-      idx = (idx + 1) % items.length;
-      textEl.style.opacity = '0';
-      setTimeout(function() {
-        textEl.textContent = items[idx];
-        textEl.style.opacity = '1';
-        if (pagerEl) pagerEl.textContent = (idx+1) + ' / ' + items.length;
-      }, 300);
-    }, 5000);
-    textEl.style.transition = 'opacity 0.3s';
+(function () {
+  var root = document.getElementById('announcementBar');
+  if (!root || !window.phAnnOk) return;
+  var slides = root.querySelectorAll('.ann-bar-slide');
+  var dots = root.querySelectorAll('.ann-dot');
+  var first = -1;
+  for (var i = 0; i < slides.length; i++) {
+    var ok = window.phAnnOk(slides[i]);
+    slides[i].classList.remove('on');
+    slides[i].setAttribute('aria-hidden', 'true');
+    if (ok && first < 0) first = i;
+    if (dots[i]) dots[i].hidden = !ok;
   }
-  function dismissAnnouncement() {
-    document.getElementById('announcementBar').style.display = 'none';
-    sessionStorage.setItem('announcementDismissed', '1');
-  }
-  window.dismissAnnouncement = dismissAnnouncement;
-  if (sessionStorage.getItem('announcementDismissed') === '1') {
-    document.getElementById('announcementBar').style.display = 'none';
-  }
+  if (first < 0) { root.setAttribute('hidden', ''); return; }
+  slides[first].classList.add('on');
+  slides[first].removeAttribute('aria-hidden');
+  if (dots[first]) dots[first].classList.add('on');
 })();
 </script>
 <% } %>
-<%- include('promo-banner') %>

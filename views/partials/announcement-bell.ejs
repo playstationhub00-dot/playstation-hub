@@ -1,0 +1,60 @@
+<%
+  const bellFeed = (typeof announcementFeed !== 'undefined' && announcementFeed) ? announcementFeed : null;
+  const bellItems = bellFeed && bellFeed.bell ? bellFeed.bell : [];
+%>
+<% if (bellItems.length) { %>
+<div class="ann-bell">
+  <button type="button" class="ann-bell-btn has-unread" id="annBellBtn" aria-label="What's new, unread announcements" aria-expanded="false" aria-controls="annBellPanel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+    <span class="ann-bell-dot" id="annBellDot"></span>
+  </button>
+  <div class="ann-bell-panel" id="annBellPanel" hidden role="region" aria-label="What's new" tabindex="-1">
+    <div class="ann-bell-head">
+      What's New
+      <button type="button" id="annMarkRead">Mark all as read</button>
+    </div>
+    <div class="ann-bell-list">
+      <% bellItems.forEach(function (item) {
+        const bellHref = item.buttonUrl || '/announcements';
+      %>
+      <a class="ann-bell-item ann-aud-<%= item.audience %> ann-dev-<%= item.device %>" href="<%= bellHref %>"<% if (item.external) { %> target="_blank" rel="noopener"<% } %> data-seen="<%= item.dismissKey %>" data-audience="<%= item.audience %>" data-device="<%= item.device %>">
+        <span class="ann-bell-ico" aria-hidden="true">
+          <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } else { %><%= item.icon || '📣' %><% } %>
+        </span>
+        <span class="ann-bell-body">
+          <span class="ann-bell-title"><%= item.title || item.text %><% if (item.isNew) { %> <span class="ann-new">NEW</span><% } %></span>
+          <% if (item.title && item.text) { %><span class="ann-bell-text"><%= item.text %></span><% } %>
+          <% if (item.dateLabel) { %><span class="ann-bell-date"><%= item.dateLabel %></span><% } %>
+        </span>
+      </a>
+      <% }) %>
+    </div>
+    <div class="ann-bell-foot">
+      <a href="/announcements">See all announcements ›</a>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  try {
+    var seen = JSON.parse(localStorage.getItem('phAnnSeen') || '{}');
+    var unread = false;
+    document.querySelectorAll('#annBellPanel [data-seen]').forEach(function (el) {
+      var aud = el.getAttribute('data-audience') || 'all';
+      var vis = document.documentElement.getAttribute('data-visitor') || 'new';
+      if (aud !== 'all' && aud !== vis) return;
+      if (!seen[el.getAttribute('data-seen')]) unread = true;
+    });
+    if (!unread) {
+      var dot = document.getElementById('annBellDot');
+      var btn = document.getElementById('annBellBtn');
+      if (dot) dot.hidden = true;
+      if (btn) {
+        btn.classList.remove('has-unread');
+        btn.setAttribute('aria-label', "What's new");
+      }
+    }
+  } catch (e) {}
+})();
+</script>
+<% } %>

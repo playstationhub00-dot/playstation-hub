@@ -39,6 +39,7 @@ const remoteImage = require('./lib/remote-image');
 const imageVariants = require('./lib/image-variants');
 const brandLogo = require('./lib/brand-logo');
 const themes = require('./lib/themes');
+const announcementsLib = require('./lib/announcements');
 const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
@@ -668,7 +669,7 @@ app.use(session({
 }));
 
 // ── Visitor tracking middleware ───────────────────────────────────────────────
-const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/guides': 'Guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary': 'Trophy vs Non-Trophy', '/guides/ps-plus-deluxe-vs-renting': 'PS Plus vs Renting', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos' };
+const PAGE_LABELS = { '/': 'Home', '/browse': 'Browse Games', '/ps-plus': 'PS Plus Deluxe', '/how-it-works': 'How It Works', '/guides': 'Guides', '/guides/trophy-vs-non-trophy-vs-ps4-primary': 'Trophy vs Non-Trophy', '/guides/ps-plus-deluxe-vs-renting': 'PS Plus vs Renting', '/faq': 'FAQ', '/terms': 'Terms of Service', '/privacy': 'Privacy Policy', '/data-deletion': 'Data Deletion', '/promos': 'Promos', '/announcements': 'Announcements' };
 
 // Appends a row to a lowdb array and trims it to its newest `cap` rows —
 // lowdb rewrites the whole file per write, so every growing log needs a ceiling.
@@ -780,7 +781,7 @@ app.use((req, res, next) => {
   // on res.locals.siteTheme as an object. Do not replace it with the holiday
   // string from site_settings.theme (lib/site-theme.js). That string used to
   // win this middleware and made every page load public/css/theme-*.css
-  // instead of the scheduled presets.
+  // instead of the scheduled presets. The announcement bar reads this object.
   // The floating support chat is for customers. Admin pages include the
   // public footer on a few edit screens, and the widget does not belong there.
   res.locals.showSupportChat = !req.path.startsWith('/admin');
@@ -789,6 +790,13 @@ app.use((req, res, next) => {
     res.locals.livePromos = ctx.live;
     res.locals.monthlyPromo = promos.monthlyDiscountLive(ctx.live);
     res.locals.bannerPromo = ctx.banner;
+    res.locals.announcementNow = themes.manilaWall(new Date());
+    res.locals.announcementFeed = announcementsLib.present({
+      entries: db.get('announcements').value() || [],
+      now: new Date(),
+      banner: ctx.banner,
+      themePromo: res.locals.siteTheme && res.locals.siteTheme.promo
+    });
     res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
     res.locals.promoCatalogLines = (gameId) => promos.catalogLines(ctx.live, gameId);
     res.locals.promoCheckoutLines = (gameId, copy) => promos.checkoutLines(ctx.live, gameId, copy);
@@ -977,6 +985,23 @@ try {
   }
 } catch (e) {
   console.log('[themes] migration failed:', e.message);
+}
+
+// One-time announcements. Copies the existing top-bar text into the new
+// entries and adds one row bound to the live promo banner. A handful of
+// fields — nothing that waits on Mongo. The flag stops a later boot from
+// putting the seed back over an edit.
+try {
+  const announcementSeed = announcementsLib.apply(db.getState(), new Date());
+  if (announcementSeed.write) {
+    db.set('announcements', announcementSeed.announcements)
+      .set('nextAnnouncementId', announcementSeed.nextAnnouncementId)
+      .set('migrations', announcementSeed.migrations)
+      .write();
+    console.log('[announcements] migrated bar and offers banner');
+  }
+} catch (e) {
+  console.log('[announcements] migration failed:', e.message);
 }
 
 // The four slug-typo families only (assasins, calisto, berseker, triology).
@@ -1296,17 +1321,7 @@ function resolveSlotDays(game) {
 }
 
 function getAnnouncements() {
-  // Migrate legacy single announcement to list on first access
-  let list = db.get('announcements').value();
-  if (!list || list.length === 0) {
-    const legacy = db.get('announcement').value();
-    if (legacy && legacy.text) {
-      const migrated = [{ id: 1, text: legacy.text, active: legacy.active !== false }];
-      db.set('announcements', migrated).set('nextAnnouncementId', 2).write();
-      list = migrated;
-    }
-  }
-  return list || [];
+  return db.get('announcements').value() || [];
 }
 function getAnnouncement() { return db.get('announcement').value(); }
 function getSiteSettings() {
@@ -1733,6 +1748,14 @@ app.get('/guides/ps-plus-deluxe-vs-renting', (req, res) => renderGuide(res, 'psp
 
 app.get('/faq', (req, res) => {
   res.render('faq', { announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() });
+});
+
+app.get('/announcements', (req, res) => {
+  res.render('announcements', {
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
 });
 
 app.get('/promos', (req, res) => {
@@ -6145,6 +6168,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     own: gameDiscount.hasOwnDiscount(g, 7) || gameDiscount.hasOwnDiscount(g, 30),
     base30: g.nt_price_30d || g.tr_price_30d || 0
   })).sort((a, b) => a.title.localeCompare(b.title));
+  res.locals.liveBanner = promoContext().banner;
+  res.locals.announcementNow = themes.manilaWall(new Date());
   res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
@@ -6569,31 +6594,37 @@ app.post('/admin/upcoming/release/:id', requireAuth, asyncRoute(async (req, res)
   }
 }));
 
-app.post('/admin/announcement', requireAuth, (req, res) => {
-  const { text, active } = req.body;
-  db.set('announcement', { text: text || '', active: active === 'on' }).write();
-  res.redirect('/admin?msg=announcement');
-});
-
-app.post('/admin/announcements/add', requireAuth, (req, res) => {
-  const { text, active } = req.body;
-  if (!text || !text.trim()) return res.redirect('/admin?msg=error');
-  const id = db.get('nextAnnouncementId').value();
-  db.get('announcements').push({ id, text: text.trim(), active: active === 'on' }).write();
-  db.set('nextAnnouncementId', id + 1).write();
-  res.redirect('/admin?msg=announcement');
-});
-
-app.post('/admin/announcements/edit/:id', requireAuth, (req, res) => {
-  const { text, active } = req.body;
-  db.get('announcements').find({ id: parseInt(req.params.id) })
-    .assign({ text: text || '', active: active === 'on' }).write();
-  res.redirect('/admin?msg=announcement');
+app.post('/admin/announcements/save', requireAuth, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'image_mobile', maxCount: 1 }]), async (req, res) => {
+  try {
+    const images = {};
+    const imageFile = req.files && req.files.image && req.files.image[0];
+    const mobileFile = req.files && req.files.image_mobile && req.files.image_mobile[0];
+    if (imageFile) images.image = await processUploadedImage(imageFile, 1600);
+    if (mobileFile) images.image_mobile = await processUploadedImage(mobileFile, 1200);
+    const result = announcementsLib.save(db.get('announcements').value(), req.body, {
+      nextId: db.get('nextAnnouncementId').value() || 1,
+      images,
+      now: new Date()
+    });
+    if (!result.ok) return res.redirect('/admin?tab=settings&msg=announcements_invalid#sec-announcements');
+    db.set('announcements', result.entries).set('nextAnnouncementId', result.nextId).write();
+    res.redirect('/admin?tab=settings&msg=announcements_saved#sec-announcements');
+  } catch (e) {
+    console.error('[announcements] save failed:', e.message);
+    res.redirect('/admin?tab=settings&msg=announcements_invalid#sec-announcements');
+  }
 });
 
 app.post('/admin/announcements/delete/:id', requireAuth, (req, res) => {
-  db.get('announcements').remove({ id: parseInt(req.params.id) }).write();
-  res.redirect('/admin?msg=announcement');
+  const next = announcementsLib.remove(db.get('announcements').value(), req.params.id);
+  db.set('announcements', next).write();
+  res.redirect('/admin?tab=settings&msg=announcements_saved#sec-announcements');
+});
+
+app.post('/admin/announcements/move', requireAuth, (req, res) => {
+  const next = announcementsLib.move(db.get('announcements').value(), req.body.id, req.body.dir);
+  db.set('announcements', next).write();
+  res.redirect('/admin?tab=settings&msg=announcements_saved#sec-announcements');
 });
 
 app.post('/admin/add', upload.fields([{ name: 'cover_image', maxCount: 1 }, { name: 'gallery', maxCount: 10 }]), requireAuth, async (req, res) => {

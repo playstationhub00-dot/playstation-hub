@@ -401,7 +401,7 @@ function switchTab(name) {
     psn_upcoming_unreachable:'games', psn_upcoming_nothing:'games', psn_upcoming_busy:'games', psn_upcoming_cancelled:'games',
     game_released:'orders', release_partial:'orders', release_failed:'games', release_in_progress:'games',
     cat_added:'games', cat_updated:'games', cat_deleted:'games',
-    announcement:'content',
+    announcement:'settings', announcements_saved:'settings', announcements_invalid:'settings',
     catalog_applied:'psplus', catalog_expired:'psplus', catalog_unreachable:'psplus', catalog_nothing:'psplus', catalog_saved:'psplus', catalog_error:'psplus',
     monthly_covers_fetched:'psplus', monthly_covers_nothing:'psplus',
     psplus_added:'psplus', psplus_updated:'psplus', psplus_deleted:'psplus',
@@ -460,6 +460,8 @@ function switchTab(name) {
     ].filter(Boolean).join(' · ') || 'nothing changed';
     messages.loyalty_saved = '🎁 Loyalty offers saved';
     messages.themes_saved = '🎨 Theme settings saved';
+    messages.announcements_saved = '📣 Announcement saved';
+    messages.announcements_invalid = 'Announcement not saved — add a title or text, and keep the end after the start';
     messages.themes_failed = '❌ Could not save themes — try again';
     messages.offers_saved = '📣 Promo saved';
     messages.offers_deleted = '🗑 Promo deleted';

@@ -1,0 +1,56 @@
+<%
+  const bannerFeed = (typeof announcementFeed !== 'undefined' && announcementFeed) ? announcementFeed : null;
+  const bannerSlides = bannerFeed && bannerFeed.banner ? bannerFeed.banner : [];
+%>
+<% if (bannerSlides.length) { %>
+<section class="ann-banner" id="annBanner" aria-label="Highlights">
+  <% bannerSlides.forEach(function (slide, i) { %>
+  <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-dismiss="<%= slide.dismissKey %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (i !== 0) { %> aria-hidden="true"<% } %>>
+    <% if (slide.image || slide.imageMobile) { %>
+    <div class="ann-banner-media">
+      <picture>
+        <% if (slide.imageMobile) { %><source media="(max-width: 820px)" srcset="<%= slide.imageMobile %>"><% } %>
+        <img src="<%= slide.image || slide.imageMobile %>" alt="">
+      </picture>
+    </div>
+    <% } %>
+    <div class="ann-banner-copy">
+      <% if (slide.label) { %><span class="ann-banner-label"><%= slide.label %></span><% } %>
+      <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %></h2><% } %>
+      <% if (slide.text) { %><p class="ann-banner-text"><%= slide.text %></p><% } %>
+      <% if (slide.buttonUrl) { %>
+      <a class="ann-banner-cta" href="<%= slide.buttonUrl %>"<% if (slide.external) { %> target="_blank" rel="noopener"<% } %>><%= slide.buttonLabel || 'Learn more' %> →</a>
+      <% } %>
+    </div>
+  </article>
+  <% }) %>
+  <% if (bannerSlides.length > 1) { %>
+  <div class="ann-banner-dots">
+    <% bannerSlides.forEach(function (slide, i) { %>
+    <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="Banner <%= i + 1 %> of <%= bannerSlides.length %>"></button>
+    <% }) %>
+  </div>
+  <% } %>
+  <button type="button" class="ann-banner-close" aria-label="Dismiss announcement">&times;</button>
+</section>
+<script>
+(function () {
+  var root = document.getElementById('annBanner');
+  if (!root || !window.phAnnOk) return;
+  var slides = root.querySelectorAll('.ann-banner-slide');
+  var dots = root.querySelectorAll('.ann-dot');
+  var first = -1;
+  for (var i = 0; i < slides.length; i++) {
+    var ok = window.phAnnOk(slides[i]);
+    slides[i].classList.remove('on');
+    slides[i].setAttribute('aria-hidden', 'true');
+    if (ok && first < 0) first = i;
+    if (dots[i]) dots[i].hidden = !ok;
+  }
+  if (first < 0) { root.setAttribute('hidden', ''); return; }
+  slides[first].classList.add('on');
+  slides[first].removeAttribute('aria-hidden');
+  if (dots[first]) dots[first].classList.add('on');
+})();
+</script>
+<% } %>
