@@ -123,3 +123,23 @@
   .ppc-sheet-cover { max-height: 45vh; }
   .ppc-sheet-cover img { max-height: 45vh; }
 }
+
+/* Hover, same as the homepage, Browse and Buy cards: the card lifts 6px, the
+   cover zooms to 106% and the card takes the theme-accent outline. Covers the
+   Most played posters, the catalog tiles and the monthly cards (replacing
+   their old 3px rise and gold glow). Mouse/trackpad only; keyboard focus gets
+   the outline; reduced motion keeps them still. */
+#ppcMostPlayed .game-card, #ppcGrid .ppc-card, body .psplus-month-card { transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
+#ppcMostPlayed .gc2-cover, #ppcGrid .ppc-cover, .psplus-month-cover { transition: transform 0.35s ease; }
+@media (hover: hover) {
+  #ppcMostPlayed .game-card:hover, #ppcGrid .ppc-card:hover, body .psplus-month-card:hover { transform: translateY(-6px); border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+  #ppcGrid .ppc-card:hover { box-shadow: 0 0 0 2px var(--theme-btn, #F5B800); }
+  #ppcMostPlayed .game-card:hover .gc2-cover, #ppcGrid .ppc-card:hover .ppc-cover, .psplus-month-card:hover .psplus-month-cover { transform: scale(1.06); }
+}
+#ppcMostPlayed .game-card:focus-visible, body .psplus-month-card:focus-visible { outline: none; border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+#ppcGrid .ppc-card:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--theme-btn, #F5B800); }
+@media (prefers-reduced-motion: reduce) {
+  #ppcMostPlayed .game-card, #ppcGrid .ppc-card, body .psplus-month-card, #ppcMostPlayed .gc2-cover, #ppcGrid .ppc-cover, .psplus-month-cover { transition: none; }
+  #ppcMostPlayed .game-card:hover, #ppcGrid .ppc-card:hover, body .psplus-month-card:hover { transform: none; }
+  #ppcMostPlayed .game-card:hover .gc2-cover, #ppcGrid .ppc-card:hover .ppc-cover, .psplus-month-card:hover .psplus-month-cover { transform: none; }
+}
