@@ -165,7 +165,8 @@ async function main() {
   });
   await okAsync('PS Plus card with its weekly price and most-played strip', async () => {
     const ps = slice(home, 'id="psplus"', 'id="reviewsSection"');
-    assert.ok(ps.includes('from <b>₱159</b> / week') && ps.includes('>God of War</a>'));
+    assert.ok(ps.includes('from <b>₱159</b> / week') && ps.includes('<span>God of War</span></a>'));
+    assert.ok(ps.includes('class="hr-ps-band"') && ps.includes('/gow.png'), 'logo band and the game cover');
     assert.ok(ps.includes('href="/ps-plus/rent"') && ps.includes('href="/ps-plus"'));
   });
   await okAsync('Choose your player: catalogue prices, the deposit, and no PS4 price', async () => {

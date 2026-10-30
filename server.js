@@ -2476,7 +2476,7 @@ app.get('/', (req, res) => {
     bands: getBrowseBands(),
     hasPs4: all.some(g => g.platform === 'PS4' || g.platform === 'PS4/PS5')
   };
-  res.render('index', Object.assign({ home, featured, specialDeals, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
+  res.render('index', Object.assign({ home, featured, specialDeals, games: all, upcoming: upcomingForLoop, psplusPopular, psplusPrices, psplusSlug: homePsplusSlug, psplusLogo: homePsplusGame ? homePsplusGame.cover_image || null : null, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: s, promo: s.promo, priceCategories: getPriceCategories(), accountSummaryMap: buildAccountSummaryMap(), activeRenters, gamesPurchased, newReleases, payViaGateway: !!process.env.PAYMONGO_SECRET_KEY },
     homeReviews));
 });
 

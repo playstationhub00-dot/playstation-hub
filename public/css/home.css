@@ -516,6 +516,32 @@ body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
 .hr-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
 .hr-cats a { display: block; background: var(--bg-dark, #101010); border: 1px solid var(--border, #2a2a2a); border-radius: 12px; padding: 12px; text-decoration: none; color: var(--text-primary, #fff); font-weight: 800; }
 .hr-cats small { display: block; color: var(--text-secondary, #8a8a8a); font-weight: 500; margin-top: 3px; }
+/* PS Plus Deluxe card: a PlayStation-blue logo band with the price, a strip of
+   covers from the owner's PS Plus list, the two actions, then smaller category tiles */
+.hr-two > .hr-psplus { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.hr-ps-band { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: #0a1f4a; border-bottom: 3px solid #F5B800; }
+.hr-ps-logo { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; flex: none; }
+.hr-ps-brand { display: flex; flex-direction: column; line-height: 1.1; }
+.hr-ps-brand small { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #c9d6f5; }
+.hr-ps-brand b { font-size: 1.45rem; font-weight: 800; color: #F5B800; }
+.hr-psplus .hr-ps-band .hr-psplus-price { margin: 0 0 0 auto; text-align: right; color: #c9d6f5; font-size: 0.85rem; }
+.hr-psplus .hr-ps-band .hr-psplus-price b { color: #fff; font-size: 1.5rem; }
+.hr-ps-body { flex: 1; display: flex; flex-direction: column; padding: 16px 18px 18px; }
+.hr-psplus .hr-ps-body > .hm-title { margin: 0; }
+.hr-psplus .hr-ps-sub { margin: 4px 0 12px; font-size: 0.9rem; }
+.hr-ps-covers { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.hr-ps-covers a { position: relative; display: block; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; background: #1a1a1a; border: 1px solid #2a2a2a; text-decoration: none; color: #fff; }
+.hr-ps-covers img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s ease; }
+.hr-ps-covers span { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 5px 4px; font-size: 0.66rem; font-weight: 700; line-height: 1.2; background: linear-gradient(transparent, rgba(0, 0, 0, 0.85)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (hover: hover) { .hr-ps-covers a:hover { border-color: var(--theme-btn, #F5B800); } .hr-ps-covers a:hover img { transform: scale(1.06); } }
+.hr-ps-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.hr-psplus .hr-ps-acts .hm-btn { margin: 0; }
+.hr-ps-ghost { border: 1px solid var(--border, #3a3a3a); border-radius: 10px; padding: 11px 18px; color: var(--text-primary, #fff); text-decoration: none; font-weight: 700; }
+.hr-ps-ghost:hover { border-color: var(--theme-btn, #F5B800); }
+.hr-psplus .hr-cats { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-top: auto; padding-top: 16px; }
+.hr-psplus .hr-cats a { padding: 9px 10px; font-size: 0.85rem; border-radius: 10px; }
+.hr-psplus .hr-cats small { font-size: 0.7rem; }
+@media (max-width: 600px) { .hr-ps-covers { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hr-ps-covers li:nth-child(n+7) { display: none; } .hr-ps-brand b { font-size: 1.2rem; } }
 .hr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
 .hr-stat { background: var(--bg-card, #141414); border: 1px solid var(--border, #262626); border-radius: 16px; padding: 18px; text-align: center; }
 .hr-stat b { display: block; font-size: clamp(1.6rem, 3vw, 2.1rem); color: var(--theme-btn, #F5B800); }

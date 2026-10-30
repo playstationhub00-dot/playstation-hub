@@ -1,6 +1,7 @@
 <%#
   Top rented as a ranked list (all ten, rows stretch to fill), beside the PS Plus
-  Deluxe card and category tiles. Locals: home, psplusPopular, psplusSlug.
+  Deluxe card: a logo band with the price, a strip of game covers, then the
+  category tiles. Locals: home, psplusPopular, psplusLogo.
 %>
 <section class="hm-wrap hm-sec" id="topRented">
   <div class="hr-sec-head">
@@ -19,24 +20,30 @@
       <% } %>
     </div>
     <div class="hr-psplus" id="psplus">
-      <span class="ann-banner-label">PS Plus Deluxe</span>
+      <div class="hr-ps-band">
+        <% if (typeof psplusLogo !== 'undefined' && psplusLogo) { %><img class="hr-ps-logo" <%- imgThumb(psplusLogo) %> alt="PS Plus Deluxe" width="48" height="48"><% } else { %><svg class="hr-ps-logo" viewBox="0 0 44 44" width="48" height="48" aria-hidden="true"><rect x="16" y="3" width="12" height="38" rx="2" fill="#F5B800"/><rect x="3" y="16" width="38" height="12" rx="2" fill="#F5B800"/><rect x="16" y="16" width="12" height="12" fill="#D99A00"/></svg><% } %>
+        <div class="hr-ps-brand"><small>PlayStation Plus</small><b>Deluxe</b></div>
+        <% if (home.prices.psplus) { %><p class="hr-psplus-price">from <b>₱<%= home.prices.psplus %></b> / week</p><% } %>
+      </div>
+      <div class="hr-ps-body">
       <h2 class="hm-title hm-title-plain">Hundreds of games, one rental</h2>
-      <p>Play any of them for the length of your rental.<% if (psplusPopular && psplusPopular.length) { %> <%= psplusPopular.slice(0, 3).map(function (row) { return row.title; }).join(', ') %> and more.<% } %></p>
-      <% if (home.prices.psplus) { %><p class="hr-psplus-price">from <b>₱<%= home.prices.psplus %></b> / week</p><% } %>
-      <a class="hm-btn" href="/ps-plus">See the games</a>
-      <a class="hr-psplus-rent" href="/ps-plus/rent">Rent PS Plus</a>
-      <% if (psplusSlug) { %><a href="/game/<%= psplusSlug %>">PS Plus on the game page</a><% } %>
+      <p class="hr-ps-sub">Play any of them for the length of your rental.</p>
       <% if (psplusPopular && psplusPopular.length) { %>
-      <ul class="hr-ps-names">
-        <% psplusPopular.slice(0, 6).forEach(function (row) { %><li><a href="/ps-plus"><%= row.title %></a></li><% }) %>
+      <ul class="hr-ps-covers" aria-label="Games on PS Plus Deluxe">
+        <% psplusPopular.slice(0, psplusPopular.length >= 10 ? 10 : 5).forEach(function (row) { %><li><a href="/ps-plus"><% if (row.cover_image) { %><img <%- imgCard(row.cover_image) %> alt="" loading="lazy" decoding="async"><% } %><span><%= row.title %></span></a></li><% }) %>
       </ul>
       <% } %>
+      <div class="hr-ps-acts">
+        <a class="hm-btn" href="/ps-plus/rent">Rent PS Plus Deluxe</a>
+        <a class="hr-ps-ghost" href="/ps-plus">See all games</a>
+      </div>
       <nav class="hr-cats" aria-label="Categories">
         <% home.quickGenres.forEach(function (gn) { %><a href="/browse?genre=<%= encodeURIComponent(gn) %>"><%= gn %><small>Browse genre</small></a><% }) %>
         <% if (home.hasPs4) { %><a href="/browse?console=ps4">Plays on PS4<small>PS4 compatible</small></a><% } %>
         <a href="/browse?price=low">Under ₱<%= home.bands.low %><small>Budget picks</small></a>
         <% if (home.prices.buy) { %><a href="/buy">Buy<small>Keep it</small></a><% } %>
       </nav>
+      </div>
     </div>
   </div>
 </section>
