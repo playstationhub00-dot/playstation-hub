@@ -383,9 +383,26 @@ body .hr-tile:focus-within { border-color: var(--theme-btn, #F5B800); box-shadow
 .hr-ps-names { display: flex; flex-wrap: wrap; gap: 8px 14px; list-style: none; margin: 0; padding: 0; }
 .hr-ps-names a { color: var(--theme-accent-text, var(--accent, #F5B800)); }
 .hr-tiles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.8rem; }
-.hr-quotes { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.hr-quotes li { background: var(--bg-card, #141414); border: 1px solid var(--border, #262626); border-radius: 14px; padding: 14px; }
+/* Reviews marquee: each row holds its reviews twice and slides by one copy's
+   width, so the loop is seamless. Hover or focus pauses it; reduced motion
+   turns it into a plain swipeable row. */
+.hr-mq-count { margin: 0 0 10px; color: var(--text-secondary, #a8a8a8); font-size: 0.9rem; }
+.hr-mq-count b { color: var(--text-primary, #fff); }
+.hr-quotes { margin: 0 0 1rem; display: flex; flex-direction: column; gap: 12px; }
+.hr-mq { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
+.hr-mq-track { display: flex; width: max-content; animation: hr-mq var(--mq-dur, 40s) linear infinite; }
+.hr-mq-rev .hr-mq-track { animation-direction: reverse; }
+.hr-mq:hover .hr-mq-track, .hr-mq:focus-within .hr-mq-track { animation-play-state: paused; }
+.hr-mq ul { list-style: none; margin: 0; padding: 0 12px 0 0; display: flex; gap: 12px; }
+@keyframes hr-mq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.hr-quotes li { width: 280px; flex: none; display: flex; flex-direction: column; justify-content: space-between; background: var(--bg-card, #141414); border: 1px solid var(--border, #262626); border-radius: 14px; padding: 14px; }
 .hr-quotes blockquote { margin: 0 0 0.6rem; color: var(--text-primary, #fff); }
+@media (max-width: 600px) { .hr-quotes li { width: 230px; font-size: 0.9rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .hr-mq { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .hr-mq-track { animation: none; }
+  .hr-mq-dup { display: none; }
+}
 .hr-quotes cite { color: var(--text-secondary, #a8a8a8); font-style: normal; font-weight: 700; }
 .hr-allfaqs a { color: var(--theme-accent-text, var(--accent, #F5B800)); font-weight: 800; }
 .hr-cta { text-align: center; padding: 2.5rem 1rem 3rem; }

@@ -1,9 +1,9 @@
 <%#
-  Stats, up to three published reviews, four questions, and the guide chips.
+  Stats, every published review in a sliding marquee, four questions, and the guide chips.
   JSON-LD still uses the full homepage FAQ list from the head.
 %>
 <%
-  const hrQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); }).slice(0, 3);
+  const hrQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); });
   const hrFaqs = (faqItems || []).slice(0, 4);
   const hmStart = [home.prices.nonTrophy, home.prices.trophy].filter(Boolean);
 %>
@@ -18,15 +18,35 @@
     <div class="hr-stat"><b><%= games.length %></b><span>games to play</span></div>
     <% if (hmStart.length) { %><div class="hr-stat"><b>₱<%= Math.min.apply(null, hmStart) %></b><span>starting price</span></div><% } %>
   </div>
-  <% if (hrQuotes.length) { %>
-  <ul class="hr-quotes">
-    <% hrQuotes.forEach(function (r) { %>
-    <li>
-      <blockquote>“<%= r.text %>”</blockquote>
-      <cite>👍 <%= reviewDisplayName(r) %></cite>
-    </li>
+  <% if (hrQuotes.length) {
+    // Six or more reviews split into two rows that slide in opposite directions.
+    const hrRows = hrQuotes.length >= 6 ? [hrQuotes.filter(function (r, i) { return i % 2 === 0; }), hrQuotes.filter(function (r, i) { return i % 2 === 1; })] : [hrQuotes];
+  %>
+  <% if (home.trust.recommendPct != null) { %><p class="hr-mq-count"><b><%= hrQuotes.length %></b> player review<%= hrQuotes.length === 1 ? '' : 's' %></p><% } %>
+  <div class="hr-quotes">
+    <% hrRows.forEach(function (row, ri) {
+      // Each half of the track is at least six cards wide so a short row never
+      // leaves a gap; the track slides by exactly one half.
+      const reps = Math.ceil(6 / row.length);
+      const copies = [];
+      for (let k = 0; k < reps * 2; k++) copies.push(k);
+    %>
+    <div class="hr-mq<%= ri ? ' hr-mq-rev' : '' %>" style="--mq-dur: <%= Math.max(30, row.length * reps * 7) %>s">
+      <div class="hr-mq-track">
+        <% copies.forEach(function (copy) { %>
+        <ul<%- copy ? ' aria-hidden="true" class="hr-mq-dup"' : '' %>>
+          <% row.forEach(function (r) { %>
+          <li>
+            <blockquote>“<%= r.text %>”</blockquote>
+            <cite>👍 <%= reviewDisplayName(r) %></cite>
+          </li>
+          <% }) %>
+        </ul>
+        <% }) %>
+      </div>
+    </div>
     <% }) %>
-  </ul>
+  </div>
   <% } %>
   <h2 class="hm-sr">Questions</h2>
   <div class="faq-list">
