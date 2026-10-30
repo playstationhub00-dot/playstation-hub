@@ -2469,7 +2469,7 @@ app.get('/', (req, res) => {
       if (line && line.days === 30 && !promos.monthlyDiscountLive(promoContext().live)) return null;
       return line;
     })(),
-    trust: homeView.trust(reviewRules.backedRecommend(reviewRules.uniqueReviews(db.get('reviews').value() || [])), homeReviews.renterCount, { reviews: homeReviews.reviews.length }),
+    trust: homeView.trust(reviewRules.backedRecommend(reviewRules.uniqueReviews(db.get('reviews').value() || [])), reviewRules.renterMilestone(reviewRules.countTransactions(getCustomers())), { reviews: homeReviews.reviews.length }),
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,

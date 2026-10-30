@@ -313,6 +313,16 @@ check('renterMilestone survives zero and rubbish input', () => {
   assert.deepStrictEqual(reviews.renterMilestone('abc'), { n: 0, plus: false });
 });
 
+check('countTransactions counts every delivered rental or purchase, not people', () => {
+  assert.strictEqual(reviews.countTransactions([
+    cust({ id: 1, customer_name: 'Ram Avila', status: 'done' }),
+    cust({ id: 2, customer_name: 'Ram Avila', status: 'renting' }),
+    cust({ id: 3, customer_name: 'Ram Avila', status: 'bought' }),
+    cust({ id: 4, customer_name: 'B Reserved', status: 'reserved' })
+  ]), 3);
+  assert.strictEqual(reviews.countTransactions(null), 0);
+});
+
 check('countRenters ignores blank names and bad input', () => {
   assert.strictEqual(reviews.countRenters([cust({ customer_name: '' }), cust({ customer_name: '   ' })]), 0);
   assert.strictEqual(reviews.countRenters([]), 0);
