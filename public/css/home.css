@@ -558,7 +558,15 @@ body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
 .hr-psplus .hr-cats { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-top: auto; padding-top: 16px; }
 .hr-psplus .hr-cats a { padding: 9px 10px; font-size: 0.85rem; border-radius: 10px; }
 .hr-psplus .hr-cats small { font-size: 0.7rem; }
-@media (max-width: 600px) { .hr-ps-covers { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hr-ps-covers li:nth-child(n+7) { display: none; } .hr-ps-brand b { font-size: 1.2rem; } }
+@media (max-width: 600px) {
+  .hr-ps-covers { grid-template-columns: repeat(3, minmax(0, 1fr)); } .hr-ps-covers li:nth-child(n+7) { display: none; } .hr-ps-brand b { font-size: 1.2rem; }
+  /* Keep "from ₱X / week" on one line in phone webviews; very narrow screens drop it to its own row. */
+  .hr-ps-band { flex-wrap: wrap; gap: 10px; padding: 14px; }
+  .hr-ps-logo { width: 40px; height: 40px; }
+  .hr-ps-brand small { font-size: 0.64rem; letter-spacing: 0.06em; white-space: nowrap; }
+  .hr-psplus .hr-ps-band .hr-psplus-price { white-space: nowrap; font-size: 0.78rem; }
+  .hr-psplus .hr-ps-band .hr-psplus-price b { font-size: 1.2rem; }
+}
 .hr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 14px; }
 .hr-stat { background: var(--bg-card, #141414); border: 1px solid var(--border, #262626); border-radius: 16px; padding: 18px; text-align: center; }
 .hr-stat b { display: block; font-size: clamp(1.6rem, 3vw, 2.1rem); color: var(--theme-btn, #F5B800); }
@@ -632,6 +640,7 @@ body.home2 .hm-trust li { font-weight: 600; }
 }
 @media (max-width: 820px) {
   .hr-stats { grid-template-columns: 1fr 1fr; }
+  .hr-stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .hr-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .hr-chips a { white-space: nowrap; }
   body.home2 .ann-banner { padding-top: 14px; }
