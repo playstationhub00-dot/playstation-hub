@@ -495,8 +495,11 @@ body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
 .hr-account-price b, .hr-account-price { font-weight: 800; }
 .hr-two { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; }
 .hr-panel, .hr-psplus { background: var(--bg-card, #141414); border: 1px solid var(--border, #262626); border-radius: 18px; padding: 18px; }
-.hr-rank { list-style: none; margin: 0; padding: 0; }
-.hr-rank a { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border, #222); text-decoration: none; color: inherit; }
+.hr-two > .hr-panel { display: flex; flex-direction: column; }
+/* The rows share the panel's height, so the list fills it beside the PS Plus card */
+.hr-rank { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; }
+.hr-rank li { flex: 1; display: flex; }
+.hr-rank a { flex: 1; display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border, #222); text-decoration: none; color: inherit; }
 .hr-rank li:first-child a { border-top: 0; }
 .hr-rank img { width: 42px; height: 42px; object-fit: cover; border-radius: 8px; }
 .hr-rank-n { width: 28px; font-weight: 800; color: var(--theme-btn, #F5B800); font-size: 1.1rem; }

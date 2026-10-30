@@ -1,5 +1,5 @@
 <%#
-  Top rented as a ranked list (first 6, the rest linked), beside the PS Plus
+  Top rented as a ranked list (all ten, rows stretch to fill), beside the PS Plus
   Deluxe card and category tiles. Locals: home, psplusPopular, psplusSlug.
 %>
 <section class="hm-wrap hm-sec" id="topRented">
@@ -12,13 +12,10 @@
     <div class="hr-panel">
       <% if (home.topRented.length) { %>
       <ol class="hr-rank">
-        <% home.topRented.slice(0, 6).forEach(function (t, i) { %>
+        <% home.topRented.slice(0, 10).forEach(function (t, i) { %>
         <li><a href="<%= seo.rentPath(t.game.title) %>"><span class="hr-rank-n"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="" width="42" height="42"><% } %><span class="hr-rank-t"><%= t.game.title %></span><% if (t.weekly) { %><span class="hr-rank-p">₱<%= t.weekly %></span><% } %></a></li>
         <% }) %>
       </ol>
-      <% } %>
-      <% if (home.topRented.length > 6) { %>
-      <p class="hr-also">Also rented: <% home.topRented.slice(6, 10).forEach(function (t, i) { %><% if (i) { %>, <% } %><a href="<%= seo.rentPath(t.game.title) %>"><%= t.game.title %></a><% }) %></p>
       <% } %>
     </div>
     <div class="hr-psplus" id="psplus">
