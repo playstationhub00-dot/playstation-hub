@@ -76,24 +76,26 @@ document.addEventListener('submit', function (e) {
         </div>
       </div>
 
-      <div class="footer-col">
+      <div class="footer-col footer-quick">
         <div class="footer-col-title">Quick Links</div>
-        <a href="/browse">Browse Games</a>
-        <a href="/ps-plus">PS Plus Deluxe</a>
-        <a href="/how-it-works">How It Works</a>
-        <a href="/guides">Guides</a>
-        <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy</a>
-        <a href="/guides/ps-plus-deluxe-vs-renting">PS Plus vs Renting</a>
-        <a href="/faq">FAQ</a>
-        <% if (typeof livePromos !== 'undefined' && livePromos && livePromos.length) { %><a href="/promos">Promos</a><% } %>
-        <a href="/announcements">What's new</a>
-        <a href="/terms">Terms of Service</a>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/data-deletion">Data Deletion</a>
-        <a href="/#how">Rental Steps</a>
+        <div class="footer-links">
+          <a href="/browse">Browse Games</a>
+          <a href="/ps-plus">PS Plus Deluxe</a>
+          <a href="/how-it-works">How It Works</a>
+          <a href="/guides">Guides</a>
+          <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Trophy vs Non-Trophy</a>
+          <a href="/guides/ps-plus-deluxe-vs-renting">PS Plus vs Renting</a>
+          <a href="/faq">FAQ</a>
+          <% if (typeof livePromos !== 'undefined' && livePromos && livePromos.length) { %><a href="/promos">Promos</a><% } %>
+          <a href="/announcements">What's new</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/data-deletion">Data Deletion</a>
+          <a href="/#how">Rental Steps</a>
+        </div>
       </div>
 
-      <div class="footer-col">
+      <div class="footer-col footer-contact">
         <div class="footer-col-title">Get In Touch</div>
         <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" data-track-source="footer">Message Us on Messenger</a>
         <a href="mailto:playstationhub00@gmail.com">playstationhub00@gmail.com</a>

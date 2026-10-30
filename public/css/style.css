@@ -2564,11 +2564,21 @@ footer {
 .footer-inner { max-width: 1300px; margin: 0 auto; }
 .footer-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  grid-template-columns: 1.2fr 1.6fr 1fr 1fr;
   gap: 2.5rem;
   padding-bottom: 2rem;
 }
 .footer-col { display: flex; flex-direction: column; gap: 0.65rem; }
+/* Quick Links has 12-13 links. In one column it stood twice as tall as the
+   other footer columns, so they're split into two, filled top to bottom.
+   Seven rows fits both counts (Promos only shows while a promo is live). */
+.footer-links {
+  display: grid;
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+  justify-content: start;
+  gap: 0.65rem 2.5rem;
+}
 .footer-col-title {
   font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
   color: #666; margin-bottom: 0.15rem;
@@ -2606,18 +2616,22 @@ footer {
 }
 @media (max-width: 820px) {
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem 1.5rem; }
-  .footer-brand { grid-column: 1 / -1; }
+  /* Quick Links takes a full row so its two link columns don't get squeezed
+     into half the width; Get In Touch and Payments pair up beneath it. */
+  .footer-brand,
+  .footer-quick { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) {
   /* Kept at two columns rather than one. Stacking all four made the footer 994px
-     on mobile — the tallest thing on the page, taller than the hero. The brand
-     column still spans the full width (set at the 820px breakpoint above); the
-     three link columns pair up beneath it. Payments is 3rd in source order, so
-     without an explicit span it lands alone in the left column of a new row,
-     squeezing the badges into half-width and leaving the right side empty —
-     give it the full row so the badges can wrap naturally.  */
+     on mobile — the tallest thing on the page, taller than the hero. Brand and
+     Quick Links span the full width (set at the 820px breakpoint above), and
+     Quick Links keeps its two link columns. Payments gets the full row so its
+     badges can wrap naturally instead of being squeezed into half-width, which
+     would leave Get In Touch alone in half a row with a long email address —
+     so it takes the full row too.  */
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem 1.25rem; }
-  .footer-col.footer-pay { grid-column: 1 / -1; }
+  .footer-col.footer-pay,
+  .footer-col.footer-contact { grid-column: 1 / -1; }
   .footer-bottom { flex-direction: column; align-items: flex-start; }
 }
 
