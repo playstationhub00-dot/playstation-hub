@@ -80,6 +80,7 @@ const supportAssistant = require('./lib/support-assistant');
 const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
+const vouchers = require('./lib/vouchers');
 const seo = require('./lib/seo');
 const guidePages = require('./lib/guide-pages');
 const { createStateSync } = require('./lib/state-sync');
@@ -1125,6 +1126,15 @@ function ensurePromoStore() {
   if (!s) return;
   if (!Array.isArray(s.promos)) db.set('site_settings.promos', []).write();
   if (!s.promo_next_id) db.set('site_settings.promo_next_id', 1).write();
+  // MONTHLY10 is inserted once. monthly10_seeded stays true after a delete,
+  // so turning the code off or removing it in Admin → Loyalty → Promos sticks.
+  if (!s.monthly10_seeded) {
+    const seeded = vouchers.seedMonthly10(db.get('site_settings.promos').value(), false);
+    db.set('site_settings.promos', seeded.offers).write();
+    db.set('site_settings.monthly10_seeded', true).write();
+    s.promos = seeded.offers;
+    s.monthly10_seeded = true;
+  }
 }
 
 function promoContext() {
@@ -1138,6 +1148,45 @@ function promoContext() {
     today
   });
   return { today, live, banner: promos.bannerOffer(live), settings };
+}
+
+// Same quote the voucher box shows and POST /order/create charges. An open
+// comeback discount or an unredeemed reward blocks a code that says it
+// cannot stack. One use per customer reads prior orders with that code.
+async function resolveVoucherQuote(opts) {
+  ensurePromoStore();
+  const src = opts || {};
+  const settings = getSiteSettings() || {};
+  const name = String(src.name || '').trim();
+  let loyaltyBlocked = false;
+  if (name) {
+    try {
+      const profile = loyaltySnapshot().profileFor({ name });
+      const rebook = profile && profile.rebook;
+      loyaltyBlocked = !!((profile && profile.availablePunch > 0) || (rebook && (rebook.eligible || rebook.unredeemed > 0)));
+    } catch (e) {
+      loyaltyBlocked = false;
+    }
+  }
+  let prior = [];
+  const code = vouchers.codeOf(src.code);
+  if (name && code) {
+    try { prior = await orders.listPromoCodeUses(code); }
+    catch (e) { prior = []; }
+  }
+  return vouchers.quote({
+    code: src.code,
+    appliedCode: src.appliedCode,
+    days: src.days,
+    base: src.base,
+    deposit: src.deposit,
+    now: src.now || new Date(),
+    offers: settings.promos,
+    name,
+    priorOrders: prior,
+    identity: db.get('loyalty_identity').value(),
+    loyaltyBlocked
+  });
 }
 
 function recordPromoEvent(row) {
@@ -1788,6 +1837,32 @@ app.get('/promos', (req, res) => {
     offers: ctx.live
   });
 });
+
+app.post('/api/voucher/quote', asyncRoute(async (req, res) => {
+  if (rateLimited('voucher_quote', clientIp(req), 40, 10 * 60 * 1000)) {
+    return res.status(429).json({ ok: false, error: 'rate', message: 'Too many tries. Wait a moment and try the code again.' });
+  }
+  const body = req.body || {};
+  const game = getGame(body.game_id);
+  const type = ['nt', 'tr', 'ps4'].includes(body.account_type) ? body.account_type : null;
+  const days = parseInt(body.days, 10);
+  if (!game || !type || !PROMO_DURATIONS.includes(days)) {
+    return res.status(400).json({ ok: false, error: 'selection', message: 'Pick an account type and a rental length first.' });
+  }
+  const resolved = resolveGamePrices(game);
+  const base = rentPricing.listPrice(resolved, type, days);
+  const promo = (getSiteSettings() || {}).promo || {};
+  const deposit = (type === 'tr' || type === 'ps4') ? (Number(promo.deposit) || 0) : 0;
+  const quoted = await resolveVoucherQuote({
+    code: body.code,
+    appliedCode: body.applied_code,
+    days,
+    base,
+    deposit,
+    name: body.fb_name
+  });
+  res.json(Object.assign({ ok: false }, quoted, { type, days }));
+}));
 
 app.get('/api/promo-line', (req, res) => {
   if (rateLimited('promo_line', clientIp(req), 40, 10 * 60 * 1000)) return res.status(429).json({ lines: [] });
@@ -3040,9 +3115,33 @@ app.post('/order/create', async (req, res) => {
   const base = rentPricing.listPrice(resolved, type, d);
   if (!base) return res.redirect(orderErrorPath(game));
 
-  const pct = rentDiscountPct(game, d, promo);
-  const amountDue = rentPricing.discounted(base, pct);
-  const depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+  const depositDueBase = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+  const submittedCode = String(req.body.promo_code || '').trim();
+  let amountDue;
+  let depositDue = depositDueBase;
+  let voucherSettle = null;
+  if (submittedCode) {
+    // Re-validate. The box's quote is not trusted: a stale page, a second
+    // code, or a customer who already used MONTHLY10 must not be charged
+    // the discounted total.
+    const quoted = await resolveVoucherQuote({
+      code: submittedCode,
+      days: d,
+      base,
+      deposit: depositDueBase,
+      name
+    });
+    voucherSettle = vouchers.settle(quoted);
+    if (!voucherSettle) {
+      const joiner = orderErrorPath(game).includes('?') ? '&' : '?';
+      return res.redirect(orderErrorPath(game).replace('order_error=1', 'order_error=code') + joiner + 'voucher=' + encodeURIComponent(quoted.error || 'invalid'));
+    }
+    amountDue = voucherSettle.amount_due;
+    depositDue = voucherSettle.deposit_due;
+  } else {
+    const pct = rentDiscountPct(game, d, promo);
+    amountDue = rentPricing.discounted(base, pct);
+  }
 
   // Freeze the tier's whole price set. A tier's prices can change after an
   // order is placed; snapshotting means a later swap compares against what the
@@ -3065,7 +3164,13 @@ app.post('/order/create', async (req, res) => {
       deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
-      client_token: orders.cleanClientToken(req.body.client_token)
+      client_token: orders.cleanClientToken(req.body.client_token),
+      ...(voucherSettle ? {
+        promo_code: voucherSettle.promo_code,
+        promo_discount: voucherSettle.promo_discount,
+        promo_id: voucherSettle.promo_id,
+        promo_pct: voucherSettle.promo_pct
+      } : {})
     });
     redirectPlacedOrder(res, placed);
   } catch (e) {
@@ -3752,14 +3857,20 @@ async function createOrderNotified(fields) {
     const profile = fields && fields.fb_name ? loyaltySnapshot().profileFor({ name: fields.fb_name }) : null;
     const ids = promos.usedIds(ctx.live, fields && fields.game_id, profile);
     if (ids.length) fields.promo_ids = ids;
+    if (fields && fields.promo_id) {
+      const ids = Array.isArray(fields.promo_ids) ? fields.promo_ids.slice() : [];
+      if (!ids.includes(fields.promo_id)) ids.push(fields.promo_id);
+      fields.promo_ids = ids;
+    }
   } catch (e) {
     console.error('[promo order]', e.message);
   }
   const placed = await orders.createOrReuse(fields);
   if (placed.reused) return placed;
   const order = placed.order;
-  if (order && Array.isArray(order.promo_ids) && order.promo_ids.length) {
-    try { recordPromoEvent({ kind: 'order', promo_id: order.promo_ids[0], session_id: order.session_id || '' }); }
+  const countedPromo = order && (order.promo_id || (Array.isArray(order.promo_ids) && order.promo_ids[0]));
+  if (countedPromo) {
+    try { recordPromoEvent({ kind: 'order', promo_id: countedPromo, session_id: order.session_id || '' }); }
     catch (e) { console.error('[promo order]', e.message); }
   }
   notifyOwnerOrder(order, 'created');
@@ -5316,8 +5427,41 @@ app.get('/game/:slug', async (req, res) => {
   // One shared pool, sorted so any review naming this game surfaces first. The
   // aggregate counts the whole pool on purpose — it describes the business, so
   // the same figure is true on every game page.
-  res.render('game-detail', Object.assign({ game: resolved, psnView: gamePsnView.buildGamePsnView(resolved), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: gdSettings, promo: gdSettings.promo, accountSummary: gameAccountSummary(game.id), order_error: req.query.order_error || null, queues },
-    reviewBlockLocals(game.title)));
+  const promoNow = promoContext();
+  const summaryMap = buildAccountSummaryMap();
+  const genreKey = String(resolved.genre || '').split('/')[0].trim().toLowerCase();
+  const related = (getGames() || [])
+    .filter(g => g && g.id !== game.id && !seo.isPsplusDeluxeTitle(g.title))
+    .map(g => ({
+      g,
+      same: genreKey && String(g.genre || '').toLowerCase().includes(genreKey) ? 1 : 0
+    }))
+    .sort((a, b) => b.same - a.same || (b.g.id || 0) - (a.g.id || 0))
+    .slice(0, 6)
+    .map(({ g }) => {
+      const row = resolveGamePrices(g);
+      const avail = computeAvailability(row, summaryMap[g.id]);
+      return {
+        title: g.title,
+        href: '/game/' + gameSlug(g.title),
+        cover: g.cover_image || '',
+        status: avail && avail.allUnavail ? 'Full · Join line' : 'Available'
+      };
+    });
+  res.render('game-detail', Object.assign({
+    game: resolved,
+    psnView: gamePsnView.buildGamePsnView(resolved),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: gdSettings,
+    promo: gdSettings.promo,
+    accountSummary: gameAccountSummary(game.id),
+    order_error: req.query.order_error || null,
+    voucher_error: req.query.voucher || '',
+    voucherHint: vouchers.hintFor(promoNow.live),
+    related,
+    queues
+  }, reviewBlockLocals(game.title)));
 });
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
@@ -8748,8 +8892,11 @@ async function linkOrderFromReferral(event) {
   console.log('[order psid]', orderRef, ok ? 'linked' : 'no matching order');
   if (!ok || !first || event.reply) return;
   const link = SITE_URL + '/order/' + existing.ref + '?k=' + existing.url_key;
+  const codeNote = existing.promo_code && Number(existing.promo_discount) > 0
+    ? ' ' + existing.promo_code + ' applied, −₱' + Number(existing.promo_discount) + '.'
+    : '';
   const text = 'Hi! Nakalink na namin ang order ' + existing.ref
-    + ' sa chat na ito. Pay here: ' + link + ' — reply here if you need anything.';
+    + ' sa chat na ito.' + codeNote + ' Pay here: ' + link + ' — reply here if you need anything.';
   await deliverMessengerText(event.psid, text);
 }
 

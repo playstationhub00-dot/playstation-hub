@@ -1,0 +1,36 @@
+<%#
+  Optional checkout code on a catalog promo. Blank means the promo is only
+  announced. MONTHLY10 is seeded with these fields filled in; uncheck On or
+  change the end date to disable it. Locals: offer (optional).
+%>
+<% const pc = (typeof offer !== 'undefined' && offer) ? offer : {}; %>
+<% const pcDur = Number(pc.duration_days) === 7 || Number(pc.duration_days) === 30 ? String(pc.duration_days) : ''; %>
+<div class="form-group">
+  <label>Promo code</label>
+  <input type="text" name="code" maxlength="24" value="<%= pc.code || '' %>" placeholder="MONTHLY10" autocapitalize="characters">
+</div>
+<div class="form-group">
+  <label>Percent off</label>
+  <input type="number" name="discount_pct" min="0" max="100" value="<%= pc.discount_pct || '' %>" placeholder="10">
+</div>
+<div class="form-group">
+  <label>Code applies to</label>
+  <select name="duration_days">
+    <option value="" <%= pcDur === '' ? 'selected' : '' %>>Any rental length</option>
+    <option value="7" <%= pcDur === '7' ? 'selected' : '' %>>Weekly only</option>
+    <option value="30" <%= pcDur === '30' ? 'selected' : '' %>>Monthly only</option>
+  </select>
+</div>
+<div class="form-group">
+  <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-top:1.4rem;">
+    <input type="checkbox" name="once_per_customer" <%= pc.once_per_customer ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#0070d1;">
+    <span>One use per customer</span>
+  </label>
+</div>
+<div class="form-group full">
+  <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;">
+    <input type="checkbox" name="exclude_loyalty" <%= pc.exclude_loyalty ? 'checked' : '' %> style="width:18px;height:18px;accent-color:#0070d1;">
+    <span>Can't combine with Rewards or the ₱50 comeback discount</span>
+  </label>
+  <p class="gdt-note" style="margin:0.35rem 0 0;">A code is checked on the game page and again when the order is created. The refundable deposit is never discounted. Leave the code blank for an announcement only. MONTHLY10 is added once; uncheck On, or set Ends before today, to turn it off. Deleting it does not bring it back.</p>
+</div>

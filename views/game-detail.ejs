@@ -20,8 +20,9 @@
   }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/game-page.css?v=<%= assetV %>">
 </head>
-<body class="gd-page-booking-v2">
+<body class="gd-page-booking-v2 gp-redesign">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
 
@@ -85,56 +86,24 @@
 %>
 
 <div class="gd-page">
-  <div class="gd-back"><a href="/browse">← Back to Catalog</a></div>
+  <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
+  <% const gpShots = (gdPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src); %>
+  <% const gpFilm = gdPsn.hideGallery ? gpShots : gdhGallery; %>
+  <% const gdTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null; %>
+  <% const gdPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null; %>
+  <% const gpInfo = (gdPsn.info || []); %>
+  <% const gpInfoValue = (label) => { const row = gpInfo.find(r => r.label === label); return row ? row.value : ''; }; %>
 
-  <%
-    // Branded banner, sharing the reservation page's .usd-hero classes so the two
-    // detail pages stay visually identical by construction rather than by two
-    // copies that can drift apart.
-    const gdhStatus = allUnavail
-      ? { label: 'Sold Out', cls: 'usd-badge-off' }
-      : (isLastSlot ? { label: 'Last Slot', cls: 'usd-badge-warn' }
-                    : { label: 'Available', cls: 'usd-badge-ok' });
-    // Urgency first, release date otherwise — the bar earns its space on the
-    // games where a customer needs to hurry, and falls back to the date (or a
-    // slot count, so it is never half-empty) on everything else.
-    let gdhBarText, gdhBarUrgent = false;
-    if (allUnavail) { gdhBarText = 'Sold out — all slots rented'; gdhBarUrgent = true; }
-    else if (isLastSlot) { gdhBarText = 'Only 1 slot left'; gdhBarUrgent = true; }
-    else if (game.release_date && game.release_date !== 'TBA') {
-      gdhBarText = 'Released ' + new Date(game.release_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    } else {
-      gdhBarText = totalSlots + ' slot' + (totalSlots !== 1 ? 's' : '') + ' available';
-    }
-  %>
-  <div class="usd-hero gdh-hero">
-    <div class="usd-hero-placeholder"></div>
-    <div class="usd-hero-scrim"></div>
-    <div class="usd-hero-in">
-      <div class="usd-badge-row">
-        <span class="usd-badge <%= gdhStatus.cls %>"><%= gdhStatus.label %></span>
-        <% const gdTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null; %>
-        <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
-        <% const gdPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null; %>
-        <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
-        <span class="usd-plat-chip"><%= game.platform %></span>
-        <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="usd-plat-chip"><%= g.trim() %></span><% }) } %>
-      </div>
-      <%# Visible title only. "Rent … in the Philippines" stays in the title tag, meta description, Open Graph tags, and JSON-LD. %>
-      <h1 class="usd-title"><%= game.title %></h1>
-      <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
-      <div class="usd-hero-foot">
-        <div class="gdh-bar-text<%= gdhBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= gdhBarText %></div>
-        <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'usd-hero-brand', logoAlt: '', logoHidden: true }) %>
-      </div>
-    </div>
+  <div class="gd-back gp-crumb">
+    <a href="/browse">← Back to Catalog</a>
+    <span> · </span>
+    <a href="/browse">Rent</a>
+    <% if (game._category_name) { %><span> · <%= game._category_name %></span><% } %>
+    <span> · <b><%= game.title %></b></span>
   </div>
 
-  <div class="gd-layout">
-
-    <!-- LEFT: Static poster, matching the reservation page. Gameplay screenshots
-         moved to a full-width section below .gd-layout — see gdhGallery. -->
-    <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
+  <div class="gp-grid">
+    <div class="gp-hero">
     <div class="gd-cover-col">
       <% if (gdPsn.media.length) { %>
         <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
@@ -148,22 +117,42 @@
           </svg>
         </div>
       <% } %>
-      <div class="gd-platform-badge"><%= game.platform %></div>
       <% if (isLastSlot) { %>
         <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
       <% } else if (noSlot) { %>
         <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
       <% } %>
-      <%- include('partials/game-psn-about', { psnView: gdPsn }) %>
-      <!-- Description sits below the poster, matching the reservation page —
-           this is also what lets the booking card start flush with the
-           poster's top edge instead of being pushed down by copy text. -->
+    </div>
+    <div class="gp-title">
+      <div class="gp-tags">
+        <% if (isLastSlot) { %><span class="gp-tag gp-tag-y">🔥 Last slot</span><% } %>
+        <% if (noSlot) { %><span class="gp-tag">Sold out</span><% } %>
+        <% if (game.platform) { %><span class="gp-tag"><%= game.platform %></span><% } %>
+        <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
+        <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
+        <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="gp-tag"><%= g.trim() %></span><% }) } %>
+      </div>
+      <%# One h1. "Rent … in the Philippines" stays in the title tag, meta description, and JSON-LD. %>
+      <h1 class="usd-title"><%= game.title %></h1>
+      <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <% if (game.description && !gdPsn.hasPsn) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
-      <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link" style="display:inline-block;margin-top:0.5rem;">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
+      <% if (gdPsn.hasPsn && gdPsn.about) { %>
+        <p class="gp-clamp"><%= gdPsn.aboutParas[0] || gdPsn.about %></p>
+        <% if (gdPsn.readMore || (gdPsn.aboutParas && gdPsn.aboutParas.length > 1)) { %><button type="button" class="gp-more" onclick="gpTab('gpPaneDetails', document.getElementById('gpTabDetails'))">Read more ›</button><% } %>
+      <% } %>
+      <% if (gpInfo.length) { %>
+      <div class="gp-chips">
+        <% ['Release date', 'Genre', 'Publisher', 'Age rating'].forEach(label => { const value = gpInfoValue(label); if (!value) return; %>
+        <span><b><%= label === 'Release date' ? 'Released' : label === 'Age rating' ? 'Rating' : label %></b><%= value %></span>
+        <% }) %>
+      </div>
+      <% } %>
+      <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
+    </div>
     </div>
 
-    <!-- RIGHT: Detail + Rental Form -->
-    <div class="gd-detail-col">
+    <!-- RIGHT: rental panel -->
+    <div class="gd-detail-col gp-panel">
 
 
       <%
@@ -189,16 +178,10 @@
       <div class="gdh-card">
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
-      <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
-        <button id="toggleRent" onclick="setMode('rent')"
-          style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:var(--ps-blue);color:#000;transition:all 0.15s;letter-spacing:0.3px;">
-          ⏱️ Rent
-        </button>
+      <div class="gp-mode">
+        <button type="button" id="toggleRent" class="on" onclick="setMode('rent')">⏱️ Rent</button>
         <% if (hasBuy) { %>
-        <button id="toggleBuy" onclick="setMode('buy')"
-          style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:transparent;color:#555;transition:all 0.15s;letter-spacing:0.3px;">
-          ♾️ Buy Permanent
-        </button>
+        <button type="button" id="toggleBuy" onclick="setMode('buy')">♾️ Buy permanent</button>
         <% } %>
       </div>
 
@@ -357,11 +340,46 @@
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
           <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = gameDiscountPct(game, d, promo); %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
-            <span class="gd-dur-days"><%= durLabel %></span>
+            <span class="gd-dur-days"><%= d === 7 ? 'Weekly · 7 days' : 'Monthly · 30 days' %></span>
             <span class="gd-dur-price" id="price-<%= d %>"><%- rentPriceHtml(game, 'nt', d, promo) %></span>
             <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
           </button>
           <% }) %>
+        </div>
+
+        <% if (typeof voucherHint !== 'undefined' && voucherHint) { %>
+        <div class="gp-hint" id="voucherHint">Renting monthly? Use <code><%= voucherHint.code %></code> for <%= voucherHint.pct %>% off.</div>
+        <% } %>
+        <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
+          <div class="lb" id="voucherLabel">Have a promo code?</div>
+          <div class="vok" id="voucherApplied" hidden></div>
+          <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
+          <div class="vrow" id="voucherEntry">
+            <input class="vin" id="voucherInput" maxlength="24" placeholder="Enter code" autocomplete="off" aria-label="Promo code">
+            <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
+          </div>
+          <div class="verr" id="voucherError" hidden></div>
+          <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
+        </div>
+
+        <!-- TOTAL BREAKDOWN. Visible with the voucher box so the figure matches
+             the order before the website form is opened. -->
+        <div class="gd-total-box" id="totalBox">
+          <div class="gd-total-label">Total</div>
+          <div class="gd-total-rows" id="totalRows"></div>
+          <div class="gd-total-final">
+            <span>Total to send</span>
+            <span id="totalFinal"></span>
+          </div>
+          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
+          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
+          <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
+          <% if (gdPromoLines.length) { %>
+          <div class="gd-promo-note" id="gdPromoNote" data-game-id="<%= game.id %>">
+            <%- include('partials/promo-lines', { items: gdPromoLines }) %>
+          </div>
+          <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
+          <% } %>
         </div>
 
         <!-- PRIMARY: Messenger. It always opens, whatever has (or has not) been
@@ -382,32 +400,12 @@
         <% if (!allUnavail) { %>
         <!-- SECONDARY: order on the website. Tapping opens the price summary,
              name field and pay button below. -->
-        <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
+        <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' || order_error === 'code' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
           Or order here on the website
           <small><%- include('partials/pay-note').trim() %></small>
         </button>
-        <div id="gdOrderBlock"<%= order_error === '1' ? '' : ' hidden' %>>
+        <div id="gdOrderBlock"<%= order_error === '1' || order_error === 'code' ? '' : ' hidden' %>>
         <% } %>
-
-        <!-- TOTAL BREAKDOWN -->
-        <div class="gd-total-box" id="totalBox">
-          <div class="gd-total-label">ORDER SUMMARY</div>
-          <div class="gd-total-rows" id="totalRows"></div>
-          <div class="gd-total-final">
-            <span>To send now</span>
-            <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
-          </div>
-          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
-          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
-          <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
-          <% const gdHasPromos = typeof livePromos !== 'undefined' && livePromos && livePromos.length; %>
-          <% if (gdHasPromos) { %>
-          <div class="gd-promo-note" id="gdPromoNote" data-game-id="<%= game.id %>"<% if (!gdPromoLines.length) { %> hidden<% } %>>
-            <%- include('partials/promo-lines', { items: gdPromoLines }) %>
-          </div>
-          <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
-          <% } %>
-        </div>
 
         <% if (!allUnavail) { %>
         <!-- Website order: the name field and the price button run as one
@@ -417,6 +415,7 @@
           <%- include('partials/order-token') %>
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
+          <input type="hidden" name="promo_code" id="orderPromoCode" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
           <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
@@ -426,6 +425,8 @@
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
         <% if (order_error === '1') { %>
         <div class="gd-order-error">⚠️ Please pick an account type and duration, and enter your Facebook name, before continuing.</div>
+        <% } else if (order_error === 'code') { %>
+        <div class="gd-order-error">That promo code couldn't be applied, so the order wasn't created. Check the message above and try again.</div>
         <% } %>
 
         <!-- The picked type has no slot: one "get in line" card -->
@@ -560,58 +561,113 @@
       </div><!-- /gdh-card -->
 
     </div>
-  </div>
 
-  <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
-
-  <% if (gdhGallery.length && !gdPsn.hideGallery) { %>
-  <!-- Gameplay gallery: reuses .rsv-gallery-section wholesale (wrapper, label,
-       and the scoped centered-thumbs rule) from the reservation page — no new
-       CSS. Still driven by the existing gdGo/gdMove/autoplay below, which are
-       ID-based and never depended on the cover being slide 1. -->
-  <div class="rsv-gallery-section">
-    <div class="rsv-gallery-label">Gameplay</div>
-    <div class="gd-slider" id="gdSlider">
-      <div class="gd-slider-track" id="gdSliderTrack">
-        <% gdhGallery.forEach((img, i) => { %>
-          <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" width="1280" height="720" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></div>
-        <% }) %>
-      </div>
-      <% if (gdhGallery.length > 1) { %>
+    <% if (gpFilm.length) { %>
+    <div class="<%= gdPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' %>" data-film>
+      <div class="gp-gal-h">
+        <h2>Gameplay</h2>
+        <span class="gp-gal-count" id="gpGalCount">1 / <%= gpFilm.length %></span>
+        <% if (gpFilm.length > 1) { %><button type="button" class="gp-viewall" onclick="gpViewAll()">View all <%= gpFilm.length %> ›</button><% } %>
+        <% if (gpFilm.length > 1) { %>
         <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
         <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
-        <div class="gd-slider-dots" id="gdSliderDots">
-          <% gdhGallery.forEach((img, i) => { %>
-            <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
+        <% } %>
+      </div>
+      <div class="gd-slider" id="gdSlider">
+        <div class="gd-slider-track" id="gdSliderTrack">
+          <% gpFilm.forEach((img, i) => { %>
+            <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></button>
           <% }) %>
         </div>
+      </div>
+      <% if (gpFilm.length > 1) { %>
+      <div class="gd-slider-dots" id="gdSliderDots">
+        <% gpFilm.forEach((img, i) => { %>
+          <button type="button" class="gd-dot<%= i === 0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i + 1 %>"></button>
+        <% }) %>
+      </div>
       <% } %>
+      <div class="gp-film-all" id="gpFilmAll" hidden>
+        <button type="button" class="gp-film-x" onclick="document.getElementById('gpFilmAll').hidden = true" aria-label="Close">✕</button>
+        <div class="gp-film-grid">
+          <% gpFilm.forEach((img, i) => { %>
+            <img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720" loading="lazy" decoding="async">
+          <% }) %>
+        </div>
+      </div>
     </div>
-    <% if (gdhGallery.length > 1) { %>
-    <div class="gd-thumbs" id="gdThumbs">
-      <% gdhGallery.forEach((img, i) => { %>
-        <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)"><img <%- imgThumb(img) %> width="160" height="90" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
-      <% }) %>
+    <% } %>
+
+    <div class="gp-tabs" id="gpTabs">
+      <div class="gp-tablist" role="tablist">
+        <button type="button" class="gp-tab on" id="gpTabBefore" role="tab" aria-selected="true" onclick="gpTab('gpPaneBefore', this)">Before you rent</button>
+        <button type="button" class="gp-tab" id="gpTabDetails" role="tab" aria-selected="false" onclick="gpTab('gpPaneDetails', this)">Details</button>
+        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ<% if (gdSeo.faqs && gdSeo.faqs.length) { %> (<%= gdSeo.faqs.length %>)<% } %></button>
+        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews<% const gpReviewN = (typeof recommend !== 'undefined' && recommend && recommend.total) ? recommend.total : ((typeof reviews !== 'undefined' && reviews) ? reviews.length : 0); if (gpReviewN) { %> (<%= gpReviewN %>)<% } %></button>
+      </div>
+      <div class="gp-pane" id="gpPaneBefore">
+        <div class="gp-before">
+          <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
+          <% if (hasTrophy) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
+          <div class="gp-bi"><span>🎮</span><p><b>Non-Trophy</b>Our account. Leave Console Sharing off.</p></div>
+          <% if (showPs4) { %><div class="gp-bi"><span>🕹️</span><p><b>PS4 Primary</b>Your PS4. Activate as primary.</p></div><% } %>
+        </div>
+        <p class="gp-before-ft">
+          <% if (typeof recommend !== 'undefined' && recommend && recommend.total > 0) { %><b><%= recommend.pct %>%</b> would recommend us · <%= recommend.up %> of <%= recommend.total %> renters asked<% } %>
+          <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %> · <%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %> renters served<% } %>
+          · <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
+        </p>
+      </div>
+      <div class="gp-pane" id="gpPaneDetails" hidden>
+        <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: gdPsn }) %><% } %>
+        <% if (!gdPsn.hasPsn && game.description) { %><p class="gp-details-copy"><%= game.description %></p><% } %>
+        <% if (!gdPsn.hasPsn) { %>
+        <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
+        <% } %>
+      </div>
+      <div class="gp-pane" id="gpPaneFaq" hidden>
+        <% if (gdSeo.faqs && gdSeo.faqs.length) { %>
+        <section class="gd-faq" id="game-faq">
+          <h2 class="gd-faq-title"><%= game.title %> rental FAQ</h2>
+          <div class="faq-list">
+            <%- include('partials/faq-items', { items: gdSeo.faqs }) %>
+          </div>
+          <p class="gd-faq-more">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>.</p>
+        </section>
+        <% } else { %>
+        <p class="gp-details-copy">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>.</p>
+        <% } %>
+      </div>
+      <div class="gp-pane" id="gpPaneReviews" hidden>
+        <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+      </div>
+    </div>
+
+    <% const gpRelated = (typeof related !== 'undefined' && related) ? related : []; %>
+    <% if (gpRelated.length) { %>
+    <div class="gp-related">
+      <div class="gp-related-h">
+        <h2><span class="gp-o">○</span> You might also like</h2>
+        <a href="/browse">See all games ›</a>
+      </div>
+      <div class="gp-related-row">
+        <% gpRelated.forEach(item => { %>
+        <a class="gp-rel" href="<%= item.href %>">
+          <% if (item.cover) { %><img src="<%= item.cover %>" alt="" width="46" height="60" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
+          <span><b><%= item.title %></b><small><%= item.status %></small></span>
+        </a>
+        <% }) %>
+      </div>
     </div>
     <% } %>
   </div>
-  <% } %>
-
-  <% if (gdSeo.faqs && gdSeo.faqs.length) { %>
-  <section class="gd-faq" id="game-faq">
-    <h2 class="gd-faq-title"><%= game.title %> rental FAQ</h2>
-    <div class="faq-list">
-      <%- include('partials/faq-items', { items: gdSeo.faqs }) %>
-    </div>
-    <p class="gd-faq-more">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>.</p>
-  </section>
-  <% } %>
 
   <!-- ══ MOBILE STICKY BAR (≤820px) ══ -->
   <div class="gd-sticky-bar" id="gdStickyBar">
     <div class="gd-sb-info">
       <div class="gd-sb-kicker" id="gdSbKicker">From</div>
       <div class="gd-sb-amount" id="gdSbAmount">₱<%= gdFromPrice %></div>
+      <div class="gd-sb-code" id="gdSbCode"></div>
     </div>
     <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? '💬 Ask us' : '💬 Message us' %></button>
   </div>
@@ -644,10 +700,11 @@ const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
 // line" card's "Fully booked · frees up in about N days" line.
 const NEXT_DAYS = <%- JSON.stringify({ tr: trNext != null ? trNext : null, nt: ntNext != null ? ntNext : null, ps4: ps4Next != null ? ps4Next : null }) %>;
 const gameTitle = '<%= game.title.replace(/'/g, "\'") %>';
-const gdSlideCount = <%= gdhGallery.length %>;
+const gdSlideCount = <%= gpFilm.length %>;
 </script>
 <% if (gdPsn.media.length || gdPsn.about) { %><script src="/js/game-media.js?v=<%= assetV %>" defer></script><% } %>
 <script src="/js/messenger-text.js?v=<%= assetV %>"></script>
 <script src="/js/game-detail.js?v=<%= assetV %>"></script>
+<script src="/js/voucher-box.js?v=<%= assetV %>"></script>
 </body>
 </html>

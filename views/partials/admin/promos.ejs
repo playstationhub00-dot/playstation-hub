@@ -54,6 +54,7 @@
           <label>Terms</label>
           <textarea name="terms" maxlength="600" rows="2"><%= offer.terms %></textarea>
         </div>
+        <%- include('promo-code-fields', { offer: offer }) %>
         <div class="form-group">
           <label>Starts (Philippines)</label>
           <input type="date" name="starts_on" value="<%= paDate(offer, 'starts_on') %>">
@@ -113,6 +114,7 @@
           <label>Terms</label>
           <textarea name="terms" maxlength="600" rows="2" placeholder="One rental per customer. New orders only."></textarea>
         </div>
+        <%- include('promo-code-fields', { offer: {} }) %>
         <div class="form-group">
           <label>Starts (Philippines)</label>
           <input type="date" name="starts_on">

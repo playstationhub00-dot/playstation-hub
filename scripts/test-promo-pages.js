@@ -185,14 +185,17 @@ async function main() {
     const quiet = await call('GET', '/');
     assert.ok(!quiet.body.includes('data-ann-bind="promo-banner"'), 'offers banner still present');
     assert.ok(!quiet.body.includes('Free 7-day rental'));
-    assert.ok(!quiet.body.includes('href="/promos"'));
+    assert.ok(quiet.body.includes('href="/promos"'), 'MONTHLY10 keeps the Promos link in the footer');
     const faq = await call('GET', '/faq');
-    assert.ok(!faq.body.includes('Are there any promos right now?'));
+    // MONTHLY10 is a seeded code, so the promos question stays. Loyalty copy does not.
+    assert.ok(faq.body.includes('Are there any promos right now?'));
     const game = await call('GET', '/game/elden-ring');
     assert.ok(!game.body.includes('gd-promo-note'));
     assert.ok(!game.body.includes('usd-badge-promo'));
     const page = await call('GET', '/promos');
-    assert.ok(page.body.includes('no promos running right now'));
+    assert.ok(page.body.includes('<h2>MONTHLY10</h2>'));
+    assert.ok(!page.body.includes('<h2>Free 7-day rental</h2>'));
+    assert.ok(!page.body.includes('no promos running right now'));
   });
 
   await okAsync('a live linked promo shows, and expired or disabled ones do not', async () => {
@@ -279,7 +282,8 @@ async function main() {
     assert.ok(!game.body.includes('usd-badge-promo'));
     assert.ok(!game.body.includes('gd-promo-note'));
     const faq = await call('GET', '/faq');
-    assert.ok(!faq.body.includes('Are there any promos right now?'));
+    assert.ok(faq.body.includes('Are there any promos right now?'), 'MONTHLY10 is still a live code');
+    assert.ok(!faq.body.includes('Elden week'));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

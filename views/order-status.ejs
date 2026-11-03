@@ -133,7 +133,10 @@
     <% if (!order.is_buy) { %>
     <div class="ord-row"><span>Duration</span><span><%= durLabel %></span></div>
     <% } %>
-    <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= order.amount_due %></span></div>
+    <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= (order.amount_due || 0) + (order.promo_discount || 0) %></span></div>
+    <% if (order.promo_code && order.promo_discount) { %>
+    <div class="ord-row"><span><%= order.promo_code %> (−<%= order.promo_pct || 10 %>%)</span><span>−₱<%= order.promo_discount %></span></div>
+    <% } %>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
     <% } %>

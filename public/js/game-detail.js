@@ -1,5 +1,39 @@
 function promoPctFor(days) { return PROMO.enabled ? (PROMO.discounts[days] || 0) : 0; }
 
+// Last server quote for the voucher box. Null until Apply succeeds. The
+// displayed total uses these numbers, which are the same ones checkout stores.
+let voucherQuote = null;
+
+function chargedRent(type, days) {
+  const rt = computeRentTotal(type, days);
+  if (voucherQuote && voucherQuote.ok && voucherQuote.type === type && Number(voucherQuote.days) === Number(days)) {
+    return {
+      base: voucherQuote.base,
+      discount: voucherQuote.discount,
+      deposit: voucherQuote.deposit,
+      pct: voucherQuote.pct,
+      total: voucherQuote.total,
+      code: voucherQuote.code,
+      voucher: true
+    };
+  }
+  return Object.assign({ voucher: false, code: '' }, rt);
+}
+
+function refreshVoucherPrices() {
+  updateTotal();
+  updateCtaState();
+  updateReserveLinks();
+  syncStickyBar();
+}
+
+function phSetVoucherQuote(quote) {
+  voucherQuote = quote && quote.ok ? quote : null;
+  const field = document.getElementById('orderPromoCode');
+  if (field) field.value = voucherQuote ? voucherQuote.code : '';
+  refreshVoucherPrices();
+}
+
 // Single source of truth for the rent total, used by the order summary,
 // the sticky bar, and the reserve-link message builder so they can never
 // independently drift on the deposit/discount rule.
@@ -23,10 +57,10 @@ function setMode(mode) {
   document.getElementById('rentPanel').style.display = isRent ? 'block' : 'none';
   const buyPanel = document.getElementById('buyPanel');
   if (buyPanel) buyPanel.style.display = isRent ? 'none' : 'block';
-  document.getElementById('toggleRent').style.background = isRent ? 'var(--ps-blue)' : 'transparent';
-  document.getElementById('toggleRent').style.color = isRent ? '#000' : '#555';
+  const tr = document.getElementById('toggleRent');
   const tb = document.getElementById('toggleBuy');
-  if (tb) { tb.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)'; tb.style.color = isRent ? '#555' : '#fff'; }
+  if (tr) tr.classList.toggle('on', isRent);
+  if (tb) tb.classList.toggle('on', !isRent);
   if (isRent) { updateTotal(); updateCtaState(); } else { updateBuyPriceHeader(); }
   syncStickyBar();
 }
@@ -209,10 +243,14 @@ function updateTotal() {
 
   let base, discount = 0, deposit = 0, pct = 0, baseLabel = 'Base';
 
+  let voucherCode = '';
   if (selectedType && selectedDays) {
-    const rt = computeRentTotal(selectedType, selectedDays);
+    const rt = chargedRent(selectedType, selectedDays);
     base = rt.base; discount = rt.discount; deposit = rt.deposit; pct = rt.pct;
-    baseLabel = 'Base (' + selectedDays + ' days)';
+    voucherCode = rt.voucher ? rt.code : '';
+    const typeWord = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+    const durWord = selectedDays === 7 ? 'Weekly' : 'Monthly';
+    baseLabel = 'Rental · ' + typeWord + ', ' + durWord;
     updatePriceHeaderFromSelection(base, discount);
   } else if (selectedType) {
     // Cheapest available duration for this type (by final, promo-applied,
@@ -220,7 +258,7 @@ function updateTotal() {
     // disagree the way "From ₱332" (every type) vs "Base ₱399" (this type)
     // used to.
     const cheapest = RENTAL_DURATIONS
-      .map(d => computeRentTotal(selectedType, d))
+      .map(d => chargedRent(selectedType, d))
       .reduce((a, b) => b.base - b.discount < a.base - a.discount ? b : a);
     base = cheapest.base; discount = cheapest.discount; deposit = cheapest.deposit; pct = cheapest.pct;
     const typeName = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'Non-Trophy';
@@ -235,8 +273,9 @@ function updateTotal() {
 
   const total = base - discount + deposit;
   let rows = `<div class="gd-total-row"><span>${baseLabel}</span><span>₱${base}</span></div>`;
-  if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
-  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱${deposit}</span></div>`;
+  if (voucherCode && discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>${voucherCode} (−${pct}%)</span><span>−₱${discount}</span></div>`;
+  else if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
+  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Refundable deposit</span><span>+₱${deposit}</span></div>`;
   rowsEl.innerHTML = rows;
   finalEl.textContent = '₱' + total;
 
@@ -352,7 +391,7 @@ function updateCtaState() {
     ctaBtn.disabled = true;
     if (ctaSub) ctaSub.style.display = 'none';
   } else {
-    const rt = computeRentTotal(selectedType, selectedDays);
+    const rt = chargedRent(selectedType, selectedDays);
     ctaBtn.textContent = '🎮 Rent now — ₱' + rt.total;
     ctaBtn.classList.remove('gd-cta-wait');
     ctaBtn.disabled = false;
@@ -391,6 +430,8 @@ function syncStickyBar() {
   // can be rented, the "get in line" card when it's fully booked. It is never
   // "waiting" — only the figure on its left changes.
   bEl.classList.remove('gd-cta-wait');
+  const note = document.getElementById('gdSbCode');
+  if (note && (isBookedNow() || !selectedType || !selectedDays)) note.textContent = '';
   if (isBookedNow()) {
     bEl.textContent = 'Get in line';
     kEl.textContent = 'Fully booked';
@@ -402,9 +443,11 @@ function syncStickyBar() {
     aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
   } else {
     bEl.textContent = '💬 Message us';
-    const rt = computeRentTotal(selectedType, selectedDays);
+    const rt = chargedRent(selectedType, selectedDays);
     kEl.textContent = 'Your total';
     aEl.textContent = '₱' + rt.total;
+    const note = document.getElementById('gdSbCode');
+    if (note) note.textContent = rt.voucher && rt.discount > 0 ? rt.code + ' −₱' + rt.discount : '';
   }
 }
 
@@ -440,12 +483,13 @@ function updateReserveLinks() {
   const daysLabel = selectedDays ? selectedDays + ' Days' : '';
   let totalLine = '';
   if (selectedType && selectedDays) {
-    const rt = computeRentTotal(selectedType, selectedDays);
+    const rt = chargedRent(selectedType, selectedDays);
     // The rent the duration cards show; the deposit follows as its own part.
     // rt.total already includes the deposit, so naming it again after rt.total
     // used to count it twice (₱249 rent read as "₱349 + ₱100").
     totalLine = 'Total: ₱' + (rt.base - rt.discount);
-    if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
+    if (rt.voucher && rt.discount > 0) totalLine += ' (incl. ' + rt.code + ' −₱' + rt.discount + ')';
+    else if (rt.discount > 0) totalLine += ' (incl. ' + rt.pct + '% promo discount)';
     if (rt.deposit  > 0) totalLine += ' + ₱' + rt.deposit + ' refundable deposit';
   }
   // The big Messenger button, its preview and its wording. Type and duration
@@ -530,6 +574,8 @@ window.addEventListener('DOMContentLoaded', () => {
     || document.querySelector('input[name="rentalType"]');
   if (preferred) { preferred.checked = true; onTypeChange(preferred); }
   else { syncStickyBar(); }
+  const monthly = document.querySelector('.gd-dur-btn[data-days="30"]');
+  if (monthly && !document.querySelector('.gd-dur-btn.active')) onDurChange(monthly);
   updateReserveLinks();
   // Auto-switch to buy tab if ?mode=buy
   if (new URLSearchParams(window.location.search).get('mode') === 'buy') {
@@ -544,21 +590,39 @@ function gdGo(i) {
   if (gdSlideCount <= 1) return;
   gdIndex = (i + gdSlideCount) % gdSlideCount;
   const track = document.getElementById('gdSliderTrack');
-  if (track) track.style.transform = 'translateX(-' + (gdIndex * 100) + '%)';
+  const shots = track ? track.querySelectorAll('.gp-shot') : [];
+  if (track && shots.length) {
+    const shot = shots[gdIndex];
+    if (shot) track.scrollTo({ left: shot.offsetLeft, behavior: 'smooth' });
+  } else if (track) {
+    track.style.transform = 'translateX(-' + (gdIndex * 100) + '%)';
+  }
   document.querySelectorAll('#gdSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gdIndex));
+  shots.forEach((t, ti) => t.classList.toggle('on', ti === gdIndex));
+  const count = document.getElementById('gpGalCount');
+  if (count) count.textContent = (gdIndex + 1) + ' / ' + gdSlideCount;
   const gdThumbsWrap = document.getElementById('gdThumbs');
   document.querySelectorAll('#gdThumbs .gd-thumb').forEach((t, ti) => {
     t.classList.toggle('active', ti === gdIndex);
-    // Horizontal-only, scoped to the thumbnail strip itself — scrollIntoView()
-    // can still move the whole page vertically to reveal an element that
-    // isn't fully in the viewport. This gallery now sits at the bottom of the
-    // page (previously it was near the top, in the 380px cover column), which
-    // is exactly the condition that caused this on the reservation page.
     if (ti === gdIndex && gdThumbsWrap) {
       const target = t.offsetLeft - (gdThumbsWrap.clientWidth - t.clientWidth) / 2;
       gdThumbsWrap.scrollTo({ left: target, behavior: 'smooth' });
     }
   });
+}
+
+function gpTab(id, btn) {
+  document.querySelectorAll('.gp-tab').forEach(t => {
+    t.classList.toggle('on', t === btn);
+    t.setAttribute('aria-selected', t === btn ? 'true' : 'false');
+  });
+  document.querySelectorAll('.gp-pane').forEach(p => { p.hidden = p.id !== id; });
+}
+
+function gpViewAll() {
+  const box = document.getElementById('gpFilmAll');
+  if (!box) return;
+  box.hidden = false;
 }
 function gdMove(dir) { gdGo(gdIndex + dir); }
 // Swipe support on touch devices
