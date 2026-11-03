@@ -706,7 +706,8 @@ body.home2 .hm-trust li { font-weight: 600; }
   }
   body.home2 .ann-banner-media { flex: none; width: 100%; height: 230px; min-height: 230px; }
   body.home2 .ann-banner-media::after { background: linear-gradient(180deg, transparent 45%, var(--hr-hero-bg)); }
-  body.home2 .ann-banner-copy { padding: 8px 20px 20px; justify-content: flex-start; }
+  body.home2 .ann-banner-copy { padding: 8px 20px 44px; justify-content: flex-start; }
+  body.home2 .ann-banner-dots { right: 22px; bottom: 6px; }
   body.home2 .ann-hours-badge { left: 12px; bottom: 12px; padding: 6px 10px 8px; border-radius: 12px; }
   body.home2 .ann-hours-badge b { font-size: 2rem; }
   body.home2 .ann-banner-title { font-size: 1.85rem; }

@@ -149,13 +149,6 @@
       step(e.key === 'ArrowLeft' ? -1 : 1, true);
       if (!keyboardHold()) start();
     });
-    root.querySelectorAll('.ann-banner-arrow').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        stop();
-        step(parseInt(btn.getAttribute('data-dir'), 10) || 1, true);
-        if (!keyboardHold()) start();
-      });
-    });
     if (root.getAttribute('data-swipe') === '1') {
       var originX = 0;
       var originY = 0;

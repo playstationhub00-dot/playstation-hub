@@ -280,8 +280,12 @@ ok('the banner script auto-advances on its own interval, and stays quiet for red
   assert.ok(js.includes('ArrowLeft') && js.includes('ArrowRight'));
   assert.ok(js.includes("setLive('off')") && js.includes("setLive('polite')"));
   assert.ok(js.includes(':focus-visible'), 'a mouse click must not pause auto-advance forever');
-  assert.ok(js.includes('ann-banner-arrow'));
+  assert.ok(!js.includes('ann-banner-arrow'), 'no previous/next buttons');
   assert.ok(!js.includes('function focusInside'));
+  const bannerCss = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
+  assert.ok(bannerCss.includes('.ann-banner-dots {') && bannerCss.includes('right: calc(2rem + 14px)'));
+  assert.ok(bannerCss.includes('background: #e8e8e8'));
+  assert.ok(!bannerCss.includes('ann-banner-arrow'));
   const css = fs.readFileSync(path.join(__dirname, '../public/css/home.css'), 'utf8');
   assert.ok(css.includes('height: 420px') && css.includes('height: 680px'));
 });

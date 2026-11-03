@@ -69,18 +69,10 @@
   <% }) %>
   <% if (bannerMany) { %>
   <div class="ann-banner-live" aria-live="off" aria-atomic="true"></div>
-  <div class="ann-banner-controls">
-    <button type="button" class="ann-banner-arrow" data-dir="-1" aria-label="Previous highlight">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6 8.5 12l6 6"/></svg>
-    </button>
-    <div class="ann-banner-dots" role="group" aria-label="Banner slides">
-      <% bannerSlides.forEach(function (slide, i) { %>
-      <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="<%= bannerLabel(slide) || ('Banner ' + (i + 1)) %>, <%= i + 1 %> of <%= bannerSlides.length %>"<% if (i === 0) { %> aria-current="true"<% } %>></button>
-      <% }) %>
-    </div>
-    <button type="button" class="ann-banner-arrow" data-dir="1" aria-label="Next highlight">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6 15.5 12l-6 6"/></svg>
-    </button>
+  <div class="ann-banner-dots" role="group" aria-label="Banner slides">
+    <% bannerSlides.forEach(function (slide, i) { %>
+    <button type="button" class="ann-dot<%= i === 0 ? ' on' : '' %>" data-index="<%= i %>" aria-label="<%= bannerLabel(slide) || ('Banner ' + (i + 1)) %>, <%= i + 1 %> of <%= bannerSlides.length %>"<% if (i === 0) { %> aria-current="true"<% } %>></button>
+    <% }) %>
   </div>
   <% } %>
 </section>

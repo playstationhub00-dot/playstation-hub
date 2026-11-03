@@ -178,8 +178,8 @@ html[data-visitor="returning"] .ann-aud-new { display: none !important; }
 }
 .ann-dot.on::after { opacity: 1; }
 .ann-banner .ann-dot { width: 28px; height: 28px; }
-.ann-banner .ann-dot::after { width: 8px; height: 4px; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 99px; background: #6b6b6b; opacity: 1; }
-.ann-banner .ann-dot.on::after { width: 18px; background: var(--theme-btn, #F5B800); opacity: 1; }
+.ann-banner .ann-dot::after { width: 10px; height: 4px; left: 50%; top: 50%; transform: translate(-50%, -50%); border-radius: 99px; background: #e8e8e8; opacity: 1; }
+.ann-banner .ann-dot.on::after { width: 18px; height: 5px; background: var(--theme-btn, #F5B800); opacity: 1; }
 .announcement-close {
   position: absolute;
   right: 6px;
@@ -379,31 +379,17 @@ a.ann-bell-item:hover { background: rgba(255, 255, 255, 0.04); }
 .hr-count span { display: flex; flex-direction: column; min-width: 52px; background: var(--bg-dark, #0a0a0a); border: 1px solid var(--border, #262626); border-radius: 8px; padding: 6px 8px; text-align: center; }
 .hr-count b { font-size: 1.25rem; font-weight: 800; color: var(--text-primary, #fff); line-height: 1.1; }
 .hr-count small { color: var(--text-secondary, #a8a8a8); font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
-.ann-banner-controls {
+.ann-banner-dots {
+  position: absolute;
+  right: calc(2rem + 14px);
+  bottom: 12px;
+  z-index: 4;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 12px auto 0;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0;
 }
-.ann-banner-arrow {
-  width: 36px;
-  height: 36px;
-  min-width: 24px;
-  min-height: 24px;
-  border-radius: 999px;
-  border: 1px solid #3a3a3a;
-  background: #141414;
-  color: var(--text-primary, #fff);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  cursor: pointer;
-}
-.ann-banner-arrow svg { width: 18px; height: 18px; }
-.ann-banner-arrow:hover { border-color: var(--theme-btn, #F5B800); color: var(--theme-btn, #F5B800); }
-.ann-banner-dots { position: static; display: flex; align-items: center; justify-content: center; gap: 2px; margin: 0; }
 .ann-banner-live {
   position: absolute;
   width: 1px;
@@ -420,6 +406,7 @@ a.ann-bell-item:hover { background: rgba(255, 255, 255, 0.04); }
   .announcement-bar { font-size: 14px; padding: 8px 46px 8px 12px; }
   .ann-bar-dots { display: none; }
   .ann-banner { padding: 12px 12px 0; }
+  .ann-banner-dots { right: 22px; bottom: 8px; }
   .ann-banner-slide.on { flex-direction: column; min-height: 0; }
   .ann-banner-media { flex: none; width: 100%; height: 180px; min-height: 180px; }
   .ann-banner-copy { padding: 18px 18px 48px; }
