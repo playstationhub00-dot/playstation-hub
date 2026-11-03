@@ -576,7 +576,7 @@
       <div class="gd-slider" id="gdSlider">
         <div class="gd-slider-track" id="gdSliderTrack">
           <% gpFilm.forEach((img, i) => { %>
-            <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720" <%= i === 0 ? '' : 'loading="lazy" decoding="async"' %>></button>
+            <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720"<% if (i > 0) { %> loading="lazy" decoding="async"<% } %>></button>
           <% }) %>
         </div>
       </div>
@@ -603,7 +603,8 @@
         <button type="button" class="gp-tab on" id="gpTabBefore" role="tab" aria-selected="true" onclick="gpTab('gpPaneBefore', this)">Before you rent</button>
         <button type="button" class="gp-tab" id="gpTabDetails" role="tab" aria-selected="false" onclick="gpTab('gpPaneDetails', this)">Details</button>
         <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ<% if (gdSeo.faqs && gdSeo.faqs.length) { %> (<%= gdSeo.faqs.length %>)<% } %></button>
-        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews<% const gpReviewN = (typeof recommend !== 'undefined' && recommend && recommend.total) ? recommend.total : ((typeof reviews !== 'undefined' && reviews) ? reviews.length : 0); if (gpReviewN) { %> (<%= gpReviewN %>)<% } %></button>
+        <%# Shared pool on every game (lib/reviews.js). A number here is the shop-wide "renters asked" total, which read as reviews of this title. %>
+        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Customer reviews</button>
       </div>
       <div class="gp-pane" id="gpPaneBefore">
         <div class="gp-before">

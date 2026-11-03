@@ -94,11 +94,25 @@ async function main() {
     assert.ok(!own.body.includes('class="rsv-gallery-section"'));
     assert.ok(!own.body.includes('https://image.api.playstation.com/s1.jpg"'), "PlayStation's screenshots are not mixed in");
   });
+  await okAsync('carousel images after the first use real lazy and async attributes', async () => {
+    const start = own.body.indexOf('id="gdSliderTrack"');
+    const end = own.body.indexOf('id="gdSliderDots"');
+    const track = own.body.slice(start, end);
+    assert.ok(start > 0 && end > start);
+    assert.ok(!track.includes('&#34;') && !track.includes('&quot;'), track);
+    const imgs = [...track.matchAll(/<img\b[^>]*>/g)].map(m => m[0]);
+    assert.strictEqual(imgs.length, 2);
+    assert.ok(!/\bloading=/.test(imgs[0]), imgs[0]);
+    assert.ok(imgs[1].includes(' loading="lazy"') && imgs[1].includes(' decoding="async"'), imgs[1]);
+    assert.ok(imgs[1].includes('alt="Zzyzx Owner Wins gameplay 2"'));
+  });
 
   console.log('\na game with no PlayStation data');
   const plain = await get('/game/zzyzx-plain');
   await okAsync('renders as before: poster, description under it, Gameplay gallery, no new blocks', async () => {
     assert.ok(plain.body.includes('gdh-poster') && plain.body.includes('Plain description.'));
+    assert.ok(plain.body.includes('>Customer reviews</button>'));
+    assert.ok(!plain.body.includes('>Reviews ('));
     assert.ok(plain.body.includes('class="rsv-gallery-section"'));
     assert.ok(!plain.body.includes('id="gpMedia"') && !plain.body.includes('id="gpAbout"') && !plain.body.includes('gpa-headline'));
     assert.ok(!plain.body.includes('/js/game-media.js'));
