@@ -34,7 +34,7 @@
   }
   window.phAnnPick = pick;
 
-  function showIndex(root, selector, index) {
+  function showIndex(root, selector, index, announce) {
     var slides = root.querySelectorAll(selector);
     var dots = root.querySelectorAll('.ann-dot');
     var chosen = null;
@@ -52,6 +52,10 @@
         if (on) dots[i].setAttribute('aria-current', 'true');
         else dots[i].removeAttribute('aria-current');
       }
+    }
+    if (announce && chosen) {
+      var region = root.querySelector('.ann-banner-live');
+      if (region) region.textContent = chosen.getAttribute('aria-label') || '';
     }
     if (!chosen) pick(root, selector);
   }
@@ -78,11 +82,21 @@
     });
     root.querySelectorAll('.ann-dot').forEach(function (dot) {
       dot.addEventListener('click', function () {
-        showIndex(root, selector, parseInt(dot.getAttribute('data-index'), 10) || 0);
+        stop();
+        showIndex(root, selector, parseInt(dot.getAttribute('data-index'), 10) || 0, true);
       });
     });
     var timer = null;
-    function step(dir) {
+    var touching = false;
+    var live = root.querySelector('.ann-banner-live');
+    function setLive(mode) {
+      if (live) live.setAttribute('aria-live', mode);
+    }
+    function focusInside() {
+      var active = document.activeElement;
+      return !!(active && active !== document.body && root.contains(active));
+    }
+    function step(dir, announce) {
       var ids = eligibleIndexes(root, selector);
       if (ids.length < 2) return;
       var slides = root.querySelectorAll(selector);
@@ -90,18 +104,29 @@
       for (var i = 0; i < slides.length; i++) if (slides[i].classList.contains('on')) current = i;
       var pos = ids.indexOf(current);
       if (pos < 0) pos = 0;
-      showIndex(root, selector, ids[(pos + (dir || 1) + ids.length) % ids.length]);
+      showIndex(root, selector, ids[(pos + (dir || 1) + ids.length) % ids.length], announce);
     }
     function start() {
-      if (reduced || timer) return;
-      if (eligibleIndexes(root, selector).length < 2) return;
+      if (reduced || timer || touching || focusInside()) return;
+      if (eligibleIndexes(root, selector).length < 2) {
+        setLive('polite');
+        return;
+      }
+      setLive('off');
+      var interval = parseInt(root.getAttribute('data-interval'), 10);
+      if (!interval || interval < 1000) interval = 6000;
       timer = setInterval(function () {
         if (root.hasAttribute('hidden') || document.hidden) return;
-        step(1);
-      }, 6000);
+        step(1, false);
+      }, interval);
     }
-    function stop() { clearInterval(timer); timer = null; }
+    function stop() {
+      clearInterval(timer);
+      timer = null;
+      setLive('polite');
+    }
     start();
+    if (reduced) setLive('polite');
     root.addEventListener('mouseenter', stop);
     root.addEventListener('mouseleave', start);
     root.addEventListener('focusin', stop);
@@ -113,8 +138,39 @@
       if (eligibleIndexes(root, selector).length < 2) return;
       e.preventDefault();
       stop();
-      step(e.key === 'ArrowLeft' ? -1 : 1);
+      step(e.key === 'ArrowLeft' ? -1 : 1, true);
     });
+    if (root.getAttribute('data-swipe') === '1') {
+      var originX = 0;
+      var originY = 0;
+      var track = false;
+      root.addEventListener('touchstart', function (e) {
+        if (!e.touches || e.touches.length !== 1) return;
+        var target = e.target;
+        track = !(target && target.closest && target.closest('a, button'));
+        originX = e.touches[0].clientX;
+        originY = e.touches[0].clientY;
+        touching = true;
+        stop();
+      }, { passive: true });
+      function endTouch(e) {
+        var point = e.changedTouches && e.changedTouches[0];
+        var dx = point ? point.clientX - originX : 0;
+        var dy = point ? point.clientY - originY : 0;
+        touching = false;
+        if (track && Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          step(dx < 0 ? 1 : -1, true);
+        }
+        track = false;
+        setTimeout(start, 350);
+      }
+      root.addEventListener('touchend', endTouch, { passive: true });
+      root.addEventListener('touchcancel', function () {
+        touching = false;
+        track = false;
+        setTimeout(start, 350);
+      }, { passive: true });
+    }
   }
 
   wireRotator(document.getElementById('announcementBar'), '.ann-bar-slide');
