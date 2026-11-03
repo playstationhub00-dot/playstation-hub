@@ -119,7 +119,7 @@
         <td class="oq-lgame"><%= o.game_title %><% if (o.new_slot) { %><span class="oq-newslot-flag"><%= ['active', 'awaiting_return', 'verifying_return', 'closed', 'cancelled', 'payment_rejected'].includes(o.state) ? '🆕 New slot' : '🆕 New slot needed — add a ' + typeLbl + ' account for ' + o.game_title %></span><% } %></td>
         <td class="oq-lmeta"><%= typeLbl %> · <%= durLbl %></td>
         <td class="oq-lnum oq-ldates"><%= dates %></td>
-        <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %></td>
+        <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %><% if (o.promo_code && o.promo_discount) { %><div class="oq-dep"><%= o.promo_code %> −₱<%= o.promo_discount %></div><% } %></td>
         <td class="oq-lst">
           <span class="oq-st <%= stCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
           <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>

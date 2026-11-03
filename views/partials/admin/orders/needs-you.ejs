@@ -89,7 +89,7 @@
       </div>
       <div class="oq-meta">
         <%= o.game_title %> · <%= nyType(o.account_type) %>
-        · <%= o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly') %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><%= o.is_reservation ? (o.upcoming_game_id ? ' reservation, paid in full' + ((o.remaining_due || 0) > 0 ? ' (₱' + o.remaining_due + ' still due on release)' : '') : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
+        · <%= o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly') %> · ₱<%= (o.amount_due || 0) + (o.deposit_due || 0) %><% if (o.promo_code && o.promo_discount) { %> · <%= o.promo_code %> −₱<%= o.promo_discount %><% } %><%= o.is_reservation ? (o.upcoming_game_id ? ' reservation, paid in full' + ((o.remaining_due || 0) > 0 ? ' (₱' + o.remaining_due + ' still due on release)' : '') : ' priority fee (₱' + (o.remaining_due || 0) + ' when slot opens)') : '' %>
       </div>
       <div class="oq-fb">
         FB: <strong><%= o.fb_name %></strong>
@@ -303,7 +303,7 @@
     const followUpMsg = '👋 Hi ' + firstName + '! Saw you started an order with us —\n\n'
       + '🎮 ' + o.game_title + ' (' + abTypeLabel + ')\n'
       + (o.is_buy ? '🛒 One-time purchase\n' : '⏱ ' + abDurLabel + ' rental\n')
-      + '💰 Total: ₱' + abTotal + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
+      + '💰 Total: ₱' + abTotal + (o.promo_code && o.promo_discount ? ' · ' + o.promo_code + ' −₱' + o.promo_discount : '') + (o.deposit_due > 0 ? ' (₱' + (o.amount_due || 0) + ' rent + ₱' + o.deposit_due + ' refundable deposit)' : '') + '\n'
       + '🔖 Reference: ' + o.ref + '\n\n'
       + 'Still want it? ' + nyPayLine + '\n\n'
       + 'No worries if you changed your mind, just let us know!';
