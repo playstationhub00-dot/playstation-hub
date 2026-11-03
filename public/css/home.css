@@ -471,23 +471,69 @@ body.home2 .ann-banner-slide {
   border-radius: 22px;
   border-width: 1px;
   background: var(--hr-hero-bg);
-  min-height: 240px;
+  box-sizing: border-box;
+  height: 420px;
+  min-height: 420px;
+  max-height: 420px;
 }
-body.home2 .ann-banner-slide.on { min-height: 240px; background: var(--hr-hero-bg); align-items: stretch; }
-body.home2 .ann-banner-media { flex: 0 0 40%; min-height: 240px; }
+body.home2 .ann-banner-slide.on { height: 420px; min-height: 420px; max-height: 420px; background: var(--hr-hero-bg); align-items: stretch; }
+body.home2 .ann-banner-media { flex: 0 0 44%; min-height: 0; align-self: stretch; }
 body.home2 .ann-banner-media::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 1;
   background: linear-gradient(90deg, transparent 52%, var(--hr-hero-bg));
   pointer-events: none;
 }
-body.home2 .ann-banner-copy { padding: 28px 48px 52px 28px; }
+body.home2 .ann-var-collage .ann-banner-media::after { display: none; }
+body.home2 .ann-banner-copy { padding: 28px 48px 52px 28px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+body.home2 .ann-banner-actions { width: 100%; }
 body.home2 .ann-banner-title { font-size: clamp(1.45rem, 2.6vw, 2.15rem); line-height: 1.15; letter-spacing: -0.03em; margin: 12px 0 8px; }
 body.home2 .ann-banner-text { font-size: 1.02rem; }
 body.home2 .ann-banner-actions { margin-top: 18px; }
 body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
-.ann-banner-accent { display: block; color: var(--theme-accent-text, var(--theme-btn, #F5B800)); }
+.ann-banner-accent { color: var(--theme-accent-text, var(--theme-btn, #F5B800)); }
+.ann-banner-accent-block { display: block; }
+.ann-banner-collage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+  background: #070707;
+}
+.ann-banner-collage img {
+  position: static;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 8px;
+}
+body.home2 .ann-var-cod .ann-banner-media img,
+body.home2 .ann-var-trial .ann-banner-media img { object-position: center center; }
+.ann-hours-badge {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--theme-btn, #F5B800);
+  color: var(--theme-btn-fg, #0a0a0a);
+  border-radius: 16px;
+  padding: 8px 14px 10px 12px;
+  line-height: 0.85;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.ann-hours-badge b { font-size: 2.6rem; font-weight: 900; letter-spacing: -0.05em; }
+.ann-hours-badge span { font-size: 0.78rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 .ann-banner-count { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-secondary, #a8a8a8); font-weight: 700; font-size: 0.92rem; }
 .ann-banner-count .ann-banner-ico { width: 16px; height: 16px; }
 .hr-pays { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -645,11 +691,17 @@ body.home2 .hm-trust li { font-weight: 600; }
   .hr-chips a { white-space: nowrap; }
   body.home2 .ann-banner { padding-top: 14px; }
   body.home2 .ann-banner-slide,
-  body.home2 .ann-banner-slide.on,
-  body.home2 .ann-banner-media { min-height: 0; }
-  body.home2 .ann-banner-media { flex: none; width: 100%; height: 168px; }
+  body.home2 .ann-banner-slide.on {
+    height: 680px;
+    min-height: 680px;
+    max-height: 680px;
+    flex-direction: column;
+  }
+  body.home2 .ann-banner-media { flex: none; width: 100%; height: 230px; min-height: 230px; }
   body.home2 .ann-banner-media::after { background: linear-gradient(180deg, transparent 45%, var(--hr-hero-bg)); }
-  body.home2 .ann-banner-copy { padding: 8px 20px 28px; }
+  body.home2 .ann-banner-copy { padding: 8px 20px 36px; justify-content: flex-start; }
+  body.home2 .ann-hours-badge { left: 12px; bottom: 12px; padding: 6px 10px 8px; border-radius: 12px; }
+  body.home2 .ann-hours-badge b { font-size: 2rem; }
   body.home2 .ann-banner-title { font-size: 1.85rem; }
   body.home2 .ann-banner-actions { flex-direction: column; align-items: stretch; }
   body.home2 .ann-banner-actions .ann-banner-cta { width: 100%; justify-content: center; box-sizing: border-box; }
