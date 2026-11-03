@@ -142,9 +142,8 @@ ok('GTA stays first, and the other slides take slots, price, and covers from the
   assert.ok(!none.banner[1].text.includes('still a slot open'));
   assert.strictEqual(feed.banner[2].footer, 'From ₱349 / week');
   assert.strictEqual(feed.banner[2].button2Url, '/how-it-works');
-  assert.strictEqual(feed.banner[2].covers.length, 6);
-  assert.strictEqual(feed.banner[2].covers[0].title, 'God of War Ragnarok');
-  assert.ok(!feed.banner[2].covers.some(c => /ps plus deluxe/i.test(c.title)));
+  assert.deepStrictEqual(feed.banner[2].covers, [], 'rental covers are not the PS Plus collage');
+  assert.ok(!/forza|yotei|first light|assassin/i.test(feed.banner[2].text));
   assert.strictEqual(feed.banner[3].title, 'Play free for');
   assert.strictEqual(feed.banner[3].titleAccent, '3 hours');
   assert.strictEqual(feed.banner[3].titleTail, ' first.');
@@ -177,6 +176,68 @@ ok('GTA stays first, and the other slides take slots, price, and covers from the
   assert.strictEqual(missing.banner[1].footer, '');
   assert.strictEqual(missing.banner[1].buttonLabel, 'Join the line');
   assert.strictEqual(missing.banner[1].buttonUrl, '/browse?tab=new');
+});
+
+ok('the PS Plus collage uses only that catalogue, and the sentence names those games', () => {
+  const rental = [
+    { title: 'Forza Horizon 5', cover_image: '/uploads/forza.webp' },
+    { title: 'Ghost of Yotei', cover_image: '/uploads/yotei.webp' },
+    { title: '007 First Light', cover_image: '/uploads/007.webp' },
+    { title: "Assassin's Creed Shadows", cover_image: '/uploads/shadows.webp' },
+    { title: 'Assassin\'s Creed Shadows: Claws of Awaji', cover_image: '/uploads/claws.webp' }
+  ];
+  const plus = [
+    { n: 'Forza Horizon 5', i: 'https://image.api.playstation.com/forza.png' },
+    { n: 'Ghost of Yotei', i: 'https://image.api.playstation.com/yotei.png' },
+    { n: 'God of War Ragnarök', i: 'https://image.api.playstation.com/gow.png' },
+    { n: 'Horizon Zero Dawn Remastered', c: '/uploads/hzd-plus.webp' },
+    { n: 'Grand Theft Auto V', i: 'https://image.api.playstation.com/gtav.png' },
+    { n: 'No art yet' },
+    { n: 'Astro Bot', i: 'https://image.api.playstation.com/astro.png' }
+  ];
+  // Forza is in this sample list on purpose, after the three named games, so a
+  // loose "Horizon" match cannot steal the second slot. The live collage only
+  // receives the PS Plus list, never the rental shelf.
+  const picked = announcements.selectPsplusCollage(plus);
+  assert.deepStrictEqual(picked.covers.map(c => c.title), [
+    'God of War Ragnarök',
+    'Horizon Zero Dawn Remastered',
+    'Grand Theft Auto V',
+    'Forza Horizon 5',
+    'Ghost of Yotei',
+    'Astro Bot'
+  ]);
+  assert.strictEqual(picked.covers[1].src, '/uploads/w/480/hzd-plus.webp?v=2');
+  assert.ok(picked.text.includes('God of War Ragnarök'));
+  assert.ok(picked.text.includes('Horizon Zero Dawn Remastered'));
+  assert.ok(picked.text.includes('Grand Theft Auto V'));
+  assert.ok(picked.text.includes('and more.'));
+  assert.ok(!picked.text.includes('Forza'));
+  assert.ok(!picked.text.includes('Yotei'));
+  assert.ok(!picked.text.includes('\u2014'));
+  const feed = announcements.present({
+    entries: heroRows(),
+    now: NOW,
+    catalog: {
+      games: rental,
+      psplusPrices: { nt_price_7d: 349, tr_price_7d: 399 },
+      psplusItems: plus.filter(item => item.n !== 'Forza Horizon 5' && item.n !== 'Ghost of Yotei')
+    }
+  });
+  const titles = feed.banner[2].covers.map(c => c.title);
+  assert.deepStrictEqual(titles, ['God of War Ragnarök', 'Horizon Zero Dawn Remastered', 'Grand Theft Auto V', 'Astro Bot']);
+  rental.forEach(g => assert.ok(!titles.includes(g.title), g.title));
+  assert.ok(!feed.banner[2].text.includes('Forza'));
+  assert.ok(!feed.banner[2].text.includes('Yotei'));
+  assert.ok(!feed.banner[2].text.includes('First Light'));
+  assert.ok(!feed.banner[2].text.includes('Assassin'));
+  const two = announcements.selectPsplusCollage([
+    { n: 'Astro Bot', i: 'https://image.api.playstation.com/astro.png' },
+    { n: 'Sackboy', i: 'https://image.api.playstation.com/sack.png' }
+  ]);
+  assert.strictEqual(two.covers.length, 2);
+  assert.ok(two.text.includes('Astro Bot and Sackboy.'));
+  assert.ok(!two.text.includes('and more'));
 });
 
 ok('hero slide seeding is idempotent and does not touch a row that already has the key', () => {
@@ -218,6 +279,9 @@ ok('the banner script auto-advances on its own interval, and stays quiet for red
   assert.ok(js.includes('touchstart') && js.includes('touchend'));
   assert.ok(js.includes('ArrowLeft') && js.includes('ArrowRight'));
   assert.ok(js.includes("setLive('off')") && js.includes("setLive('polite')"));
+  assert.ok(js.includes(':focus-visible'), 'a mouse click must not pause auto-advance forever');
+  assert.ok(js.includes('ann-banner-arrow'));
+  assert.ok(!js.includes('function focusInside'));
   const css = fs.readFileSync(path.join(__dirname, '../public/css/home.css'), 'utf8');
   assert.ok(css.includes('height: 420px') && css.includes('height: 680px'));
 });

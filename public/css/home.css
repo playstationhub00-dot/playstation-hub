@@ -487,7 +487,7 @@ body.home2 .ann-banner-media::after {
   pointer-events: none;
 }
 body.home2 .ann-var-collage .ann-banner-media::after { display: none; }
-body.home2 .ann-banner-copy { padding: 28px 48px 52px 28px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
+body.home2 .ann-banner-copy { padding: 28px 40px 28px 28px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; }
 body.home2 .ann-banner-actions { width: 100%; }
 body.home2 .ann-banner-title { font-size: clamp(1.45rem, 2.6vw, 2.15rem); line-height: 1.15; letter-spacing: -0.03em; margin: 12px 0 8px; }
 body.home2 .ann-banner-text { font-size: 1.02rem; }
@@ -505,6 +505,13 @@ body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
   padding: 8px;
   background: #070707;
 }
+.ann-banner-collage.n-1 { grid-template-columns: minmax(0, 1fr); grid-template-rows: 1fr; padding: 18px 28%; }
+.ann-banner-collage.n-2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+.ann-banner-collage.n-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 1fr; }
+.ann-banner-collage.n-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.ann-banner-collage.n-5 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.ann-banner-collage.n-5 img:nth-child(-n+3) { grid-column: span 2; }
+.ann-banner-collage.n-5 img:nth-child(n+4) { grid-column: span 3; }
 .ann-banner-collage img {
   position: static;
   inset: auto;
@@ -699,7 +706,7 @@ body.home2 .hm-trust li { font-weight: 600; }
   }
   body.home2 .ann-banner-media { flex: none; width: 100%; height: 230px; min-height: 230px; }
   body.home2 .ann-banner-media::after { background: linear-gradient(180deg, transparent 45%, var(--hr-hero-bg)); }
-  body.home2 .ann-banner-copy { padding: 8px 20px 36px; justify-content: flex-start; }
+  body.home2 .ann-banner-copy { padding: 8px 20px 20px; justify-content: flex-start; }
   body.home2 .ann-hours-badge { left: 12px; bottom: 12px; padding: 6px 10px 8px; border-radius: 12px; }
   body.home2 .ann-hours-badge b { font-size: 2rem; }
   body.home2 .ann-banner-title { font-size: 1.85rem; }
