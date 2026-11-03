@@ -76,6 +76,17 @@ async function main() {
     assert.ok(/<tr><td>Age rating<\/td><td>ESRB Mature<\/td><\/tr>/.test(known.body));
     assert.ok(known.body.includes('>Action<') && known.body.includes('>Adventure<'), 'genre chips use PlayStation genres');
   });
+  await okAsync('PlayStation screenshots after the first use a real loading attribute', async () => {
+    const stageStart = known.body.indexOf('id="gpmStage"');
+    const stageEnd = known.body.indexOf('id="gpmThumbs"');
+    const stage = known.body.slice(stageStart, stageEnd);
+    const shots = [...stage.matchAll(/<img\b[^>]*>/g)].map(m => m[0]).filter(tag => tag.includes('image.api.playstation.com'));
+    assert.ok(shots.length >= 2, shots.join('\n'));
+    shots.forEach(tag => {
+      assert.ok(!tag.includes('loading=&#34;'), tag);
+      assert.ok(tag.includes(' decoding="async"') && tag.includes(' loading="lazy"'), tag);
+    });
+  });
   await okAsync('the rent box and the Messenger button are still there', async () => {
     assert.ok(known.body.includes('id="ctaMsgPrimary"') && known.body.includes('id="rentPanel"'));
     assert.ok(known.body.includes('/js/game-media.js?v=') && known.body.includes('/css/game-psn.css?v='));

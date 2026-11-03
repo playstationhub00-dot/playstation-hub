@@ -14,7 +14,7 @@
       <video controls playsinline preload="none"<% if (m.poster) { %> poster="<%= m.poster %>"<% } %>><source src="<%= m.src %>" type="video/mp4"></video>
       <span class="gpm-badge">▶ TRAILER</span>
       <% } else { %>
-      <img src="<%= m.src %>" alt="<%= title %> screenshot <%= i + 1 %>" width="1280" height="720" decoding="async"<%= i === 0 ? '' : ' loading="lazy"' %>>
+      <img src="<%= m.src %>" alt="<%= title %> screenshot <%= i + 1 %>" width="1280" height="720" decoding="async"<% if (i > 0) { %> loading="lazy"<% } %>>
       <% } %>
     </div>
     <% }) %>
