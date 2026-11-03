@@ -19,7 +19,7 @@
   <article class="ann-banner-slide<%= i === 0 ? ' on' : '' %><%= slide.variant ? ' ann-var-' + slide.variant : '' %> ann-aud-<%= slide.audience %> ann-dev-<%= slide.device %>" data-audience="<%= slide.audience %>" data-device="<%= slide.device %>"<% if (slide.sourceKey) { %> data-source="<%= slide.sourceKey %>"<% } %><% if (bannerMany) { %> aria-roledescription="slide" aria-label="<%= (i + 1) + ' of ' + bannerSlides.length + (slideName ? ': ' + slideName : '') %>"<% } %><% if (i !== 0) { %> aria-hidden="true"<% } %>>
     <% if (slide.variant === 'collage' && slide.covers && slide.covers.length) { %>
     <div class="ann-banner-media" aria-hidden="true">
-      <div class="ann-banner-collage">
+      <div class="ann-banner-collage n-<%= slide.covers.length %>">
         <% slide.covers.forEach(function (cover) { %>
         <img <%- imgCard(cover.src) %> alt="" width="240" height="320" decoding="async"<% if (i > 0) { %> loading="lazy"<% } %>>
         <% }) %>

@@ -88,13 +88,22 @@
     });
     var timer = null;
     var touching = false;
+    var pointerInside = false;
     var live = root.querySelector('.ann-banner-live');
     function setLive(mode) {
       if (live) live.setAttribute('aria-live', mode);
     }
-    function focusInside() {
+    // A mouse click focuses a button, but that focus is not :focus-visible.
+    // Treating every focused control as a hold stopped the timer forever after
+    // the first click, and also if the carousel region itself was focused on
+    // load. Only a keyboard focus keeps auto-advance paused.
+    function keyboardHold() {
       var active = document.activeElement;
-      return !!(active && active !== document.body && root.contains(active));
+      if (!active || active === document.body || !root.contains(active)) return false;
+      try { return active.matches(':focus-visible'); } catch (err) { return false; }
+    }
+    function canAuto() {
+      return !reduced && !pointerInside && !touching && !keyboardHold() && eligibleIndexes(root, selector).length >= 2;
     }
     function step(dir, announce) {
       var ids = eligibleIndexes(root, selector);
@@ -107,16 +116,15 @@
       showIndex(root, selector, ids[(pos + (dir || 1) + ids.length) % ids.length], announce);
     }
     function start() {
-      if (reduced || timer || touching || focusInside()) return;
-      if (eligibleIndexes(root, selector).length < 2) {
-        setLive('polite');
+      if (timer || !canAuto()) {
+        if (!timer) setLive(canAuto() ? 'off' : 'polite');
         return;
       }
       setLive('off');
       var interval = parseInt(root.getAttribute('data-interval'), 10);
       if (!interval || interval < 1000) interval = 6000;
       timer = setInterval(function () {
-        if (root.hasAttribute('hidden') || document.hidden) return;
+        if (root.hasAttribute('hidden') || document.hidden || !canAuto()) return;
         step(1, false);
       }, interval);
     }
@@ -127,9 +135,9 @@
     }
     start();
     if (reduced) setLive('polite');
-    root.addEventListener('mouseenter', stop);
-    root.addEventListener('mouseleave', start);
-    root.addEventListener('focusin', stop);
+    root.addEventListener('mouseenter', function () { pointerInside = true; stop(); });
+    root.addEventListener('mouseleave', function () { pointerInside = false; start(); });
+    root.addEventListener('focusin', function () { if (keyboardHold()) stop(); });
     root.addEventListener('focusout', function (e) {
       if (!root.contains(e.relatedTarget)) start();
     });
@@ -139,6 +147,7 @@
       e.preventDefault();
       stop();
       step(e.key === 'ArrowLeft' ? -1 : 1, true);
+      if (!keyboardHold()) start();
     });
     if (root.getAttribute('data-swipe') === '1') {
       var originX = 0;

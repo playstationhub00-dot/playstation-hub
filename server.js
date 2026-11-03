@@ -796,6 +796,18 @@ app.use((req, res, next) => {
     let accountSummaries = {};
     try { accountSummaries = buildAccountSummaryMap(); } catch (e) { accountSummaries = {}; }
     const annSettings = db.get('site_settings').value() || {};
+    let psplusItems = [];
+    try {
+      psplusItems = psplusCatalogView.buildPublicCatalog({
+        games: psplusCatalogStore.all(),
+        siteGames: db.get('games').value() || [],
+        entries: getPsplus() || [],
+        slugFor: gameSlug,
+        monthlyCovers: psplusMonthlyCoversStore.all()
+      }).items || [];
+    } catch (e) {
+      psplusItems = [];
+    }
     res.locals.announcementFeed = announcementsLib.present({
       entries: db.get('announcements').value() || [],
       now: new Date(),
@@ -807,6 +819,7 @@ app.use((req, res, next) => {
         summaries: accountSummaries,
         priceCategories: db.get('price_categories').value() || [],
         psplusPrices: db.get('psplus_prices').value() || null,
+        psplusItems,
         promo: annSettings.promo || null
       }
     });
