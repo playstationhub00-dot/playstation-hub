@@ -792,6 +792,9 @@ app.use((req, res, next) => {
     res.locals.monthlyPromo = promos.monthlyDiscountLive(ctx.live);
     res.locals.bannerPromo = ctx.banner;
     res.locals.announcementNow = themes.manilaWall(new Date());
+    let accountSummaries = {};
+    try { accountSummaries = buildAccountSummaryMap(); } catch (e) { accountSummaries = {}; }
+    const annSettings = db.get('site_settings').value() || {};
     res.locals.announcementFeed = announcementsLib.present({
       entries: db.get('announcements').value() || [],
       now: new Date(),
@@ -799,7 +802,11 @@ app.use((req, res, next) => {
       themePromo: res.locals.siteTheme && res.locals.siteTheme.promo,
       catalog: {
         games: db.get('games').value() || [],
-        upcoming: db.get('upcoming').value() || []
+        upcoming: db.get('upcoming').value() || [],
+        summaries: accountSummaries,
+        priceCategories: db.get('price_categories').value() || [],
+        psplusPrices: db.get('psplus_prices').value() || null,
+        promo: annSettings.promo || null
       }
     });
     res.locals.promoBadgeFor = (gameId) => promos.badgeFor(ctx.live, gameId);
@@ -1022,6 +1029,22 @@ try {
   }
 } catch (e) {
   console.log('[announcements] homepage seed failed:', e.message);
+}
+
+// CoD, PS Plus, and the free-trial hero. Separate from the GTA migration so a
+// database that already ran that one still gains the slides once. source_key
+// keeps a second boot from inserting duplicates.
+try {
+  const heroAnn = announcementsLib.applyHeroSlides(db.getState(), new Date());
+  if (heroAnn.write) {
+    db.set('announcements', heroAnn.announcements)
+      .set('nextAnnouncementId', heroAnn.nextAnnouncementId)
+      .set('migrations', heroAnn.migrations)
+      .write();
+    console.log('[announcements] hero slides seeded');
+  }
+} catch (e) {
+  console.log('[announcements] hero slide seed failed:', e.message);
 }
 
 // The four slug-typo families only (assasins, calisto, berseker, triology).

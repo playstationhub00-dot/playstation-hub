@@ -111,8 +111,18 @@ async function main() {
     ['Which account type is for you?', 'Three ways to play', 'Why Rent From Us', 'Ways to Pay', 'Browse by Price Tier', 'Most Popular', 'hero-v2', 'Rent Longer. Save More.', 'spotlight-section', 'id="hmBanner"', '100% safe', 'no risk', 'always 10% off']
       .forEach(t => assert.ok(!home.includes(t), t));
     const hero = slice(home, 'id="annBanner"', 'id="find"');
-    assert.ok(!hero.includes('₱'), 'no price on the reservation card');
-    assert.ok(hero.includes('Reserve on Messenger') && hero.includes('Browse new games'));
+    const gtaAt = hero.indexOf('GTA VI is coming');
+    assert.ok(gtaAt > 0, 'GTA slide is first in the hero');
+    const gta = hero.slice(hero.lastIndexOf('<article', gtaAt), hero.indexOf('</article>', gtaAt));
+    assert.ok(!gta.includes('₱'), 'no price on the reservation card');
+    assert.ok(gta.includes('Reserve on Messenger') && gta.includes('Browse new games'));
+    assert.ok(hero.indexOf('GTA VI is coming') < hero.indexOf('Call of Duty'));
+    assert.ok(hero.includes('aria-roledescription="carousel"') && hero.includes('data-interval="6500"'));
+    assert.ok(hero.includes('Hundreds of games') && hero.includes('From ₱159 / week'));
+    assert.ok(hero.includes('Play free for') && hero.includes('Message us'));
+    assert.ok(hero.includes('loading="lazy"'));
+    assert.strictEqual((hero.match(/<h1\b/g) || []).length, 0);
+    assert.strictEqual((home.match(/<h1\b/g) || []).length, 1);
   });
   await okAsync('a game card is on the page before "Choose your player"', async () => {
     assert.ok(home.indexOf('class="game-card') > 0 && home.indexOf('class="game-card') < home.indexOf('id="players"'));

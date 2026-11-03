@@ -93,6 +93,135 @@ ok('a theme promo takes the first bar slot and is not a second strip', () => {
   assert.ok(!feed.bell.some(s => s.kind === 'theme'));
 });
 
+console.log('\nhero slides');
+function heroRows() {
+  return [
+    entry({ id: 1, source_key: 'home-hero-gta6', place_banner: true, priority: 5, sort: 3, label: 'Reservations open', title: 'GTA VI is coming.', title_accent: 'Reserve your slot now.', text: 'Hold your spot.', button_label: 'Reserve on Messenger', button_url: 'https://m.me/PlaystationHub00', countdown_at: '2026-11-19T00:00' }),
+    entry({ id: 2, source_key: 'home-hero-cod-mw4', place_banner: true, priority: 4, sort: 4, title: 'Call of Duty®: Modern Warfare® 4', title_accent: 'is ready to play.', text: 'seed', button_label: 'Rent now', button_url: '/game/call-of-duty-modern-warfare-4', button2_label: 'See all new games', button2_url: '/browse?tab=new', image: '/uploads/1789972642700.webp' }),
+    entry({ id: 3, source_key: 'home-hero-psplus', place_banner: true, priority: 3, sort: 5, label: 'PS Plus Deluxe', title: 'Hundreds of games.', title_accent: 'One rental.', text: 'Play any game.', button_label: 'See the games', button_url: '/ps-plus', button2_label: 'How it works', button2_url: '/how-it-works' }),
+    entry({ id: 4, source_key: 'home-hero-try3h', place_banner: true, priority: 2, sort: 6, label: 'Try before you pay', title: 'Play free for 3 hours first.', title_accent: '3 hours', text: 'Try it.', button_label: 'Message us', button_url: 'https://m.me/PlaystationHub00', button2_label: 'Compare account types', button2_url: '/guides/trophy-vs-non-trophy-vs-ps4-primary', image: '/uploads/1791607091002.webp' })
+  ];
+}
+function heroGames() {
+  return [
+    { id: 8, title: 'Call of Duty: Modern Warfare 4', platform: 'PS5', nt_price_7d: 349, tr_price_7d: 449, non_trophy_slots: 1, trophy_slots: 0, cover_image: '/uploads/cod.webp' },
+    { id: 9, title: 'God of War Ragnarok', cover_image: '/uploads/gow.webp', platform: 'PS5' },
+    { id: 10, title: 'Horizon Zero Dawn', cover_image: '/uploads/hzd.webp', platform: 'PS5' },
+    { id: 11, title: 'Ghost of Tsushima', cover_image: '/uploads/ghost.webp', platform: 'PS5' },
+    { id: 12, title: 'The Crew Motorfest', cover_image: '/uploads/crew.webp', platform: 'PS5' },
+    { id: 13, title: 'Grand Theft Auto V', cover_image: '/uploads/gtav.webp', platform: 'PS5' },
+    { id: 14, title: 'The Last of Us Part I', cover_image: '/uploads/tlou.webp', platform: 'PS5' },
+    { id: 15, title: 'PS Plus Deluxe', cover_image: '/uploads/plus.webp', nt_price_7d: 999, tr_price_7d: 999, platform: 'PS5' }
+  ];
+}
+ok('GTA stays first, and the other slides take slots, price, and covers from the catalogue', () => {
+  const catalog = { games: heroGames(), psplusPrices: { nt_price_7d: 349, tr_price_7d: 399 }, summaries: {} };
+  const feed = announcements.present({ entries: heroRows(), now: NOW, catalog });
+  assert.deepStrictEqual(feed.banner.map(s => s.sourceKey), ['home-hero-gta6', 'home-hero-cod-mw4', 'home-hero-psplus', 'home-hero-try3h']);
+  assert.ok(feed.banner[0].countdown, 'GTA countdown still comes from countdown_at');
+  assert.strictEqual(feed.banner[0].title, 'GTA VI is coming.');
+  assert.strictEqual(feed.banner[1].label, 'New · Last slot');
+  assert.strictEqual(feed.banner[1].buttonLabel, 'Rent now');
+  assert.strictEqual(feed.banner[1].buttonUrl, '/game/call-of-duty-modern-warfare-4');
+  assert.strictEqual(feed.banner[1].footer, 'Weekly from ₱349');
+  assert.ok(feed.banner[1].text.includes('still a slot open'));
+  assert.ok(!feed.banner[1].text.includes('\u2014'));
+  const many = announcements.present({
+    entries: heroRows(), now: NOW,
+    catalog: { games: heroGames().map(g => g.id === 8 ? Object.assign({}, g, { non_trophy_slots: 2, trophy_slots: 1 }) : g), psplusPrices: catalog.psplusPrices }
+  });
+  assert.strictEqual(many.banner[1].label, 'New');
+  assert.ok(many.banner[1].text.includes('slots are open'));
+  const none = announcements.present({
+    entries: heroRows(), now: NOW,
+    catalog: { games: heroGames().map(g => g.id === 8 ? Object.assign({}, g, { non_trophy_slots: 0, trophy_slots: 0 }) : g), psplusPrices: { nt_price_7d: 280, tr_price_7d: 399 } }
+  });
+  assert.strictEqual(none.banner[1].label, 'Full');
+  assert.strictEqual(none.banner[1].buttonLabel, 'Join the line');
+  assert.strictEqual(none.banner[1].buttonUrl, '/game/call-of-duty-modern-warfare-4');
+  assert.ok(!none.banner[1].text.includes('still a slot open'));
+  assert.strictEqual(feed.banner[2].footer, 'From ₱349 / week');
+  assert.strictEqual(feed.banner[2].button2Url, '/how-it-works');
+  assert.strictEqual(feed.banner[2].covers.length, 6);
+  assert.strictEqual(feed.banner[2].covers[0].title, 'God of War Ragnarok');
+  assert.ok(!feed.banner[2].covers.some(c => /ps plus deluxe/i.test(c.title)));
+  assert.strictEqual(feed.banner[3].title, 'Play free for');
+  assert.strictEqual(feed.banner[3].titleAccent, '3 hours');
+  assert.strictEqual(feed.banner[3].titleTail, ' first.');
+  assert.strictEqual(feed.banner[3].footer, 'Non-Trophy accounts only. Not on Trophy or PS4 Primary.');
+  assert.strictEqual(feed.banner[3].badge, true);
+  assert.strictEqual(feed.banner[3].buttonUrl, 'https://m.me/PlaystationHub00');
+  const fromAccounts = announcements.present({
+    entries: heroRows(), now: NOW,
+    catalog: {
+      games: heroGames().map(g => g.id === 8 ? Object.assign({}, g, { non_trophy_slots: 5, trophy_slots: 5 }) : g),
+      summaries: { 8: { non_trophy: { available: 1, total: 3 }, trophy: { available: 0, total: 2 }, ps4_primary: { available: 0, total: 0 } } },
+      psplusPrices: catalog.psplusPrices
+    }
+  });
+  assert.strictEqual(fromAccounts.banner[1].label, 'New · Last slot');
+  const priced = announcements.present({
+    entries: heroRows(), now: NOW,
+    catalog: {
+      games: [{ id: 8, title: 'Call of Duty: Modern Warfare 4', platform: 'PS5', price_category_id: 2, nt_price_7d: 0, tr_price_7d: 0, non_trophy_slots: 3, trophy_slots: 0, cover_image: '/c.webp' }],
+      priceCategories: [{ id: 2, nt_price_7d: 299, tr_price_7d: 399 }],
+      promo: { enabled: true, discounts: { 7: 10, 30: 0 } },
+      psplusPrices: null
+    }
+  });
+  assert.strictEqual(priced.banner[1].label, 'New');
+  assert.strictEqual(priced.banner[1].footer, 'Weekly from ₱269');
+  assert.strictEqual(priced.banner[2].footer, '');
+  const missing = announcements.present({ entries: heroRows(), now: NOW, catalog: { games: [], psplusPrices: null } });
+  assert.strictEqual(missing.banner[1].label, 'Full');
+  assert.strictEqual(missing.banner[1].footer, '');
+  assert.strictEqual(missing.banner[1].buttonLabel, 'Join the line');
+  assert.strictEqual(missing.banner[1].buttonUrl, '/browse?tab=new');
+});
+
+ok('hero slide seeding is idempotent and does not touch a row that already has the key', () => {
+  const custom = {
+    migrations: ['homepage-redesign-2026-10-29'],
+    announcements: [{ id: 3, source_key: 'home-hero-cod-mw4', title: 'Custom CoD', text: 'Keep me', enabled: true, place_banner: true }],
+    nextAnnouncementId: 4
+  };
+  const first = announcements.applyHeroSlides(custom, NOW);
+  assert.strictEqual(first.write, true);
+  assert.ok(first.migrations.includes(announcements.HERO_SLIDES_MIGRATION_ID));
+  const cod = first.announcements.filter(a => a.source_key === 'home-hero-cod-mw4');
+  assert.strictEqual(cod.length, 1);
+  assert.strictEqual(cod[0].text, 'Keep me');
+  assert.strictEqual(cod[0].title, 'Custom CoD');
+  assert.strictEqual(first.announcements.filter(a => a.source_key === 'home-hero-psplus').length, 1);
+  assert.strictEqual(first.announcements.filter(a => a.source_key === 'home-hero-try3h').length, 1);
+  const again = announcements.applyHeroSlides({
+    migrations: first.migrations,
+    announcements: first.announcements.map(a => a.source_key === 'home-hero-psplus' ? Object.assign({}, a, { title: 'Edited' }) : a),
+    nextAnnouncementId: first.nextAnnouncementId
+  }, NOW);
+  assert.strictEqual(again.write, false);
+  assert.strictEqual(again.announcements.filter(a => a.source_key === 'home-hero-psplus').length, 1);
+  assert.strictEqual(again.announcements.find(a => a.source_key === 'home-hero-psplus').title, 'Edited');
+  const dropped = announcements.applyHeroSlides({
+    migrations: [announcements.HERO_SLIDES_MIGRATION_ID],
+    announcements: [],
+    nextAnnouncementId: 1
+  }, NOW);
+  assert.strictEqual(dropped.write, false);
+  assert.strictEqual(dropped.announcements.length, 0);
+});
+
+ok('the banner script auto-advances on its own interval, and stays quiet for reduced motion', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../public/js/announcements.js'), 'utf8');
+  assert.ok(js.includes("getAttribute('data-interval')"));
+  assert.ok(js.includes('prefers-reduced-motion'));
+  assert.ok(js.includes('touchstart') && js.includes('touchend'));
+  assert.ok(js.includes('ArrowLeft') && js.includes('ArrowRight'));
+  assert.ok(js.includes("setLive('off')") && js.includes("setLive('polite')"));
+  const css = fs.readFileSync(path.join(__dirname, '../public/css/home.css'), 'utf8');
+  assert.ok(css.includes('height: 420px') && css.includes('height: 680px'));
+});
+
 console.log('\nmigration');
 ok('existing text is kept, a legacy bar is copied once, and a second boot does not write', () => {
   const custom = {
