@@ -11,7 +11,7 @@
   }
 %>
 <% if (bannerSlides.length) { %>
-<section class="ann-banner" id="annBanner" aria-label="Highlights"<% if (bannerMany) { %> role="region" aria-roledescription="carousel" aria-live="off" tabindex="0" data-interval="6500" data-swipe="1"<% } %>>
+<section class="ann-banner<%= bannerMany ? ' ann-banner-fx' : '' %>" id="annBanner" aria-label="Highlights"<% if (bannerMany) { %> role="region" aria-roledescription="carousel" aria-live="off" tabindex="0" data-interval="6500" data-swipe="1"<% } %>>
   <%- include('theme-decor') %>
   <% bannerSlides.forEach(function (slide, i) {
     const slideName = bannerLabel(slide);
@@ -49,7 +49,7 @@
         <%= slide.label %>
       </span>
       <% } %>
-      <% if (slide.title) { %><h2 class="ann-banner-title"><%= slide.title %><% if (slide.titleAccent) { %> <span class="ann-banner-accent<%= slide.titleTail ? '' : ' ann-banner-accent-block' %>"><%= slide.titleAccent %></span><% } %><% if (slide.titleTail) { %><%= slide.titleTail %><% } %></h2><% } %>
+      <% if (slide.title) { %><h2 class="ann-banner-title"><span class="ann-banner-line"><%= slide.title %></span><% if (slide.titleAccent) { %> <span class="ann-banner-accent<%= slide.titleTail ? '' : ' ann-banner-accent-block' %>"><%= slide.titleAccent %></span><% } %><% if (slide.titleTail) { %><%= slide.titleTail %><% } %></h2><% } %>
       <% if (slide.text) { %><p class="ann-banner-text"><%= slide.text %></p><% } %>
       <div class="ann-banner-actions">
         <% if (slide.buttonUrl) { %>
@@ -68,6 +68,7 @@
   </article>
   <% }) %>
   <% if (bannerMany) { %>
+  <div class="ann-banner-sweep" aria-hidden="true"></div>
   <div class="ann-banner-live" aria-live="off" aria-atomic="true"></div>
   <div class="ann-banner-dots" role="group" aria-label="Banner slides">
     <% bannerSlides.forEach(function (slide, i) { %>
