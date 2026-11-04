@@ -216,7 +216,7 @@
 body.home2 .gc2-card:hover { transform: none; box-shadow: none; }
 body.home2 .game-card:hover .game-desc-inline { display: none; }
 body.home2 .ann-banner { padding-top: 16px; }
-body.home2 .ann-banner .theme-deco { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+body.home2 .ann-banner .theme-deco { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
 .hr-find { padding-top: 1.25rem; }
 .hr-find .hm-tagline { font-size: clamp(1.35rem, 2.4vw, 1.8rem); font-weight: 800; letter-spacing: -0.03em; margin: 0 0 0.8rem; }
 /* These are <nav>s: undo the site header's nav rules (sticky, 64px tall, spread out, border)
@@ -495,6 +495,8 @@ body.home2 .ann-banner-actions { margin-top: 18px; }
 body.home2 .ann-banner-actions .ann-banner-cta { margin-top: 0; }
 .ann-banner-accent { color: var(--theme-accent-text, var(--theme-btn, #F5B800)); }
 .ann-banner-accent-block { display: block; }
+/* The lead stays on its own line above a block accent, same as the bare text node did. */
+body.home2 .ann-banner-title:has(.ann-banner-accent-block) .ann-banner-line { display: inline-block; max-width: 100%; }
 .ann-banner-collage {
   position: absolute;
   inset: 0;
@@ -543,6 +545,139 @@ body.home2 .ann-var-trial .ann-banner-media img { object-position: center center
 .ann-hours-badge span { font-size: 0.78rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; }
 .ann-banner-count { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--text-secondary, #a8a8a8); font-weight: 700; font-size: 0.92rem; }
 .ann-banner-count .ann-banner-ico { width: 16px; height: 16px; }
+
+/* Option C: a diagonal gold sweep uncovers the next hero slide. The banner
+   keeps the same outer box (24px pad + 420px card) while slides stack. */
+body.home2 .ann-banner.ann-banner-fx { height: 444px; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide {
+  display: flex;
+  position: absolute;
+  top: 24px;
+  left: 2rem;
+  right: 2rem;
+  visibility: hidden;
+  z-index: 1;
+  pointer-events: none;
+}
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.on,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.out { visibility: visible; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.on { z-index: 2; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.on:not(.in) { pointer-events: auto; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.on.in {
+  animation: ann-wipe 850ms cubic-bezier(.65, 0, .25, 1) both;
+}
+@keyframes ann-wipe {
+  from {
+    -webkit-clip-path: polygon(100% 0, 130% 0, 115% 100%, 85% 100%);
+    clip-path: polygon(100% 0, 130% 0, 115% 100%, 85% 100%);
+  }
+  to {
+    -webkit-clip-path: polygon(-30% 0, 130% 0, 115% 100%, -45% 100%);
+    clip-path: polygon(-30% 0, 130% 0, 115% 100%, -45% 100%);
+  }
+}
+body.home2 .ann-banner-sweep {
+  position: absolute;
+  top: 24px;
+  bottom: 0;
+  left: 2rem;
+  right: 2rem;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 22px;
+}
+body.home2 .ann-banner-sweep::before {
+  content: '';
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: 0;
+  width: clamp(56px, 7vw, 90px);
+  opacity: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 214, 90, 0.95) 48%, #fff6cf 50%, rgba(245, 184, 0, 0.9) 52%, transparent 70%);
+  filter: blur(2px);
+}
+body.home2 .ann-banner-sweep.go::before {
+  animation: ann-sweep 850ms cubic-bezier(.65, 0, .25, 1) both;
+}
+@keyframes ann-sweep {
+  0% { opacity: 1; transform: translate3d(var(--sweep-from, 1000px), 0, 0) skewX(var(--sweep-skew, -18deg)); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--sweep-to, -280px), 0, 0) skewX(var(--sweep-skew, -18deg)); }
+}
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-label,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-text,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-actions,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-foot,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-count {
+  animation: ann-rise 360ms ease-out both;
+}
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-label { animation-delay: 80ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title { animation-delay: 160ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-text { animation-delay: 240ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-actions { animation-delay: 320ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-foot,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-count { animation-delay: 400ms; }
+/* A block accent is its own beat, between the title and the description. */
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title:has(.ann-banner-accent-block) { animation: none; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title:has(.ann-banner-accent-block) .ann-banner-line,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title:has(.ann-banner-accent-block) .ann-banner-accent-block {
+  animation: ann-rise 360ms ease-out both;
+}
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title:has(.ann-banner-accent-block) .ann-banner-line { animation-delay: 160ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title:has(.ann-banner-accent-block) .ann-banner-accent-block { animation-delay: 240ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-copy:has(.ann-banner-accent-block) > .ann-banner-text { animation-delay: 320ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-copy:has(.ann-banner-accent-block) > .ann-banner-actions { animation-delay: 400ms; }
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-copy:has(.ann-banner-accent-block) > .ann-banner-foot,
+body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-copy:has(.ann-banner-accent-block) > .ann-banner-count { animation-delay: 480ms; }
+@keyframes ann-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ann-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+body.home2 .ann-banner .ann-dot.on::after {
+  width: 24px;
+  background: color-mix(in srgb, var(--theme-btn, #F5B800) 35%, transparent);
+}
+body.home2 .ann-banner .ann-dot.ann-fill::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 5px;
+  margin: -2.5px 0 0 -12px;
+  border-radius: 99px;
+  background: var(--theme-btn, #F5B800);
+  z-index: 1;
+  transform-origin: left center;
+  animation: ann-dot-fill var(--ann-int, 6500ms) linear forwards;
+}
+body.home2 .ann-banner.ann-hold .ann-dot.ann-fill::before { animation-play-state: paused; }
+@keyframes ann-dot-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+body.home2 .ann-banner-dots { z-index: 5; }
+@media (prefers-reduced-motion: reduce) {
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.on.in { animation: ann-fade 300ms ease-out both; }
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-label,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-title,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-text,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-actions,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-foot,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-count,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-line,
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide.st-on .ann-banner-accent-block { animation: none; }
+  body.home2 .ann-banner-sweep { display: none; }
+  body.home2 .ann-banner .ann-dot.ann-fill::before { animation: none; }
+  body.home2 .ann-banner .ann-dot.on::after { background: var(--theme-btn, #F5B800); }
+}
 .hr-pays { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .hr-pays span { border: 1px solid var(--border, #333); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 800; color: var(--text-primary, #fff); }
 .hr-pop {
@@ -697,6 +832,9 @@ body.home2 .hm-trust li { font-weight: 600; }
   .hr-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .hr-chips a { white-space: nowrap; }
   body.home2 .ann-banner { padding-top: 14px; }
+  body.home2 .ann-banner.ann-banner-fx { height: 694px; }
+  body.home2 .ann-banner.ann-banner-fx .ann-banner-slide { top: 14px; left: 12px; right: 12px; }
+  body.home2 .ann-banner-sweep { top: 14px; left: 12px; right: 12px; }
   body.home2 .ann-banner-slide,
   body.home2 .ann-banner-slide.on {
     height: 680px;

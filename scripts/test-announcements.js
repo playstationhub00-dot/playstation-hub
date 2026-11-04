@@ -282,12 +282,19 @@ ok('the banner script auto-advances on its own interval, and stays quiet for red
   assert.ok(js.includes(':focus-visible'), 'a mouse click must not pause auto-advance forever');
   assert.ok(!js.includes('ann-banner-arrow'), 'no previous/next buttons');
   assert.ok(!js.includes('function focusInside'));
+  assert.ok(js.includes('ann-banner-sweep') && js.includes('playHeroMotion'), 'hero slide change plays the gold sweep');
+  assert.ok(js.includes("'--ann-int'") || js.includes('\'--ann-int\''), 'dot fill uses the auto-advance interval');
+  assert.ok(js.includes('ann-fill') && js.includes('resetFill'), 'manual dot click resets the progress fill');
   const bannerCss = fs.readFileSync(path.join(__dirname, '../public/css/style.css'), 'utf8');
   assert.ok(bannerCss.includes('.ann-banner-dots {') && bannerCss.includes('right: calc(2rem + 14px)'));
   assert.ok(bannerCss.includes('background: #e8e8e8'));
   assert.ok(!bannerCss.includes('ann-banner-arrow'));
   const css = fs.readFileSync(path.join(__dirname, '../public/css/home.css'), 'utf8');
   assert.ok(css.includes('height: 420px') && css.includes('height: 680px'));
+  assert.ok(css.includes('ann-wipe') && css.includes('clip-path: polygon(100% 0, 130% 0, 115% 100%, 85% 100%)'));
+  assert.ok(css.includes('ann-sweep') && css.includes('ann-rise') && css.includes('ann-dot-fill'));
+  assert.ok(css.includes('ann-fade 300ms') && css.includes('prefers-reduced-motion: reduce'));
+  assert.ok(css.includes('width: 24px') && css.includes('height: 444px') && css.includes('height: 694px'));
 });
 
 console.log('\nmigration');

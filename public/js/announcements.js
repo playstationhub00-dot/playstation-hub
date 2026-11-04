@@ -34,10 +34,52 @@
   }
   window.phAnnPick = pick;
 
+  // Gold sweep on the homepage hero only. The outgoing slide stays put and
+  // the incoming one wipes in over it. Reduced motion is a short fade.
+  function playHeroMotion(root, slides, prevIndex, nextIndex) {
+    var prev = slides[prevIndex];
+    var next = slides[nextIndex];
+    if (!prev || !next || prev === next) return;
+    var gen = (root._annGen || 0) + 1;
+    root._annGen = gen;
+    for (var i = 0; i < slides.length; i++) slides[i].classList.remove('out', 'in', 'st-on');
+    prev.classList.add('out');
+    void next.offsetWidth;
+    next.classList.add('in');
+    if (!reduced) {
+      next.classList.add('st-on');
+      var sweep = root.querySelector('.ann-banner-sweep');
+      if (sweep) {
+        var rect = next.getBoundingClientRect();
+        var beam = 90;
+        try { beam = parseFloat(window.getComputedStyle(sweep, '::before').width) || beam; } catch (err) {}
+        if (rect.width > 0 && rect.height > 0) {
+          root.style.setProperty('--sweep-from', Math.round(rect.width * 0.925 - beam / 2) + 'px');
+          root.style.setProperty('--sweep-to', Math.round(-rect.width * 0.375 - beam / 2) + 'px');
+          var angle = Math.atan((rect.width * 0.15) / rect.height) * 180 / Math.PI;
+          root.style.setProperty('--sweep-skew', (-angle).toFixed(2) + 'deg');
+        }
+        sweep.classList.remove('go');
+        void sweep.offsetWidth;
+        sweep.classList.add('go');
+      }
+    }
+    window.setTimeout(function () {
+      if (root._annGen !== gen) return;
+      prev.classList.remove('out');
+      next.classList.remove('in', 'st-on');
+    }, reduced ? 360 : 980);
+  }
+
   function showIndex(root, selector, index, announce) {
     var slides = root.querySelectorAll(selector);
     var dots = root.querySelectorAll('.ann-dot');
+    var hero = root.id === 'annBanner';
+    var prev = -1;
     var chosen = null;
+    for (var p = 0; p < slides.length; p++) {
+      if (slides[p].classList.contains('on')) prev = p;
+    }
     for (var i = 0; i < slides.length; i++) {
       var on = i === index && window.phAnnOk(slides[i]);
       slides[i].classList.toggle('on', on);
@@ -53,11 +95,13 @@
         else dots[i].removeAttribute('aria-current');
       }
     }
+    if (hero && chosen && prev >= 0 && prev !== index) playHeroMotion(root, slides, prev, index);
     if (announce && chosen) {
       var region = root.querySelector('.ann-banner-live');
       if (region) region.textContent = chosen.getAttribute('aria-label') || '';
     }
     if (!chosen) pick(root, selector);
+    if (typeof root._annAfterShow === 'function') root._annAfterShow();
   }
 
   function eligibleIndexes(root, selector) {
@@ -82,11 +126,31 @@
     });
     root.querySelectorAll('.ann-dot').forEach(function (dot) {
       dot.addEventListener('click', function () {
-        stop();
+        stop(true);
         showIndex(root, selector, parseInt(dot.getAttribute('data-index'), 10) || 0, true);
       });
     });
     var timer = null;
+    function clearFill() {
+      if (root.id !== 'annBanner') return;
+      var nodes = root.querySelectorAll('.ann-dot');
+      for (var i = 0; i < nodes.length; i++) nodes[i].classList.remove('ann-fill');
+    }
+    function restartFill() {
+      if (root.id !== 'annBanner') return;
+      clearFill();
+      if (reduced || !timer) return;
+      var active = root.querySelector('.ann-dot.on');
+      if (!active) return;
+      void active.offsetWidth;
+      active.classList.add('ann-fill');
+    }
+    if (root.id === 'annBanner') {
+      root._annAfterShow = function () {
+        if (timer) restartFill();
+        else clearFill();
+      };
+    }
     var touching = false;
     var pointerInside = false;
     var live = root.querySelector('.ann-banner-live');
@@ -123,15 +187,27 @@
       setLive('off');
       var interval = parseInt(root.getAttribute('data-interval'), 10);
       if (!interval || interval < 1000) interval = 6000;
+      if (root.id === 'annBanner') {
+        root.classList.remove('ann-hold');
+        root.style.setProperty('--ann-int', interval + 'ms');
+      }
       timer = setInterval(function () {
         if (root.hasAttribute('hidden') || document.hidden || !canAuto()) return;
         step(1, false);
       }, interval);
+      restartFill();
     }
-    function stop() {
+    function stop(resetFill) {
       clearInterval(timer);
       timer = null;
       setLive('polite');
+      if (root.id !== 'annBanner') return;
+      if (resetFill) {
+        root.classList.remove('ann-hold');
+        clearFill();
+      } else {
+        root.classList.add('ann-hold');
+      }
     }
     start();
     if (reduced) setLive('polite');
