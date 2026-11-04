@@ -1,0 +1,17 @@
+<div class="adm-confirm" id="admConfirm" hidden>
+  <div class="adm-dialog" role="dialog" aria-modal="true" aria-labelledby="admConfirmTitle">
+    <div class="adm-dialog-ic" aria-hidden="true">!</div>
+    <h4 id="admConfirmTitle" data-confirm-title>Are you sure?</h4>
+    <p data-confirm-body></p>
+    <div class="adm-dialog-extra" data-confirm-extra hidden></div>
+    <div class="adm-dialog-type" data-confirm-typed hidden>
+      Type <b>DELETE</b> to confirm
+      <input type="text" data-confirm-input autocomplete="off" spellcheck="false" aria-label="Type DELETE to confirm">
+    </div>
+    <div class="adm-dialog-foot">
+      <button type="button" class="adm-btn adm-btn-ghost" data-confirm-cancel>Cancel</button>
+      <button type="button" class="adm-btn adm-btn-danger" data-confirm-ok disabled>Delete</button>
+    </div>
+  </div>
+</div>
+<div id="admToasts" aria-live="polite"></div>

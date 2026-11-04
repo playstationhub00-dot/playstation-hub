@@ -373,8 +373,17 @@
             </label>
             <label class="pm-field">
               <span><%= m.key === 'paypal' ? 'PayPal.Me username or business email' : 'Account number' %></span>
+              <% if (maskPaymentKey(m.key) && m.account_number) { %>
+                <span class="mask-field">
+                  <span class="mask-value"><%= maskPaymentNumber(m.account_number) %></span>
+                  <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" data-mask-kind="payment_number" data-mask-subject="<%= m.key %>" data-mask-input="number_<%= m.key %>">Reveal</button>
+                  <input type="text" name="number_<%= m.key %>" value="" autocomplete="off" placeholder="<%= maskPaymentNumber(m.account_number) %>">
+                  <input type="hidden" name="number_<%= m.key %>_keep" value="1">
+                </span>
+              <% } else { %>
               <input type="text" name="number_<%= m.key %>" value="<%= m.account_number %>"
                      placeholder="<%= m.key === 'paypal' ? 'playstationhub' : '' %>">
+              <% } %>
             </label>
             <% if (m.key === 'paypal') { %>
             <p class="pm-note">

@@ -316,7 +316,29 @@
       byId('accModalTitle').textContent = a ? 'Edit Account' : 'Add Account';
       byId('accModalSubmit').textContent = a ? 'Save changes' : 'Create account';
       setField('label', a ? a.label : '');
-      setField('email', a ? a.email : '');
+      setField('email', '');
+      var keep = document.getElementById('accEmailKeep');
+      var maskEl = document.getElementById('accEmailMask');
+      var revealBtn = document.getElementById('accEmailReveal');
+      var emailInput = document.getElementById('accEmailInput');
+      if (a && a.has_email) {
+        if (keep) keep.value = '1';
+        if (maskEl) {
+          maskEl.hidden = false;
+          maskEl.textContent = a.email_masked || '';
+          maskEl.dataset.mask = a.email_masked || '';
+        }
+        if (revealBtn) {
+          revealBtn.hidden = false;
+          revealBtn.setAttribute('data-mask-subject', String(id));
+        }
+        if (emailInput) emailInput.placeholder = a.email_masked || 'Reveal to edit';
+      } else {
+        if (keep) keep.value = '0';
+        if (maskEl) { maskEl.hidden = true; maskEl.textContent = ''; }
+        if (revealBtn) revealBtn.hidden = true;
+        if (emailInput) emailInput.placeholder = 'e.g. pshub.account1@gmail.com';
+      }
       setField('games_text', a ? a.games_text : '');
       setField('note', a ? a.note : '');
       setField('price_permanent_tr', a ? a.price_permanent_tr : 5000);
@@ -445,6 +467,11 @@
       if (slotForm.elements.days.value) slotForm.elements.end_date.value = '';
     });
     gameSearch.addEventListener('input', filterGameList);
+    var emailInput = document.getElementById('accEmailInput');
+    if (emailInput) emailInput.addEventListener('input', function () {
+      var keep = document.getElementById('accEmailKeep');
+      if (keep) keep.value = '0';
+    });
     accForm.addEventListener('change', function (e) {
       if (e.target && e.target.name === 'game_ids') renderGameChips();
     });

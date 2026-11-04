@@ -152,7 +152,7 @@
             <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">↩</button>
           </form>
           <% } %>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" data-confirm-title="Delete order <%= o.ref %>?" data-confirm-body="Its customer record and money go too. This cannot be undone." data-confirm-ok="Delete order" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
             <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
           </form>
         </td>

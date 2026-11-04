@@ -112,7 +112,7 @@ console.log('\nAll games');
 ok('toolbar: search, five chips with counts, platform and sort', () => {
   const p = panel(html, 'all');
   assert.ok(p.includes('id="gmSearch"'));
-  [['all', 'All', 3], ['new', '🆕 New', 1], ['soldout', '⛔ Sold out', 1], ['never', '💤 Never rented', 1], ['bundle', '📦 Bundles', 1]]
+  [['all', 'All', 3], ['new', '🆕 New', 1], ['soldout', '⛔ Sold out', 1], ['never', '💤 Not rented yet', 1], ['bundle', '📦 Bundles', 1]]
     .forEach(([k, label, n]) => assert.ok(p.includes('data-gm-chip="' + k + '">' + label + ' <span class="gm-chip-n">' + n + '</span>'), k));
   assert.ok(p.includes('<select id="gmPlatform"'));
   ['all', 'PS5', 'PS4', 'PS4/PS5'].forEach(v => assert.ok(p.includes('<option value="' + v + '">'), v));
@@ -140,27 +140,27 @@ ok('game cell: cover, title, platform · genre, category and bundle tags', () =>
 
 ok('slot chips go red at 0, and PS4 shows only on a PS4 platform', () => {
   const r2 = gameRow(html, 2);
-  assert.ok(r2.includes('class="gm-slot gm-slot-zero">NT 0<'));
-  assert.ok(r2.includes('class="gm-slot gm-slot-tr gm-slot-zero">TR 0<'));
+  assert.ok(r2.includes('class="gm-slot gm-slot-zero">Non-Trophy 0<'));
+  assert.ok(r2.includes('class="gm-slot gm-slot-tr gm-slot-zero">Trophy 0<'));
   assert.ok(r2.includes('class="gm-slot">PS4 1<'));
   const r3 = gameRow(html, 3);
-  assert.ok(r3.includes('class="gm-slot">NT 2<'));
-  assert.ok(r3.includes('class="gm-slot gm-slot-tr">TR 1<'));
+  assert.ok(r3.includes('class="gm-slot">Non-Trophy 2<'));
+  assert.ok(r3.includes('class="gm-slot gm-slot-tr">Trophy 1<'));
   assert.ok(!r3.includes('>PS4 '));
 });
 
-ok('prices: weekly / monthly for NT and TR, and a Buy line only when a buy price is set', () => {
+ok('prices: weekly / monthly for Non-Trophy and Trophy, and a Buy line only when a buy price is set', () => {
   const r3 = gameRow(html, 3);
-  assert.ok(r3.includes('<div>NT ₱199 / ₱449</div>'));
-  assert.ok(r3.includes('<div class="gm-tr">TR ₱249 / ₱549</div>'));
+  assert.ok(r3.includes('<div>Non-Trophy ₱199 / ₱449</div>'));
+  assert.ok(r3.includes('<div class="gm-tr">Trophy ₱249 / ₱549</div>'));
   assert.ok(!r3.includes('gm-buy'));
-  assert.ok(gameRow(html, 2).includes('<div class="gm-buy">Buy NT ₱999</div>'));
+  assert.ok(gameRow(html, 2).includes('<div class="gm-buy">Buy Non-Trophy ₱999</div>'));
 });
 
-ok('status chips: New with days left (urgent at 3 or fewer), Never rented, Sold out, Stocked', () => {
+ok('status chips: New with days left (urgent at 3 or fewer), Not rented yet, Sold out, Stocked', () => {
   const r3 = gameRow(html, 3);
   assert.ok(r3.includes('class="gm-st gm-st-new gm-st-urgent">NEW · 3d left<'));
-  assert.ok(r3.includes('class="gm-st gm-st-never">Never rented<'));
+  assert.ok(r3.includes('class="gm-st gm-st-never">Not rented yet<'));
   assert.ok(gameRow(html, 2).includes('class="gm-st gm-st-stocked">Stocked<'));
   assert.ok(!gameRow(html, 2).includes('Sold out'));
   assert.ok(gameRow(html, 1).includes('class="gm-st gm-st-sold">Sold out<'));

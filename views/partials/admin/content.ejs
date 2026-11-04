@@ -467,7 +467,7 @@
               <div style="color:#ccc;font-size:0.88rem;line-height:1.5;">"<%= r.text %>"</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:0.4rem;flex-shrink:0;">
-              <form method="POST" action="/admin/reviews/toggle/<%= r.id %>"><button type="submit" style="background:<%= r.visible ? '#1a2a1a' : '#2a1a00' %>;color:<%= r.visible ? '#4ade80' : '#f59e0b' %>;border:1px solid <%= r.visible ? '#2a4a2a' : '#4a3a00' %>;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.75rem;cursor:pointer;white-space:nowrap;"><%= r.visible ? '👁 Hide' : '👁 Show' %></button></form>
+              <form method="POST" action="/admin/reviews/toggle/<%= r.id %>" data-undo-label="<%= r.visible ? 'Review hidden from the homepage' : 'Review shown on the homepage' %>"><button type="submit" style="background:<%= r.visible ? '#1a2a1a' : '#2a1a00' %>;color:<%= r.visible ? '#4ade80' : '#f59e0b' %>;border:1px solid <%= r.visible ? '#2a4a2a' : '#4a3a00' %>;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.75rem;cursor:pointer;white-space:nowrap;"><%= r.visible ? '👁 Hide' : '👁 Show' %></button></form>
               <form method="POST" action="/admin/reviews/delete/<%= r.id %>" onsubmit="return confirm('Delete this review?')"><button type="submit" style="background:#2a0000;color:#ef4444;border:1px solid #4a0000;border-radius:6px;padding:0.3rem 0.75rem;font-size:0.75rem;cursor:pointer;">🗑 Delete</button></form>
             </div>
           </div>

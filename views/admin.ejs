@@ -3,11 +3,12 @@
 <head>
   <%- include('partials/head', { title: 'Admin Panel — ' + settings.title, noindex: true }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/admin-shell.css?v=<%= assetV %>">
   <style>
     /* ── App shell: fixed full-height sidebar + fluid content ──
        The content area is deliberately unconstrained (no max-width): this is a
        back office on a desktop, and tables are the main thing on it. */
-    :root { --sbw: 236px; }
+    :root { --sbw: 252px; }
     body.admin-body { margin:0; background:#0b0b0c; }
     body.sb-collapsed { --sbw: 68px; }
 
@@ -34,7 +35,7 @@
     .admin-tab .tab-icon { flex-shrink:0; width:18px; text-align:center; }
     .admin-tab .tab-label { overflow:hidden; text-overflow:ellipsis; }
     .admin-tab:hover { color:#e6e6e6; background:#131313; }
-    .admin-tab.active { background:var(--ps-blue); color:#000; box-shadow:0 2px 12px rgba(240,165,0,0.28); }
+    .admin-tab.active { background:#F5B800; color:#0a0a0a; box-shadow:none; }
     .admin-tab .oq-count { margin-left:auto; }
 
     /* Collapsed: icons only. The group words wrap at this width, so they become
@@ -70,7 +71,7 @@
     /* style.css paints the active tab #f0f2f5 in light mode — written for the
        old horizontal bar, where a gold border carried the highlight. This is a
        borderless rail on a white sidebar, so that grey would vanish. */
-    body.light-mode .admin-tab.active { background:var(--ps-blue); color:#000; }
+    body.light-mode .admin-tab.active { background:#F5B800; color:#0a0a0a; }
     body.light-mode .admin-topbar { background:rgba(255,255,255,0.95); border-bottom-color:#e4e7eb; }
     body.light-mode .atb-toggle { background:#f2f4f7; border-color:#e0e4e8; color:#4b5259; }
 
@@ -139,30 +140,48 @@
       <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'brand-logo-for-dark' }) %>
       <%- include('partials/brand-logo', { logoVariant: 'dark', logoClass: 'brand-logo-for-light' }) %>
     </a>
-    <span class="asb-brand-txt">Admin</span>
+    <span class="asb-admin-pill">ADMIN</span>
   </div>
 
   <div class="asb-scroll">
-    <div class="sidebar-group-label">Manage</div>
-    <button class="admin-tab" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="tab-icon">📊</span><span class="tab-label">Dashboard</span></button>
-    <button class="admin-tab" data-tab="orders" onclick="switchTab('orders')"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span><% const oqBadge = orderQueue.length + (typeof refundsOwed !== 'undefined' ? refundsOwed : []).length; %><% if (oqBadge) { %><span class="oq-count"><%= oqBadge %></span><% } %></button>
-    <button class="admin-tab" data-tab="customers" onclick="switchTab('customers')"><span class="tab-icon">👥</span><span class="tab-label">Customers</span></button>
-    <button class="admin-tab" data-tab="loyalty" onclick="switchTab('loyalty')"><span class="tab-icon">🎁</span><span class="tab-label">Loyalty</span><% const loyaltyWaiting = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex && loyaltyIndex.profiles) ? loyaltyIndex.profiles.filter(p => p.hasReward).length : 0; %><% if (loyaltyWaiting) { %><span class="oq-count"><%= loyaltyWaiting %></span><% } %></button>
-    <button class="admin-tab" data-tab="games" onclick="switchTab('games')"><span class="tab-icon">🎮</span><span class="tab-label">Games</span></button>
-    <button class="admin-tab" data-tab="accounts" onclick="switchTab('accounts')"><span class="tab-icon">🗂️</span><span class="tab-label">Accounts</span></button>
+    <% const tdNav = (typeof todayView !== 'undefined' && todayView) ? todayView : null; %>
+    <% const gameCount = (typeof gamesView !== 'undefined' && gamesView && gamesView.rows) ? gamesView.rows.length : 0; %>
+    <% const requestBadge = tdNav ? tdNav.queues.requests.count : 0; %>
+    <% const loyaltyWaiting = (typeof loyaltyIndex !== 'undefined' && loyaltyIndex && loyaltyIndex.profiles) ? loyaltyIndex.profiles.filter(p => p.hasReward).length : 0; %>
+    <% const supportWaiting = ((typeof supportHandoffs !== 'undefined' && supportHandoffs) || []).length + ((typeof supportInboxNotes !== 'undefined' && supportInboxNotes) || []).length; %>
+    <% const returnsBadge = tdNav ? (tdNav.queues.returns.count + tdNav.queues.deposits.count) : 0; %>
+    <div class="sidebar-group-label">Overview</div>
+    <button class="admin-tab" data-tab="today" data-nav="today" onclick="switchTab('today','today')"><span class="tab-icon">🏠</span><span class="tab-label">Today</span><% if (tdNav && tdNav.needsYouCount) { %><span class="nav-badge"><%= tdNav.needsYouCount %></span><% } %></button>
+    <button class="admin-tab" data-tab="dashboard" data-nav="dashboard" onclick="switchTab('dashboard','dashboard')"><span class="tab-icon">📊</span><span class="tab-label">Dashboard</span></button>
 
-    <div class="sidebar-group-label">Set up</div>
-    <button class="admin-tab" data-tab="content" onclick="switchTab('content')"><span class="tab-icon">🖥️</span><span class="tab-label">Site content</span></button>
-    <button class="admin-tab" data-tab="messaging" onclick="switchTab('messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span><% var supportWaiting = ((typeof supportHandoffs !== 'undefined' && supportHandoffs) || []).length + ((typeof supportInboxNotes !== 'undefined' && supportInboxNotes) || []).length; %>
-<% if (supportWaiting) { %><span class="oq-count"><%= supportWaiting %></span><% } %></button>
-    <button class="admin-tab" data-tab="psplus" onclick="switchTab('psplus')"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus</span></button>
-    <button class="admin-tab" data-tab="posters" onclick="switchTab('posters')"><span class="tab-icon">📸</span><span class="tab-label">Posters</span></button>
-    <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></button>
+    <div class="sidebar-group-label">Rentals</div>
+    <button class="admin-tab" data-tab="orders" data-nav="orders" onclick="switchTab('orders','orders')"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span></button>
+    <button class="admin-tab" data-tab="returns" data-nav="returns" onclick="switchTab('returns','returns')"><span class="tab-icon">↩️</span><span class="tab-label">Returns &amp; deposits</span><% if (returnsBadge) { %><span class="nav-badge"><%= returnsBadge %></span><% } %></button>
+
+    <div class="sidebar-group-label">Games &amp; accounts</div>
+    <button class="admin-tab" data-tab="games" data-nav="games" onclick="switchTab('games','games')"><span class="tab-icon">🎮</span><span class="tab-label">Games</span><% if (gameCount) { %><span class="nav-badge"><%= gameCount %></span><% } %></button>
+    <button class="admin-tab" data-tab="accounts" data-nav="accounts" onclick="switchTab('accounts','accounts')"><span class="tab-icon">🗝️</span><span class="tab-label">Accounts &amp; slots</span></button>
+    <button class="admin-tab" data-tab="games" data-nav="requests" data-open-sub="requests" onclick="switchTab('games','requests')"><span class="tab-icon">🙋</span><span class="tab-label">Game requests</span><% if (requestBadge) { %><span class="nav-badge"><%= requestBadge %></span><% } %></button>
+    <button class="admin-tab" data-tab="psplus" data-nav="psplus" onclick="switchTab('psplus','psplus')"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus list</span></button>
+
+    <div class="sidebar-group-label">Customers</div>
+    <button class="admin-tab" data-tab="customers" data-nav="customers" onclick="switchTab('customers','customers')"><span class="tab-icon">👥</span><span class="tab-label">Customers</span></button>
+    <button class="admin-tab" data-tab="loyalty" data-nav="loyalty" onclick="switchTab('loyalty','loyalty')"><span class="tab-icon">🎁</span><span class="tab-label">Loyalty</span><% if (loyaltyWaiting) { %><span class="nav-badge"><%= loyaltyWaiting %></span><% } %></button>
+
+    <div class="sidebar-group-label">Marketing</div>
+    <button class="admin-tab" data-tab="content" data-nav="content" onclick="switchTab('content','content')"><span class="tab-icon">🖼️</span><span class="tab-label">Site content</span></button>
+    <button class="admin-tab" data-tab="settings" data-nav="announcements" data-anchor="sec-announcements" onclick="switchTab('settings','announcements')"><span class="tab-icon">📣</span><span class="tab-label">Announcements</span></button>
+    <button class="admin-tab" data-tab="loyalty" data-nav="promos" data-anchor="sec-promos" onclick="switchTab('loyalty','promos')"><span class="tab-icon">🏷️</span><span class="tab-label">Promos</span></button>
+    <button class="admin-tab" data-tab="posters" data-nav="posters" onclick="switchTab('posters','posters')"><span class="tab-icon">🪧</span><span class="tab-label">Posters</span></button>
+    <button class="admin-tab" data-tab="messaging" data-nav="messaging" onclick="switchTab('messaging','messaging')"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span><% if (supportWaiting) { %><span class="nav-badge"><%= supportWaiting %></span><% } %></button>
+
+    <div class="sidebar-group-label">Settings</div>
+    <button class="admin-tab" data-tab="settings" data-nav="settings" onclick="switchTab('settings','settings')"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></button>
   </div>
 
   <div class="asb-foot">
-    <a class="admin-tab" href="/" title="View site"><span class="tab-icon">🌐</span><span class="tab-label">View site</span></a>
-    <a class="admin-tab" href="/admin/logout" title="Logout"><span class="tab-icon">🔒</span><span class="tab-label">Logout</span></a>
+    <a class="admin-tab" href="/" title="View site"><span class="tab-icon">🌐</span><span class="tab-label">View site ↗</span></a>
+    <a class="admin-tab" href="/admin/logout" title="Log out"><span class="tab-icon">🔒</span><span class="tab-label">Log out</span></a>
   </div>
 </div>
 <div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebarDrawer()"></div>
@@ -170,12 +189,16 @@
 <div class="admin-body-main">
   <div class="admin-topbar">
     <button class="atb-toggle" onclick="toggleSidebar()" title="Collapse/expand sidebar" aria-label="Toggle sidebar">▤</button>
-    <span class="atb-crumb" id="adminCrumb">Dashboard</span>
+    <span class="atb-crumb" id="adminCrumb">Today</span>
+    <label class="admin-search">🔍
+      <input id="adminSearch" type="search" placeholder="Search orders, games, customers…" autocomplete="off" aria-label="Search orders, games, customers">
+      <kbd>/</kbd>
+    </label>
     <div class="atb-right">
       <%- include('partials/admin/notif-bell') %>
-      <div id="mongoIndicator" style="display:flex;align-items:center;gap:0.45rem;background:#111;border:1px solid #222;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.74rem;font-weight:600;color:#555;">
-        <span id="mongoDot" style="width:8px;height:8px;border-radius:50%;background:#333;display:inline-block;"></span>
-        <span id="mongoLabel">Checking DB…</span>
+      <div id="mongoIndicator" class="admin-status-pill">
+        <span id="mongoDot" style="border-radius:50%;background:#333;display:inline-block;"></span>
+        <span id="mongoLabel">Checking…</span>
       </div>
       <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode"
         style="background:#111;border:1px solid #222;border-radius:20px;padding:0.3rem 0.75rem;font-size:0.78rem;font-weight:600;color:#aaa;cursor:pointer;display:flex;align-items:center;gap:0.4rem;">
@@ -215,13 +238,16 @@
   }
   fetch('/admin/mongo-status').then(r=>r.json()).then(d=>{
     const dot=document.getElementById('mongoDot'),label=document.getElementById('mongoLabel'),wrap=document.getElementById('mongoIndicator');
-    if(d.status&&d.status.includes('✅')){dot.style.background='#22c55e';dot.style.boxShadow='0 0 6px #22c55e';label.textContent='MongoDB Connected';label.style.color='#22c55e';wrap.style.borderColor='#14532d';}
+    if(d.status&&d.status.includes('✅')){dot.style.background='#3ccf6e';dot.style.boxShadow='none';label.textContent='All systems OK';label.style.color='#bbb';wrap.style.borderColor='#2e2e2e';}
     else if(d.status&&d.status.includes('no MONGODB_URI')){dot.style.background='#f59e0b';label.textContent='No MONGODB_URI';label.style.color='#f59e0b';wrap.style.borderColor='#78350f';}
     else{dot.style.background='#ef4444';dot.style.boxShadow='0 0 6px #ef4444';label.textContent='DB Disconnected';label.style.color='#ef4444';wrap.style.borderColor='#7f1d1d';}
   }).catch(()=>{ document.getElementById('mongoLabel').textContent='DB Unknown'; });
   </script>
 
   <div class="admin-content">
+      <!-- ═══════════════ TODAY ═══════════════ -->
+      <%- include('partials/admin/today') %>
+
       <!-- ═══════════════ DASHBOARD TAB ═══════════════ -->
       <%- include('partials/admin/dashboard') %>
 
@@ -248,6 +274,9 @@
 
       <!-- ═══════════════ ORDERS TAB ═══════════════ -->
       <%- include('partials/admin/orders') %>
+
+      <!-- ═══════════════ RETURNS & DEPOSITS ═══════════════ -->
+      <%- include('partials/admin/returns') %>
 
       <!-- ═══════════════ ACCOUNTS TAB ═══════════════ -->
       <%- include('partials/admin/accounts') %>
@@ -276,7 +305,7 @@
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
-const tabs = ['dashboard','orders','customers','loyalty','games','accounts','content','messaging','psplus','posters','settings'];
+const tabs = ['today','dashboard','orders','returns','customers','loyalty','games','accounts','content','messaging','psplus','posters','settings'];
 // Tab ids retired in later phases of the admin reorganisation. A browser that
 // still has one of these in localStorage, or a bookmark carrying one in
 // ?tab=, must land somewhere real instead of a tab that no longer exists.
@@ -359,32 +388,64 @@ window.closeSidebarDrawer = closeSidebarDrawer;
   applySidebar(saved === '1');
 })();
 
-function switchTab(name) {
+function switchTab(name, nav) {
   // A name outside the current tabs array (a stale id from before a phase of
   // this reorganisation shipped) must not reach getElementById and dereference
   // null — fall back to the landing tab instead of throwing on page load.
-  if (!tabs.includes(name)) name = 'dashboard';
+  if (!tabs.includes(name)) name = 'today';
+  if (!nav) nav = name;
   tabs.forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('active', t===name);
-    document.querySelector('[data-tab='+t+']').classList.toggle('active', t===name);
+    const panel = document.getElementById('tab-'+t);
+    if (panel) panel.classList.toggle('active', t===name);
+  });
+  const navButtons = document.querySelectorAll('[data-nav]');
+  if (navButtons.length) {
+    navButtons.forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-nav') === nav));
+  } else {
+    tabs.forEach(t => {
+      const b = document.querySelector('[data-tab='+t+']');
+      if (b) b.classList.toggle('active', t===name);
+    });
+  }
+  const bottom = document.querySelectorAll('[data-bottom]');
+  const primary = ['today', 'orders', 'games', 'messaging'];
+  bottom.forEach(btn => {
+    const key = btn.getAttribute('data-bottom');
+    const on = key === 'more' ? primary.indexOf(name) === -1 : key === name;
+    btn.classList.toggle('on', on);
   });
   localStorage.setItem(TAB_KEY, name);
   // The top bar names the section you are in. Read straight off the sidebar
   // button so the two can never disagree about what a section is called.
   const crumb = document.getElementById('adminCrumb');
-  const btnLabel = document.querySelector('[data-tab=' + name + '] .tab-label');
+  const btnLabel = document.querySelector('[data-nav="' + nav + '"] .tab-label')
+    || document.querySelector('[data-tab=' + name + '] .tab-label');
   if (crumb && btnLabel) crumb.textContent = btnLabel.textContent;
   closeSidebarDrawer();
+  if (name === 'games' && window.gmActivateSubtab) {
+    window.gmActivateSubtab(nav === 'requests' ? 'requests' : (nav === 'games' ? 'all' : null));
+  }
+  const anchorBtn = document.querySelector('[data-nav="' + nav + '"]');
+  const anchor = anchorBtn && anchorBtn.getAttribute ? anchorBtn.getAttribute('data-anchor') : '';
+  if (anchor) {
+    const target = document.getElementById(anchor);
+    if (target && target.scrollIntoView) setTimeout(() => target.scrollIntoView({ block: 'start' }), 40);
+  }
   // Preserve any other query params (the orders ledger period, ?history=1).
   // Rewriting the whole query string would drop them the moment this runs on
   // load, so a reload would silently snap back to the default view. `msg` is
   // deliberately dropped so its toast does not re-fire on refresh.
+  // Today is the landing tab, so it keeps a clean /admin URL. Every other
+  // section, including Dashboard, stays on ?tab= so old links still resolve.
   const q = new URLSearchParams(window.location.search);
   q.delete('tab');
   q.delete('msg');
-  if (name !== 'dashboard') q.set('tab', name);
+  if (name !== 'today') q.set('tab', name);
   const qs = q.toString();
-  history.replaceState({}, '', '/admin' + (qs ? '?' + qs : ''));
+  let url = '/admin' + (qs ? '?' + qs : '');
+  if (anchor) url += '#' + anchor;
+  else if (nav === 'requests') url += '#requests';
+  history.replaceState({}, '', url);
 }
 
 // Determine initial tab: URL param > msg-based auto-switch > localStorage > default
@@ -433,9 +494,14 @@ function switchTab(name) {
   // somewhere, and it is almost always the tab the action belonged to anyway.
   // Below that, where you were beats msgTabMap, which is a fixed guess at where
   // a given message belongs and was the thing yanking you off your own tab.
-  const rawInitial = urlTab || (returnTo && returnTo.tab) || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'dashboard';
+  const rawInitial = urlTab || (returnTo && returnTo.tab) || (msg && msgTabMap[msg]) || localStorage.getItem(TAB_KEY) || 'today';
   const initial = LEGACY_TABS[rawInitial] || rawInitial;
-  switchTab(initial);
+  const hash = (location.hash || '').replace(/^#/, '');
+  let initialNav = initial;
+  if (initial === 'games' && hash === 'requests') initialNav = 'requests';
+  if (initial === 'settings' && hash === 'sec-announcements') initialNav = 'announcements';
+  if (initial === 'loyalty' && hash === 'sec-promos') initialNav = 'promos';
+  switchTab(initial, initialNav);
 
   // Scroll AFTER switchTab: every panel is display:none until its tab is the
   // active one, so the page is barely tall enough to scroll before that runs.
@@ -503,6 +569,42 @@ function switchTab(name) {
   } catch (e) {}
 })();
 
+// Top-bar search jumps into the page search that already exists.
+(function () {
+  const input = document.getElementById('adminSearch');
+  if (!input || !input.addEventListener) return;
+  function go() {
+    const q = String(input.value || '').trim();
+    if (!q) return;
+    const looksLikeRef = /^ph-?\d/i.test(q);
+    let gameHit = false;
+    document.querySelectorAll('[data-gm-game][data-title]').forEach(function (row) {
+      if (gameHit) return;
+      const title = (row.getAttribute && row.getAttribute('data-title')) || '';
+      if (title.toLowerCase().indexOf(q.toLowerCase()) !== -1) gameHit = true;
+    });
+    if (gameHit && !looksLikeRef) {
+      switchTab('games', 'games');
+      const box = document.getElementById('gmSearch');
+      if (box) { box.value = q; box.dispatchEvent(new Event('input', { bubbles: true })); }
+      return;
+    }
+    switchTab('orders', 'orders');
+    const box = document.getElementById('oqSearch');
+    if (box) { box.value = q; box.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); go(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (e.key === '/' && tag !== 'INPUT' && tag !== 'TEXTAREA') {
+      e.preventDefault();
+      input.focus();
+    }
+  });
+})();
+
 // ── Loading overlay ──
 (function() {
   const overlay = document.getElementById('loadingOverlay');
@@ -518,6 +620,16 @@ function switchTab(name) {
 })();
 </script>
 
+<nav class="admin-bottom-nav" aria-label="Admin">
+  <button type="button" data-bottom="today" onclick="switchTab('today','today')"><span>🏠</span>Today</button>
+  <button type="button" data-bottom="orders" onclick="switchTab('orders','orders')"><span>🧾</span>Orders</button>
+  <button type="button" data-bottom="games" onclick="switchTab('games','games')"><span>🎮</span>Games</button>
+  <button type="button" data-bottom="messaging" onclick="switchTab('messaging','messaging')"><span>💬</span>Messages</button>
+  <button type="button" data-bottom="more" onclick="if (window.matchMedia('(max-width: 860px)').matches) document.body.classList.toggle('sb-open')"><span>☰</span>More</button>
+</nav>
+<%- include('partials/admin/confirm-dialog') %>
+<script src="/js/admin-confirm.js?v=<%= assetV %>"></script>
+<script src="/js/admin-mask.js?v=<%= assetV %>"></script>
 <script src="/js/admin-searchable-select.js?v=<%= assetV %>"></script>
 <script src="/js/admin-accounts.js?v=<%= assetV %>"></script>
 <script src="/js/admin-orders.js?v=<%= assetV %>"></script>

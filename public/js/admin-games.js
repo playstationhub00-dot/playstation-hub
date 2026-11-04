@@ -124,7 +124,10 @@
     });
     // views/admin.ejs strips ?msg= from the URL before this runs, so the
     // template hands it over on data-msg.
-    activateSubtab(subtabForMessage(shell.getAttribute('data-msg')) || readJson(SUBTAB_KEY));
+    var hash = (window.location.hash || '').replace(/^#/, '');
+    var fromHash = (hash === 'requests' || hash === 'soon' || hash === 'categories' || hash === 'all') ? hash : '';
+    activateSubtab(subtabForMessage(shell.getAttribute('data-msg')) || fromHash || readJson(SUBTAB_KEY));
+    window.gmActivateSubtab = function (key) { if (key) activateSubtab(key); };
   }
 
   // "+ Add New → Price Category": open the categories sub-tab and its form.
