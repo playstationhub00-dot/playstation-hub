@@ -7,6 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const av = require('../lib/accounts-view');
+const mask = require('../lib/mask');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -42,7 +43,9 @@ function render(accounts) {
     { id: 3, title: 'Tekken 8', platform: 'PS5', cover_image: '' }
   ];
   const customers = [{ id: 40, customer_name: 'Ana Cruz' }];
-  return ejs.render(fs.readFileSync(FILE, 'utf8'), { accountsView, games, customers }, { filename: FILE });
+  return ejs.render(fs.readFileSync(FILE, 'utf8'), {
+    accountsView, games, customers, maskEmail: mask.maskEmail
+  }, { filename: FILE });
 }
 
 const EVIL = 'Pack </script><script>alert(1)</script>';

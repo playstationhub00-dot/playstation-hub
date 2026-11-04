@@ -17,7 +17,7 @@
   const accTitles = a => a.game_ids.map(id => (accGameById[id] ? accGameById[id].title : '')).filter(Boolean);
   const accPillClass = s => 'st-' + (s.due || s.status);
   const accShortDate = d => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '');
-  const accHaystack = (a, renters) => [a.label, a.email, a.games_text, accTitles(a).join(' '), renters].join(' ').toLowerCase();
+  const accHaystack = (a, renters) => [a.label, a.games_text, accTitles(a).join(' '), renters].join(' ').toLowerCase();
   const accData = { accounts: {} };
   accountsView.accounts.forEach(a => {
     const slots = {};
@@ -26,7 +26,7 @@
       slots[t] = { enabled: !!s.enabled, status: s.status, renter_id: s.renter_id || null, end: s.end || '' };
     });
     accData.accounts[a.id] = {
-      label: a.label, email: a.email || '', games_text: a.games_text || '', note: a.note || '',
+      label: a.label, email_masked: a.email ? maskEmail(a.email) : '', has_email: !!a.email, games_text: a.games_text || '', note: a.note || '',
       game_ids: a.game_ids, price_permanent_tr: a.price_permanent_tr, price_permanent_nt: a.price_permanent_nt,
       public_name: a.public_name || '', for_sale: !!a.for_sale, slots
     };
@@ -105,7 +105,7 @@
         <% if (first && first.cover_image) { %><img src="<%= first.cover_image %>" alt="" class="acc-s-cover" loading="lazy"><% } else { %><span class="acc-s-cover acc-cover-placeholder">🎮</span><% } %>
         <span class="acc-s-gtitle"><%= titles[0] || a.games_text || '—' %><% if (titles.length > 1) { %> <span class="acc-more">+<%= titles.length - 1 %></span><% } %></span>
       </span>
-      <span class="acc-s-acc"><b><%= a.label %></b><% if (a.email) { %><span class="acc-s-email"><%= a.email %></span><% } %></span>
+      <span class="acc-s-acc"><b><%= a.label %></b><% if (a.email) { %><span class="acc-s-email mask-value"><%= maskEmail(a.email) %></span> <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" data-mask-kind="account_email" data-mask-subject="<%= a.id %>">Reveal</button><% } %></span>
       <span class="acc-s-renter"><%= s.renter_name || '—' %></span>
       <span class="acc-s-date"><%= s.status === 'rented' && s.end ? accShortDate(s.end) : '—' %></span>
     </div>
@@ -122,7 +122,7 @@
            const gamesLine = titles.length
              ? titles.slice(0, 2).join(', ') + (titles.length > 2 ? ' +' + (titles.length - 2) : '')
              : (a.games_text || '');
-           const meta = [a.email ? '✉ ' + a.email : '', gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
+           const meta = [a.email ? '✉ ' + maskEmail(a.email) : '', gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
       %>
       <div class="acc-arow" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, renters) %>">
         <div class="acc-a-main">
@@ -149,7 +149,7 @@
         <div class="acc-a-price">₱<%= Number(a.price_permanent_tr || 0).toLocaleString('en-US') %> / ₱<%= Number(a.price_permanent_nt || 0).toLocaleString('en-US') %></div>
         <div class="acc-a-actions">
           <button type="button" class="acc-act" data-acc-edit="<%= a.id %>">Edit</button>
-          <form method="POST" action="/admin/accounts/delete/<%= a.id %>" onsubmit="return confirm('Delete this account?');">
+          <form method="POST" action="/admin/accounts/delete/<%= a.id %>" data-confirm-title="Delete account <%= a.label %>?" data-confirm-body="This removes the account and its slots. This cannot be undone." data-confirm-ok="Delete account" onsubmit="return confirm('Delete this account?');">
             <button type="submit" class="acc-act acc-act-del">Delete</button>
           </form>
         </div>
@@ -190,7 +190,14 @@
           <textarea class="qa-in" name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6…"></textarea>
 
           <div class="acc-fields">
-            <label class="qa-sub">Account email<input class="qa-in" type="email" name="email" placeholder="e.g. pshub.account1@gmail.com"></label>
+            <label class="qa-sub">Account email
+              <span class="mask-field">
+                <span class="mask-value" id="accEmailMask" hidden></span>
+                <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" id="accEmailReveal" hidden data-mask-kind="account_email">Reveal</button>
+                <input class="qa-in" type="text" name="email" id="accEmailInput" placeholder="e.g. pshub.account1@gmail.com" autocomplete="off">
+              </span>
+            </label>
+            <input type="hidden" name="email_keep" id="accEmailKeep" value="0">
             <label class="qa-sub">Internal note<input class="qa-in" type="text" name="note" placeholder="reminders, misc info…"></label>
             <label class="qa-sub">Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_tr" min="0"></label>
             <label class="qa-sub">Non-Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_nt" min="0"></label>

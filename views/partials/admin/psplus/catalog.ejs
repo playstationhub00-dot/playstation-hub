@@ -315,10 +315,15 @@
       tog.setAttribute('aria-pressed', String(!r.h));
       tog.setAttribute('aria-label', (r.h ? 'Show ' : 'Hide ') + r.n);
       tog.addEventListener('click', function () {
-        if (r.h) { post(base(r.k) + '/visibility', { hidden: '0' }); return; }
-        var note = window.prompt('Hide "' + r.n + '" from customers?\nOptional note for yourself (e.g. not on our region):', '');
-        if (note === null) return;
-        post(base(r.k) + '/visibility', { hidden: '1', note: note });
+        var note = '';
+        if (!r.h) {
+          note = window.prompt('Hide "' + r.n + '" from customers?\nOptional note for yourself (e.g. not on our region):', '');
+          if (note === null) return;
+        }
+        var label = r.h ? ('PS Plus game "' + r.n + '" shown') : ('PS Plus game "' + r.n + '" hidden');
+        var run = function () { post(base(r.k) + '/visibility', r.h ? { hidden: '0' } : { hidden: '1', note: note }); };
+        if (window.adminScheduleUndo) window.adminScheduleUndo(label, run);
+        else run();
       });
       c4.appendChild(tog);
       tr.appendChild(c4);

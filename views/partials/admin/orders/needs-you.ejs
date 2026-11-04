@@ -136,7 +136,7 @@
             <button type="submit" class="oq-more-item">Can't find it</button>
           </form>
           <% } %>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Permanently delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. This cannot be undone.');">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" data-confirm-title="Delete order <%= o.ref %>?" data-confirm-body="Its customer record and money go too. This cannot be undone." data-confirm-ok="Delete order" onsubmit="return confirm('Permanently delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. This cannot be undone.');">
             <button type="submit" class="oq-more-item oq-more-danger">Delete</button>
           </form>
         </div>
@@ -328,7 +328,7 @@
     </div>
     <div class="oq-actions">
       <button type="button" class="oq-btn-ghost rem-copy" data-msg="<%= followUpMsg %>" title="Copy follow-up message">📋 Copy</button>
-      <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
+      <form method="POST" action="/admin/orders/<%= o.ref %>/mark-paid" data-mark-ref="<%= o.ref %>" data-mark-name="<%= o.fb_name %>" data-mark-game="<%= o.game_title %>" data-mark-type="<%= abTypeLabel %>" data-mark-plan="<%= abDurLabel %>" data-mark-amount="₱<%= abTotal %>" data-mark-deposit="<%= o.deposit_due || 0 %>" onsubmit="return confirm('Mark order ' + <%= JSON.stringify(o.ref) %> + ' as paid? Use this when the customer paid outside the site (e.g. Messenger). They\'ll still need to send their sign-in QR.');">
         <button type="submit" class="oq-btn-go" title="Confirm this order was paid outside the site">✅ Mark paid</button>
       </form>
       <details class="oq-more">
@@ -340,7 +340,7 @@
           <form method="POST" action="/admin/orders/<%= o.ref %>/cancel" onsubmit="return confirm('Cancel order ' + <%= JSON.stringify(o.ref) %> + '? The customer said no or never followed up. The record is kept, unlike Delete.');">
             <button type="submit" class="oq-more-item" title="Cancel this order — the customer declined or never paid">Cancel</button>
           </form>
-          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out duplicate or accidental orders. This cannot be undone.');">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/delete" data-confirm-title="Delete order <%= o.ref %>?" data-confirm-body="Its customer record and money go too. This cannot be undone." data-confirm-ok="Delete order" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out duplicate or accidental orders. This cannot be undone.');">
             <button type="submit" class="oq-more-item oq-more-danger" title="Delete this order (e.g. a duplicate from the customer re-ordering)">Delete</button>
           </form>
         </div>

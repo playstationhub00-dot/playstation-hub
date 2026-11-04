@@ -1,0 +1,48 @@
+<div class="tab-panel" id="tab-returns">
+<%
+  const rq = (typeof todayView !== 'undefined' && todayView) ? todayView : null;
+  const peso = n => '₱' + Math.round(Number(n) || 0).toLocaleString('en-US');
+%>
+  <div class="td-hi">
+    <div>
+      <h2 style="font-size:22px;">Returns &amp; deposits</h2>
+      <div class="td-kicker">The two lists that already exist. A single filtered queue comes in a later update.</div>
+    </div>
+  </div>
+  <% if (!rq) { %>
+    <p class="td-empty">This list could not be built for this load.</p>
+  <% } else { %>
+  <div class="rq-grid">
+    <div class="td-card">
+      <h3>Returns to verify <span class="adm-badge adm-badge-wa"><%= rq.lists.returns.length %></span></h3>
+      <p class="td-kicker" style="margin:0 0 8px;">Ended rentals waiting for the account to be checked free.</p>
+      <% if (!rq.lists.returns.length) { %><div class="td-empty">None right now.</div><% } %>
+      <% rq.lists.returns.forEach(function (row) { %>
+        <div class="rq-row">
+          <div>
+            <div class="rq-ref"><%= row.ref %></div>
+            <div><%= row.name || 'Customer' %> · <%= row.game %></div>
+            <div class="td-kicker"><%= row.accountType %><% if (row.end) { %> · ended <%= row.end %><% } %></div>
+          </div>
+          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('orders','orders')">Open orders</button>
+        </div>
+      <% }) %>
+    </div>
+    <div class="td-card">
+      <h3>Deposits to refund <span class="adm-badge adm-badge-wa"><%= rq.lists.deposits.length %></span></h3>
+      <p class="td-kicker" style="margin:0 0 8px;"><%= peso(rq.queues.deposits.amount) %> still with the shop on closed rentals.</p>
+      <% if (!rq.lists.deposits.length) { %><div class="td-empty">None right now.</div><% } %>
+      <% rq.lists.deposits.forEach(function (row) { %>
+        <div class="rq-row">
+          <div>
+            <div class="rq-ref"><%= row.ref %></div>
+            <div><%= row.name || 'Customer' %> · <%= row.game %></div>
+            <div class="td-kicker"><%= row.accountType %></div>
+          </div>
+          <b><%= peso(row.deposit) %></b>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+  <% } %>
+</div>

@@ -53,7 +53,7 @@
                     <input type="text" name="fb_name" value="<%= v.fb_name %>" style="font-size:0.72rem;background:#141414;border:1px solid #2a2a2a;color:#ccc;border-radius:6px;padding:0.25rem 0.4rem;max-width:160px;">
                     <button type="submit" class="btn-edit" style="font-size:0.68rem;padding:0.25rem 0.6rem;">Save</button>
                   </form>
-                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" style="display:inline" onsubmit="return confirm('Remove this vote?');">
+                  <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" style="display:inline" data-undo-label="Requester removed" onsubmit="return confirm('Remove this vote?');">
                     <input type="hidden" name="at" value="<%= v.at %>">
                     <button type="submit" class="btn-delete" style="font-size:0.68rem;padding:0.25rem 0.5rem;">✕</button>
                   </form>
