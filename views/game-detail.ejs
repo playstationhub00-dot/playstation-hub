@@ -567,7 +567,7 @@
       <div class="gp-gal-h">
         <h2>Gameplay</h2>
         <span class="gp-gal-count" id="gpGalCount">1 / <%= gpFilm.length %></span>
-        <% if (gpFilm.length > 1) { %><button type="button" class="gp-viewall" onclick="gpViewAll()">View all <%= gpFilm.length %> ›</button><% } %>
+        <% if (gpFilm.length > 1) { %><button type="button" class="gp-viewall" onclick="gpOpenFilm(gpFilmIndex())">View all <%= gpFilm.length %> ›</button><% } %>
         <% if (gpFilm.length > 1) { %>
         <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
         <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
@@ -576,7 +576,7 @@
       <div class="gd-slider" id="gdSlider">
         <div class="gd-slider-track" id="gdSliderTrack">
           <% gpFilm.forEach((img, i) => { %>
-            <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gdGo(<%= i %>)"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720"<% if (i > 0) { %> loading="lazy" decoding="async"<% } %>></button>
+            <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gpOpenFilm(<%= i %>, this)"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720"<% if (i > 0) { %> loading="lazy" decoding="async"<% } %>></button>
           <% }) %>
         </div>
       </div>
@@ -587,14 +587,17 @@
         <% }) %>
       </div>
       <% } %>
-      <div class="gp-film-all" id="gpFilmAll" hidden>
-        <button type="button" class="gp-film-x" onclick="document.getElementById('gpFilmAll').hidden = true" aria-label="Close">✕</button>
-        <div class="gp-film-grid">
-          <% gpFilm.forEach((img, i) => { %>
-            <img src="<%= img %>" alt="<%= game.title %> gameplay <%= i + 1 %>" width="1280" height="720" loading="lazy" decoding="async">
-          <% }) %>
+      <dialog class="gp-lb" id="gpLightbox" aria-label="Gameplay images">
+        <div class="gp-lb-frame">
+          <div class="gp-lb-bar">
+            <span id="gpLbCount">1 / <%= gpFilm.length %></span>
+            <button type="button" class="gp-lb-x" id="gpLbClose" aria-label="Close">Close</button>
+          </div>
+          <button type="button" class="gp-lb-nav gp-lb-prev" id="gpLbPrev" aria-label="Previous image">‹</button>
+          <img id="gpLbImg" alt="" width="1280" height="720">
+          <button type="button" class="gp-lb-nav gp-lb-next" id="gpLbNext" aria-label="Next image">›</button>
         </div>
-      </div>
+      </dialog>
     </div>
     <% } %>
 

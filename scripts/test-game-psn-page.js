@@ -76,6 +76,18 @@ async function main() {
     assert.ok(/<tr><td>Age rating<\/td><td>ESRB Mature<\/td><\/tr>/.test(known.body));
     assert.ok(known.body.includes('>Action<') && known.body.includes('>Adventure<'), 'genre chips use PlayStation genres');
   });
+  await okAsync('gameplay dots sit under the strip, and the lightbox is in the page', async () => {
+    const filmAt = known.body.indexOf('data-film');
+    const dotsAt = known.body.indexOf('id="gdSliderDots"');
+    const tabsAt = known.body.indexOf('id="gpTabs"');
+    const beforeAt = known.body.indexOf('id="gpPaneBefore"');
+    assert.ok(filmAt > 0 && dotsAt > filmAt && tabsAt > dotsAt && beforeAt > tabsAt);
+    const film = known.body.slice(filmAt, tabsAt);
+    assert.ok(film.includes('id="gdSliderDots"'));
+    assert.ok(!known.body.slice(tabsAt, beforeAt + 20).includes('id="gdSliderDots"'));
+    assert.ok(known.body.includes('id="gpLightbox"') && known.body.includes('id="gpLbPrev"') && known.body.includes('id="gpLbNext"') && known.body.includes('id="gpLbCount"'));
+    assert.ok(!film.includes('loading=&#34;'));
+  });
   await okAsync('PlayStation screenshots after the first use a real loading attribute', async () => {
     const stageStart = known.body.indexOf('id="gpmStage"');
     const stageEnd = known.body.indexOf('id="gpmThumbs"');
