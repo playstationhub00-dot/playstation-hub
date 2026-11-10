@@ -3,17 +3,10 @@
 <head>
   <%- include('partials/head', { title: 'Add Upcoming Game — ' + settings.title, noindex: true }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/admin-shell.css?v=<%= assetV %>">
 </head>
-<body>
-
-<nav>
-  <a href="/" class="logo"><%- include('partials/brand-logo') %></a>
-  <div class="nav-links">
-    <a href="/browse">Browse Games</a>
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
-
+<body class="admin-body">
+<%- include('partials/admin/edit-frame-open', { shellCrumb: 'Add upcoming game', shellNav: 'games' }) %>
 <div class="edit-container">
   <a href="/admin?tab=games" class="back-link">← Back to Admin</a>
   <h1>Add Upcoming Game</h1>
@@ -90,6 +83,6 @@ function toggleAddTba(checked) {
   inp.disabled = checked; inp.style.opacity = checked ? '0.3' : '1'; hid.value = checked ? 'TBA' : '';
 }
 </script>
-
+<%- include('partials/admin/edit-frame-close') %>
 </body>
 </html>

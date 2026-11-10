@@ -5217,6 +5217,20 @@ app.post('/admin/requests/:slug/voter/rename', requireAuth, async (req, res) => 
   res.redirect('/admin?tab=games&msg=' + msg);
 });
 
+// One Save for every name on a request. The per-name route above still works.
+app.post('/admin/requests/:slug/voters/save', requireAuth, async (req, res) => {
+  const body = req.body || {};
+  const ats = [].concat(body.at == null ? [] : body.at);
+  const names = [].concat(body.fb_name == null ? [] : body.fb_name);
+  const pairs = ats.map((at, i) => ({ at, fb_name: names[i] }));
+  const r = await gameRequests.renameVoters(req.params.slug, pairs);
+  const msg = r.ok ? 'voter_renamed'
+    : r.reason === 'duplicate' ? 'voter_dupe'
+    : r.reason === 'empty' ? 'voter_empty'
+    : 'voter_error';
+  res.redirect('/admin?tab=games&msg=' + msg);
+});
+
 app.post('/admin/requests/:slug/voter/remove', requireAuth, async (req, res) => {
   const r = await gameRequests.removeVoter(req.params.slug, req.body.at);
   res.redirect('/admin?tab=games&msg=' + (r.ok ? 'voter_removed' : 'voter_error'));
@@ -6393,7 +6407,16 @@ app.get('/admin', requireAuth, async (req, res) => {
   });
   // Games tab rows, worked out once here with the customer site's own slot
   // and status rules — see lib/games-view.js.
-  const gamesViewRows = gamesViewLib.gameRows(games, customers, buildAccountSummaryMap(), new Date());
+  const gameQueues = gamesViewLib.queueByGame(allOrders, new Date());
+  (gameRequestRows || []).forEach(r => {
+    if (!r || r.game_id == null || r.game_id === '') return;
+    if (r.status === 'stocked' || r.status === 'rejected') return;
+    const key = String(r.game_id);
+    const cur = gameQueues.get(key) || { reserved: 0, waitlist: 0 };
+    cur.waitlist += (r.voters || []).length;
+    gameQueues.set(key, cur);
+  });
+  const gamesViewRows = gamesViewLib.gameRows(games, customers, buildAccountSummaryMap(), new Date(), gameQueues);
   // Coming soon → "Update from PlayStation": ?psn_upcoming=<token> shows that
   // check's list until it is applied, cancelled or expires.
   const psnUpcomingToken = String(req.query.psn_upcoming || '');
@@ -8097,9 +8120,9 @@ app.post('/admin/customers/delete/:id', requireAuth, async (req, res) => {
 // anything else is refused and nothing is saved.
 app.post('/admin/browse-price-bands', requireAuth, (req, res) => {
   const bands = browseCore.parseBands((req.body || {}).low, (req.body || {}).high);
-  if (!bands) return res.redirect('/admin?tab=settings&msg=price_bands_invalid');
+  if (!bands) return res.redirect('/admin?tab=games&msg=price_bands_invalid');
   db.set('site_settings.browse_price_bands', bands).write();
-  res.redirect('/admin?tab=settings&msg=price_bands_saved');
+  res.redirect('/admin?tab=games&msg=price_bands_saved');
 });
 
 // Settings → Game discounts: each game's own Weekly / Monthly % (lib/game-discount.js).

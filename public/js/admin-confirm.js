@@ -38,6 +38,9 @@
     }
     if (/\/admin\/orders\/[^/]+\/mark-paid\/?$/.test(path)) return 'mark-paid';
     if (/\/admin\/upcoming\/release\/[^/]+\/?$/.test(path)) return 'release';
+    if (/\/admin\/games\/psn\/refresh\/?$/.test(path)) return 'bulk';
+    if (/\/admin\/psplus\/catalog\/refresh\/?$/.test(path)) return 'bulk';
+    if (/\/admin\/price-categories\/edit\/[^/]+\/?$/.test(path)) return 'bulk';
     if (/\/admin\/reviews\/toggle\/[^/]+\/?$/.test(path)) return 'undo';
     if (/\/admin\/requests\/[^/]+\/voter\/remove\/?$/.test(path)) return 'undo';
     if (
@@ -142,6 +145,15 @@
           extra: bits.map(escapeHtml).join('<br>'),
           ok: 'Yes, mark paid',
           cancel: 'Cancel'
+        };
+      }
+      if (kind === 'bulk') {
+        return {
+          title: d.confirmTitle || 'Continue?',
+          body: d.confirmBody || 'This changes live data.',
+          extra: '',
+          ok: d.confirmOk || 'Continue',
+          cancel: d.confirmCancel || 'Cancel'
         };
       }
       if (kind === 'release') {
@@ -284,6 +296,7 @@
       });
       if (!kind) return;
       e.preventDefault();
+      e.stopPropagation();
       e.stopImmediatePropagation();
       if (kind === 'undo') {
         const label = (form.dataset && form.dataset.undoLabel) || 'Change saved';

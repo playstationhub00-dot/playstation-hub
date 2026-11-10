@@ -3,16 +3,10 @@
 <head>
   <%- include('partials/head', { title: 'Edit Most Played Game — ' + settings.title, noindex: true }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/admin-shell.css?v=<%= assetV %>">
 </head>
-<body>
-<nav>
-  <a href="/" class="logo"><%- include('partials/brand-logo') %></a>
-  <div class="nav-links">
-    <a href="/ps-plus">PS Plus Deluxe</a>
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
-
+<body class="admin-body">
+<%- include('partials/admin/edit-frame-open', { shellCrumb: 'Edit most played game', shellNav: 'psplus' }) %>
 <div class="edit-container">
   <a href="/admin" class="back-link">← Back to Admin</a>
   <h1>Edit Most Played Game</h1>
@@ -105,7 +99,7 @@
 </div>
 
 <script src="/js/admin-searchable-select.js?v=<%= assetV %>"></script>
-<%- include('partials/footer') %>
+<%- include('partials/admin/edit-frame-close') %>
 </body>
 </html>
 

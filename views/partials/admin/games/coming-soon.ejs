@@ -6,7 +6,11 @@
 <%- include('psn-update') %>
 <%
   const csRows = gamesView.upcoming;
-  const csPeso = v => v ? '₱' + v : '₱—';
+  const csBit = v => v ? ('₱' + v) : 'not set';
+  const csLine = (label, weekly, monthly) => {
+    if (!weekly && !monthly) return label + ' not set';
+    return label + ' ' + csBit(weekly) + ' weekly · ' + csBit(monthly) + ' monthly';
+  };
 %>
 <% if (!csRows.length) { %>
 <div class="gm-empty">No upcoming games. Use + Add New → Upcoming Game.</div>
@@ -30,20 +34,19 @@
       <span class="gm-slot gm-slot-tr<%= u.slots.tr ? '' : ' gm-slot-zero' %>">Trophy <%= u.slots.tr %></span>
     </div>
     <div class="gm-c-prices">
-      <% if (u.prices.nt7 || u.prices.nt30) { %><div>Non-Trophy <%= csPeso(u.prices.nt7) %> / <%= csPeso(u.prices.nt30) %></div><% } %>
-      <% if (u.prices.tr7 || u.prices.tr30) { %><div class="gm-tr">Trophy <%= csPeso(u.prices.tr7) %> / <%= csPeso(u.prices.tr30) %></div><% } %>
-      <% if (!(u.prices.nt7 || u.prices.nt30 || u.prices.tr7 || u.prices.tr30)) { %><span class="gm-dash">—</span><% } %>
+      <div><%= csLine('Non-Trophy', u.prices.nt7, u.prices.nt30) %></div>
+      <div class="gm-tr"><%= csLine('Trophy', u.prices.tr7, u.prices.tr30) %></div>
     </div>
     <div class="gm-c-actions">
-      <form method="POST" action="/admin/upcoming/release/<%= u.id %>" data-release-title="<%= u.title %>" data-release-reserved="<%= u.reserved || 0 %>" onsubmit="return confirm('Release \'<%= u.title.replace(/'/g, "\\'") %>\' to Available Games?<%= u.reserved ? ' ' + u.reserved + ' paid reservation' + (u.reserved === 1 ? '' : 's') + ' will move to sign-in.' : '' %>')">
-        <button type="submit" class="gm-btn gm-btn-release">🚀 Release</button>
+      <form method="POST" action="/admin/upcoming/release/<%= u.id %>" data-release-title="<%= u.title %>" data-release-reserved="<%= u.reserved || 0 %>">
+        <button type="submit" class="gm-btn gm-btn-release">Release</button>
       </form>
       <details class="gm-more">
         <summary class="gm-more-btn" title="More actions" aria-label="More actions">⋯</summary>
         <div class="gm-more-menu">
           <a href="/admin/upcoming/edit/<%= u.id %>" class="gm-more-item">✏️ Edit</a>
-          <form method="POST" action="/admin/upcoming/delete/<%= u.id %>" onsubmit="return confirm('Delete <%= u.title.replace(/'/g, "\\'") %>?')">
-            <button type="submit" class="gm-more-item gm-more-danger">🗑 Delete</button>
+          <form method="POST" action="/admin/upcoming/delete/<%= u.id %>" data-confirm-title="Delete <%= u.title %>?" data-confirm-body="This removes the upcoming game." data-confirm-ok="Delete">
+            <button type="submit" class="gm-more-item gm-more-danger">Delete</button>
           </form>
         </div>
       </details>

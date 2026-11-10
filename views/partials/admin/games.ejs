@@ -10,7 +10,7 @@
   const gmSubtabs = [
     ['all', 'All games', '(' + gamesView.rows.length + ')'],
     ['soon', 'Coming soon', '(' + gamesView.upcoming.length + ')'],
-    ['requests', 'Requests', gmReq.pending ? '(' + gmReq.pending + ' pending)' : '(' + gmReq.total + ')'],
+    ['requests', 'Requests', gmReq.needsAction ? '(' + gmReq.needsAction + ' to do)' : '(' + gmReq.total + ')'],
     ['categories', 'Price categories', '(' + priceCategories.length + ')']
   ];
 %>

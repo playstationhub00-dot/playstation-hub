@@ -6,8 +6,15 @@
 <%
   const gmRows = gamesView.rows;
   const gmCounts = gamesView.counts;
-  const gmPeso = v => v ? '₱' + Number(v).toLocaleString() : '₱—';
+  const gmPeso = v => v ? '₱' + Number(v).toLocaleString() : 'not set';
+  const gmSlot = (free, cap) => (cap ? free + '/' + cap : String(free));
   const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['never', '💤 Not rented yet'], ['bundle', '📦 Bundles']];
+  const psnList = (typeof games !== 'undefined' && Array.isArray(games)) ? games : [];
+  const PSN_FRESH = 7 * 24 * 60 * 60 * 1000;
+  const psnDue = psnList.filter(g => {
+    const at = g && g.psn && g.psn.fetched_at && Date.parse(g.psn.fetched_at);
+    return !(at && (Date.now() - at) <= PSN_FRESH);
+  }).length;
 %>
 <div class="gm-toolbar">
   <input type="search" id="gmSearch" class="gm-search" placeholder="Search title, genre or category…" maxlength="100" autocomplete="off">
@@ -32,9 +39,12 @@
 <%
   const psnRun = typeof psnLastRun !== 'undefined' ? psnLastRun : null;
 %>
-<form method="POST" action="/admin/games/psn/refresh" class="gm-psn"
-      onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Updating… this can take a minute';">
-  <button type="submit" style="padding:0.5rem 0.9rem;border-radius:8px;border:1px solid #333;background:#161616;color:#fff;font-weight:700;cursor:pointer;">🎮 Update all from PlayStation</button>
+<form method="POST" action="/admin/games/psn/refresh" class="gm-psn" data-confirm-kind="bulk"
+      data-psn-due="<%= psnDue %>" data-psn-all="<%= psnList.length %>"
+      data-confirm-title="Update <%= psnDue %> game<%= psnDue === 1 ? '' : 's' %> from PlayStation?"
+      data-confirm-body="This updates <%= psnDue %> of <%= psnList.length %> games. Games fetched in the last 7 days are skipped unless you tick the box."
+      data-confirm-ok="Update now" data-confirm-cancel="Not now">
+  <button type="submit" class="adm-btn adm-btn-secondary">Update all from PlayStation</button>
   <label style="font-size:0.78rem;color:#888;"><input type="checkbox" name="force" value="1"> Also re-fetch games updated in the last 7 days</label>
   <% if (psnRun) { %>
   <span style="font-size:0.78rem;color:#888;">Last run <%= psnRun.at.slice(0, 16).replace('T', ' ') %> UTC · updated <strong style="color:#4ade80;"><%= psnRun.updated %></strong>
@@ -54,7 +64,7 @@
 <% if (!gmRows.length) { %>
 <div class="gm-empty">No games yet. Use + Add New to add one.</div>
 <% } else { %>
-<div class="gm-head gm-grid" id="gmHead" aria-hidden="true"><span>Game</span><span>Slots left</span><span>Prices (wk / mo)</span><span>Status</span><span>Money</span><span></span></div>
+<div class="gm-head gm-grid" id="gmHead" aria-hidden="true"><span>Game</span><span>Non-Trophy free</span><span>Trophy free</span><span>Weekly / monthly</span><span>Rental state</span><span>Earned</span><span></span></div>
 <div class="gm-list" id="gmList">
   <% gmRows.forEach(r => { %>
   <div class="gm-row gm-grid" data-gm-game data-id="<%= r.id %>" data-chips="<%= r.chips.join(' ') %>" data-platform="<%= r.platform %>" data-s="<%= r.search %>" data-title="<%= r.title %>" data-earned="<%= r.money.earned %>" data-slots="<%= r.slots.total %>">
@@ -72,10 +82,12 @@
         <% } %>
       </div>
     </div>
-    <div class="gm-c-slots">
-      <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">Non-Trophy <%= r.slots.nt %></span>
-      <span class="gm-slot gm-slot-tr<%= r.slots.tr ? '' : ' gm-slot-zero' %>">Trophy <%= r.slots.tr %></span>
-      <% if (r.slots.showPs4) { %><span class="gm-slot<%= r.slots.ps4 ? '' : ' gm-slot-zero' %>">PS4 <%= r.slots.ps4 %></span><% } %>
+    <div class="gm-c-nt">
+      <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">Non-Trophy <%= gmSlot(r.slots.nt, r.slots.ntCap) %></span>
+      <% if (r.slots.showPs4) { %><span class="gm-slot<%= r.slots.ps4 ? '' : ' gm-slot-zero' %>">PS4 <%= gmSlot(r.slots.ps4, r.slots.ps4Cap) %></span><% } %>
+    </div>
+    <div class="gm-c-tr">
+      <span class="gm-slot gm-slot-tr<%= r.slots.tr ? '' : ' gm-slot-zero' %>">Trophy <%= gmSlot(r.slots.tr, r.slots.trCap) %></span>
     </div>
     <div class="gm-c-prices">
       <div>Non-Trophy <%= gmPeso(r.prices.nt7) %> / <%= gmPeso(r.prices.nt30) %></div>
@@ -83,15 +95,16 @@
       <% if (r.prices.buyNt > 0 || r.prices.buyTr > 0) { %><div class="gm-buy">Buy <%= [r.prices.buyNt > 0 ? 'Non-Trophy ' + gmPeso(r.prices.buyNt) : '', r.prices.buyTr > 0 ? 'Trophy ' + gmPeso(r.prices.buyTr) : ''].filter(Boolean).join(' · ') %></div><% } %>
     </div>
     <div class="gm-c-status">
+      <span class="gm-st gm-st-<%= r.rental.tone %>"><%= r.rental.label %></span>
+      <% if (r.rental.detail) { %><div class="gm-sub"><%= r.rental.detail %></div><% } %>
       <% if (r.status.isNew) { %><span class="gm-st gm-st-new<%= r.status.daysLeft <= 3 ? ' gm-st-urgent' : '' %>">NEW · <%= r.status.daysLeft %>d left</span><% } %>
-      <% if (r.status.neverRented) { %><span class="gm-st gm-st-never">Not rented yet</span><% } %>
-      <% if (r.status.soldOut) { %><span class="gm-st gm-st-sold">Sold out</span><% } %>
+      <% if (r.status.soldOut && r.rental.label !== 'Full') { %><span class="gm-st gm-st-sold">Sold out</span><% } %>
       <% if (r.status.stocked) { %><span class="gm-st gm-st-stocked">Stocked</span><% } %>
-      <% if (!r.status.isNew && !r.status.neverRented && !r.status.soldOut && !r.status.stocked) { %><span class="gm-dash">—</span><% } %>
     </div>
     <div class="gm-c-money">
       <div class="gm-earned">₱<%= r.money.earned.toLocaleString() %> earned <span class="gm-txns"><%= r.money.txns %> txn<%= r.money.txns === 1 ? '' : 's' %></span></div>
-      <% if (r.money.profit >= 0) { %><div class="gm-profit">+₱<%= r.money.profit.toLocaleString() %> profit</div><% } else { %><div class="gm-profit gm-loss">₱<%= Math.abs(r.money.profit).toLocaleString() %> at a loss</div><% } %>
+      <% if (r.money.earned > 0 && r.money.profit > 0) { %><div class="gm-profit">+₱<%= r.money.profit.toLocaleString() %> profit</div><% } %>
+      <% if (r.money.earned > 0 && r.money.profit < 0) { %><div class="gm-profit gm-below">₱<%= Math.abs(r.money.profit).toLocaleString() %> below cost</div><% } %>
     </div>
     <div class="gm-c-actions">
       <a href="/admin/edit/<%= r.id %>" class="gm-btn">✏️ Edit</a>
@@ -101,8 +114,8 @@
           <form method="POST" action="/admin/games/<%= r.id %>/stocked">
             <button type="submit" class="gm-more-item"><%= r.status.stocked ? '📦 Clear stocked' : '📦 Mark as stocked' %></button>
           </form>
-          <form method="POST" action="/admin/delete/<%= r.id %>" onsubmit="return confirm('Delete <%= r.title.replace(/'/g, "\\'") %>?')">
-            <button type="submit" class="gm-more-item gm-more-danger">🗑 Delete</button>
+          <form method="POST" action="/admin/delete/<%= r.id %>" data-confirm-title="Delete <%= r.title %>?" data-confirm-body="This removes the game from the catalogue." data-confirm-ok="Delete game">
+            <button type="submit" class="gm-more-item gm-more-danger">Delete</button>
           </form>
         </div>
       </details>
@@ -112,3 +125,24 @@
 </div>
 <div class="gm-empty" id="gmNoMatch" hidden>No games match these filters. <a href="#" data-gm-clear>Clear</a></div>
 <% } %>
+<%# Moved here from Settings. The customer Browse page still reads the same saved cut-offs. %>
+<% const pbBands = typeof browseBands === 'function' ? browseBands() : { low: 200, high: 300 }; %>
+<div class="adm-card" id="sec-price-bands">
+  <div class="adm-card-head" style="border-left:3px solid #38bdf8;">
+    <div class="sa-left">
+      <div class="sa-icon" style="background:rgba(56,189,248,0.15);">💸</div>
+      <div>
+        <div class="sa-title"><a href="#sec-price-bands">Browse price filter</a></div>
+        <div class="sa-desc">The cut-offs behind the Price chips on Browse. Customer prices do not change.</div>
+      </div>
+    </div>
+  </div>
+  <div class="adm-card-body">
+    <form method="POST" action="/admin/browse-price-bands" class="pb-form">
+      <label>Cheapest chip: under ₱ <input type="number" name="low" value="<%= pbBands.low %>" min="1" step="1" required></label>
+      <label>Top chip: ₱ <input type="number" name="high" value="<%= pbBands.high %>" min="2" step="1" required> and up</label>
+      <button type="submit" class="btn btn-primary">Save price filter</button>
+    </form>
+    <p class="gdt-note">Customers see: Under ₱<%= pbBands.low %> · ₱<%= pbBands.low %>–<%= pbBands.high - 1 %> · ₱<%= pbBands.high %>+. Each game counts at the "from ₱" price on its card; PS Plus games at the PS Plus weekly price.</p>
+  </div>
+</div>

@@ -1,6 +1,6 @@
 // Run: node scripts/test-admin-price-bands.js
 //
-// Admin → Settings → Browse price filter: the card, saving the two cut-offs,
+// Admin → Games → Browse price filter: the card, saving the two cut-offs,
 // refusing bad ones, and the login. Boots a throwaway instance (temp DATA_DIR,
 // blank MONGODB_URI, in-memory sessions, a made-up admin password); the
 // project's games.json, the database and the real admin are never touched.
@@ -91,10 +91,10 @@ async function main() {
     }
     assert.deepStrictEqual(bandsInDb(), { low: 150, high: 250 }, 'unchanged');
   });
-  await okAsync('both messages are wired to the Settings tab', async () => {
+  await okAsync('both messages are wired to the Games tab', async () => {
     const r = await call('GET', '/admin?tab=settings&msg=price_bands_saved', { headers: { Cookie: cookie } });
     assert.ok(r.body.includes("price_bands_saved:'✅ Price filter saved'"));
-    assert.ok(r.body.includes("price_bands_saved:'settings', price_bands_invalid:'settings'"));
+    assert.ok(r.body.includes("price_bands_saved:'games', price_bands_invalid:'games'"));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

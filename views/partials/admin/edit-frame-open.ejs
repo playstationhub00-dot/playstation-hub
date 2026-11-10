@@ -1,0 +1,49 @@
+<%
+  const shellNavKey = typeof shellNav !== 'undefined' ? shellNav : '';
+  const shellCrumbText = typeof shellCrumb !== 'undefined' ? shellCrumb : 'Admin';
+  const shellOn = key => shellNavKey === key ? ' active' : '';
+%>
+<div class="admin-sidebar" id="adminSidebar" role="navigation" aria-label="Admin sections">
+  <div class="asb-brand">
+    <a href="/" title="View site" class="asb-logo">
+      <%- include('../brand-logo', { logoVariant: 'light', logoClass: 'brand-logo-for-dark' }) %>
+      <%- include('../brand-logo', { logoVariant: 'dark', logoClass: 'brand-logo-for-light' }) %>
+    </a>
+    <span class="asb-admin-pill">ADMIN</span>
+  </div>
+  <div class="asb-scroll">
+    <div class="sidebar-group-label">Overview</div>
+    <a class="admin-tab<%= shellOn('today') %>" href="/admin?tab=today"><span class="tab-icon">🏠</span><span class="tab-label">Today</span></a>
+    <a class="admin-tab<%= shellOn('dashboard') %>" href="/admin?tab=dashboard"><span class="tab-icon">📊</span><span class="tab-label">Dashboard</span></a>
+    <div class="sidebar-group-label">Rentals</div>
+    <a class="admin-tab<%= shellOn('orders') %>" href="/admin?tab=orders"><span class="tab-icon">🧾</span><span class="tab-label">Orders</span></a>
+    <a class="admin-tab<%= shellOn('returns') %>" href="/admin?tab=returns"><span class="tab-icon">↩️</span><span class="tab-label">Returns &amp; deposits</span></a>
+    <div class="sidebar-group-label">Games &amp; accounts</div>
+    <a class="admin-tab<%= shellOn('games') %>" href="/admin?tab=games"><span class="tab-icon">🎮</span><span class="tab-label">Games</span></a>
+    <a class="admin-tab<%= shellOn('accounts') %>" href="/admin?tab=accounts"><span class="tab-icon">🗝️</span><span class="tab-label">Accounts &amp; slots</span></a>
+    <a class="admin-tab<%= shellOn('requests') %>" href="/admin?tab=games#requests"><span class="tab-icon">🙋</span><span class="tab-label">Game requests</span></a>
+    <a class="admin-tab<%= shellOn('psplus') %>" href="/admin?tab=psplus"><span class="tab-icon">⭐</span><span class="tab-label">PS Plus list</span></a>
+    <div class="sidebar-group-label">Customers</div>
+    <a class="admin-tab<%= shellOn('customers') %>" href="/admin?tab=customers"><span class="tab-icon">👥</span><span class="tab-label">Customers</span></a>
+    <a class="admin-tab<%= shellOn('loyalty') %>" href="/admin?tab=loyalty"><span class="tab-icon">🎁</span><span class="tab-label">Loyalty</span></a>
+    <div class="sidebar-group-label">Marketing</div>
+    <a class="admin-tab<%= shellOn('content') %>" href="/admin?tab=content"><span class="tab-icon">🖼️</span><span class="tab-label">Site content</span></a>
+    <a class="admin-tab" href="/admin?tab=settings#sec-announcements"><span class="tab-icon">📣</span><span class="tab-label">Announcements</span></a>
+    <a class="admin-tab" href="/admin?tab=loyalty#sec-promos"><span class="tab-icon">🏷️</span><span class="tab-label">Promos</span></a>
+    <a class="admin-tab<%= shellOn('posters') %>" href="/admin?tab=posters"><span class="tab-icon">🪧</span><span class="tab-label">Posters</span></a>
+    <a class="admin-tab<%= shellOn('messaging') %>" href="/admin?tab=messaging"><span class="tab-icon">💬</span><span class="tab-label">Messaging</span></a>
+    <div class="sidebar-group-label">Settings</div>
+    <a class="admin-tab<%= shellOn('settings') %>" href="/admin?tab=settings"><span class="tab-icon">⚙️</span><span class="tab-label">Settings</span></a>
+  </div>
+  <div class="asb-foot">
+    <a class="admin-tab" href="/" title="View site"><span class="tab-icon">🌐</span><span class="tab-label">View site ↗</span></a>
+    <a class="admin-tab" href="/admin/logout" title="Log out"><span class="tab-icon">🔒</span><span class="tab-label">Log out</span></a>
+  </div>
+</div>
+<div class="sb-backdrop" id="sbBackdrop" onclick="closeSidebarDrawer()"></div>
+<div class="admin-body-main">
+  <div class="admin-topbar">
+    <button type="button" class="atb-toggle" onclick="toggleSidebar()" title="Collapse/expand sidebar" aria-label="Toggle sidebar">▤</button>
+    <span class="atb-crumb"><%= shellCrumbText %></span>
+  </div>
+  <div class="admin-content">

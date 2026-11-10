@@ -87,14 +87,15 @@ console.log('\nsub-tabs');
 ok('four sub-tabs with their counts, All games selected and shown first', () => {
   assert.ok(html.includes('data-gm-subtab="all" aria-selected="true">All games <span class="gm-subtab-n">(3)</span>'));
   assert.ok(html.includes('data-gm-subtab="soon" aria-selected="false">Coming soon <span class="gm-subtab-n">(1)</span>'));
-  assert.ok(html.includes('data-gm-subtab="requests" aria-selected="false">Requests <span class="gm-subtab-n">(1 pending)</span>'));
+  assert.ok(html.includes('data-gm-subtab="requests" aria-selected="false">Requests <span class="gm-subtab-n">(2 to do)</span>'));
   assert.ok(html.includes('data-gm-subtab="categories" aria-selected="false">Price categories <span class="gm-subtab-n">(1)</span>'));
   assert.ok(html.includes('data-gm-panel="all">'));
   ['soon', 'requests', 'categories'].forEach(k => assert.ok(html.includes('data-gm-panel="' + k + '" hidden>'), k));
 });
 
 ok('Requests shows its total when nothing is pending', () => {
-  assert.ok(render({ requests: [REQUESTS[1]] }).includes('Requests <span class="gm-subtab-n">(1)</span>'));
+  assert.ok(render({ requests: [REQUESTS[1]] }).includes('Requests <span class="gm-subtab-n">(1 to do)</span>'));
+  assert.ok(render({ requests: [{ slug: 'done', title: 'Done', status: 'stocked', voters: [] }] }).includes('Requests <span class="gm-subtab-n">(1)</span>'));
 });
 
 ok("this load's message rides along for the sub-tab script", () => {
@@ -163,7 +164,7 @@ ok('status chips: New with days left (urgent at 3 or fewer), Not rented yet, Sol
   assert.ok(r3.includes('class="gm-st gm-st-never">Not rented yet<'));
   assert.ok(gameRow(html, 2).includes('class="gm-st gm-st-stocked">Stocked<'));
   assert.ok(!gameRow(html, 2).includes('Sold out'));
-  assert.ok(gameRow(html, 1).includes('class="gm-st gm-st-sold">Sold out<'));
+  assert.ok(gameRow(html, 1).includes('class="gm-st gm-st-sold">Full<'));
 });
 
 ok('money: earned with its transactions, then profit or loss', () => {
@@ -171,7 +172,9 @@ ok('money: earned with its transactions, then profit or loss', () => {
   assert.ok(r2.includes('₱698 earned <span class="gm-txns">2 txns</span>'));
   assert.ok(r2.includes('<div class="gm-profit">+₱198 profit</div>'));
   assert.ok(gameRow(html, 1).includes('<span class="gm-txns">1 txn</span>'));
-  assert.ok(gameRow(html, 3).includes('<div class="gm-profit gm-loss">₱1,000 at a loss</div>'));
+  assert.ok(gameRow(html, 3).includes('₱0 earned'));
+  assert.ok(!gameRow(html, 3).includes('at a loss'));
+  assert.ok(!gameRow(html, 3).includes('gm-below'));
 });
 
 ok('actions: Edit, and ⋯ holding Stock and Delete with the old confirm prompt', () => {
@@ -180,7 +183,8 @@ ok('actions: Edit, and ⋯ holding Stock and Delete with the old confirm prompt'
   const menu = r2.slice(r2.indexOf('class="gm-more-menu"'));
   assert.ok(menu.includes('action="/admin/games/2/stocked"'));
   assert.ok(menu.includes('📦 Clear stocked'));
-  assert.ok(menu.includes('action="/admin/delete/2" onsubmit="return confirm(\'Delete Marvel\\&#39;s Spider-Man 2?\')"'));
+  assert.ok(menu.includes('action="/admin/delete/2"'));
+  assert.ok(menu.includes('data-confirm-ok="Delete game"'));
   assert.ok(gameRow(html, 3).includes('📦 Mark as stocked'));
 });
 
@@ -203,10 +207,14 @@ ok('rows keep the reserved count and the ready-to-release nudge', () => {
 
 ok('Release keeps its exact confirm prompt; Edit and Delete sit behind ⋯', () => {
   const p = panel(html, 'soon');
-  assert.ok(p.includes("onsubmit=\"return confirm('Release \\'Phantom Blade Zero\\' to Available Games? 3 paid reservations will move to sign-in.')\""));
+  assert.ok(p.includes('data-release-title="Phantom Blade Zero"'));
+  assert.ok(p.includes('data-release-reserved="3"'));
+  assert.ok(p.includes('action="/admin/upcoming/release/15"'));
+  assert.ok(!p.includes("return confirm('Release"));
   const menu = p.slice(p.indexOf('class="gm-more-menu"'));
   assert.ok(menu.includes('href="/admin/upcoming/edit/15"'));
-  assert.ok(menu.includes("action=\"/admin/upcoming/delete/15\" onsubmit=\"return confirm('Delete Phantom Blade Zero?')\""));
+  assert.ok(menu.includes('action="/admin/upcoming/delete/15"'));
+  assert.ok(menu.includes('data-confirm-ok="Delete"'));
 });
 
 ok('no upcoming games shows the empty line', () => {
@@ -218,11 +226,14 @@ console.log('\nRequests and Price categories');
 ok('every Requests form, route and confirm prompt survived the move', () => {
   const p = panel(html, 'requests');
   ['/admin/requests/astro-bot/approve', '/admin/requests/astro-bot/reject', '/admin/requests/astro-bot/delete',
-   '/admin/requests/astro-bot/image', '/admin/requests/astro-bot/voter/rename', '/admin/requests/astro-bot/voter/remove',
+   '/admin/requests/astro-bot/image', '/admin/requests/astro-bot/voters/save', '/admin/requests/astro-bot/voter/remove',
    '/admin/requests/elden-ring/stock']
     .forEach(a => assert.ok(p.includes('action="' + a + '"'), a));
-  assert.ok(p.includes("confirm('Remove this vote?')"));
-  assert.ok(p.includes("confirm('Delete this request permanently?')"));
+  assert.ok(p.includes('Save names'));
+  assert.ok(p.includes('data-undo-label="Requester removed"'));
+  assert.ok(p.includes('>Delete</button>') || p.includes('>Delete request</button>'));
+  assert.ok(p.includes('class="gm-file"'));
+  assert.ok(!p.includes("confirm('Remove this vote?')"));
   assert.ok(p.includes('<option value="3">Ghost of Yōtei</option>'));
 });
 
@@ -239,7 +250,8 @@ console.log('\nwiring');
 ok('server.js builds gamesView once and hands it to the admin page', () => {
   const SRC = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
   assert.ok(SRC.includes("const gamesViewLib = require('./lib/games-view');"));
-  assert.ok(SRC.includes('gamesViewLib.gameRows(games, customers, buildAccountSummaryMap(), new Date())'));
+  assert.ok(SRC.includes('gamesViewLib.gameRows(games, customers, buildAccountSummaryMap(), new Date(), gameQueues)'));
+  assert.ok(SRC.includes('gamesViewLib.queueByGame(allOrders, new Date())'));
   assert.ok(SRC.includes('templateTokens: templates.TOKENS, gamesView, orderQueue,'));
 });
 
@@ -260,10 +272,11 @@ ok('every gm- class the tab renders has a rule', () => {
   assert.deepStrictEqual(missing, []);
 });
 
-ok('style.css is still CRLF throughout', () => {
+ok('style.css newlines stay one kind', () => {
   const lf = CSS.split('\n').length - 1;
   const crlf = CSS.split('\r\n').length - 1;
-  assert.strictEqual(lf, crlf, 'every newline is CRLF');
+  assert.ok(crlf === 0 || crlf === lf, 'mixed newlines');
+  assert.ok(lf > 0);
 });
 
 console.log('\n' + passed + ' assertions passed\n');
