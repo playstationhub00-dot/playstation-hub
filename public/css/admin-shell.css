@@ -268,6 +268,71 @@ body.admin-body .edit-container h1 { color: #fff; }
 .slot-pill.st-overdue { background: #3a1212; color: #ff8a8a; box-shadow: none; }
 .acc-a-price { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #ccc; }
 
+/* Returns & deposits */
+.rd-summary { margin: 0 0 14px; color: #ccc; font-size: 14px; }
+.rd-summary b { color: #fff; }
+.rd-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.rd-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.rd-chip { background: transparent; border: 1px solid #2a2a2a; border-radius: 20px; padding: 0.32rem 0.75rem; font-size: 0.74rem; font-weight: 700; color: #8a8a8a; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.rd-chip:hover { border-color: #3a3a3a; color: #bbb; }
+.rd-chip-on { background: #F5B800; color: #0a0a0a; border-color: #F5B800; }
+.rd-chip-n { font-variant-numeric: tabular-nums; opacity: 0.7; margin-left: 0.2rem; }
+.rd-chip-todo { border-color: #f59e0b; color: #f59e0b; }
+.rd-chip-todo.rd-chip-on { background: #f59e0b; color: #1a1200; border-color: #f59e0b; }
+.rd-search { flex: 1 1 200px; max-width: 320px; height: 36px; border: 1px solid #2a2a2a; background: #121212; border-radius: 9px; padding: 0 12px; color: #eee; font: inherit; font-size: 14px; }
+.rd-wrap { overflow-x: auto; border: 1px solid #2a2a2a; border-radius: 12px; }
+.rd-table { width: 100%; border-collapse: collapse; min-width: 980px; font-size: 13.5px; }
+.rd-table th { text-align: left; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #8a8a8a; padding: 10px 12px; border-bottom: 1px solid #2a2a2a; background: #141414; white-space: nowrap; }
+.rd-table td { padding: 12px; border-bottom: 1px solid #222; vertical-align: top; color: #ddd; }
+.rd-name { font-weight: 700; color: #fff; }
+.rd-sub { color: #8a8a8a; font-size: 12px; margin-top: 2px; }
+.rd-acc { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rd-acc b { font-weight: 700; color: #fff; }
+.rd-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.rd-actions form { margin: 0; }
+.rd-dep-owed { color: #f59e0b; font-weight: 700; }
+.rd-dep-held { color: #8fc3ff; }
+.rd-dep-refunded { color: #86efac; }
+.rd-dep-none { color: #8a8a8a; }
+.rd-row[hidden] { display: none !important; }
+.rd-pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: #aaa; font-size: 13px; }
+.rd-pager[hidden], #rdEmpty[hidden], #rdTableWrap[hidden] { display: none !important; }
+
+body.light-mode .rd-summary,
+body.light-mode .rd-table td { color: #333; }
+body.light-mode .rd-summary b,
+body.light-mode .rd-name,
+body.light-mode .rd-acc b { color: #14171a; }
+body.light-mode .rd-chip { border-color: #ccc; color: #555; }
+body.light-mode .rd-chip-on { background: #F5B800; color: #0a0a0a; border-color: #F5B800; }
+body.light-mode .rd-chip-todo { border-color: #d97706; color: #b45309; }
+body.light-mode .rd-chip-todo.rd-chip-on { background: #f59e0b; color: #1a1200; }
+body.light-mode .rd-search { background: #fff; color: #14171a; border-color: #d5d8dc; }
+body.light-mode .rd-wrap,
+body.light-mode .rd-table th,
+body.light-mode .rd-table td { border-color: #e4e7eb; }
+body.light-mode .rd-table th { background: #f6f7f9; color: #666; }
+body.light-mode .rd-pager { color: #555; }
+
+@media (max-width: 860px) {
+  .rd-search { max-width: none; width: 100%; }
+  .rd-chips { flex-wrap: wrap; max-width: 100%; }
+  .rd-wrap { overflow: visible; border: 0; }
+  .rd-table { min-width: 0; }
+  .rd-table thead { display: none; }
+  .rd-table, .rd-table tbody, .rd-table tr, .rd-table td { display: block; width: 100%; }
+  .rd-table tr.rd-row {
+    background: #171717; border: 1px solid #2a2a2a; border-radius: 14px;
+    margin: 0 0 10px; padding: 12px 14px;
+  }
+  .rd-table td { border: 0; padding: 4px 0; }
+  .rd-table td[data-label]::before {
+    content: attr(data-label); display: block; font-size: 10px; letter-spacing: .06em;
+    text-transform: uppercase; color: #777; font-weight: 700; margin-bottom: 2px;
+  }
+  body.light-mode .rd-table tr.rd-row { background: #fff; border-color: #e4e7eb; }
+}
+
 @media (max-width: 860px) {
   .admin-sidebar { transform: translateX(-100%); width: 250px; }
   body.sb-open .admin-sidebar { transform: none; }

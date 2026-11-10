@@ -11,7 +11,7 @@ function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
 // 1:30 PM in Asia/Manila is 05:30 UTC. The shop clock is Philippines time.
 const NOW = new Date('2026-11-04T05:30:00.000Z');
 
-const ORDERS = [
+const ORDERS = ([
   { ref: 'PH-0310', state: 'active', fb_name: 'Customer B', game_title: 'Call of Duty', created_at: '2026-11-03T02:00:00.000Z', state_history: [{ state: 'active', at: '2026-11-04T04:30:00.000Z' }] },
   { ref: 'PH-0281', state: 'awaiting_return', fb_name: 'Customer C', game_title: 'NBA 2K', end_date: '2026-11-03', deposit_due: 100, deposit_refunded: false, created_at: '2026-10-27T02:00:00.000Z', state_history: [{ state: 'awaiting_return', at: '2026-11-04T02:30:00.000Z' }] },
   { ref: 'PH-0280', state: 'verifying_return', fb_name: 'Customer E', game_title: 'Ghost', end_date: '2026-11-02', deposit_due: 0, created_at: '2026-10-20T02:00:00.000Z', state_history: [{ state: 'verifying_return', at: '2026-11-04T01:00:00.000Z' }] },
@@ -22,8 +22,11 @@ const ORDERS = [
   { ref: 'PH-0101', state: 'closed', fb_name: 'Customer G', game_title: 'Onimusha', deposit_due: 100, deposit_refunded: true, created_at: '2026-10-01T02:00:00.000Z' },
   { ref: 'PH-0102', state: 'closed', fb_name: 'Customer H', game_title: 'RDR2', deposit_due: 0, deposit_refunded: false, created_at: '2026-10-02T02:00:00.000Z' },
   { ref: 'PH-0090', state: 'waitlisted', fb_name: 'Customer W', game_title: 'Wait', created_at: '2026-11-01T02:00:00.000Z' },
-  { ref: 'PH-0091', state: 'cancelled', fb_name: 'Customer X', game_title: 'Nope', created_at: '2026-11-02T02:00:00.000Z', state_history: [{ state: 'cancelled', at: '2026-11-04T00:30:00.000Z' }] }
-];
+  { ref: 'PH-0091', state: 'cancelled', fb_name: 'Customer X', game_title: 'Nope', created_at: '2026-11-02T02:00:00.000Z', state_history: [{ state: 'cancelled', at: '2026-11-04T00:30:00.000Z' }] },
+  { ref: 'PH-NT1', state: 'awaiting_return', account_type: 'nt', fb_name: 'Non Trophy', game_title: 'Swap', deposit_due: 100, deposit_refunded: false, created_at: '2020-01-01T00:00:00.000Z' },
+  { ref: 'PH-NT2', state: 'closed', account_type: 'nt', fb_name: 'Non Trophy Two', game_title: 'Swap', deposit_due: 100, deposit_refunded: false, created_at: '2020-01-02T00:00:00.000Z' },
+  { ref: 'PH-PS0', state: 'closed', account_type: 'ps4', fb_name: 'PS4 None', game_title: 'Old Game', deposit_due: 0, deposit_refunded: false, created_at: '2020-01-03T00:00:00.000Z' }
+]).map(o => Object.assign({ account_type: 'tr' }, o));
 
 const CUSTOMERS = [
   { customer_name: 'Ana', game_title: 'Call of Duty', status: 'renting', start_date: '2026-11-02', end_date: '2026-11-06', payments: [{ amount: 500, date: '2026-11-02' }] },
@@ -81,12 +84,34 @@ ok('morning and evening follow the Manila hour', () => {
 });
 
 ok('needs-you queues are returns, checkout that stalled, and deposits still held', () => {
-  const q = build().queues;
+  const t = build();
+  const q = t.queues;
   assert.strictEqual(q.returns.count, 2);
   assert.strictEqual(q.unpaid.count, 2);
   assert.strictEqual(q.unpaid.over24h, 1);
   assert.strictEqual(q.deposits.count, 1);
   assert.strictEqual(q.deposits.amount, 100);
+  assert.ok(!t.lists.returns.map(o => o.ref).includes('PH-NT1'));
+  assert.ok(!t.lists.deposits.map(o => o.ref).includes('PH-NT2'));
+  assert.ok(!t.lists.deposits.map(o => o.ref).includes('PH-PS0'));
+});
+
+ok('a PS4 Primary deposit counts, and a PS4 rental with no deposit does not', () => {
+  const t = today.buildToday({
+    now: NOW,
+    orders: [
+      { ref: 'PH-P1', state: 'closed', account_type: 'ps4', deposit_due: 100, deposit_refunded: false },
+      { ref: 'PH-P2', state: 'verifying_return', account_type: 'ps4', deposit_due: 100 },
+      { ref: 'PH-P3', state: 'awaiting_return', account_type: 'ps4', deposit_due: 0 },
+      { ref: 'PH-P4', state: 'closed', account_type: 'nt', deposit_due: 100, deposit_refunded: false }
+    ]
+  });
+  assert.strictEqual(t.queues.returns.count, 1);
+  assert.strictEqual(t.lists.returns[0].ref, 'PH-P2');
+  assert.strictEqual(t.queues.deposits.count, 1);
+  assert.strictEqual(t.queues.deposits.amount, 100);
+  assert.strictEqual(t.kpis.depositsHeld.ready, 1);
+  assert.strictEqual(t.kpis.depositsHeld.amount, 200);
 });
 
 ok('a Quick Add the owner recorded is not an unpaid checkout', () => {

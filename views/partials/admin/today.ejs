@@ -23,7 +23,7 @@
       <div class="td-card-h"><span class="td-ico">↩️</span><span class="adm-badge adm-badge-wa">Needs you</span></div>
       <div class="td-n"><%= q.returns.count %></div>
       <div class="td-t">Returns to verify</div>
-      <div class="td-d">Rentals ended — check the account is free, then refund the deposit</div>
+      <div class="td-d">Trophy rentals that have ended — check the account is free, then refund the deposit. PS4 Primary counts when the record has a deposit.</div>
       <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('returns','returns')">Verify returns →</button>
     </div>
     <div class="td-card">
@@ -37,7 +37,7 @@
       <div class="td-card-h"><span class="td-ico">💵</span><span class="adm-badge adm-badge-wa">Needs you</span></div>
       <div class="td-n"><%= q.deposits.count %></div>
       <div class="td-t">Deposits to refund</div>
-      <div class="td-d"><%= peso(q.deposits.amount) %> total waiting to go back to customers</div>
+      <div class="td-d"><%= peso(q.deposits.amount) %> on Trophy rentals waiting to go back</div>
       <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('returns','returns')">Refund deposits →</button>
     </div>
     <div class="td-card">
@@ -77,7 +77,7 @@
     <div class="td-card">
       <div class="td-k">Deposits held</div>
       <div class="td-v"><%= peso(td.kpis.depositsHeld.amount) %></div>
-      <div class="td-c"><%= td.kpis.depositsHeld.ready %> ready to refund (<%= peso(td.kpis.depositsHeld.readyAmount) %>)</div>
+      <div class="td-c">Trophy accounts · <%= td.kpis.depositsHeld.ready %> ready to refund (<%= peso(td.kpis.depositsHeld.readyAmount) %>)</div>
     </div>
     <div class="td-card">
       <div class="td-k">Slots in use</div>

@@ -30,6 +30,7 @@ const revealLog = require('./lib/reveal-log');
 const markPaidMethod = require('./lib/mark-paid-method');
 const orderDetail = require('./lib/order-detail');
 const todayLib = require('./lib/today');
+const returnsLib = require('./lib/returns');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
 const gamesViewLib = require('./lib/games-view');
@@ -4937,7 +4938,8 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     }
   }
 
-  res.redirect('/admin?tab=orders&msg=order_advanced');
+  const back = req.body && req.body.return_to === 'returns' ? 'returns' : 'orders';
+  res.redirect('/admin?tab=' + back + '&msg=order_advanced');
 }));
 
 app.post('/admin/orders/:ref/reject', requireAuth, asyncRoute(async (req, res) => {
@@ -5247,7 +5249,8 @@ app.post('/admin/online', requireAuth, (req, res) => {
 // paid here.
 app.post('/admin/orders/:ref/refunded', requireAuth, async (req, res) => {
   await orders.markRefunded(req.params.ref);
-  res.redirect('/admin?tab=orders&msg=refund_marked');
+  const back = req.body && req.body.return_to === 'returns' ? 'returns' : 'orders';
+  res.redirect('/admin?tab=' + back + '&msg=refund_marked');
 });
 
 // Pushes the customer row's end date onto an order that never got it — an
@@ -6477,7 +6480,14 @@ app.get('/admin', requireAuth, async (req, res) => {
       botsFiltered: weekMetrics.skipped || 0
     }
   });
-  res.render('admin', { todayView, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
+  const returnsView = returnsLib.build({
+    now: dashNowDate,
+    orders: allOrders,
+    customers,
+    accounts: getAccounts(),
+    slotHistory: db.get('slot_history').value() || []
+  });
+  res.render('admin', { todayView, returnsView, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -8073,7 +8083,8 @@ app.post('/admin/customers/status/:id', requireAuth, (req, res) => {
     if (linkedAssign) refreshAccountAssignment(linkedAssign, { customerName: existing.customer_name, endDate: existing.end_date, status });
   }
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({ status }).write();
-  res.redirect('/admin?tab=customers&msg=customer_updated');
+  const back = req.body && req.body.return_to === 'returns' ? 'returns' : 'customers';
+  res.redirect('/admin?tab=' + back + '&msg=customer_updated');
 });
 
 // Removes a customer row and puts back whatever it was holding: the game's
