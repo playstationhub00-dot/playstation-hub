@@ -1,0 +1,126 @@
+<div class="tab-panel" id="tab-today">
+<%
+  const td = (typeof todayView !== 'undefined' && todayView) ? todayView : null;
+  const peso = n => '₱' + Math.round(Number(n) || 0).toLocaleString('en-US');
+  const q = td ? td.queues : null;
+%>
+<% if (!td) { %>
+  <p class="td-empty">Today could not be built for this load.</p>
+<% } else { %>
+  <div class="td-hi">
+    <div>
+      <div class="td-kicker"><%= td.when.line %></div>
+      <h2><%= td.greeting %> — <%= td.headline %></h2>
+    </div>
+    <div class="td-hi-actions">
+      <span class="td-kicker">Counts are from this page load</span>
+      <button type="button" class="adm-btn" onclick="qaOpen()">⚡ Quick add order</button>
+    </div>
+  </div>
+
+  <div class="td-grid">
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">↩️</span><span class="adm-badge adm-badge-wa">Needs you</span></div>
+      <div class="td-n"><%= q.returns.count %></div>
+      <div class="td-t">Returns to verify</div>
+      <div class="td-d">Rentals ended — check the account is free, then refund the deposit</div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('returns','returns')">Verify returns →</button>
+    </div>
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">💳</span><span class="adm-badge adm-badge-er">Needs you</span></div>
+      <div class="td-n"><%= q.unpaid.count %></div>
+      <div class="td-t">Unpaid orders</div>
+      <div class="td-d">Started checkout but didn't pay.<% if (q.unpaid.over24h) { %> <%= q.unpaid.over24h %> <%= q.unpaid.over24h === 1 ? 'is' : 'are' %> over 24 h<% } %></div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('orders','orders')">Open unpaid →</button>
+    </div>
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">💵</span><span class="adm-badge adm-badge-wa">Needs you</span></div>
+      <div class="td-n"><%= q.deposits.count %></div>
+      <div class="td-t">Deposits to refund</div>
+      <div class="td-d"><%= peso(q.deposits.amount) %> total waiting to go back to customers</div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('returns','returns')">Refund deposits →</button>
+    </div>
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">🎁</span><span class="adm-badge adm-badge-in">To review</span></div>
+      <div class="td-n"><%= q.loyalty.count %></div>
+      <div class="td-t">Loyalty pending</div>
+      <div class="td-d">Customers with a reward ready</div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('loyalty','loyalty')">Review loyalty →</button>
+    </div>
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">💬</span><span class="adm-badge adm-badge-in">To review</span></div>
+      <div class="td-n"><%= q.messages.count %></div>
+      <div class="td-t">Messages</div>
+      <div class="td-d">Bot handed over to you — customers waiting</div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('messaging','messaging')">Open messages →</button>
+    </div>
+    <div class="td-card">
+      <div class="td-card-h"><span class="td-ico">🙋</span><span class="adm-badge adm-badge-nu">To review</span></div>
+      <div class="td-n"><%= q.requests.count %></div>
+      <div class="td-t">Game requests</div>
+      <div class="td-d"><%= q.requests.newer %> new this week · <%= q.requests.stocked %> already in stock</div>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('games','requests')">See requests →</button>
+    </div>
+  </div>
+
+  <div class="td-kpis">
+    <div class="td-card">
+      <div class="td-k">Collected this month <span>(<%= td.kpis.collected.fromDay %>–<%= td.kpis.collected.toDay %> <%= td.kpis.collected.monthLabel %>)</span></div>
+      <div class="td-v"><%= peso(td.kpis.collected.total) %></div>
+      <div class="td-c">Same <%= td.kpis.collected.toDay %> days last month: <%= peso(td.kpis.collected.prior) %></div>
+    </div>
+    <div class="td-card">
+      <div class="td-k">Out on rent now</div>
+      <div class="td-v"><%= td.kpis.outOnRent.count %></div>
+      <div class="td-c"><%= td.kpis.outOnRent.endingSoon %> end in ≤3 days · <%= td.kpis.outOnRent.overdue %> overdue</div>
+    </div>
+    <div class="td-card">
+      <div class="td-k">Deposits held</div>
+      <div class="td-v"><%= peso(td.kpis.depositsHeld.amount) %></div>
+      <div class="td-c"><%= td.kpis.depositsHeld.ready %> ready to refund (<%= peso(td.kpis.depositsHeld.readyAmount) %>)</div>
+    </div>
+    <div class="td-card">
+      <div class="td-k">Slots in use</div>
+      <% const slotPct = td.kpis.slots.total ? Math.round((td.kpis.slots.filled / td.kpis.slots.total) * 100) : 0; %>
+      <div class="td-v"><%= td.kpis.slots.filled %> <span>/ <%= td.kpis.slots.total %></span></div>
+      <div class="td-bar"><i style="width:<%= slotPct %>%"></i></div>
+      <div class="td-c"><%= td.kpis.slots.open %> open</div>
+    </div>
+  </div>
+
+  <div class="td-cols">
+    <div class="td-card">
+      <h3>🕑 Recent activity <button type="button" onclick="switchTab('orders','orders')">All orders →</button></h3>
+      <% if (!td.activity.length) { %><div class="td-empty">No recent order activity.</div><% } %>
+      <% td.activity.forEach(function (row) { %>
+        <div class="td-li">
+          <span class="adm-badge adm-badge-<%= row.badge.kind %>"><%= row.badge.label %></span>
+          <span><%= row.ref %><% if (row.name) { %> · <%= row.name %><% } %><% if (row.game) { %> · <%= row.game %><% } %></span>
+          <span class="m"><%= row.ago %></span>
+        </div>
+      <% }) %>
+    </div>
+    <div class="td-card">
+      <h3>🔥 Most rented · <%= td.kpis.collected.monthLabel %> <button type="button" onclick="switchTab('games','games')">Games →</button></h3>
+      <% if (!td.topRented.length) { %><div class="td-empty">No rentals started this month.</div><% } %>
+      <% td.topRented.forEach(function (row, i) { %>
+        <div class="td-li"><span><%= i + 1 %>. <%= row[0] %></span><span class="m"><%= row[1] %></span></div>
+      <% }) %>
+    </div>
+    <div class="td-card">
+      <h3>🌐 Site traffic · 7 days <button type="button" onclick="switchTab('dashboard','dashboard')">Details →</button></h3>
+      <% if (!td.traffic) { %>
+        <div class="td-note">Google Analytics traffic is coming in a later update. The shop does not store a GA4 feed yet.</div>
+      <% } else { %>
+        <div class="td-metrics">
+          <div><b><%= td.traffic.visitors.toLocaleString('en-US') %></b><div class="td-kicker">real visitors</div></div>
+          <div><b><%= td.traffic.messaged.toLocaleString('en-US') %></b><div class="td-kicker">messaged us</div></div>
+          <div><b><%= td.traffic.paid.toLocaleString('en-US') %></b><div class="td-kicker">paid</div></div>
+        </div>
+        <div class="td-note">Bots filtered: <%= td.traffic.botsFiltered.toLocaleString('en-US') %> visits hidden. These numbers are the shop's own visit log. Google Analytics is coming in a later update.</div>
+      <% } %>
+    </div>
+  </div>
+  <p class="td-later">Coming in a later update: waitlist counts, a Reserved slot state, and PS Plus expiry dates. Those are not stored yet, so they are not shown here.</p>
+<% } %>
+</div>

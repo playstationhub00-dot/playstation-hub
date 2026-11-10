@@ -26,16 +26,16 @@
     </div>
     <div class="gm-c-release"><%= u.releaseLabel %></div>
     <div class="gm-c-slots">
-      <span class="gm-slot<%= u.slots.nt ? '' : ' gm-slot-zero' %>">NT <%= u.slots.nt %></span>
-      <span class="gm-slot gm-slot-tr<%= u.slots.tr ? '' : ' gm-slot-zero' %>">TR <%= u.slots.tr %></span>
+      <span class="gm-slot<%= u.slots.nt ? '' : ' gm-slot-zero' %>">Non-Trophy <%= u.slots.nt %></span>
+      <span class="gm-slot gm-slot-tr<%= u.slots.tr ? '' : ' gm-slot-zero' %>">Trophy <%= u.slots.tr %></span>
     </div>
     <div class="gm-c-prices">
-      <% if (u.prices.nt7 || u.prices.nt30) { %><div>NT <%= csPeso(u.prices.nt7) %> / <%= csPeso(u.prices.nt30) %></div><% } %>
-      <% if (u.prices.tr7 || u.prices.tr30) { %><div class="gm-tr">TR <%= csPeso(u.prices.tr7) %> / <%= csPeso(u.prices.tr30) %></div><% } %>
+      <% if (u.prices.nt7 || u.prices.nt30) { %><div>Non-Trophy <%= csPeso(u.prices.nt7) %> / <%= csPeso(u.prices.nt30) %></div><% } %>
+      <% if (u.prices.tr7 || u.prices.tr30) { %><div class="gm-tr">Trophy <%= csPeso(u.prices.tr7) %> / <%= csPeso(u.prices.tr30) %></div><% } %>
       <% if (!(u.prices.nt7 || u.prices.nt30 || u.prices.tr7 || u.prices.tr30)) { %><span class="gm-dash">—</span><% } %>
     </div>
     <div class="gm-c-actions">
-      <form method="POST" action="/admin/upcoming/release/<%= u.id %>" onsubmit="return confirm('Release \'<%= u.title.replace(/'/g, "\\'") %>\' to Available Games?<%= u.reserved ? ' ' + u.reserved + ' paid reservation' + (u.reserved === 1 ? '' : 's') + ' will move to sign-in.' : '' %>')">
+      <form method="POST" action="/admin/upcoming/release/<%= u.id %>" data-release-title="<%= u.title %>" data-release-reserved="<%= u.reserved || 0 %>" onsubmit="return confirm('Release \'<%= u.title.replace(/'/g, "\\'") %>\' to Available Games?<%= u.reserved ? ' ' + u.reserved + ' paid reservation' + (u.reserved === 1 ? '' : 's') + ' will move to sign-in.' : '' %>')">
         <button type="submit" class="gm-btn gm-btn-release">🚀 Release</button>
       </form>
       <details class="gm-more">

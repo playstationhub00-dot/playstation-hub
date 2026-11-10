@@ -25,6 +25,9 @@ const signinCode = require('./lib/signin-code');
 const telegram = require('./lib/telegram');
 const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
+const mask = require('./lib/mask');
+const revealLog = require('./lib/reveal-log');
+const todayLib = require('./lib/today');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
 const gamesViewLib = require('./lib/games-view');
@@ -158,6 +161,9 @@ app.locals.orderClientToken = () => require('crypto').randomBytes(9).toString('h
 app.locals.imgCard = (url) => imageVariants.cardAttrs(url);
 app.locals.imgThumb = (url) => imageVariants.thumbAttrs(url);
 app.locals.imgHero = (url) => imageVariants.heroAttrs(url);
+app.locals.maskEmail = mask.maskEmail;
+app.locals.maskPaymentNumber = mask.maskPaymentNumber;
+app.locals.maskPaymentKey = mask.isMaskedPaymentKey;
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -286,7 +292,8 @@ db.defaults({
   support_threads: [],
   loyalty_redemptions: [],
   loyalty_identity: { aliases: {}, rows: {} },
-  loyalty_next_id: 1
+  loyalty_next_id: 1,
+  reveal_log: []
 }).write();
 
 // Ensure accounts collection exists for pre-existing databases
@@ -297,6 +304,7 @@ if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).wr
 // "History starts …" line: nothing before it was recorded.
 if (db.get('slot_history').value() === undefined) db.set('slot_history', []).write();
 if (db.get('nextSlotHistoryId').value() === undefined) db.set('nextSlotHistoryId', 1).write();
+if (db.get('reveal_log').value() === undefined) db.set('reveal_log', []).write();
 if (!db.get('slot_history_started_at').value()) db.set('slot_history_started_at', new Date().toISOString()).write();
 if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
 if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
@@ -5572,15 +5580,20 @@ app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
       }
       qr = await processUploadedImage(f, 900);
     }
+    // A masked field posts empty plus a keep flag until the owner reveals
+    // and edits it. Saving the rest of the form must not wipe the number.
+    const accountNumber = mask.isMaskedPaymentKey(m.key)
+      ? mask.resolveKeptSecret(req.body['number_' + m.key], m.account_number, req.body['number_' + m.key + '_keep'])
+      : (req.body['number_' + m.key] || '').trim();
     next.push({
       key: m.key,
       label: m.label,
       account_name: (req.body['name_' + m.key] || '').trim(),
-      account_number: (req.body['number_' + m.key] || '').trim(),
+      account_number: accountNumber,
       qr_image: qr,
       // A method with no QR and no account number cannot be paid to, so it
       // stays off no matter what the checkbox says.
-      enabled: req.body['enabled_' + m.key] === 'on' && !!(qr || (req.body['number_' + m.key] || '').trim())
+      enabled: req.body['enabled_' + m.key] === 'on' && !!(qr || accountNumber)
     });
   }
   db.set('site_settings.payment_methods', next).write();
@@ -5601,6 +5614,38 @@ app.post('/admin/payment-methods', requireAuth, uploadPromoMedia.fields([
   db.set('site_settings.paypal_payout_usd',  numOr(req.body.paypal_payout_usd, 0.5, 0, 100)).write();
   db.set('site_settings.fx_manual_rate',     numOr(req.body.fx_manual_rate, 62.5, fx.RATE_MIN, fx.RATE_MAX)).write();
   res.redirect('/admin?tab=settings&msg=payment_saved');
+});
+
+// Reveal a masked admin secret and record who looked, and when. The value
+// is not written into the log. One shared admin password, so the actor is
+// "admin" — there is no per-person account on this panel.
+app.post('/admin/reveal', requireAuth, (req, res) => {
+  const kind = String(req.body.kind || '');
+  const subject = String(req.body.subject || '').trim();
+  let value = '';
+  if (kind === 'account_email') {
+    const account = getAccount(subject);
+    if (!account) return res.status(404).json({ ok: false });
+    value = account.email || '';
+  } else if (kind === 'payment_number') {
+    if (!mask.isMaskedPaymentKey(subject)) return res.status(400).json({ ok: false });
+    const method = (getSiteSettings().payment_methods || []).find(m => m && m.key === subject);
+    if (!method) return res.status(404).json({ ok: false });
+    value = method.account_number || '';
+  } else {
+    return res.status(400).json({ ok: false });
+  }
+  try {
+    const next = revealLog.append(db.get('reveal_log').value(), {
+      actor: 'admin',
+      kind,
+      subject
+    }, new Date());
+    db.set('reveal_log', next).write();
+  } catch (e) {
+    return res.status(400).json({ ok: false });
+  }
+  res.json({ ok: true, value });
 });
 
 app.post('/admin/message-templates', requireAuth, (req, res) => {
@@ -6370,7 +6415,31 @@ app.get('/admin', requireAuth, async (req, res) => {
   })).sort((a, b) => a.title.localeCompare(b.title));
   res.locals.liveBanner = promoContext().banner;
   res.locals.announcementNow = themes.manilaWall(new Date());
-  res.render('admin', { qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
+  const weekFromMs = Date.parse(todayManila + 'T00:00:00Z') - 6 * 86400000;
+  const weekFrom = new Date(weekFromMs).toISOString().slice(0, 10);
+  const inVisitWeek = day => day >= weekFrom && day <= todayManila;
+  const weekSessions = (sessionSummaries || []).filter(s => inVisitWeek(s.startDate));
+  const weekMetrics = visitorFunnel.windowMetrics(weekSessions, visitorFunnel.skippedForWindow(visitorSkips, inVisitWeek));
+  const funnelCount = label => {
+    const row = (weekMetrics.funnel || []).find(f => f.label === label);
+    return row ? row.count : 0;
+  };
+  const todayView = todayLib.buildToday({
+    now: dashNowDate,
+    orders: allOrders,
+    customers,
+    accounts: (accountsView && accountsView.accounts) || [],
+    requests: gameRequestRows || [],
+    loyaltyProfiles: (res.locals.loyaltyIndex && res.locals.loyaltyIndex.profiles) || [],
+    messageCount: (supportHandoffs || []).length + (supportInboxNotes || []).length,
+    traffic: {
+      visitors: funnelCount('Landed'),
+      messaged: funnelCount('Messaged us'),
+      paid: funnelCount('Paid'),
+      botsFiltered: weekMetrics.skipped || 0
+    }
+  });
+  res.render('admin', { todayView, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something
@@ -8294,7 +8363,7 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     games_text: games_text !== undefined ? games_text : existing.games_text,
     game_ids: parseGameIds(game_ids),
     note: note !== undefined ? note : existing.note,
-    email: email !== undefined ? email.trim() : existing.email,
+    email: mask.resolveKeptSecret(email, existing.email, req.body.email_keep),
     price_permanent_tr: price_permanent_tr !== undefined && price_permanent_tr !== '' ? (parseInt(price_permanent_tr) || 0) : existing.price_permanent_tr,
     price_permanent_nt: price_permanent_nt !== undefined && price_permanent_nt !== '' ? (parseInt(price_permanent_nt) || 0) : existing.price_permanent_nt,
     for_sale: for_sale === 'on',

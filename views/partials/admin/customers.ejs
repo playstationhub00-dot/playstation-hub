@@ -381,6 +381,8 @@
                       fb_name typed on the public order form, so that is reachable
                       by anyone who can place an order. EJS escaping applies here. %>
                   <form method="POST" action="/admin/customers/delete/<%= c.id %>" style="display:inline" class="cst-confirm"
+                        data-deletes-order="<%= c.order_ref ? '1' : '0' %>"
+                        data-confirm-title="Delete <%= c.customer_name %>?"
                         data-confirm="Delete <%= c.customer_name %>?<%= c.order_ref ? ' This also deletes order ' + c.order_ref + ' and takes its \u20b1' + (c.price || 0) + ' out of your monthly totals.' : '' %>">
                     <button type="submit" class="btn-delete">🗑</button>
                   </form>
@@ -446,6 +448,9 @@
       document.addEventListener('submit', function(e){
         const form = e.target.closest('.cst-confirm');
         if (!form) return;
+        // The shared confirm dialog handles this when it is loaded. This
+        // listener is the fallback for a page that did not get that script.
+        if (window.AdminConfirm || form.dataset.confirmHandled === '1') return;
         if (!confirm(form.dataset.confirm || 'Are you sure?')) e.preventDefault();
       });
 

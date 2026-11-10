@@ -7,7 +7,7 @@
   const gmRows = gamesView.rows;
   const gmCounts = gamesView.counts;
   const gmPeso = v => v ? '₱' + Number(v).toLocaleString() : '₱—';
-  const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['never', '💤 Never rented'], ['bundle', '📦 Bundles']];
+  const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['never', '💤 Not rented yet'], ['bundle', '📦 Bundles']];
 %>
 <div class="gm-toolbar">
   <input type="search" id="gmSearch" class="gm-search" placeholder="Search title, genre or category…" maxlength="100" autocomplete="off">
@@ -73,18 +73,18 @@
       </div>
     </div>
     <div class="gm-c-slots">
-      <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">NT <%= r.slots.nt %></span>
-      <span class="gm-slot gm-slot-tr<%= r.slots.tr ? '' : ' gm-slot-zero' %>">TR <%= r.slots.tr %></span>
+      <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">Non-Trophy <%= r.slots.nt %></span>
+      <span class="gm-slot gm-slot-tr<%= r.slots.tr ? '' : ' gm-slot-zero' %>">Trophy <%= r.slots.tr %></span>
       <% if (r.slots.showPs4) { %><span class="gm-slot<%= r.slots.ps4 ? '' : ' gm-slot-zero' %>">PS4 <%= r.slots.ps4 %></span><% } %>
     </div>
     <div class="gm-c-prices">
-      <div>NT <%= gmPeso(r.prices.nt7) %> / <%= gmPeso(r.prices.nt30) %></div>
-      <div class="gm-tr">TR <%= gmPeso(r.prices.tr7) %> / <%= gmPeso(r.prices.tr30) %></div>
-      <% if (r.prices.buyNt > 0 || r.prices.buyTr > 0) { %><div class="gm-buy">Buy <%= [r.prices.buyNt > 0 ? 'NT ' + gmPeso(r.prices.buyNt) : '', r.prices.buyTr > 0 ? 'TR ' + gmPeso(r.prices.buyTr) : ''].filter(Boolean).join(' · ') %></div><% } %>
+      <div>Non-Trophy <%= gmPeso(r.prices.nt7) %> / <%= gmPeso(r.prices.nt30) %></div>
+      <div class="gm-tr">Trophy <%= gmPeso(r.prices.tr7) %> / <%= gmPeso(r.prices.tr30) %></div>
+      <% if (r.prices.buyNt > 0 || r.prices.buyTr > 0) { %><div class="gm-buy">Buy <%= [r.prices.buyNt > 0 ? 'Non-Trophy ' + gmPeso(r.prices.buyNt) : '', r.prices.buyTr > 0 ? 'Trophy ' + gmPeso(r.prices.buyTr) : ''].filter(Boolean).join(' · ') %></div><% } %>
     </div>
     <div class="gm-c-status">
       <% if (r.status.isNew) { %><span class="gm-st gm-st-new<%= r.status.daysLeft <= 3 ? ' gm-st-urgent' : '' %>">NEW · <%= r.status.daysLeft %>d left</span><% } %>
-      <% if (r.status.neverRented) { %><span class="gm-st gm-st-never">Never rented</span><% } %>
+      <% if (r.status.neverRented) { %><span class="gm-st gm-st-never">Not rented yet</span><% } %>
       <% if (r.status.soldOut) { %><span class="gm-st gm-st-sold">Sold out</span><% } %>
       <% if (r.status.stocked) { %><span class="gm-st gm-st-stocked">Stocked</span><% } %>
       <% if (!r.status.isNew && !r.status.neverRented && !r.status.soldOut && !r.status.stocked) { %><span class="gm-dash">—</span><% } %>
