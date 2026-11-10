@@ -112,11 +112,55 @@
       (needsType && input ? input : cancelBtn).focus();
     }
 
-    function closeDialog() {
+    function closeDialog(confirmed) {
       const el = dialog();
       if (!el) return;
+      const done = el._askResolve;
       el.hidden = true;
       el._form = null;
+      el._askResolve = null;
+      el.dataset.kind = '';
+      if (done) done(confirmed === true);
+    }
+
+    // A confirm that is not a form submit: leaving a settings tab, or a heavy
+    // button such as Optimize all images. Resolves true only when the owner
+    // presses the confirm button.
+    function ask(opts) {
+      opts = opts || {};
+      return new Promise(function (resolve) {
+        const el = dialog();
+        if (!el) {
+          const ok = doc.defaultView && typeof doc.defaultView.confirm === 'function'
+            ? doc.defaultView.confirm(opts.body || opts.title || 'Continue?')
+            : false;
+          resolve(!!ok);
+          return;
+        }
+        if (el._askResolve) el._askResolve(false);
+        const title = el.querySelector('[data-confirm-title]');
+        const body = el.querySelector('[data-confirm-body]');
+        const extra = el.querySelector('[data-confirm-extra]');
+        const typed = el.querySelector('[data-confirm-typed]');
+        const okBtn = el.querySelector('[data-confirm-ok]');
+        const cancelBtn = el.querySelector('[data-confirm-cancel]');
+        const methodWrap = el.querySelector('[data-confirm-method]');
+        title.textContent = opts.title || 'Are you sure?';
+        body.textContent = opts.body || '';
+        extra.hidden = true;
+        extra.innerHTML = '';
+        typed.hidden = true;
+        if (methodWrap) methodWrap.hidden = true;
+        okBtn.disabled = false;
+        okBtn.textContent = opts.ok || 'Continue';
+        cancelBtn.textContent = opts.cancel || 'Cancel';
+        okBtn.className = 'adm-btn adm-btn-primary';
+        el.hidden = false;
+        el.dataset.kind = 'ask';
+        el._form = null;
+        el._askResolve = resolve;
+        cancelBtn.focus();
+      });
     }
 
     function copyFor(kind, form) {
@@ -336,6 +380,10 @@
       }
       if (e.target.closest && e.target.closest('[data-confirm-ok]')) {
         e.preventDefault();
+        if (el.dataset.kind === 'ask') {
+          closeDialog(true);
+          return;
+        }
         if (el.dataset.kind === 'delete-typed') {
           const input = el.querySelector('[data-confirm-input]');
           if (!acceptsDeleteWord(input && input.value)) return;
@@ -368,6 +416,7 @@
       doc.defaultView.adminScheduleUndo = function (label, run) {
         showUndo(label, run);
       };
+      doc.defaultView.adminConfirmAsk = ask;
     }
   }
 

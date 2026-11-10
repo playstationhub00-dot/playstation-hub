@@ -302,6 +302,7 @@
 </div>
 <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
 
+<script src="/js/admin-settings.js?v=<%= assetV %>"></script>
 <script>
 // ── Tab system ──
 const TAB_KEY = 'adminTab';
@@ -394,6 +395,16 @@ function switchTab(name, nav) {
   // null — fall back to the landing tab instead of throwing on page load.
   if (!tabs.includes(name)) name = 'today';
   if (!nav) nav = name;
+  // Settings asks before a dirty group is left. The confirm calls switchTab
+  // again with the bypass set, so this does not loop.
+  if (!window.__settingsBypass && typeof window.settingsShouldBlock === 'function' && window.settingsShouldBlock(name, nav)) {
+    window.settingsConfirmLeave(function () {
+      window.__settingsBypass = true;
+      try { switchTab(name, nav); }
+      finally { window.__settingsBypass = false; }
+    });
+    return;
+  }
   tabs.forEach(t => {
     const panel = document.getElementById('tab-'+t);
     if (panel) panel.classList.toggle('active', t===name);
@@ -440,12 +451,18 @@ function switchTab(name, nav) {
   const q = new URLSearchParams(window.location.search);
   q.delete('tab');
   q.delete('msg');
+  if (name !== 'settings') q.delete('section');
   if (name !== 'today') q.set('tab', name);
   const qs = q.toString();
   let url = '/admin' + (qs ? '?' + qs : '');
   if (anchor) url += '#' + anchor;
   else if (nav === 'requests') url += '#requests';
+  else if (name === 'settings') {
+    const kept = (location.hash || '').replace(/^#/, '');
+    if (kept.indexOf('sec-') === 0) url += '#' + kept;
+  }
   history.replaceState({}, '', url);
+  if (typeof window.settingsSyncFromUrl === 'function') window.settingsSyncFromUrl({ anchor: anchor || '' });
 }
 
 // Determine initial tab: URL param > msg-based auto-switch > localStorage > default
@@ -525,6 +542,7 @@ function switchTab(name, nav) {
       psnCount('info') ? 'got info for ' + psnPlural(psnCount('info'), 'game') : ''
     ].filter(Boolean).join(' · ') || 'nothing changed';
     messages.loyalty_saved = '🎁 Loyalty offers saved';
+    messages.payment_saved = '💳 Payment methods saved';
     messages.themes_saved = '🎨 Theme settings saved';
     messages.announcements_saved = '📣 Announcement saved';
     messages.announcements_invalid = 'Announcement not saved — add a title or text, and keep the end after the start';
@@ -555,7 +573,12 @@ function switchTab(name, nav) {
       setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
       // `initial`, not msgTabMap: the URL has to name the tab that is actually
       // on screen, or reloading after a toast lands somewhere else again.
-      history.replaceState({}, '', '/admin?tab=' + initial);
+      const keep = new URLSearchParams(window.location.search);
+      keep.set('tab', initial);
+      keep.delete('msg');
+      let nextUrl = '/admin?' + keep.toString();
+      if (initial === 'settings' && window.location.hash) nextUrl += window.location.hash;
+      history.replaceState({}, '', nextUrl);
     }
     // The Sign-In QR Guide used to need re-opening after a save; it is a
     // plain always-visible panel now, so landing on the tab is enough.

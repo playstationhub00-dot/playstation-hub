@@ -75,11 +75,12 @@ ok('an empty payment number stays empty', () => {
   assert.strictEqual(mask.maskPaymentNumber(null), '');
 });
 
-ok('GCash, Maya and PayPal are the payment keys this PR masks', () => {
-  assert.deepStrictEqual(mask.PAYMENT_KEYS, ['gcash', 'maya', 'paypal']);
+ok('GCash, Maya, PayPal and bank transfer are the payment keys that are masked', () => {
+  assert.deepStrictEqual(mask.PAYMENT_KEYS, ['gcash', 'maya', 'paypal', 'bank']);
   assert.strictEqual(mask.isMaskedPaymentKey('gcash'), true);
-  assert.strictEqual(mask.isMaskedPaymentKey('bank'), false);
+  assert.strictEqual(mask.isMaskedPaymentKey('bank'), true);
   assert.strictEqual(mask.isMaskedPaymentKey('GCash'), true);
+  assert.strictEqual(mask.isMaskedPaymentKey('other'), false);
 });
 
 ok('keep flag holds the stored secret even if the field was posted empty', () => {
