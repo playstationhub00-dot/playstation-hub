@@ -1,48 +1,122 @@
 <div class="tab-panel" id="tab-returns">
 <%
-  const rq = (typeof todayView !== 'undefined' && todayView) ? todayView : null;
+  const rv = (typeof returnsView !== 'undefined' && returnsView) ? returnsView : null;
   const peso = n => '₱' + Math.round(Number(n) || 0).toLocaleString('en-US');
+  const rows = rv ? rv.rows : [];
+  const counts = rv ? rv.counts : { all: 0, renting: 0, owed: 0, refunded: 0 };
+  const summary = rv ? rv.summary : { heldAmount: 0, owedCount: 0, owedAmount: 0 };
+  const pageSize = rv ? rv.pageSize : 50;
 %>
   <div class="td-hi">
     <div>
       <h2 style="font-size:22px;">Returns &amp; deposits</h2>
-      <div class="td-kicker">The two lists that already exist. A single filtered queue comes in a later update.</div>
+      <div class="td-kicker">Every Trophy rental, still running or already finished, and whether the security deposit went back. PS4 Primary is listed when that rental’s record has a deposit. Non-Trophy rentals are not listed.</div>
     </div>
   </div>
-  <% if (!rq) { %>
+  <% if (!rv) { %>
     <p class="td-empty">This list could not be built for this load.</p>
   <% } else { %>
-  <div class="rq-grid">
-    <div class="td-card">
-      <h3>Returns to verify <span class="adm-badge adm-badge-wa"><%= rq.lists.returns.length %></span></h3>
-      <p class="td-kicker" style="margin:0 0 8px;">Ended rentals waiting for the account to be checked free.</p>
-      <% if (!rq.lists.returns.length) { %><div class="td-empty">None right now.</div><% } %>
-      <% rq.lists.returns.forEach(function (row) { %>
-        <div class="rq-row">
-          <div>
-            <div class="rq-ref"><%= row.ref %></div>
-            <div><%= row.name || 'Customer' %> · <%= row.game %></div>
-            <div class="td-kicker"><%= row.accountType %><% if (row.end) { %> · ended <%= row.end %><% } %></div>
-          </div>
-          <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" onclick="switchTab('orders','orders')">Open orders</button>
-        </div>
-      <% }) %>
+  <p class="rd-summary" id="rdSummary">
+    <b><%= peso(summary.heldAmount) %></b> currently held on rentals that are still running.
+    <b><%= summary.owedCount %></b> owed back<% if (summary.owedCount) { %> (<%= peso(summary.owedAmount) %>)<% } %>.
+  </p>
+  <div class="rd-bar">
+    <div class="rd-chips" role="group" aria-label="Filter rentals">
+      <button type="button" class="rd-chip rd-chip-on" data-chip="all" aria-pressed="true">All <span class="rd-chip-n"><%= counts.all %></span></button>
+      <button type="button" class="rd-chip" data-chip="renting" aria-pressed="false">Still renting <span class="rd-chip-n"><%= counts.renting %></span></button>
+      <button type="button" class="rd-chip rd-chip-todo" data-chip="owed" aria-pressed="false">Ended — deposit not refunded yet <span class="rd-chip-n"><%= counts.owed %></span></button>
+      <button type="button" class="rd-chip" data-chip="refunded" aria-pressed="false">Refunded <span class="rd-chip-n"><%= counts.refunded %></span></button>
     </div>
-    <div class="td-card">
-      <h3>Deposits to refund <span class="adm-badge adm-badge-wa"><%= rq.lists.deposits.length %></span></h3>
-      <p class="td-kicker" style="margin:0 0 8px;"><%= peso(rq.queues.deposits.amount) %> still with the shop on closed rentals.</p>
-      <% if (!rq.lists.deposits.length) { %><div class="td-empty">None right now.</div><% } %>
-      <% rq.lists.deposits.forEach(function (row) { %>
-        <div class="rq-row">
-          <div>
-            <div class="rq-ref"><%= row.ref %></div>
-            <div><%= row.name || 'Customer' %> · <%= row.game %></div>
-            <div class="td-kicker"><%= row.accountType %></div>
-          </div>
-          <b><%= peso(row.deposit) %></b>
-        </div>
-      <% }) %>
+    <input type="search" id="rdSearch" class="rd-search" placeholder="Search name, game, or PSN" aria-label="Search by name, game, or PSN" autocomplete="off">
+  </div>
+  <% if (!rows.length) { %>
+    <div class="td-empty">No Trophy rentals yet.</div>
+  <% } else { %>
+  <div id="rdTableWrap">
+    <div class="rd-wrap">
+      <table class="rd-table">
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Game</th>
+            <th>Account</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Rental</th>
+            <th>Deposit</th>
+            <th>Deposit status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach(function (row, i) { %>
+          <tr class="rd-row" <%= i >= pageSize ? 'hidden' : '' %>
+              data-renting="<%= row.renting %>"
+              data-owed="<%= row.owed %>"
+              data-refunded="<%= row.refunded %>"
+              data-s="<%= row.search %>">
+            <td data-label="Customer">
+              <div class="rd-name"><%= row.name %></div>
+              <% if (row.psn) { %><div class="rd-sub">PSN <%= row.psn %></div><% } %>
+              <% if (row.messenger) { %><div class="rd-sub">Messenger <%= row.messenger %></div><% } %>
+              <% if (!row.psn && !row.messenger && row.ref) { %><div class="rd-sub"><%= row.ref %></div><% } %>
+              <% if ((row.psn || row.messenger) && row.ref) { %><div class="rd-sub"><%= row.ref %></div><% } %>
+            </td>
+            <td data-label="Game"><%= row.game || '—' %></td>
+            <td data-label="Account">
+              <% if (!row.accountLabel) { %>
+                <span class="rd-sub">Not linked</span>
+              <% } else { %>
+                <div class="rd-acc">
+                  <b><%= row.accountLabel %></b>
+                  <% if (row.emailMask) { %>
+                    <span class="mask-value"><%= row.emailMask %></span>
+                    <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" data-mask-kind="account_email" data-mask-subject="<%= row.accountId %>">Reveal</button>
+                  <% } %>
+                </div>
+              <% } %>
+            </td>
+            <td data-label="Start"><%= row.start || '—' %></td>
+            <td data-label="End"><%= row.end || '—' %></td>
+            <td data-label="Rental"><span class="adm-badge adm-badge-<%= row.rentalBadge %>"><%= row.rentalLabel %></span></td>
+            <td data-label="Deposit"><%= row.depositAmount ? peso(row.depositAmount) : '—' %></td>
+            <td data-label="Deposit status"><span class="rd-dep rd-dep-<%= row.depositKey %>"><%= row.depositLabel %></span></td>
+            <td data-label="Actions">
+              <div class="rd-actions">
+                <% if (row.canMarkReturned) { %>
+                <form method="POST" action="/admin/customers/status/<%= row.customerId %>" data-confirm-kind="bulk" data-confirm-title="Mark this rental returned?" data-confirm-body="This marks the customer as done and frees the account slot. You can put them back to renting from Customers." data-confirm-ok="Mark returned">
+                  <input type="hidden" name="status" value="done">
+                  <input type="hidden" name="return_to" value="returns">
+                  <button type="submit" class="adm-btn adm-btn-secondary adm-btn-sm">Mark returned</button>
+                </form>
+                <% } %>
+                <% if (row.canConfirmReturn) { %>
+                <form method="POST" action="/admin/orders/<%= row.ref %>/advance" data-confirm-kind="bulk" data-confirm-title="Confirm this return?" data-confirm-body="This closes the order after you have checked the account is free." data-confirm-ok="Return confirmed">
+                  <input type="hidden" name="return_to" value="returns">
+                  <button type="submit" class="adm-btn adm-btn-secondary adm-btn-sm">Return confirmed</button>
+                </form>
+                <% } %>
+                <% if (row.canMarkRefunded) { %>
+                <form method="POST" action="/admin/orders/<%= row.ref %>/refunded" data-confirm-kind="bulk" data-confirm-title="Mark the deposit refunded?" data-confirm-body="This records that the security deposit was sent back. It does not send the money." data-confirm-ok="Mark deposit refunded">
+                  <input type="hidden" name="return_to" value="returns">
+                  <button type="submit" class="adm-btn adm-btn-primary adm-btn-sm">Mark deposit refunded</button>
+                </form>
+                <% } %>
+                <% if (row.note) { %><div class="rd-sub"><%= row.note %></div><% } %>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <div class="rd-pager" id="rdPager">
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="rdPagerPrev">Previous</button>
+      <span id="rdPagerRange"></span>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" id="rdPagerNext">Next</button>
     </div>
   </div>
+  <div class="td-empty" id="rdEmpty" hidden>Nothing matches this filter.</div>
+  <% } %>
   <% } %>
 </div>
