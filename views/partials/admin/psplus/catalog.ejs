@@ -78,6 +78,10 @@
   .ppca-table img { width:34px; height:34px; border-radius:6px; object-fit:cover; display:block; }
   .ppca-table tr.ppca-off td { opacity:0.55; }
   .ppca-sel { background:#141414; border:1px solid #2a2a2a; color:#bbb; border-radius:6px; padding:0.2rem 0.35rem; font-size:0.75rem; max-width:220px; }
+  .ppca-rent { position:relative; display:inline-block; max-width:180px; }
+  .ppca-rent-btn { max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; background:#161616; color:#ddd; border:1px solid #333; border-radius:8px; height:30px; padding:0 10px; font-size:12px; font-weight:700; cursor:pointer; }
+  .ppca-sel-pop { position:absolute; z-index:6; top:34px; left:0; min-width:220px; background:#141414; }
+  .ppca-count { display:block; color:#888; font-size:0.75rem; margin-bottom:0.35rem; }
   .ppca-tog { width:34px; height:19px; border-radius:20px; background:#16a34a; border:0; position:relative; cursor:pointer; }
   .ppca-tog::after { content:''; position:absolute; top:2px; right:2px; width:15px; height:15px; border-radius:50%; background:#fff; }
   .ppca-tog.off { background:#333; }
@@ -86,6 +90,13 @@
   .ppca-link { background:none; border:0; color:#888; font-size:0.72rem; cursor:pointer; padding:0.1rem 0.3rem; font-family:inherit; text-decoration:underline; }
   .ppca-danger { color:#f87171; }
   .ppca-more { text-align:center; margin-top:0.6rem; }
+  @media (max-width: 640px) {
+    .ppca-table, .ppca-table tbody, .ppca-table tr, .ppca-table td { display:block; width:100%; }
+    .ppca-table thead { display:none; }
+    .ppca-table tr { border:1px solid #2a2a2a; border-radius:12px; margin:0 0 10px; padding:8px 10px; background:#141414; }
+    .ppca-table td { border:0; padding:4px 0; }
+    .ppca-rent, .ppca-rent-btn, .ppca-sel { max-width:none; width:100%; }
+  }
   .ppca-empty { text-align:center; color:#888; padding:1.5rem 1rem; font-size:0.85rem; }
 </style>
 
@@ -105,7 +116,10 @@
       </form>
       <% } %>
       <button type="button" class="ppca-btn ppca-ghost" onclick="ppcaOpenAdd()">➕ Add a game by hand</button>
-      <form method="POST" action="/admin/psplus/catalog/refresh" style="margin:0;" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='⏳ Checking PlayStation…';">
+      <form method="POST" action="/admin/psplus/catalog/refresh" style="margin:0;"
+            data-confirm-title="Refresh the PS Plus list from PlayStation?"
+            data-confirm-body="This checks <%= pc.rows.length %> games already on the list. Nothing is saved until you apply the preview."
+            data-confirm-ok="Check PlayStation" data-confirm-cancel="Not now">
         <button type="submit" class="ppca-btn ppca-gold">🔄 Refresh from PlayStation</button>
       </form>
     </div>
@@ -215,7 +229,7 @@
         <tbody id="ppcaRows"></tbody>
       </table>
     </div>
-    <div class="ppca-more"><button type="button" id="ppcaMore" class="ppca-btn ppca-ghost" hidden>Show more</button></div>
+    <div class="ppca-more"><span id="ppcaCount" class="ppca-count"></span><button type="button" id="ppcaMore" class="ppca-btn ppca-ghost" hidden>Show more</button></div>
     <% } %>
   </div>
 
@@ -296,9 +310,12 @@
       c2.appendChild(el('span', 'ppca-tag ppca-tag-' + r.t, TAG[r.t]));
       tr.appendChild(c2);
       var c3 = el('td');
-      var sel = el('select', 'ppca-sel');
+      var sel = el('select', 'ppca-sel ppca-sel-pop');
+      sel.hidden = true;
       sel.setAttribute('aria-label', 'Also for rent: ' + r.n);
-      var auto = el('option', null, 'Automatic' + (!r.ro ? (r.rt ? ' — ' + r.rt : ' — none found') : ''));
+      var autoLabel = 'Automatic';
+      if (!r.ro && r.rt) autoLabel = 'Automatic — ' + r.rt;
+      var auto = el('option', null, autoLabel);
       auto.value = 'auto';
       sel.appendChild(auto);
       var none = el('option', null, '— none —');
@@ -307,7 +324,16 @@
       games.forEach(function (g) { var o = el('option', null, g.title); o.value = String(g.id); sel.appendChild(o); });
       sel.value = !r.ro ? 'auto' : (r.rg == null ? 'none' : String(r.rg));
       sel.addEventListener('change', function () { post(base(r.k) + '/rent-link', { rent: sel.value }); });
-      c3.appendChild(sel);
+      var linked = games.filter(function (g) { return String(g.id) === String(r.rg); })[0];
+      var summary = !r.ro ? (r.rt ? ('Rent: ' + r.rt) : 'Automatic') : (r.rg == null ? 'Not for rent' : (linked ? linked.title : 'Linked game'));
+      var pick = el('button', 'ppca-rent-btn', summary);
+      pick.type = 'button';
+      if (!r.ro && !r.rt) pick.title = 'No matching game on your rental list';
+      pick.addEventListener('click', function () { sel.hidden = !sel.hidden; });
+      var box = el('div', 'ppca-rent');
+      box.appendChild(pick);
+      box.appendChild(sel);
+      c3.appendChild(box);
       tr.appendChild(c3);
       var c4 = el('td');
       var tog = el('button', 'ppca-tog' + (r.h ? ' off' : ''));
@@ -354,7 +380,9 @@
       list.slice(0, shown).forEach(function (r) { frag.appendChild(row(r)); });
       body.appendChild(frag);
       more.hidden = list.length <= shown;
-      more.textContent = 'Show more (' + (list.length - shown) + ' left)';
+      more.textContent = 'Show more (' + Math.max(0, list.length - shown) + ' left)';
+      var count = document.getElementById('ppcaCount');
+      if (count) count.textContent = 'Showing ' + Math.min(shown, list.length) + ' of ' + list.length;
     }
     more.addEventListener('click', function () { shown += PAGE; render(); });
     var search = document.getElementById('ppcaSearch'), timer = null;

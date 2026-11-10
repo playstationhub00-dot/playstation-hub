@@ -59,6 +59,35 @@ ok('stocked or rented once clears it', () => {
   assert.strictEqual(one(GAME({ renters: 0, stocked: true })).status.stocked, true);
 });
 
+ok('a recorded payment clears Not rented yet even when the renters counter is still 0', () => {
+  const r = one(GAME({ id: 5, renters: 0, cost: 1000 }), [{ game_id: 5, payments: [{ amount: 349 }] }]);
+  assert.strictEqual(r.status.neverRented, false);
+  assert.ok(!r.chips.includes('never'));
+  assert.strictEqual(r.money.earned, 349);
+  assert.strictEqual(r.rental.label, 'Available');
+});
+
+ok('a live rental and a waiting line show on the row', () => {
+  const r = one(
+    GAME({ id: 5, renters: 2, non_trophy_slots: 2, trophy_slots: 1 }),
+    [{ game_id: 5, status: 'renting', payments: [{ amount: 199 }] }],
+    {}
+  );
+  const withLine = gv.gameRows([GAME({ id: 5, renters: 2 })], [
+    { game_id: 5, status: 'renting', payments: [{ amount: 199 }] }
+  ], {}, NOW, gv.queueByGame([
+    { game_id: 5, state: 'reserved', account_type: 'nt', ref: 'PH-1001', created_at: NOW.toISOString() },
+    { game_id: 5, state: 'waitlisted', account_type: 'tr', ref: 'PH-1002', created_at: NOW.toISOString() },
+    { game_id: 9, state: 'waitlisted', account_type: 'nt', ref: 'PH-1003', created_at: NOW.toISOString(), upcoming_game_id: 3 }
+  ], NOW));
+  assert.strictEqual(r.rental.label, 'Rented now');
+  assert.strictEqual(r.rental.active, 1);
+  assert.strictEqual(withLine[0].rental.reserved, 1);
+  assert.strictEqual(withLine[0].rental.waiting, 1);
+  assert.ok(withLine[0].rental.detail.includes('1 reserved'));
+  assert.ok(withLine[0].rental.detail.includes('1 waiting'));
+});
+
 console.log('\nslots and sold out');
 
 ok('slot counts come from the hand-typed fields when there are no linked accounts', () => {
@@ -156,9 +185,12 @@ ok('reserved counts are read by id, and missing ones are 0', () => {
   assert.deepStrictEqual(rows.map(r => r.reserved), [3, 0]);
 });
 
-ok('the request summary counts pending separately', () => {
-  assert.deepStrictEqual(gv.requestSummary([{ status: 'pending' }, { status: 'approved' }, { status: 'pending' }]), { total: 3, pending: 2 });
-  assert.deepStrictEqual(gv.requestSummary(null), { total: 0, pending: 0 });
+ok('the request summary counts pending and anything that still needs an action', () => {
+  assert.deepStrictEqual(
+    gv.requestSummary([{ status: 'pending' }, { status: 'approved' }, { status: 'pending' }, { status: 'stocked' }]),
+    { total: 4, pending: 2, needsAction: 3 }
+  );
+  assert.deepStrictEqual(gv.requestSummary(null), { total: 0, pending: 0, needsAction: 0 });
 });
 
 console.log('\n' + passed + ' assertions passed\n');

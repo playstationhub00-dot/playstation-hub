@@ -1,0 +1,28 @@
+  </div>
+</div>
+<nav class="admin-bottom-nav" aria-label="Admin">
+  <a href="/admin?tab=today"><span>🏠</span>Today</a>
+  <a href="/admin?tab=orders"><span>🧾</span>Orders</a>
+  <a href="/admin?tab=games"><span>🎮</span>Games</a>
+  <a href="/admin?tab=messaging"><span>💬</span>Messages</a>
+  <button type="button" onclick="document.body.classList.toggle('sb-open')"><span>☰</span>More</button>
+</nav>
+<%- include('confirm-dialog') %>
+<script src="/js/admin-confirm.js?v=<%= assetV %>"></script>
+<script src="/js/admin-mask.js?v=<%= assetV %>"></script>
+<script>
+function applySidebar(collapsed) { document.body.classList.toggle('sb-collapsed', collapsed); }
+function closeSidebarDrawer() { document.body.classList.remove('sb-open'); }
+function toggleSidebar() {
+  if (window.matchMedia('(max-width: 860px)').matches) {
+    document.body.classList.toggle('sb-open');
+    return;
+  }
+  var collapsed = !document.body.classList.contains('sb-collapsed');
+  applySidebar(collapsed);
+  try { localStorage.setItem('adminSidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+}
+(function () {
+  try { applySidebar(localStorage.getItem('adminSidebarCollapsed') === '1'); } catch (e) {}
+})();
+</script>

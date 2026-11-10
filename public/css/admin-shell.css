@@ -222,3 +222,65 @@ body.light-mode #tab-orders .oq-lr,
 body.light-mode #tab-orders .od-row-on td,
 body.light-mode #tab-orders .oq-lr:hover td { background:#fff; }
 body.light-mode .adm-dialog-method select { background:#fff; color:#14171a; border-color:#d5d8dc; }
+
+/* Edit pages are full documents, so they need the shell layout that admin.ejs
+   keeps in its own style block. Same values, so the admin page does not shift. */
+:root { --sbw: 252px; }
+body.admin-body { margin: 0; background: #0b0b0c; }
+body.sb-collapsed { --sbw: 68px; }
+.admin-sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 200; width: var(--sbw);
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
+  height: 100vh; background: #0a0a0a; border-right: 1px solid #191919; padding: 0;
+  transition: width 0.18s ease, transform 0.2s ease; }
+.asb-brand { display: flex; align-items: center; gap: 0.55rem; padding: 0 0.85rem; height: 56px; flex-shrink: 0; border-bottom: 1px solid #161616; box-sizing: border-box; overflow: hidden; }
+.asb-brand img { height: 28px; width: auto; display: block; flex-shrink: 0; }
+.asb-brand img.brand-logo { height: 23px; }
+.asb-brand .brand-logo-for-light { display: none; }
+body.light-mode .asb-brand .brand-logo-for-dark { display: none; }
+body.light-mode .asb-brand .brand-logo-for-light { display: block; }
+.asb-scroll { flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: 0.55rem 0.5rem 1rem; }
+.asb-foot { flex-shrink: 0; border-top: 1px solid #161616; padding: 0.45rem 0.5rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.admin-tab { display: flex; align-items: center; gap: 0.65rem; width: 100%; text-align: left; padding: 0.55rem 0.65rem; border-radius: 9px; font-size: 0.82rem; font-weight: 700; cursor: pointer; color: #8b8b8b; border: none; background: none; letter-spacing: 0.2px; white-space: nowrap; text-decoration: none; overflow: hidden; box-sizing: border-box; }
+.admin-tab .tab-icon { flex-shrink: 0; width: 18px; text-align: center; }
+.admin-tab:hover { color: #e6e6e6; background: #131313; }
+.admin-body-main { margin-left: var(--sbw); min-height: 100vh; transition: margin-left 0.18s ease; }
+.admin-topbar { position: sticky; top: 0; z-index: 150; display: flex; align-items: center; gap: 0.85rem; height: 56px; padding: 0 1.35rem; background: rgba(10,10,10,0.94); border-bottom: 1px solid #191919; box-sizing: border-box; }
+.atb-toggle { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; border: 1px solid #232323; background: #111; color: #9a9a9a; font-size: 0.9rem; cursor: pointer; line-height: 1; }
+.atb-crumb { font-size: 0.95rem; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-content { padding: 1.35rem 1.5rem 4rem; }
+.sb-backdrop { display: none; position: fixed; inset: 0; z-index: 190; background: rgba(0,0,0,0.6); }
+body.sb-collapsed .asb-brand { justify-content: center; padding: 0 0.4rem; }
+body.sb-collapsed .asb-admin-pill,
+body.sb-collapsed .admin-tab .tab-label,
+body.sb-collapsed .admin-tab .nav-badge { display: none; }
+body.sb-collapsed .admin-tab { justify-content: center; padding: 0.55rem 0; gap: 0; }
+body.sb-collapsed .sidebar-group-label { font-size: 0; line-height: 0; padding: 0.3rem 0; }
+body.admin-body .edit-container { max-width: 920px; margin: 0; padding: 0 0 2rem; }
+body.admin-body .edit-container h1 { color: #fff; }
+
+.acc-stat { cursor: pointer; }
+.acc-stat-go { font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: #F5B800; }
+.acc-stat.on { background: #1f1a08; border-color: #F5B800; box-shadow: none; }
+.acc-view-help { flex: 1 1 220px; margin: 0; font-size: 12px; color: #9a9a9a; line-height: 1.35; }
+.acc-stat-rented .lbl, .acc-stat-rented .val { color: #8fc3ff; }
+.acc-stat-overdue .lbl, .acc-stat-overdue .val { color: #ff8a8a; }
+.slot-pill.st-rented { background: #0f2135; color: #8fc3ff; }
+.slot-pill.st-overdue { background: #3a1212; color: #ff8a8a; box-shadow: none; }
+.acc-a-price { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #ccc; }
+
+@media (max-width: 860px) {
+  .admin-sidebar { transform: translateX(-100%); width: 250px; }
+  body.sb-open .admin-sidebar { transform: none; }
+  body.sb-open .sb-backdrop { display: block; }
+  .admin-body-main { margin-left: 0; }
+  body.sb-collapsed .admin-tab { justify-content: flex-start; padding: 0.55rem 0.65rem; gap: 0.65rem; }
+  body.sb-collapsed .admin-tab .tab-label,
+  body.sb-collapsed .asb-admin-pill { display: inline; }
+  body.sb-collapsed .sidebar-group-label { font-size: 0.63rem; line-height: normal; padding: 0.75rem 0.65rem 0.35rem; }
+  body.sb-collapsed .asb-brand { justify-content: flex-start; padding: 0 0.85rem; }
+  .admin-bottom-nav a {
+    display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: flex-start;
+    color: inherit; text-decoration: none; font: inherit; padding: 0;
+  }
+  .admin-bottom-nav a span { font-size: 18px; line-height: 1; }
+}

@@ -198,7 +198,9 @@
       byId('accEmptyClear').hidden = !filtering;
       byId('accClear').hidden = !filtering;
       toArray(root.querySelectorAll('[data-acc-stat]')).forEach(function (card) {
-        card.classList.toggle('on', card.getAttribute('data-acc-stat') === state.status);
+        var on = card.getAttribute('data-acc-stat') === state.status;
+        card.classList.toggle('on', on);
+        card.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
       var n = activeFilterCount(state);
       byId('accFilterBtnCount').textContent = n ? ' (' + n + ')' : '';

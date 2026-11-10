@@ -37,17 +37,17 @@
   <div class="acc-head">
     <div>
       <div class="acc-title">Accounts</div>
-      <div class="acc-sub">Each PSN account and its Trophy / Non-Trophy / PS4 Primary slots.</div>
+      <div class="acc-sub">Each PSN account and its Trophy / Non-Trophy / PS4 Primary slots. The tiles filter the list.</div>
     </div>
     <button type="button" class="btn btn-primary acc-add-btn" data-acc-add>+ Add Account</button>
   </div>
 
   <div class="acc-stats">
-    <button type="button" class="acc-stat acc-stat-total" data-acc-stat="all"><span class="lbl">Total slots</span><span class="val"><%= accStats.total %></span></button>
-    <button type="button" class="acc-stat acc-stat-open" data-acc-stat="open"><span class="lbl">Open</span><span class="val"><%= accStats.open %></span></button>
-    <button type="button" class="acc-stat acc-stat-rented" data-acc-stat="rented"><span class="lbl">Rented</span><span class="val"><%= accStats.rented %></span></button>
-    <button type="button" class="acc-stat acc-stat-ending" data-acc-stat="ending"><span class="lbl">Ending ≤3 days</span><span class="val"><%= accStats.ending %></span></button>
-    <button type="button" class="acc-stat acc-stat-overdue" data-acc-stat="overdue"><span class="lbl">Overdue</span><span class="val"><%= accStats.overdue %></span></button>
+    <button type="button" class="acc-stat acc-stat-total" data-acc-stat="all" aria-pressed="false"><span class="lbl">Total slots</span><span class="val"><%= accStats.total %></span><span class="acc-stat-go">Show all</span></button>
+    <button type="button" class="acc-stat acc-stat-open" data-acc-stat="open" aria-pressed="false"><span class="lbl">Open</span><span class="val"><%= accStats.open %></span><span class="acc-stat-go">Filter</span></button>
+    <button type="button" class="acc-stat acc-stat-rented" data-acc-stat="rented" aria-pressed="false"><span class="lbl">Rented</span><span class="val"><%= accStats.rented %></span><span class="acc-stat-go">Filter</span></button>
+    <button type="button" class="acc-stat acc-stat-ending" data-acc-stat="ending" aria-pressed="false"><span class="lbl">Ending ≤3 days</span><span class="val"><%= accStats.ending %></span><span class="acc-stat-go">Filter</span></button>
+    <button type="button" class="acc-stat acc-stat-overdue" data-acc-stat="overdue" aria-pressed="false"><span class="lbl">Overdue</span><span class="val"><%= accStats.overdue %></span><span class="acc-stat-go">Filter</span></button>
   </div>
 
   <% if (!accountsView.accounts.length) { %>
@@ -59,6 +59,7 @@
       <button type="button" data-acc-view="slots" class="on" aria-pressed="true">Slots</button>
       <button type="button" data-acc-view="accounts" aria-pressed="false">Accounts</button>
     </div>
+    <p class="acc-view-help">Slots is one row per seat. Accounts groups those seats under each PSN login — up to Trophy, Non-Trophy, and PS4 Primary.</p>
     <input type="search" id="accSearch" class="acc-search" placeholder="Search account, game, email or renter…" autocomplete="off">
     <button type="button" id="accFilterBtn" class="acc-filter-btn">Filters<span id="accFilterBtnCount"></span></button>
     <div class="acc-filters" id="accFilterPanel">
@@ -91,7 +92,7 @@
 
   <div id="accSlotsView" class="acc-slots">
     <div class="acc-shead" aria-hidden="true">
-      <span>Status</span><span>Type</span><span>Game</span><span>Account</span><span>Renter</span><span>Ends</span>
+      <span>Status</span><span>Type</span><span>Game</span><span>Account · login email</span><span>Renter</span><span>Ends</span>
     </div>
     <% accountsView.slots.forEach(s => {
          const a = accById[s.account_id];
@@ -122,7 +123,7 @@
            const gamesLine = titles.length
              ? titles.slice(0, 2).join(', ') + (titles.length > 2 ? ' +' + (titles.length - 2) : '')
              : (a.games_text || '');
-           const meta = [a.email ? '✉ ' + maskEmail(a.email) : '', gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
+           const meta = [gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
       %>
       <div class="acc-arow" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, renters) %>">
         <div class="acc-a-main">
@@ -134,7 +135,10 @@
           </div>
           <div class="acc-a-text">
             <div class="acc-name"><%= a.label %><% if (a.for_sale) { %> <span class="acc-sale" title="Listed on the Buy page">🛒</span><% } %></div>
-            <% if (meta.length) { %><div class="acc-meta"><%= meta.join(' · ') %></div><% } %>
+            <div class="acc-meta">
+              <% if (a.email) { %><span class="mask-value"><%= maskEmail(a.email) %></span> <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" data-mask-kind="account_email" data-mask-subject="<%= a.id %>">Reveal</button><% } %>
+              <% if (meta.length) { %><span><%= meta.join(' · ') %></span><% } %>
+            </div>
           </div>
         </div>
         <div class="acc-a-chips">
@@ -146,10 +150,10 @@
             <% } %>
           <% }) %>
         </div>
-        <div class="acc-a-price">₱<%= Number(a.price_permanent_tr || 0).toLocaleString('en-US') %> / ₱<%= Number(a.price_permanent_nt || 0).toLocaleString('en-US') %></div>
+        <div class="acc-a-price"><span>Trophy ₱<%= Number(a.price_permanent_tr || 0).toLocaleString('en-US') %></span> <span>Non-Trophy ₱<%= Number(a.price_permanent_nt || 0).toLocaleString('en-US') %></span></div>
         <div class="acc-a-actions">
           <button type="button" class="acc-act" data-acc-edit="<%= a.id %>">Edit</button>
-          <form method="POST" action="/admin/accounts/delete/<%= a.id %>" data-confirm-title="Delete account <%= a.label %>?" data-confirm-body="This removes the account and its slots. This cannot be undone." data-confirm-ok="Delete account" onsubmit="return confirm('Delete this account?');">
+          <form method="POST" action="/admin/accounts/delete/<%= a.id %>" data-confirm-title="Delete account <%= a.label %>?" data-confirm-body="This removes the account and its slots. This cannot be undone." data-confirm-ok="Delete account">
             <button type="submit" class="acc-act acc-act-del">Delete</button>
           </form>
         </div>

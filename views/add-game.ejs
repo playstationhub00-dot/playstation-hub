@@ -3,17 +3,10 @@
 <head>
   <%- include('partials/head', { title: 'Add Game — ' + settings.title, noindex: true }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/admin-shell.css?v=<%= assetV %>">
 </head>
-<body>
-
-<nav>
-  <a href="/" class="logo"><%- include('partials/brand-logo') %></a>
-  <div class="nav-links">
-    <a href="/browse">Browse Games</a>
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
-
+<body class="admin-body">
+<%- include('partials/admin/edit-frame-open', { shellCrumb: 'Add game', shellNav: 'games' }) %>
 <div class="edit-container">
   <a href="/admin?tab=games" class="back-link">← Back to Admin</a>
   <h1>Add New Game</h1>
@@ -154,6 +147,6 @@ function gfPlatformChanged(v) {
   document.getElementById('gf_ps4').style.display = (v === 'PS4' || v === 'PS4/PS5') ? '' : 'none';
 }
 </script>
-
+<%- include('partials/admin/edit-frame-close') %>
 </body>
 </html>

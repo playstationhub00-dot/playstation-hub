@@ -48,6 +48,12 @@ ok('mark paid and release have their own confirms and do not ask for DELETE', ()
   assert.strictEqual(confirm.classifyAdminAction('/admin/upcoming/release/8'), 'release');
 });
 
+ok('bulk PlayStation updates and tier saves confirm how wide the change is', () => {
+  assert.strictEqual(confirm.classifyAdminAction('/admin/games/psn/refresh'), 'bulk');
+  assert.strictEqual(confirm.classifyAdminAction('/admin/psplus/catalog/refresh'), 'bulk');
+  assert.strictEqual(confirm.classifyAdminAction('/admin/price-categories/edit/4'), 'bulk');
+});
+
 ok('hide review and remove requester are undoable toggles', () => {
   assert.strictEqual(confirm.classifyAdminAction('/admin/reviews/toggle/4'), 'undo');
   assert.strictEqual(confirm.classifyAdminAction('/admin/requests/onimusha/voter/remove'), 'undo');

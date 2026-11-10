@@ -3,16 +3,10 @@
 <head>
   <%- include('partials/head', { title: 'Edit Customer — ' + settings.title, noindex: true }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/admin-shell.css?v=<%= assetV %>">
 </head>
-<body>
-
-<nav>
-  <a href="/" class="logo"><%- include('partials/brand-logo') %></a>
-  <div class="nav-links">
-    <a href="/admin" class="admin-btn">Admin Panel</a>
-  </div>
-</nav>
-
+<body class="admin-body">
+<%- include('partials/admin/edit-frame-open', { shellCrumb: 'Edit customer', shellNav: 'customers' }) %>
 <div class="edit-container">
   <a href="/admin?tab=customers" class="back-link">← Back to Customers</a>
   <h1>Edit Customer</h1>
@@ -330,6 +324,6 @@ function updateCustEndDate() {
 </script>
 
 <script src="/js/admin-searchable-select.js?v=<%= assetV %>"></script>
-<%- include('partials/footer') %>
+<%- include('partials/admin/edit-frame-close') %>
 </body>
 </html>

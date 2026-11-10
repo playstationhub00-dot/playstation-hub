@@ -19,7 +19,8 @@
     added: 'all', updated: 'all', deleted: 'all',
     upcoming_added: 'soon', upcoming_updated: 'soon', upcoming_deleted: 'soon',
     release_failed: 'soon', release_in_progress: 'soon',
-    cat_added: 'categories', cat_updated: 'categories', cat_deleted: 'categories'
+    cat_added: 'categories', cat_updated: 'categories', cat_deleted: 'categories',
+    price_bands_saved: 'all', price_bands_invalid: 'all'
   };
 
   // Anything read back from storage is untrusted: unknown values fall back to
@@ -206,9 +207,32 @@
     apply();
   }
 
+  // The confirm reads these at submit time, so ticking "include the last 7
+  // days" changes the count before the dialog opens.
+  function initPsnConfirm() {
+    var form = document.querySelector('.gm-psn');
+    if (!form) return;
+    var box = form.querySelector('input[name="force"]');
+    function sync() {
+      var all = form.getAttribute('data-psn-all') || '0';
+      var due = form.getAttribute('data-psn-due') || '0';
+      var force = !!(box && box.checked);
+      var n = force ? all : due;
+      var noun = n === '1' ? 'game' : 'games';
+      form.dataset.confirmTitle = 'Update ' + n + ' ' + noun + ' from PlayStation?';
+      form.dataset.confirmBody = 'This updates ' + n + ' of ' + all + ' ' + (all === '1' ? 'game' : 'games') + '.'
+        + (force ? ' Games fetched in the last 7 days are included.' : ' Games fetched in the last 7 days are skipped.');
+      form.dataset.confirmOk = 'Update now';
+      form.dataset.confirmCancel = 'Not now';
+    }
+    if (box) box.addEventListener('change', sync);
+    sync();
+  }
+
   function init() {
     initSubtabs();
     initList();
+    initPsnConfirm();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
