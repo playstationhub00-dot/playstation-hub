@@ -34,7 +34,8 @@
     <form method="POST" action="/admin/themes" enctype="multipart/form-data">
       <div class="form-grid">
         <div class="form-group">
-          <label>Base theme <span style="color:#555;font-size:0.75rem;">(used when no schedule includes now)</span></label>
+          <label>Base theme</label>
+          <p class="set-hint">Used when no schedule includes now.</p>
           <select name="base">
             <% rows.forEach(p => { %>
             <option value="<%= p.id %>"<%= th.base === p.id ? ' selected' : '' %>><%= p.name %></option>
@@ -54,7 +55,8 @@
           <input type="text" name="promo_text" maxlength="180" value="<%= th.promo.text %>">
         </div>
         <div class="form-group">
-          <label>Code to highlight <span style="color:#555;font-size:0.75rem;">(matched inside the text)</span></label>
+          <label>Code to highlight</label>
+          <p class="set-hint">Matched inside the promo text.</p>
           <input type="text" name="promo_code" maxlength="40" value="<%= th.promo.code %>">
         </div>
       </div>
@@ -74,11 +76,13 @@
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <label>Starts <span style="color:#555;font-size:0.75rem;">(Manila, optional)</span></label>
+            <label>Starts</label>
+            <p class="set-hint">Philippines time. Optional.</p>
             <input type="datetime-local" name="<%= p.id %>_start" value="<%= row.start || '' %>">
           </div>
           <div class="form-group">
-            <label>Ends <span style="color:#555;font-size:0.75rem;">(Manila, optional — not included)</span></label>
+            <label>Ends</label>
+            <p class="set-hint">Philippines time. Optional. This minute is not included.</p>
             <input type="datetime-local" name="<%= p.id %>_end" value="<%= row.end || '' %>">
           </div>
           <div class="form-group">
@@ -94,7 +98,8 @@
             <input type="text" name="<%= p.id %>_line2" maxlength="80" value="<%= row.line2 || '' %>">
           </div>
           <div class="form-group">
-            <label>Hero image <span style="color:#555;font-size:0.75rem;">(first slide on the homepage banner)</span></label>
+            <label>Hero image</label>
+            <p class="set-hint">First slide on the homepage banner.</p>
             <% if (row.hero_image) { %>
             <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.4rem;">
               <img src="<%= row.hero_image %>" alt="" style="height:42px;width:74px;object-fit:cover;border-radius:6px;">
