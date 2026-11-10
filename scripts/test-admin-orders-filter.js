@@ -176,6 +176,19 @@ ok('the file still loads cleanly with no DOM (wiring skipped, rules still expose
   assert.strictEqual(typeof again.rowMatches, 'function');
 });
 
+ok('paginate windows 50 rows and clamps the page', () => {
+  assert.deepStrictEqual(plain(F.paginate(0, 1, 50)), { page: 1, pages: 1, per: 50, start: 0, end: 0 });
+  assert.deepStrictEqual(plain(F.paginate(120, 2, 50)), { page: 2, pages: 3, per: 50, start: 50, end: 100 });
+  assert.deepStrictEqual(plain(F.paginate(120, 9, 50)).page, 3);
+  assert.strictEqual(F.PAGE_SIZE, 50);
+});
+
+ok('a waiting-for-sign-in chip is a real filter value', () => {
+  assert.strictEqual(F.normalizeLedgerState({ chip: 'signin' }).chip, 'signin');
+  assert.ok(F.rowMatches(row('signin', 'rental'), st({ chip: 'signin' })));
+  assert.ok(!F.rowMatches(row('out', 'rental'), st({ chip: 'signin' })));
+});
+
 ok('the notification bell no longer points at the deleted order-queue.ejs', () => {
   const bell = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'admin', 'notif-bell.ejs'), 'utf8');
   assert.ok(!bell.includes('order-queue.ejs'));
