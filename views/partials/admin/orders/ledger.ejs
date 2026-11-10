@@ -1,8 +1,8 @@
 <%#
   All Orders: every order in the selected period, grouped by month. The period
-  reloads from the server; the status chip, the type and the search filter the
-  loaded rows in public/js/admin-orders.js and persist for the browser session.
-  Each chip counts the rows it would show, so the five chips add up to All.
+  reloads from the server; the status chip, the type, the game and the search
+  filter the loaded rows in public/js/admin-orders.js. Each chip is one
+  status, so the chips under All add up to All. Fifty rows show at a time.
 %>
 <%
   const PERIOD_LABEL = p => {
@@ -13,20 +13,60 @@
       .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
   const periodLabel = orderPeriod ? PERIOD_LABEL(orderPeriod) : 'Last 3 months';
-  const OUT_STATES = ['awaiting_qr', 'qr_pending', 'active', 'awaiting_return', 'verifying_return'];
+  // One group per order. Waiting for sign-in and verify-return are not
+  // "out on rent", and a reservation is not "completed".
   const lgGroup = o => o.state === 'cancelled' ? 'cancelled'
     : ['awaiting_payment', 'payment_rejected'].includes(o.state) ? 'unpaid'
-    : OUT_STATES.includes(o.state) ? 'out' : 'paid';
+    : o.state === 'verifying_payment' ? 'review'
+    : ['awaiting_qr', 'qr_pending'].includes(o.state) ? 'signin'
+    : o.state === 'verifying_return' ? 'verify'
+    : ['active', 'awaiting_return'].includes(o.state) ? 'out'
+    : o.state === 'reserved' ? 'reserved'
+    : 'paid';
   // Same rule as orderType() in public/js/admin-orders.js: a Coming Soon
   // pre-order carries is_buy too, but it is a reservation first.
   const lgType = o => o.is_reservation ? 'reservation' : o.is_buy ? 'purchase' : 'rental';
   const lgOrders = ledgerGroups.flatMap(gr => gr.orders);
   const lgCount = g => lgOrders.filter(o => lgGroup(o) === g).length;
+  const lgGames = [...new Set(lgOrders.map(o => o.game_title).filter(Boolean))]
+    .sort((a, b) => String(a).localeCompare(String(b)));
+  const CHIPS = [
+    ['unpaid', "Didn't pay"],
+    ['review', 'Check payment'],
+    ['signin', 'Waiting for sign-in'],
+    ['out', 'Out on rent'],
+    ['verify', 'Verify return'],
+    ['reserved', 'Reserved'],
+    ['paid', 'Completed'],
+    ['cancelled', 'Cancelled']
+  ];
+  const badgeFor = (grp, o) => {
+    if (o.state === 'cancelled' && o.slot_given_at) return 'adm-badge-ok';
+    if (grp === 'cancelled' || grp === 'unpaid') return 'adm-badge-er';
+    if (grp === 'out') return 'adm-badge-ok';
+    if (grp === 'paid') return 'adm-badge-in';
+    return 'adm-badge-wa';
+  };
+  const toneFor = (grp, o) => {
+    if (o.state === 'cancelled' && o.slot_given_at) return 'oq-st-done';
+    if (grp === 'cancelled') return 'oq-st-dead';
+    if (grp === 'unpaid' || grp === 'review') return 'oq-st-wait';
+    if (grp === 'out') return 'oq-st-live';
+    return 'oq-st-done';
+  };
 %>
 <div class="oq-zone oq-zone-all oq-ledger-h">
   All orders <span class="oq-zone-n"><%= ledgerStats.total %></span>
   <span class="oq-zone-sub"><%= ledgerStats.paidCount %> paid · ₱<%= ledgerStats.paidTotal.toLocaleString() %> · <%= periodLabel %></span>
 </div>
+
+<% if (!orderPeriod) { %>
+<p class="od-period-cue">Showing the <strong>last 3 months</strong>. Older orders are hidden. <a href="/admin?tab=orders&amp;operiod=all">All time</a></p>
+<% } else if (orderPeriod === 'all') { %>
+<p class="od-period-cue">Showing <strong>all time</strong>. <a href="/admin?tab=orders">Last 3 months</a></p>
+<% } else { %>
+<p class="od-period-cue">Showing <strong><%= periodLabel %></strong>. <a href="/admin?tab=orders&amp;operiod=all">All time</a> · <a href="/admin?tab=orders">Last 3 months</a></p>
+<% } %>
 
 <div class="oq-ledger-bar">
   <form method="GET" action="/admin" class="oq-period">
@@ -56,14 +96,20 @@
     <option value="purchase">Purchases</option>
     <option value="reservation">Reservations</option>
   </select>
+  <select id="oqGame" class="oq-type" data-ss-skip aria-label="Game">
+    <option value="">All games</option>
+    <% lgGames.forEach(name => { %>
+    <option value="<%= name %>"><%= name %></option>
+    <% }) %>
+  </select>
+  <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" id="oqByGameJump">By game</button>
 </div>
 
 <div class="oq-chips">
   <button type="button" class="oq-chip oq-chip-on" data-g="all">All <span class="oq-chip-n"><%= lgOrders.length %></span></button>
-  <button type="button" class="oq-chip" data-g="out">🎮 Out on rent <span class="oq-chip-n"><%= lgCount('out') %></span></button>
-  <button type="button" class="oq-chip" data-g="paid">✅ Completed <span class="oq-chip-n"><%= lgCount('paid') %></span></button>
-  <button type="button" class="oq-chip" data-g="unpaid">⚠ Didn't pay <span class="oq-chip-n"><%= lgCount('unpaid') %></span></button>
-  <button type="button" class="oq-chip" data-g="cancelled">🚫 Cancelled <span class="oq-chip-n"><%= lgCount('cancelled') %></span></button>
+  <% CHIPS.forEach(pair => { const n = lgCount(pair[0]); if (!n) return; %>
+  <button type="button" class="oq-chip" data-g="<%= pair[0] %>"><%= pair[1] %> <span class="oq-chip-n"><%= n %></span></button>
+  <% }) %>
 </div>
 
 <% if (!ledgerGroups.length) { %>
@@ -74,7 +120,7 @@
     <thead>
       <tr>
         <th>Ref</th><th>Customer</th><th>Game</th><th>Rental</th>
-        <th>Dates</th><th>Total</th><th>Status</th><th></th>
+        <th>Dates</th><th>Total</th><th>Status</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -88,22 +134,26 @@
       <% g.orders.forEach(o => {
            const paid = !['awaiting_payment','verifying_payment','payment_rejected','cancelled'].includes(o.state);
            const grp = lgGroup(o);
-           const out = grp === 'out';
            const typeLbl = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
            const durLbl = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');
            const total = (o.amount_due || 0) + (o.deposit_due || 0);
            const fmt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
            const dates = o.start_date ? fmt(o.start_date) + (o.end_date ? ' – ' + fmt(o.end_date) : '') : '—';
-           const stCls = grp === 'cancelled' ? 'oq-st-dead' : grp === 'unpaid' ? 'oq-st-wait' : out ? 'oq-st-live' : 'oq-st-done';
+           const stCls = toneFor(grp, o);
+           const admCls = badgeFor(grp, o);
            const stLbl = o.state === 'cancelled'
-                         ? (o.slot_given_at ? '✅ Slot given'
+                         ? (o.slot_given_at ? 'Slot given'
                            : o.cancel_reason === 'stale' ? 'Cancelled · ' + (o.stale_days || 30) + '+ days'
                            : 'Cancelled')
                        : o.state === 'payment_rejected' ? 'Payment rejected'
                        : o.state === 'awaiting_payment' ? 'Awaiting payment'
+                       : o.state === 'verifying_payment' ? 'Check payment'
+                       : o.state === 'awaiting_qr' ? 'Waiting for sign-in'
+                       : o.state === 'qr_pending' ? 'Sign-in code in'
+                       : o.state === 'verifying_return' ? 'Verify return'
                        : o.state === 'closed' ? 'Completed'
                        : o.state === 'reserved' ? (o.upcoming_game_id ? 'Reserved — awaiting release' : 'Priority — awaiting a slot')
-                       : out ? 'Out on rent' : 'Completed';
+                       : (grp === 'out' ? 'Out on rent' : 'Completed');
            // Bundle slots aren't locked until an order reaches 'active', so two
            // customers can both pay for the same slot before anyone notices —
            // flagged here for manual review. Limited to the loaded period.
@@ -113,23 +163,27 @@
              : 0;
       %>
       <tr class="oq-lr" data-g="<%= grp %>" data-t="<%= lgType(o) %>"
-          data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>">
+          data-game="<%= o.game_title || '' %>" data-ref="<%= o.ref %>"
+          data-s="<%= (o.ref + ' ' + (o.fb_name||'') + ' ' + (o.game_title||'')).toLowerCase() %>"
+          tabindex="0"<%- include('detail-attr', { odOrder: o }) %>>
         <td class="oq-lref"><%= o.ref %></td>
-        <td class="oq-lcust"><%= o.fb_name %> <%- include('../loyalty-badge', { name: o.fb_name, rowId: o.customer_id }) %></td>
-        <td class="oq-lgame"><%= o.game_title %><% if (o.new_slot) { %><span class="oq-newslot-flag"><%= ['active', 'awaiting_return', 'verifying_return', 'closed', 'cancelled', 'payment_rejected'].includes(o.state) ? '🆕 New slot' : '🆕 New slot needed — add a ' + typeLbl + ' account for ' + o.game_title %></span><% } %></td>
-        <td class="oq-lmeta"><%= typeLbl %> · <%= durLbl %></td>
-        <td class="oq-lnum oq-ldates"><%= dates %></td>
-        <td class="oq-lnum oq-ltot">₱<%= total.toLocaleString() %><% if (o.promo_code && o.promo_discount) { %><div class="oq-dep"><%= o.promo_code %> −₱<%= o.promo_discount %></div><% } %></td>
-        <td class="oq-lst">
-          <span class="oq-st <%= stCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
+        <td class="oq-lcust" data-label="Customer"><%= o.fb_name %> <%- include('../loyalty-badge', { name: o.fb_name, rowId: o.customer_id }) %></td>
+        <td class="oq-lgame" data-label="Game"><%= o.game_title %><% if (o.new_slot) { %><span class="oq-newslot-flag"><%= ['active', 'awaiting_return', 'verifying_return', 'closed', 'cancelled', 'payment_rejected'].includes(o.state) ? '🆕 New slot' : '🆕 New slot needed — add a ' + typeLbl + ' account for ' + o.game_title %></span><% } %></td>
+        <td class="oq-lmeta" data-label="Rental"><%= typeLbl %> · <%= durLbl %></td>
+        <td class="oq-lnum oq-ldates" data-label="Dates"><%= dates %></td>
+        <td class="oq-lnum oq-ltot" data-label="Total">₱<%= total.toLocaleString() %><% if (o.promo_code && o.promo_discount) { %><div class="oq-dep"><%= o.promo_code %> −₱<%= o.promo_discount %></div><% } %></td>
+        <td class="oq-lst" data-label="Status">
+          <span class="oq-st <%= stCls %> adm-badge <%= admCls %>"><span class="oq-st-dot"></span><%= stLbl %></span>
           <% const reminded = (typeof reminderBadge === 'function') ? reminderBadge(o) : null; %>
           <% if (reminded) { %>
-            <div class="rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></div>
+            <span class="od-tag rem-badge <%= reminded === 'last_call' ? 'rem-today' : 'rem-tomorrow' %>"><%= reminded === 'last_call' ? 'Last call' : 'Reminded' %></span>
           <% } %>
           <% if (paid && (o.deposit_due || 0) > 0) { %>
-            <div class="oq-dep <%= o.deposit_refunded ? 'oq-dep-ok' : '' %>">
-              <%= o.deposit_refunded ? 'Deposit refunded' : 'Deposit not refunded' %>
-            </div>
+            <% if (o.deposit_refunded) { %>
+            <div class="oq-dep oq-dep-ok">Deposit refunded</div>
+            <% } else { %>
+            <div class="adm-badge adm-badge-wa od-deposit">Deposit not refunded</div>
+            <% } %>
           <% } %>
           <% if (dupSlotCount > 0) { %>
             <div class="oq-dep" title="Multiple live orders are claiming the same slot — verify before fulfilling and refund manually if needed.">
@@ -137,23 +191,23 @@
             </div>
           <% } %>
         </td>
-        <td class="oq-lact">
+        <td class="oq-lact" data-label="Actions">
           <%# Only present on orders that can actually be reviewed and haven't
               been yet — server.js attaches review_msg, and its absence is the
               whole condition. %>
           <% if (o.review_msg) { %>
-          <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">📋</button>
+          <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">Copy message</button>
           <% } %>
           <%# Only on orders the priority-paid button created — a Coming Soon
               reservation rests in the same state but paid for a game, not a
               queue place, and must not be undoable into a free entry. %>
           <% if (o.state === 'reserved' && o.upgraded_from_waitlist) { %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/undo-priority" onsubmit="return confirm('Undo priority for ' + <%= JSON.stringify(o.ref) %> + '?\n\nThey go back to a free waiting-list entry, keeping their reference and their place in line. Use this if the ₱100 never actually arrived.');">
-            <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">↩</button>
+            <button type="submit" class="oq-lact-undo" title="Put this customer back on the free waiting list">Undo priority</button>
           </form>
           <% } %>
           <form method="POST" action="/admin/orders/<%= o.ref %>/delete" data-confirm-title="Delete order <%= o.ref %>?" data-confirm-body="Its customer record and money go too. This cannot be undone." data-confirm-ok="Delete order" onsubmit="return confirm('Delete order ' + <%= JSON.stringify(o.ref) %> + '? Its customer record and money go too. Use this to clear out test orders or accidental duplicates. This cannot be undone.');">
-            <button type="submit" class="oq-lact-del" title="Delete this order">🗑</button>
+            <button type="submit" class="oq-lact-del" title="Delete this order">Delete</button>
           </form>
         </td>
       </tr>
@@ -161,6 +215,11 @@
       <% }) %>
     </tbody>
   </table>
+</div>
+<div class="od-pager" id="oqPager">
+  <span id="oqPagerRange"></span>
+  <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" id="oqPagerPrev">Previous</button>
+  <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" id="oqPagerNext">Next</button>
 </div>
 <div class="oq-empty" id="oqNoMatch" hidden>No orders match these filters. <a href="#" data-oq-clear>Clear filters</a></div>
 <% } %>

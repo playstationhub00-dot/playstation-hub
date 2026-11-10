@@ -1,0 +1,11 @@
+<% if (typeof orderDetail === 'function' && odOrder) {
+  const _odList = (typeof customers !== 'undefined' && customers) || [];
+  const _odCust = odOrder.customer_id == null ? null : _odList.find(c => c && c.id === odOrder.customer_id);
+  const _od = orderDetail(odOrder, {
+    customer: _odCust,
+    paymentMethods: (typeof settings !== 'undefined' && settings && settings.payment_methods) || [],
+    extendTiers: typeof extendTiers !== 'undefined' ? extendTiers : null,
+    today: typeof todayManila !== 'undefined' ? todayManila : ''
+  });
+  const _odEsc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+%> data-od-open="1" data-detail="<%- _odEsc(JSON.stringify(_od)) %>"<% } %>

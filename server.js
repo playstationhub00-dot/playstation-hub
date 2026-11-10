@@ -27,6 +27,8 @@ const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
 const mask = require('./lib/mask');
 const revealLog = require('./lib/reveal-log');
+const markPaidMethod = require('./lib/mark-paid-method');
+const orderDetail = require('./lib/order-detail');
 const todayLib = require('./lib/today');
 const accountsViewLib = require('./lib/accounts-view');
 const releaseLib = require('./lib/release');
@@ -164,6 +166,8 @@ app.locals.imgHero = (url) => imageVariants.heroAttrs(url);
 app.locals.maskEmail = mask.maskEmail;
 app.locals.maskPaymentNumber = mask.maskPaymentNumber;
 app.locals.maskPaymentKey = mask.isMaskedPaymentKey;
+app.locals.markPaidChoices = markPaidMethod.choices;
+app.locals.orderDetail = orderDetail.view;
 
 // DATA_DIR env var points to a persistent volume on Railway (e.g. /data)
 // Falls back to local project folder for development
@@ -4954,8 +4958,16 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, asyncRoute(async (req, res
   if (!['awaiting_payment', 'payment_rejected'].includes(order.state)) {
     return res.redirect('/admin?tab=orders&msg=order_bad_state');
   }
+  // The owner has to say how the money arrived. A missing or unknown method
+  // does not fall back to "manual" — that used to record a payment with no
+  // method at all.
+  const method = markPaidMethod.resolve(
+    req.body.payment_method || req.body.method,
+    (getSiteSettings().payment_methods || [])
+  );
+  if (!method) return res.redirect('/admin?tab=orders&msg=order_method_required');
   if (quickAddSettle.isOwnerRecordedUnpaid(order)) {
-    const r = await settleQuickAddPayment(order, { method: order.payment_method || 'manual', channel: 'manual' });
+    const r = await settleQuickAddPayment(order, { method, channel: 'manual' });
     return res.redirect('/admin?tab=orders&msg=' + (r.ok ? 'order_marked_paid' : 'order_stale'));
   }
   // Reservation orders (Coming Soon downpayments) have no console to sign
@@ -4972,8 +4984,7 @@ app.post('/admin/orders/:ref/mark-paid', requireAuth, asyncRoute(async (req, res
     await orders.transition(order.ref, 'verifying_payment', {});
   }
   const target = order.is_reservation ? 'reserved' : 'awaiting_qr';
-  const patch = { paid_at: new Date().toISOString() };
-  if (!order.payment_method) patch.payment_method = 'manual';
+  const patch = { paid_at: new Date().toISOString(), payment_method: method };
   const r = await orders.transition(order.ref, target, patch);
   if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
   res.redirect('/admin?tab=orders&msg=order_marked_paid');
@@ -5628,8 +5639,12 @@ app.post('/admin/reveal', requireAuth, (req, res) => {
     if (!account) return res.status(404).json({ ok: false });
     value = account.email || '';
   } else if (kind === 'payment_number') {
-    if (!mask.isMaskedPaymentKey(subject)) return res.status(400).json({ ok: false });
-    const method = (getSiteSettings().payment_methods || []).find(m => m && m.key === subject);
+    const key = subject.toLowerCase();
+    // Bank numbers are masked on the order drawer the same way GCash, Maya
+    // and PayPal are. Settings still uses isMaskedPaymentKey, which leaves
+    // bank as a plain field there.
+    if (!mask.isMaskedPaymentKey(key) && key !== 'bank') return res.status(400).json({ ok: false });
+    const method = (getSiteSettings().payment_methods || []).find(m => m && String(m.key).toLowerCase() === key);
     if (!method) return res.status(404).json({ ok: false });
     value = method.account_number || '';
   } else {

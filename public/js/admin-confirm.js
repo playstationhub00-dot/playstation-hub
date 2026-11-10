@@ -6,9 +6,10 @@
 //
 // Typed DELETE is only for deleting an order or an account (and a customer
 // row that deletes its order with it). A slide, a review, a game, and the
-// other smaller deletes get a plain confirm. Mark paid and Release confirm
-// the action and do not ask for a payment method. Hide-review and remove-
-// requester wait 8 seconds so Undo can cancel them before they save.
+// other smaller deletes get a plain confirm. Mark paid confirms in the page
+// and will not save until a payment method is chosen. Release confirms the
+// action. Hide-review and remove-requester wait 8 seconds so Undo can cancel
+// them before they save.
 
 (function (root, factory) {
   const api = factory();
@@ -92,11 +93,13 @@
       extra.hidden = !copy.extra;
       extra.innerHTML = copy.extra || '';
       const needsType = kind === 'delete-typed';
+      const needsMethod = kind === 'mark-paid';
       typed.hidden = !needsType;
-      if (input) {
-        input.value = '';
-        okBtn.disabled = needsType;
-      }
+      const methodWrap = el.querySelector('[data-confirm-method]');
+      if (methodWrap) methodWrap.hidden = !needsMethod;
+      if (needsMethod) fillMethods(el);
+      if (input) input.value = '';
+      okBtn.disabled = needsType || needsMethod;
       okBtn.textContent = copy.ok;
       cancelBtn.textContent = copy.cancel;
       okBtn.className = 'adm-btn ' + (kind === 'delete-typed' ? 'adm-btn-danger' : 'adm-btn-primary');
@@ -131,7 +134,7 @@
         const bits = [];
         if (d.markAmount) bits.push('Amount: ' + d.markAmount);
         if (d.markDeposit && d.markDeposit !== '0') bits.push('Includes a refundable deposit');
-        bits.push('Payment method stays whatever was already recorded. It is not required here.');
+        bits.push('Choose how they paid. It is saved on the order.');
         bits.push('Then: the order is marked paid. They still send their sign-in code.');
         return {
           title: 'Mark ' + (d.markRef || 'this order') + ' as paid?',
@@ -168,6 +171,59 @@
     function escapeHtml(s) {
       return String(s == null ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function fillMethods(el) {
+      const sel = el.querySelector('[data-confirm-method-select]');
+      const src = doc.getElementById('oqPayMethodOptions');
+      if (!sel) return;
+      while (sel.firstChild) sel.removeChild(sel.firstChild);
+      const blank = doc.createElement('option');
+      blank.value = '';
+      blank.textContent = 'Choose a payment method';
+      sel.appendChild(blank);
+      if (src) {
+        Array.prototype.forEach.call(src.options, function (opt) {
+          if (!opt.value) return;
+          const o = doc.createElement('option');
+          o.value = opt.value;
+          o.textContent = opt.textContent;
+          sel.appendChild(o);
+        });
+      }
+      sel.value = '';
+    }
+
+    function chosenMethod(el) {
+      const sel = el && el.querySelector('[data-confirm-method-select]');
+      return sel && sel.value ? sel.value : '';
+    }
+
+    function writeMethod(form, value) {
+      if (!form || !value) return;
+      let input = form.querySelector('input[name="payment_method"]');
+      if (!input) {
+        input = doc.createElement('input');
+        input.type = 'hidden';
+        input.name = 'payment_method';
+        form.appendChild(input);
+      }
+      input.value = value;
+    }
+
+    function syncOk() {
+      const el = dialog();
+      if (!el || el.hidden) return;
+      const okBtn = el.querySelector('[data-confirm-ok]');
+      if (!okBtn) return;
+      if (el.dataset.kind === 'delete-typed') {
+        const input = el.querySelector('[data-confirm-input]');
+        okBtn.disabled = !acceptsDeleteWord(input && input.value);
+      } else if (el.dataset.kind === 'mark-paid') {
+        okBtn.disabled = !chosenMethod(el);
+      } else {
+        okBtn.disabled = false;
+      }
     }
 
     function commit(form) {
@@ -247,8 +303,14 @@
       const el = dialog();
       if (!el || el.hidden) return;
       if (!e.target || !e.target.matches || !e.target.matches('[data-confirm-input]')) return;
-      const okBtn = el.querySelector('[data-confirm-ok]');
-      if (okBtn) okBtn.disabled = !acceptsDeleteWord(e.target.value);
+      syncOk();
+    });
+
+    doc.addEventListener('change', function (e) {
+      const el = dialog();
+      if (!el || el.hidden) return;
+      if (!e.target || !e.target.matches || !e.target.matches('[data-confirm-method-select]')) return;
+      syncOk();
     });
 
     doc.addEventListener('click', function (e) {
@@ -266,6 +328,11 @@
           if (!acceptsDeleteWord(input && input.value)) return;
         }
         const form = el._form;
+        if (el.dataset.kind === 'mark-paid') {
+          const method = chosenMethod(el);
+          if (!method) return;
+          writeMethod(form, method);
+        }
         closeDialog();
         commit(form);
       }

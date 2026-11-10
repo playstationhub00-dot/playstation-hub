@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const { buildBoard } = require('../lib/needs-you-board');
+const orderDetail = require('../lib/order-detail');
 
 let passed = 0;
 function ok(desc, fn) { fn(); passed++; console.log('  ok - ' + desc); }
@@ -63,7 +64,8 @@ function fixture(over) {
     orderStartRate: 12,
     paymongoMode: 'live',
     paymongoHealth: { ok_count: 9, fail_count: 0, last_ok_at: '2026-09-20T03:23:00Z' },
-    settings: { owner_online: true, payment_methods: [{ key: 'gcash', label: 'GCash', enabled: true }] }
+    orderDetail: orderDetail.view,
+    settings: { owner_online: true, payment_methods: [{ key: 'gcash', label: 'GCash', enabled: true, account_number: '09171234567' }] }
   }, over || {});
   // server.js builds the board from these same two lists; a test that passes
   // its own orderBoard (or slotsFree) keeps it.
@@ -95,8 +97,12 @@ const html = render();
 
 console.log('\nNeeds You');
 
-ok('headline counts Do now + Refunds only', () => {
-  assert.ok(/Needs you <span class="oq-zone-n">4<\/span>/.test(html), 'expected 3 + 1 = 4');
+ok('headline counts Do now, Just released, refunds and started-but-unpaid', () => {
+  assert.ok(/Needs you <span class="oq-zone-n">8<\/span>/.test(html), 'expected 3 + 2 + 1 + 2 = 8');
+  assert.ok(html.includes('3 to do'));
+  assert.ok(html.includes('2 just released'));
+  assert.ok(html.includes('2 started but unpaid'));
+  assert.ok(html.includes('1 refund'));
 });
 
 ok('Do now: live QR first, then oldest first', () => {
@@ -109,10 +115,14 @@ ok('By game: one card per game + type; waiting priority first, then follow-ups n
   assert.deepStrictEqual([...board.matchAll(/data-oq-card="([^"]+)"/g)].map(m => m[1]), ['5|nt', '5|tr']);
 });
 
-ok('Do now, Refunds and By game start open; the old Follow-ups and Waitlist groups are gone', () => {
+ok('Do now starts open; Just released, Refunds and By game start closed so the table is reachable', () => {
   assert.ok(html.includes('data-oq-group="now" open>'));
-  assert.ok(html.includes('data-oq-group="refunds" open>'));
-  assert.ok(html.includes('data-oq-group="bygame" open>'));
+  assert.ok(html.includes('data-oq-group="released">'));
+  assert.ok(!html.includes('data-oq-group="released" open'));
+  assert.ok(html.includes('data-oq-group="refunds">'));
+  assert.ok(!html.includes('data-oq-group="refunds" open'));
+  assert.ok(html.includes('data-oq-group="bygame">'));
+  assert.ok(!html.includes('data-oq-group="bygame" open'));
   assert.ok(!html.includes('data-oq-group="followups"') && !html.includes('data-oq-group="waitlist"'));
 });
 
@@ -130,7 +140,7 @@ ok('the QR countdown and the ages are still rendered for the script to tick', ()
 ok('an empty group is not rendered at all', () => {
   const noRefunds = render({ refundsOwed: [] });
   assert.ok(!noRefunds.includes('data-oq-group="refunds"'));
-  assert.ok(/Needs you <span class="oq-zone-n">3<\/span>/.test(noRefunds));
+  assert.ok(/Needs you <span class="oq-zone-n">7<\/span>/.test(noRefunds));
 });
 
 ok('everything empty: one quiet line and no groups', () => {
@@ -140,8 +150,8 @@ ok('everything empty: one quiet line and no groups', () => {
   assert.ok(empty.includes('No orders in this period.'));
 });
 
-ok('Just released lists moved reservations newest first, open, with a copy button', () => {
-  assert.ok(html.includes('data-oq-group="released" open>'));
+ok('Just released lists moved reservations newest first, closed, with a copy button', () => {
+  assert.ok(html.includes('data-oq-group="released">'));
   const b = groupBlock(html, 'released');
   assert.deepStrictEqual(refsIn(b), ['PH-0131', 'PH-0130']);
   assert.ok(b.includes('class="oq-btn-ghost rem-copy" data-msg="🎮 Phantom Blade Zero is out! Your reservation PH-0131 is ready."'));
@@ -334,8 +344,8 @@ ok('the ledger says ✅ Slot given for a slot given, Cancelled for a plain cance
     lo('PH-0208', 'cancelled')
   ] }] });
   const row = ref => { const i = ledger.indexOf('<td class="oq-lref">' + ref + '</td>'); assert.ok(i > 0, ref); return ledger.slice(i, ledger.indexOf('</tr>', i)); };
-  assert.ok(row('PH-0207').includes('<span class="oq-st oq-st-dead"><span class="oq-st-dot"></span>✅ Slot given</span>'));
-  assert.ok(row('PH-0208').includes('<span class="oq-st oq-st-dead"><span class="oq-st-dot"></span>Cancelled</span>'));
+  assert.ok(row('PH-0207').includes('<span class="oq-st-dot"></span>Slot given</span>'));
+  assert.ok(row('PH-0208').includes('<span class="oq-st-dot"></span>Cancelled</span>'));
 });
 
 ok('the new controls are styled', () => {
@@ -387,7 +397,10 @@ ok('chip counts are the rows each chip shows, and add up to All', () => {
     const m = html.match(new RegExp('data-g="' + g + '">[^<]*<span class="oq-chip-n">(\\d+)</span>'));
     return m ? Number(m[1]) : null;
   };
-  assert.deepStrictEqual([n('all'), n('out'), n('paid'), n('unpaid'), n('cancelled')], [6, 2, 2, 1, 1]);
+  assert.deepStrictEqual([n('all'), n('out'), n('paid'), n('unpaid'), n('cancelled'), n('reserved')], [6, 2, 1, 1, 1, 1]);
+  const parts = ['out', 'paid', 'unpaid', 'cancelled', 'reserved'].reduce((s, g) => s + n(g), 0);
+  assert.strictEqual(parts, n('all'));
+  assert.strictEqual(n('review'), null, 'an empty chip is not shown');
 });
 
 ok('every ledger row carries its type', () => {
@@ -416,9 +429,40 @@ ok('the old monolithic partial is gone', () => {
   assert.ok(!fs.existsSync(path.join(ROOT, 'views', 'partials', 'order-queue.ejs')));
 });
 
-ok('the sidebar badge counts Do now + Refunds', () => {
+ok('the default period is named and All time is one click away', () => {
+  assert.ok(html.includes('Showing the <strong>last 3 months</strong>'));
+  assert.ok(html.includes('Older orders are hidden.'));
+  assert.ok(html.includes('href="/admin?tab=orders&amp;operiod=all"'));
+});
+
+ok('rows open a drawer, delete is labeled, and mark paid has payment methods', () => {
+  assert.ok(html.includes('id="oqDrawer"'));
+  assert.ok(html.includes('id="oqPager"'));
+  assert.ok(html.includes('data-od-open="1"'));
+  assert.ok(html.includes('>Delete</button>'));
+  assert.ok(!html.includes('🗑'));
+  const labeled = render({ ledgerGroups: [{ key: '2026-09', label: '2026-09', paidCount: 0, paidTotal: 0, orders: [
+    lo('PH-0209', 'closed', { review_msg: 'Please review PH-0209' }),
+    lo('PH-0210', 'reserved', { upgraded_from_waitlist: true })
+  ] }] });
+  assert.ok(labeled.includes('>Copy message</button>'));
+  assert.ok(labeled.includes('>Undo priority</button>'));
+  assert.ok(html.includes('id="oqPayMethodOptions"'));
+  assert.ok(html.includes('Cash/Other'));
+  assert.ok(html.includes('class="adm-badge adm-badge-wa od-deposit">Deposit not refunded</div>'));
+});
+
+ok('a payment number in the order detail is masked and the raw number is not in the page', () => {
+  assert.ok(html.includes('09•• ••• ••67'), 'masked gcash number');
+  assert.ok(!html.includes('09171234567'));
+  assert.ok(html.includes('&quot;paidToReveal&quot;:&quot;gcash&quot;'));
+});
+
+ok('the Orders nav button is a label, and the page headline is the count', () => {
   const admin = fs.readFileSync(path.join(ROOT, 'views', 'admin.ejs'), 'utf8');
-  assert.ok(admin.includes('orderQueue.length + (typeof refundsOwed !== \'undefined\' ? refundsOwed : []).length'));
+  const btn = /data-nav="orders"[\s\S]*?<\/button>/.exec(admin)[0];
+  assert.ok(btn.includes('>Orders</span>'));
+  assert.ok(!btn.includes('orderQueue.length'));
 });
 
 console.log('\nstyles');
@@ -449,10 +493,10 @@ ok('rules other templates rely on are still there', () => {
     .forEach(r => assert.ok(CSS.includes(r), r));
 });
 
-ok('style.css is still CRLF throughout', () => {
-  const lf = CSS.split('\n').length - 1;
-  const crlf = CSS.split('\r\n').length - 1;
-  assert.strictEqual(lf, crlf, 'every newline is CRLF');
+ok('style.css line endings stay LF, with no mixed endings', () => {
+  const raw = fs.readFileSync(path.join(ROOT, 'public', 'css', 'style.css'));
+  assert.strictEqual(raw.includes(Buffer.from('\r\n')), false);
+  assert.ok(raw.includes(Buffer.from('\n')));
 });
 
 console.log('\n' + passed + ' assertions passed\n');

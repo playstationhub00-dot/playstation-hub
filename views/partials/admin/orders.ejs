@@ -2,4 +2,21 @@
     <%- include('orders/strip') %>
     <%- include('orders/needs-you') %>
     <%- include('orders/ledger') %>
+    <%
+      const payChoices = (typeof markPaidChoices === 'function')
+        ? markPaidChoices((settings && settings.payment_methods) || [])
+        : [
+            { key: 'gcash', label: 'GCash' },
+            { key: 'maya', label: 'Maya' },
+            { key: 'paypal', label: 'PayPal' },
+            { key: 'bank', label: 'Bank transfer' },
+            { key: 'manual', label: 'Cash/Other' }
+          ];
+    %>
+    <select id="oqPayMethodOptions" hidden data-ss-skip aria-hidden="true" tabindex="-1">
+      <% payChoices.forEach(m => { %>
+      <option value="<%= m.key %>"><%= m.label %></option>
+      <% }) %>
+    </select>
+    <%- include('orders/drawer') %>
   </div>

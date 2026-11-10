@@ -1,0 +1,40 @@
+<aside class="od-drawer" id="oqDrawer" hidden aria-hidden="true">
+  <div class="od-drawer-backdrop" data-od-close></div>
+  <div class="od-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="oqDrawerTitle">
+    <header class="od-drawer-h">
+      <div>
+        <div class="od-kicker">Order</div>
+        <h2 id="oqDrawerTitle" data-od-ref></h2>
+        <div data-od-status></div>
+      </div>
+      <button type="button" class="adm-btn adm-btn-ghost adm-btn-sm" data-od-close>Close</button>
+    </header>
+    <dl class="od-fields">
+      <div><dt>Customer</dt><dd data-od-customer></dd></div>
+      <div><dt>PSN ID</dt><dd data-od-psn></dd></div>
+      <div><dt>Phone</dt><dd data-od-phone></dd></div>
+      <div><dt>Game</dt><dd data-od-game></dd></div>
+      <div><dt>Rental type</dt><dd data-od-rental></dd></div>
+      <div><dt>Dates</dt><dd data-od-dates></dd></div>
+      <div><dt>Total</dt><dd data-od-total></dd></div>
+      <div><dt>Deposit</dt><dd data-od-deposit></dd></div>
+      <div><dt>Payment method</dt><dd data-od-method></dd></div>
+      <div data-od-paidto-row hidden>
+        <dt>Payment number</dt>
+        <dd>
+          <span class="mask-field">
+            <span class="mask-value" data-od-paidto></span>
+            <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm mask-reveal" data-od-reveal data-mask-kind="payment_number" data-mask-subject="">Reveal</button>
+          </span>
+        </dd>
+      </div>
+      <div><dt>Slot</dt><dd data-od-slot></dd></div>
+    </dl>
+    <h3 class="od-h">Status history</h3>
+    <ol class="od-history" data-od-history></ol>
+    <h3 class="od-h">Note</h3>
+    <p class="od-note" data-od-note></p>
+    <h3 class="od-h">Actions</h3>
+    <div class="od-actions" data-od-actions></div>
+  </div>
+</aside>

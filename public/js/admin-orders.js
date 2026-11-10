@@ -5,7 +5,8 @@
 (function () {
   'use strict';
 
-  var CHIPS = ['all', 'out', 'paid', 'unpaid', 'cancelled'];
+  var CHIPS = ['all', 'unpaid', 'review', 'signin', 'out', 'verify', 'reserved', 'paid', 'cancelled'];
+  var PAGE_SIZE = 50;
   var TYPES = ['all', 'rental', 'purchase', 'reservation'];
   var GROUP_KEYS = ['now', 'released', 'refunds', 'bygame'];
   var LEDGER_KEY = 'oqLedger';
@@ -82,6 +83,19 @@
       '?\n\nThey leave the board; the records stay in All orders.';
   }
 
+  // Page window over the rows that already match the filters. page is 1-based.
+  function paginate(count, page, size) {
+    var n = Math.max(0, Number(count) || 0);
+    var per = Math.max(1, Number(size) || PAGE_SIZE);
+    var pages = Math.max(1, Math.ceil(n / per) || 1);
+    var p = Math.floor(Number(page) || 1);
+    if (p < 1) p = 1;
+    if (p > pages) p = pages;
+    var start = n === 0 ? 0 : (p - 1) * per;
+    var end = Math.min(n, start + per);
+    return { page: p, pages: pages, per: per, start: start, end: end };
+  }
+
   window.__oqFilter = {
     normalizeLedgerState: normalizeLedgerState,
     orderType: orderType,
@@ -90,7 +104,9 @@
     normalizeGroups: normalizeGroups,
     normalizeCards: normalizeCards,
     bulkLabel: bulkLabel,
-    bulkConfirm: bulkConfirm
+    bulkConfirm: bulkConfirm,
+    paginate: paginate,
+    PAGE_SIZE: PAGE_SIZE
   };
 
   // ── Page wiring ──────────────────────────────────────────────────────────
@@ -224,21 +240,30 @@
     var table = document.getElementById('oqLedger');
     var search = document.getElementById('oqSearch');
     var typeSel = document.getElementById('oqType');
+    var gameSel = document.getElementById('oqGame');
     var panel = document.getElementById('tab-orders');
     if (!table || !search || !typeSel || !panel) return;
 
     var state = normalizeLedgerState(readJson('session', LEDGER_KEY));
+    var page = 1;
 
     function apply() {
-      var shown = 0;
+      var game = gameSel ? gameSel.value : '';
+      var matched = [];
       toArray(table.querySelectorAll('tr.oq-lr')).forEach(function (r) {
         var match = rowMatches({
           g: r.getAttribute('data-g') || '',
           t: r.getAttribute('data-t') || '',
           s: r.getAttribute('data-s') || ''
         }, state);
-        r.hidden = !match;
-        if (match) shown++;
+        if (match && game && (r.getAttribute('data-game') || '') !== game) match = false;
+        if (match) matched.push(r);
+        else r.hidden = true;
+      });
+      var windowed = paginate(matched.length, page, PAGE_SIZE);
+      page = windowed.page;
+      matched.forEach(function (r, i) {
+        r.hidden = i < windowed.start || i >= windowed.end;
       });
       // A month header with every row filtered out is noise, so hide it too.
       toArray(table.querySelectorAll('tr.oq-grp')).forEach(function (h) {
@@ -254,29 +279,195 @@
       });
       var wrap = document.getElementById('oqLedgerWrap');
       var none = document.getElementById('oqNoMatch');
-      if (wrap) wrap.hidden = shown === 0;
-      if (none) none.hidden = shown !== 0;
+      if (wrap) wrap.hidden = matched.length === 0;
+      if (none) none.hidden = matched.length !== 0;
+      var range = document.getElementById('oqPagerRange');
+      var pager = document.getElementById('oqPager');
+      var prev = document.getElementById('oqPagerPrev');
+      var next = document.getElementById('oqPagerNext');
+      if (pager) pager.hidden = matched.length === 0;
+      if (range) {
+        range.textContent = matched.length
+          ? ('Showing ' + (windowed.start + 1) + '–' + windowed.end + ' of ' + matched.length)
+          : '';
+      }
+      if (prev) prev.disabled = windowed.page <= 1;
+      if (next) next.disabled = windowed.page >= windowed.pages;
       writeJson('session', LEDGER_KEY, state);
     }
 
     search.value = state.q;
     typeSel.value = state.type;
-    search.addEventListener('input', function () { state.q = search.value; apply(); });
-    typeSel.addEventListener('change', function () { state.type = typeSel.value; apply(); });
+    search.addEventListener('input', function () { page = 1; state.q = search.value; apply(); });
+    typeSel.addEventListener('change', function () { page = 1; state.type = typeSel.value; apply(); });
+    if (gameSel) gameSel.addEventListener('change', function () { page = 1; apply(); });
+    var prevBtn = document.getElementById('oqPagerPrev');
+    var nextBtn = document.getElementById('oqPagerNext');
+    if (prevBtn) prevBtn.addEventListener('click', function () { page -= 1; apply(); });
+    if (nextBtn) nextBtn.addEventListener('click', function () { page += 1; apply(); });
     panel.addEventListener('click', function (e) {
       var t = e.target;
       if (!t || !t.closest) return;
       var chip = t.closest('.oq-chip');
-      if (chip) { state.chip = chip.getAttribute('data-g'); apply(); return; }
+      if (chip && panel.contains(chip)) { page = 1; state.chip = chip.getAttribute('data-g'); apply(); return; }
       if (t.closest('[data-oq-clear]')) {
         e.preventDefault();
+        page = 1;
         state = normalizeLedgerState(null);
         search.value = '';
         typeSel.value = 'all';
+        if (gameSel) gameSel.value = '';
         apply();
       }
     });
+    var byGame = document.getElementById('oqByGameJump');
+    if (byGame) {
+      byGame.addEventListener('click', function () {
+        var board = document.querySelector('details[data-oq-group="bygame"]');
+        if (!board) return;
+        board.open = true;
+        board.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
     apply();
+  }
+
+  function parseDetail(row) {
+    var raw = row.getAttribute('data-detail');
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
+
+  function fillText(root, sel, value) {
+    var el = root.querySelector(sel);
+    if (el) el.textContent = value == null ? '' : String(value);
+  }
+
+  function initDrawer() {
+    var drawer = document.getElementById('oqDrawer');
+    var panel = document.getElementById('tab-orders');
+    if (!drawer || !panel) return;
+    var actions = drawer.querySelector('[data-od-actions]');
+    var history = drawer.querySelector('[data-od-history]');
+
+    function close() {
+      drawer.hidden = true;
+      drawer.setAttribute('aria-hidden', 'true');
+      toArray(panel.querySelectorAll('.od-row-on')).forEach(function (r) { r.classList.remove('od-row-on'); });
+    }
+
+    function open(row) {
+      var detail = parseDetail(row);
+      if (!detail) return;
+      fillText(drawer, '[data-od-ref]', detail.ref || 'Order');
+      fillText(drawer, '[data-od-customer]', detail.customer);
+      fillText(drawer, '[data-od-psn]', detail.psn);
+      fillText(drawer, '[data-od-phone]', detail.phone);
+      fillText(drawer, '[data-od-game]', detail.game);
+      fillText(drawer, '[data-od-rental]', detail.rental);
+      fillText(drawer, '[data-od-dates]', detail.dates);
+      fillText(drawer, '[data-od-total]', detail.total);
+      fillText(drawer, '[data-od-deposit]', detail.deposit);
+      fillText(drawer, '[data-od-method]', detail.method);
+      fillText(drawer, '[data-od-slot]', detail.slot);
+      fillText(drawer, '[data-od-note]', detail.note || 'No note');
+      var status = drawer.querySelector('[data-od-status]');
+      if (status) {
+        status.innerHTML = '';
+        var badge = document.createElement('span');
+        badge.className = 'adm-badge adm-badge-in';
+        badge.textContent = detail.status || '';
+        status.appendChild(badge);
+      }
+      var paidRow = drawer.querySelector('[data-od-paidto-row]');
+      var paid = drawer.querySelector('[data-od-paidto]');
+      var reveal = drawer.querySelector('[data-od-reveal]');
+      if (paidRow && paid && reveal) {
+        if (detail.paidToMask && detail.paidToReveal) {
+          paid.textContent = detail.paidToMask;
+          paid.removeAttribute('data-revealed');
+          delete paid.dataset.mask;
+          reveal.setAttribute('data-mask-subject', detail.paidToReveal);
+          paidRow.hidden = false;
+        } else {
+          paid.textContent = '';
+          reveal.setAttribute('data-mask-subject', '');
+          paidRow.hidden = true;
+        }
+      }
+      if (history) {
+        history.innerHTML = '';
+        var items = detail.history && detail.history.length ? detail.history : [{ label: detail.status || 'Recorded', at: '' }];
+        items.forEach(function (h) {
+          var li = document.createElement('li');
+          var name = document.createElement('b');
+          name.textContent = h.label || 'Updated';
+          li.appendChild(name);
+          if (h.at) {
+            var when = document.createElement('span');
+            var dt = new Date(h.at);
+            when.textContent = isNaN(dt.getTime()) ? h.at : dt.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+            li.appendChild(when);
+          }
+          history.appendChild(li);
+        });
+      }
+      if (actions) {
+        actions.innerHTML = '';
+        var src = row.querySelector('.oq-lact') || row.querySelector('.oq-actions');
+        if (src) {
+          var clone = src.cloneNode(true);
+          toArray(clone.querySelectorAll('[id]')).forEach(function (el) { el.removeAttribute('id'); });
+          toArray(clone.querySelectorAll('input.oq-pick, .oq-pick-all')).forEach(function (el) { el.remove(); });
+          actions.appendChild(clone);
+        }
+        if (detail.extend && detail.extend.id) {
+          var ext = document.createElement('button');
+          ext.type = 'button';
+          ext.className = 'adm-btn adm-btn-secondary adm-btn-sm cst-extend';
+          ext.textContent = 'Extend';
+          ext.setAttribute('data-id', detail.extend.id);
+          ext.setAttribute('data-name', detail.extend.name || '');
+          ext.setAttribute('data-game', detail.extend.game || '');
+          ext.setAttribute('data-end', detail.extend.end || '');
+          ext.setAttribute('data-p7', String(detail.extend.p7 || 0));
+          ext.setAttribute('data-p30', String(detail.extend.p30 || 0));
+          ext.setAttribute('data-today', detail.extend.today || '');
+          actions.appendChild(ext);
+        }
+      }
+      toArray(panel.querySelectorAll('.od-row-on')).forEach(function (r) { r.classList.remove('od-row-on'); });
+      row.classList.add('od-row-on');
+      drawer.hidden = false;
+      drawer.setAttribute('aria-hidden', 'false');
+      var closeBtn = drawer.querySelector('[data-od-close]');
+      if (closeBtn && closeBtn.focus) closeBtn.focus();
+    }
+
+    panel.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('button, a, input, select, textarea, label, summary, form')) return;
+      var row = t.closest('[data-od-open]');
+      if (!row || !panel.contains(row)) return;
+      open(row);
+    });
+    panel.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var row = e.target && e.target.closest ? e.target.closest('tr[data-od-open]') : null;
+      if (!row || e.target !== row) return;
+      e.preventDefault();
+      open(row);
+    });
+    drawer.addEventListener('click', function (e) {
+      if (e.target && e.target.closest && e.target.closest('[data-od-close]')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || drawer.hidden) return;
+      var confirmEl = document.getElementById('admConfirm');
+      if (confirmEl && !confirmEl.hidden) return;
+      close();
+    });
   }
 
   // "💳 Payment link" — asks the server for a fresh PayMongo checkout session
@@ -334,6 +525,7 @@
     initCards();
     initBulk();
     initLedger();
+    initDrawer();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
