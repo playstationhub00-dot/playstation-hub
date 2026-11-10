@@ -5654,9 +5654,9 @@ app.post('/admin/reveal', requireAuth, (req, res) => {
     value = account.email || '';
   } else if (kind === 'payment_number') {
     const key = subject.toLowerCase();
-    // Bank numbers are masked on the order drawer the same way GCash, Maya
-    // and PayPal are. Settings still uses isMaskedPaymentKey, which leaves
-    // bank as a plain field there.
+    // GCash, Maya, PayPal and bank transfer numbers are masked in Settings
+    // and on the order drawer. Reveal is logged. The extra bank check keeps
+    // the drawer working if the allow-list and this route ever drift.
     if (!mask.isMaskedPaymentKey(key) && key !== 'bank') return res.status(400).json({ ok: false });
     const method = (getSiteSettings().payment_methods || []).find(m => m && String(m.key).toLowerCase() === key);
     if (!method) return res.status(404).json({ ok: false });

@@ -1,19 +1,23 @@
   <div class="tab-panel" id="tab-settings">
+    <div class="set-shell" id="setShell" data-msg="<%= (typeof msg !== 'undefined' && msg) ? msg : '' %>">
+      <div class="set-tabs" role="tablist" aria-label="Settings sections">
+        <a class="set-tab set-tab-on" role="tab" aria-selected="true" data-set-tab="themes" href="/admin?tab=settings&section=themes#sec-themes">Themes</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="announcements" href="/admin?tab=settings&section=announcements#sec-announcements">Announcements</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="site" href="/admin?tab=settings&section=site#sec-site">Site</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="pricing" href="/admin?tab=settings&section=pricing#sec-promo">Pricing</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="payments" href="/admin?tab=settings&section=payments#sec-payments">Payments</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="alerts" href="/admin?tab=settings&section=alerts#sec-alerts">Alerts</a>
+        <a class="set-tab" role="tab" aria-selected="false" data-set-tab="maintenance" href="/admin?tab=settings&section=maintenance#sec-images">Maintenance</a>
+      </div>
+      <p class="set-intro">Each tab saves on its own. Switching tabs with unsaved edits asks you first. Older Settings links still open the right tab.</p>
 
-    <div class="adm-jump">
-      <a href="#sec-themes">Themes</a>
-      <a href="#sec-announcements">Announcements</a>
-      <a href="#sec-site">Site</a>
-      <a href="#sec-promo">Promo & pricing</a>
-      <a href="#sec-game-discounts">Game discounts</a>
-      <a href="#sec-payments">Payment methods</a>
-      <a href="#sec-reminders">Payment reminders</a>
-      <a href="#sec-alerts">Phone alerts</a>
-      <a href="#sec-images">Images</a>
-    </div>
-
-    <%- include('themes') %>
-    <%- include('announcements') %>
+      <div class="set-panel" data-set-panel="themes">
+        <%- include('themes') %>
+      </div>
+      <div class="set-panel" data-set-panel="announcements" hidden>
+        <%- include('announcements') %>
+      </div>
+      <div class="set-panel" data-set-panel="site" hidden>
 
     <!-- SITE SETTINGS -->
     <div class="adm-card" id="sec-site">
@@ -51,9 +55,12 @@
             <input type="file" name="favicon" accept="image/*,.svg,.ico" style="padding:0.5rem;">
           </div>
 
-          <!-- Hero Background -->
+          <!-- Hero background: kept so a save still posts the stored file.
+               Collapsed because the new homepage does not read it. -->
           <div class="form-group full" style="margin-top:0.5rem;">
-            <label>Home Page Hero Background <span style="color:#888;font-weight:400;">— not used by the new homepage</span></label>
+            <details class="set-legacy" id="heroLegacy">
+              <summary>Legacy — home page hero background</summary>
+              <p class="set-hint">Not used by the new homepage. The file stays saved. Open this only if you are cleaning up an old background.</p>
             <div style="display:flex;gap:0.75rem;margin:0.65rem 0 1rem;flex-wrap:wrap;" id="heroBgOptions">
               <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;background:#1a1a1a;border:1px solid <%= (settings.hero_bg.type==='default') ? 'var(--ps-blue)' : '#333' %>;border-radius:10px;padding:0.6rem 1rem;font-size:0.875rem;font-weight:600;">
                 <input type="radio" name="hero_bg_type" value="default" <%= settings.hero_bg.type==='default' ? 'checked' : '' %> onchange="heroTypeChange(this)"> Default Gradient
@@ -92,6 +99,7 @@
                 </div>
               </div>
             </div>
+            </details>
           </div>
 
           <!-- Section Spacing -->
@@ -125,6 +133,44 @@
       </div><!-- /accordion-body -->
     </div><!-- /accordion site-settings -->
 
+    <div class="form-card" style="border-color:rgba(255,50,50,0.2);background:linear-gradient(135deg,#1a0a0a,#1a1a1a);">
+      <h2 style="display:flex;align-items:center;gap:0.5rem;">Change admin password</h2>
+      <form method="POST" action="/admin/change-password">
+        <div class="form-grid">
+          <div class="form-group"><label>Current password</label><input type="password" name="current_password" placeholder="Current password" required autocomplete="current-password"></div>
+          <div class="form-group"><label>New password</label><input type="password" name="new_password" placeholder="At least 4 characters" required autocomplete="new-password"></div>
+          <div class="form-group"><label>Confirm new password</label><input type="password" name="confirm_password" placeholder="Repeat the new password" required autocomplete="new-password"></div>
+        </div>
+        <div class="form-actions" style="margin-top:0.75rem;">
+          <button type="submit" class="btn" style="background:#c0392b;color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Change password</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="adm-card" id="sec-loyalty">
+      <div class="adm-card-head" style="border-left:3px solid #f0a500;">
+        <div class="sa-left">
+          <div class="sa-icon" style="background:rgba(240,165,0,0.15);">🎁</div>
+          <div>
+            <div class="sa-title">Loyalty offers</div>
+            <div class="sa-desc">Punch card and rebook discount</div>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card-body">
+        <p class="set-lead">Punch card and rebook discount are edited on the Loyalty page. Settings used to repeat that same form. It posts to the same place, so this is only a link.</p>
+        <a class="adm-btn" href="/admin?tab=loyalty">Open Loyalty</a>
+      </div>
+    </div>
+      </div><!-- /set-panel site -->
+
+      <div class="set-panel" data-set-panel="pricing" hidden>
+      <p class="set-panel-note">Promo and pricing apply to every rental. A game discount replaces that promo on the games you fill in.</p>
+      <div class="set-jumps">
+        <a href="#sec-promo">Promo and pricing</a>
+        <a href="#sec-game-discounts">Game discounts</a>
+      </div>
+
     <!-- PROMO SETTINGS -->
     <%
       const adminPromo = settings.promo || { enabled: true, discounts: { 10: 0, 15: 0, 30: 10 }, deposit: 100 };
@@ -146,7 +192,7 @@
         <div class="form-grid">
           <!-- RENT PROMO -->
           <div class="form-group full" style="margin-bottom:0;">
-            <label style="color:#22c55e;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">⏱️ Rent Promo</label>
+            <label class="set-kicker">Rent promo</label>
           </div>
           <div class="form-group full">
             <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
@@ -207,7 +253,7 @@
 
           <!-- BUY PROMO -->
           <div class="form-group full" style="margin-top:0.5rem;padding-top:1rem;border-top:1px solid #1a1a1a;margin-bottom:0;">
-            <label style="color:#a855f7;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">♾️ Buy Permanent Promo</label>
+            <label class="set-kicker">Buy promo</label>
           </div>
           <div class="form-group full">
             <label style="display:flex;align-items:center;gap:0.75rem;cursor:pointer;">
@@ -311,6 +357,15 @@
 
 
 
+      </div><!-- /set-panel pricing -->
+
+      <div class="set-panel" data-set-panel="payments" hidden>
+      <p class="set-panel-note">Payment methods are what customers pay to. Reminders are for orders that are still unpaid. Each form saves on its own.</p>
+      <div class="set-jumps">
+        <a href="#sec-payments">Payment methods</a>
+        <a href="#sec-reminders">Payment reminders</a>
+      </div>
+
     <!-- PAYMENT METHODS -->
     <div class="adm-card" id="sec-payments">
       <div class="adm-card-head" style="border-left:3px solid #a855f7;">
@@ -318,7 +373,7 @@
           <div class="sa-icon" style="background:rgba(168,85,247,0.15);">💳</div>
           <div>
             <div class="sa-title">Payment Methods</div>
-            <div class="sa-desc">GCash and Maya account details customers see when paying</div>
+            <div class="sa-desc">GCash, Maya, PayPal and bank transfer. Numbers stay hidden until you reveal them.</div>
           </div>
         </div>
       </div>
@@ -334,6 +389,7 @@
             If the handle is wrong the link still opens Messenger, but we never learn
             which customer the order belongs to.
           </p>
+          <p class="pm-note">Account numbers are hidden. Reveal shows one for 30 seconds and writes a log of who looked. Edit the number after revealing it, then save. Leaving it hidden keeps the saved number.</p>
 
           <% (settings.payment_methods || []).forEach(m => { %>
           <div class="pm-card">
@@ -427,22 +483,6 @@
       </div>
     </div><!-- /accordion payment-methods -->
 
-    <div class="form-card" style="border-color:rgba(255,50,50,0.2);background:linear-gradient(135deg,#1a0a0a,#1a1a1a);">
-      <h2 style="display:flex;align-items:center;gap:0.5rem;">🔒 Change Admin Password</h2>
-      <form method="POST" action="/admin/change-password">
-        <div class="form-grid">
-          <div class="form-group"><label>Current Password</label><input type="password" name="current_password" placeholder="Current password" required></div>
-          <div class="form-group"><label>New Password</label><input type="password" name="new_password" placeholder="New password (min 4 chars)" required></div>
-          <div class="form-group"><label>Confirm New Password</label><input type="password" name="confirm_password" placeholder="Repeat new password" required></div>
-        </div>
-        <div class="form-actions" style="margin-top:0.75rem;">
-          <button type="submit" class="btn" style="background:#c0392b;color:#fff;font-weight:700;padding:0.75rem 1.75rem;border-radius:50px;border:none;cursor:pointer;">Change Password</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- MAINTENANCE -->
-    <div style="margin:1.5rem 0 0.75rem;font-size:0.78rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:#555;">Maintenance</div>
     <!-- PAYMENT REMINDERS -->
     <div class="adm-card" id="sec-reminders">
       <div class="adm-card-head" style="border-left:3px solid #f59e0b;">
@@ -496,6 +536,9 @@
         </form>
       </div>
     </div>
+      </div><!-- /set-panel payments -->
+
+      <div class="set-panel" data-set-panel="alerts" hidden>
 
     <!-- PHONE ALERTS -->
     <div class="adm-card" id="sec-alerts">
@@ -545,6 +588,9 @@
 
     </div>
     </div>
+      </div><!-- /set-panel alerts -->
+
+      <div class="set-panel" data-set-panel="maintenance" hidden>
 
     <!-- IMAGE OPTIMIZATION -->
     <div class="adm-card" id="sec-images">
@@ -562,15 +608,18 @@
       <p style="color:#888;font-size:0.85rem;margin:0 0 1.25rem;line-height:1.6;">
         New uploads are already resized to WebP (max 900px). Catalog cards request a 480px copy on a normal screen and a 720px copy on a retina screen — generated the first time someone views one and kept on the volume. The cards themselves are a little smaller than before so that 720px file stays sharp. Game pages still use the full image. This button only converts older PNG/JPG uploads that predate that; WebP files are skipped, and it is safe to run more than once. To build the smaller copies before traffic hits them, run <code>scripts/warm-image-variants.js</code> against a copy of the volume (see the script header). Do not point it at the live disk unless you mean to.
       </p>
-      <button type="button" class="btn btn-primary" style="background:#22c55e;" onclick="runImageBackfill(this)">🗜️ Optimize All Images Now</button>
+      <button type="button" class="btn btn-primary" style="background:#22c55e;" onclick="runImageBackfill(this)">Optimize all images now</button>
       <div id="backfillResult" style="margin-top:1rem;font-size:0.85rem;"></div>
     </div>
       </div><!-- /accordion-body -->
     </div><!-- /accordion image-optimization -->
     <script>
     function runImageBackfill(btn) {
+      var copy = window.AdminSettings && AdminSettings.OPTIMIZE_CONFIRM;
+      var ask = window.adminConfirmAsk;
+      function start() {
       btn.disabled = true;
-      btn.textContent = '⏳ Optimizing… this may take a minute';
+      btn.textContent = 'Optimizing… this may take a minute';
       const resultEl = document.getElementById('backfillResult');
       resultEl.textContent = '';
       fetch('/admin/backfill-images', { method: 'POST' })
@@ -579,7 +628,10 @@
           resultEl.innerHTML = `<span style="color:#22c55e;">✅ Done — ${stats.processed} image${stats.processed!==1?'s':''} shrunk, ${stats.skipped} already optimized${stats.errors ? `, <span style="color:#ef4444;">${stats.errors} failed</span>` : ''}.</span>`;
         })
         .catch(() => { resultEl.innerHTML = '<span style="color:#ef4444;">❌ Something went wrong — try again.</span>'; })
-        .finally(() => { btn.disabled = false; btn.textContent = '🗜️ Optimize All Images Now'; });
+        .finally(() => { btn.disabled = false; btn.textContent = 'Optimize all images now'; });
+      }
+      if (!copy || typeof ask !== 'function') return;
+      ask(copy).then(function (yes) { if (yes) start(); });
     }
     </script>
     <script>
@@ -619,5 +671,14 @@
   });
 })();
     </script>
-    <%- include('loyalty-settings', { settings: settings, loyaltyReturnTab: 'settings', loyaltySectionId: 'sec-loyalty' }) %>
+      </div><!-- /set-panel maintenance -->
+
+      <div class="set-dirty" id="setDirty" hidden>
+        <p id="setDirtyText"></p>
+        <div class="set-dirty-actions">
+          <button type="button" class="adm-btn adm-btn-ghost" id="setDirtyDiscard">Discard</button>
+          <button type="button" class="adm-btn" id="setDirtySave">Save</button>
+        </div>
+      </div>
+    </div><!-- /set-shell -->
   </div><!-- /tab-settings -->

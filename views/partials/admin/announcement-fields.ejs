@@ -1,0 +1,156 @@
+<%#
+  One announcement's fields, grouped so the long form is scannable.
+  Closed groups still submit: a collapsed <details> is not a disabled field.
+  Locals: ann (existing row, or null for a new one).
+%>
+<%
+  const row = (typeof ann !== 'undefined' && ann) ? ann : {};
+  const isNew = !row.id;
+  const on = isNew ? true : (row.enabled !== undefined ? row.enabled !== false : row.active !== false);
+  const bound = row.bind === 'promo-banner';
+  const whereOpen = isNew || row.place_bar || row.place_bell || row.place_banner || row.starts_at || row.ends_at || row.countdown_at;
+  const buttonOpen = !!(row.button_label || row.button_url || row.button2_label || row.button2_url);
+  const advancedOpen = !isNew && !!(row.priority || row.icon || row.bell_pin || row.image || row.image_mobile || (row.audience && row.audience !== 'all') || (row.device && row.device !== 'all') || (row.bell_new_days != null && Number(row.bell_new_days) !== 0));
+%>
+<details class="set-fold" open>
+  <summary>Basics <span>Title, text, and whether it is on</span></summary>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Show on the site</label>
+      <label class="toggle-switch"><input type="checkbox" name="enabled" <%= on ? 'checked' : '' %>><span class="toggle-slider"></span></label>
+    </div>
+    <div class="form-group">
+      <label>Label</label>
+      <p class="set-hint">Short chip on the banner, for example “Now open”.</p>
+      <input type="text" name="label" maxlength="32" value="<%= row.label || '' %>" placeholder="<%= isNew ? 'Now open' : '' %>">
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" name="title" maxlength="120" value="<%= row.title || '' %>" placeholder="<%= bound ? 'Blank keeps the live promo' : '' %>">
+    </div>
+    <div class="form-group">
+      <label>Highlighted title words</label>
+      <p class="set-hint">Shown in the accent colour on the banner.</p>
+      <input type="text" name="title_accent" maxlength="80" value="<%= row.title_accent || '' %>">
+    </div>
+    <div class="form-group full">
+      <label>Text<%= isNew ? ' *' : '' %></label>
+      <textarea name="text" rows="2" maxlength="400" placeholder="<%= bound ? 'Blank keeps the live promo' : (isNew ? 'Short message customers will read' : 'Short message') %>"><%= row.text || '' %></textarea>
+    </div>
+  </div>
+</details>
+
+<details class="set-fold" <%= whereOpen ? 'open' : '' %>>
+  <summary>Where &amp; when <span>Top bar, bell, banner, and the schedule</span></summary>
+  <div class="form-grid">
+    <div class="form-group full">
+      <label>Where it shows</label>
+      <p class="set-hint">One entry can feed any of these. The bar shows the three highest-priority messages.</p>
+      <label class="set-checks">
+        <span><input type="checkbox" name="place_bar" <%= (isNew || row.place_bar) ? 'checked' : '' %>> Top bar</span>
+        <span><input type="checkbox" name="place_bell" <%= (isNew || row.place_bell) ? 'checked' : '' %>> What's New bell</span>
+        <span><input type="checkbox" name="place_banner" <%= row.place_banner ? 'checked' : '' %>> Homepage banner</span>
+      </label>
+    </div>
+    <div class="form-group">
+      <label>Starts</label>
+      <p class="set-hint">Philippines time. Optional. Hidden until this moment.</p>
+      <input type="datetime-local" name="starts_at" value="<%= row.starts_at || '' %>">
+    </div>
+    <div class="form-group">
+      <label>Ends</label>
+      <p class="set-hint">Philippines time. Optional. Hidden at this moment.</p>
+      <input type="datetime-local" name="ends_at" value="<%= row.ends_at || '' %>">
+    </div>
+    <div class="form-group">
+      <label>Countdown target</label>
+      <p class="set-hint">Philippines time. GTA VI’s release date is filled in only when that game is already in Games or Coming soon. Otherwise set it here. Blank means no countdown.</p>
+      <input type="datetime-local" name="countdown_at" value="<%= row.countdown_at || '' %>">
+    </div>
+  </div>
+</details>
+
+<details class="set-fold" <%= buttonOpen ? 'open' : '' %>>
+  <summary>Button <span>Links on the bar or the banner</span></summary>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Button label</label>
+      <input type="text" name="button_label" maxlength="40" value="<%= row.button_label || '' %>" placeholder="Learn more">
+    </div>
+    <div class="form-group">
+      <label>Button link</label>
+      <input type="text" name="button_url" maxlength="300" value="<%= row.button_url || '' %>" placeholder="<%= isNew ? '/browse' : '/promos or https://' %>">
+    </div>
+    <div class="form-group">
+      <label>Second button label</label>
+      <input type="text" name="button2_label" maxlength="40" value="<%= row.button2_label || '' %>" placeholder="Browse new games">
+    </div>
+    <div class="form-group">
+      <label>Second button link</label>
+      <input type="text" name="button2_url" maxlength="300" value="<%= row.button2_url || '' %>">
+    </div>
+  </div>
+</details>
+
+<details class="set-fold" <%= advancedOpen ? 'open' : '' %>>
+  <summary>Advanced <span>Priority, who sees it, and images</span></summary>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Priority</label>
+      <p class="set-hint">Higher numbers show first. The bar keeps the top three.</p>
+      <input type="number" name="priority" min="-100" max="100" value="<%= row.priority || 0 %>">
+    </div>
+    <div class="form-group">
+      <label>Icon</label>
+      <p class="set-hint">Optional. A single emoji is enough.</p>
+      <input type="text" name="icon" maxlength="8" value="<%= row.icon || '' %>" placeholder="📣">
+    </div>
+    <div class="form-group">
+      <label>Who sees it</label>
+      <select name="audience">
+        <% ['all', 'new', 'returning'].forEach(function (key) { %>
+        <option value="<%= key %>"<%= (row.audience || 'all') === key ? ' selected' : '' %>><%= key === 'all' ? 'Everyone' : (key === 'new' ? 'New visitors' : 'Returning visitors') %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Screen</label>
+      <select name="device">
+        <% ['all', 'desktop', 'mobile'].forEach(function (key) { %>
+        <option value="<%= key %>"<%= (row.device || 'all') === key ? ' selected' : '' %>><%= key === 'all' ? 'Desktop and mobile' : (key === 'desktop' ? 'Desktop only' : 'Mobile only') %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>New tag for how many days</label>
+      <p class="set-hint">On the bell. 0 hides the tag.</p>
+      <input type="number" name="bell_new_days" min="0" max="60" value="<%= isNew ? 7 : (row.bell_new_days != null ? row.bell_new_days : 0) %>">
+    </div>
+    <div class="form-group">
+      <label>Pin to the top of What's New</label>
+      <label class="toggle-switch"><input type="checkbox" name="bell_pin" <%= row.bell_pin ? 'checked' : '' %>><span class="toggle-slider"></span></label>
+    </div>
+    <div class="form-group">
+      <label>Image</label>
+      <p class="set-hint">Used on the banner and in the bell.</p>
+      <% if (row.image) { %>
+      <div class="set-file-current">
+        <img src="<%= row.image %>" alt="">
+        <label><input type="checkbox" name="image_clear"> Remove</label>
+      </div>
+      <% } %>
+      <input type="file" name="image" accept="image/*">
+    </div>
+    <div class="form-group">
+      <label>Mobile image</label>
+      <p class="set-hint">A separate crop for phones. Optional.</p>
+      <% if (row.image_mobile) { %>
+      <div class="set-file-current">
+        <img src="<%= row.image_mobile %>" alt="">
+        <label><input type="checkbox" name="image_mobile_clear"> Remove</label>
+      </div>
+      <% } %>
+      <input type="file" name="image_mobile" accept="image/*">
+    </div>
+  </div>
+</details>

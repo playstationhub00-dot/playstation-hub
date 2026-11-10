@@ -44,13 +44,17 @@ ok('the order page is given the same progress copy', () => {
   assert.ok(orderPage.includes("include('partials/promo-lines'"));
 });
 
-ok('the admin has a Loyalty tab, and settings can edit the offers', () => {
+ok('the admin has a Loyalty tab, and settings links there instead of repeating the form', () => {
   assert.ok(admin.includes('data-tab="loyalty"'));
   assert.ok(admin.includes("'loyalty'"));
   assert.ok(admin.includes("include('partials/admin/loyalty')"));
   assert.ok(admin.includes("loyalty_saved:'loyalty'"));
   assert.ok(admin.includes("messages.loyalty_redeemed = '🎁 Reward marked redeemed'"));
-  assert.ok(settings.includes("action=\"/admin/loyalty/settings\"") || settings.includes('loyalty-settings'));
+  assert.ok(settings.includes('href="/admin?tab=loyalty"'));
+  assert.ok(!settings.includes('loyalty-settings'));
+  const loyalty = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'admin', 'loyalty.ejs'), 'utf8');
+  assert.ok(loyalty.includes('loyalty-settings'));
+  assert.ok(loyalty.includes('action="/admin/loyalty/settings"') || loyalty.includes("action=\"/admin/loyalty/settings\"") || loyalty.includes('loyalty-settings'));
 });
 
 ok('customer and order rows carry the reward badge', () => {
