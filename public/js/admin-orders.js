@@ -236,6 +236,8 @@
     });
   }
 
+  var focusLedger = null;
+
   function initLedger() {
     var table = document.getElementById('oqLedger');
     var search = document.getElementById('oqSearch');
@@ -330,7 +332,29 @@
       });
     }
     apply();
+    focusLedger = function (chip) {
+      if (CHIPS.indexOf(chip) === -1) return;
+      page = 1;
+      state.chip = chip;
+      apply();
+    };
   }
+
+  window.oqFocus = function (opts) {
+    opts = opts || {};
+    if (opts.group) {
+      var g = document.querySelector('details[data-oq-group="' + opts.group + '"]');
+      if (g) {
+        g.open = true;
+        if (!opts.chip && g.scrollIntoView) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+    if (opts.chip && focusLedger) focusLedger(opts.chip);
+    if (opts.chip) {
+      var ledger = document.getElementById('oqLedger');
+      if (ledger && ledger.scrollIntoView) ledger.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   function parseDetail(row) {
     var raw = row.getAttribute('data-detail');

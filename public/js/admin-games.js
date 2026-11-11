@@ -205,6 +205,15 @@
       }
     });
     apply();
+    window.gmSetChip = function (chip, q) {
+      if (chip && CHIPS.indexOf(chip) !== -1) state.chip = chip;
+      if (typeof q === 'string') {
+        state.q = q.slice(0, 100);
+        search.value = state.q;
+      }
+      apply();
+      if (list.scrollIntoView) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
   }
 
   // The confirm reads these at submit time, so ticking "include the last 7

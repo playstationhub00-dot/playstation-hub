@@ -1,6 +1,5 @@
-  <div class="dash-pane" id="dsub-overview">
+  <div class="dash-pane<%= (typeof dashSub === 'undefined' ? 'overview' : dashSub) === 'overview' ? ' active' : '' %>" id="dsub-overview">
     <%
-      // Order-queue slices, local to the cards below.
       const qrPending = orderQueue.filter(o => o.state === 'qr_pending');
       const paymentsToApprove = orderQueue.filter(o => o.state === 'verifying_payment');
       const returnsToVerify = orderQueue.filter(o => o.state === 'verifying_return');
@@ -9,10 +8,7 @@
       )[0];
       const overdueReminders = needsReminder.filter(r => r.dl < 0);
       const needsNow = dashMetrics.needsNowTotal;
-      const hr = dashNow.getHours();
-      const greet = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
-      // A tiny "N minutes ago" for the activity feed. Server-rendered, so no
-      // per-row clock in JS and no drift between rows.
+      const greet = dashMetrics.greeting || { greeting: 'Hello', line: '' };
       const ago = iso => {
         const mins = Math.max(0, Math.round((dashNow - new Date(iso)) / 60000));
         if (mins < 1) return 'just now';
@@ -22,117 +18,133 @@
         return Math.round(h / 24) + 'd ago';
       };
       const t = dashMetrics.collectedTrend;
+      const pace = dashMetrics.collectedPace;
+      const bell = dashMetrics.bell || { total: needsNow, queue: needsNow, other: 0 };
+      const nn = [
+        { n: qrPending.length, ic: '🕐', lbl: 'Sign-in' + (qrPending.length !== 1 ? 's' : '') + ' waiting', hot: qrPending.length > 0, dest: { tab: 'orders', chip: 'signin', group: 'now' } },
+        { n: paymentsToApprove.length, ic: '💳', lbl: 'Payment' + (paymentsToApprove.length !== 1 ? 's' : '') + ' to approve', hot: paymentsToApprove.length > 0, dest: { tab: 'orders', chip: 'review', group: 'now' } },
+        { n: returnsToVerify.length, ic: '↩️', lbl: 'Return' + (returnsToVerify.length !== 1 ? 's' : '') + ' to verify', hot: false, dest: { tab: 'orders', chip: 'verify', group: 'now' } },
+        { n: needsReminder.length, ic: '⏰', lbl: 'Reminder' + (needsReminder.length !== 1 ? 's' : '') + ' due', hot: overdueReminders.length > 0, dest: { tab: 'customers', anchor: needsReminder.length ? 'sec-reminders' : 'sec-attention' } },
+        { n: unlinkedRentals.length, ic: '🗂️', lbl: 'Rental' + (unlinkedRentals.length !== 1 ? 's' : '') + ' with no slot', hot: unlinkedRentals.length > 0, dest: { tab: 'customers', anchor: unlinkedRentals.length ? 'sec-unlinked' : 'sec-attention' } }
+      ];
+      const queueBits = [
+        qrPending.length ? qrPending.length + ' sign-in' + (qrPending.length === 1 ? '' : 's') : '',
+        paymentsToApprove.length ? paymentsToApprove.length + ' payment' + (paymentsToApprove.length === 1 ? '' : 's') : '',
+        returnsToVerify.length ? returnsToVerify.length + ' return' + (returnsToVerify.length === 1 ? '' : 's') : '',
+        needsReminder.length ? needsReminder.length + ' reminder' + (needsReminder.length === 1 ? '' : 's') : '',
+        unlinkedRentals.length ? unlinkedRentals.length + ' with no slot' : ''
+      ].filter(Boolean);
+      const bellNote = !needsNow && !bell.total
+        ? 'Nothing waiting on you right now. The bell agrees.'
+        : bell.other > 0
+          ? (needsNow
+              ? needsNow + ' in the rental queue' + (queueBits.length ? ' (' + queueBits.join(', ') + ')' : '') + '. The bell shows ' + bell.total + ' because it also lists ' + bell.other + ' other item' + (bell.other === 1 ? '' : 's') + ': deposits to refund, reviews, support chats, and record checks.'
+              : 'Nothing in the rental queue. The bell shows ' + bell.total + ' other item' + (bell.total === 1 ? '' : 's') + ': deposits to refund, reviews, support chats, and record checks.')
+          : needsNow + ' in the rental queue' + (queueBits.length ? ' (' + queueBits.join(', ') + ')' : '') + '. The bell shows the same ' + bell.total + '.';
+      const peso = n => '₱' + (Number(n) || 0).toLocaleString();
     %>
 
     <div class="ov-hero">
       <div>
-        <div class="ov-hi"><%= greet %></div>
-        <div class="ov-hi-sub">Everything across your rentals, money and stock.</div>
+        <div class="ov-hi"><%= greet.greeting %></div>
+        <div class="ov-hi-sub"><%= greet.line %> · Rentals, money and stock.</div>
       </div>
       <div class="ov-health <%= needsNow ? 'busy' : 'ok' %>">
         <span class="ov-health-ic"><%= needsNow ? '🔔' : '✅' %></span>
         <div>
           <div class="ov-health-t"><%= needsNow ? needsNow + (needsNow === 1 ? ' thing needs you' : ' things need you') : 'All clear' %></div>
-          <div class="ov-health-s"><%= needsNow
-            ? [qrPending.length ? qrPending.length + ' sign-in waiting' : '', paymentsToApprove.length ? paymentsToApprove.length + ' to approve' : '', overdueReminders.length ? overdueReminders.length + ' overdue' : ''].filter(Boolean).join(' · ')
-            : 'Nothing waiting on you right now' %></div>
+          <div class="ov-health-s"><%= bellNote %></div>
         </div>
       </div>
     </div>
 
-    <!-- ── KPI strip ── -->
     <div class="ov-kpis">
-      <div class="ov-kpi <%= needsNow ? 'hot' : '' %>">
-        <div class="ov-kpi-ic">🔔</div>
+      <button type="button" class="ov-kpi <%= needsNow ? 'hot' : '' %>" onclick="document.getElementById('ov-needs').scrollIntoView({behavior:'smooth',block:'start'})">
         <div class="ov-kpi-l">Needs you now</div>
-        <div class="ov-kpi-v" style="<%= needsNow ? 'color:#ef4444' : '' %>"><%= needsNow %></div>
-        <div class="ov-kpi-d ov-flat"><%= qrPending.length ? '1 is on a 10-min clock' : (needsNow ? 'clear the queue' : 'nothing waiting') %></div>
-      </div>
-      <div class="ov-kpi">
-        <div class="ov-kpi-ic">🎮</div>
+        <div class="ov-kpi-v" style="<%= needsNow ? 'color:#ff8a8a' : '' %>"><%= needsNow %></div>
+        <div class="ov-kpi-d ov-flat"><%= needsNow ? 'Rental queue, not the bell' : 'Nothing waiting' %></div>
+      </button>
+      <button type="button" class="ov-kpi" onclick="dashOpen({tab:'orders', chip:'out'})">
         <div class="ov-kpi-l">Out on rent</div>
         <div class="ov-kpi-v"><%= activeCustomers.length %></div>
         <div class="ov-kpi-d ov-flat"><%= reservationCustomersNow.length %> reserved · <%= boughtCustomersNow.length %> bought</div>
-      </div>
-      <div class="ov-kpi">
-        <div class="ov-kpi-ic">💰</div>
+      </button>
+      <button type="button" class="ov-kpi" onclick="dashGoto('money')">
         <div class="ov-kpi-l">Collected · <%= dashPeriod.label %></div>
-        <div class="ov-kpi-v">₱<%= dashMetrics.collected.total.toLocaleString() %></div>
+        <div class="ov-kpi-v"><%= peso(dashMetrics.collected.total) %></div>
         <div class="ov-kpi-d <%= t ? (t.dir === 'up' ? 'ov-up' : t.dir === 'down' ? 'ov-down' : 'ov-flat') : 'ov-flat' %>">
-          <% if (t && t.pct != null) { %><%= t.dir === 'up' ? '↑' : t.dir === 'down' ? '↓' : '' %> <%= t.pct %>% vs last<% } else if (t && t.dir === 'up') { %>↑ up from nothing<% } else { %><%= dashMetrics.collected.count %> payments<% } %>
+          <% if (t && t.pct != null) { %><%= t.dir === 'up' ? '↑' : t.dir === 'down' ? '↓' : '→' %> <%= t.pct %>% <%= pace && pace.partial ? 'vs same stretch' : 'vs last' %><% } else if (t && t.dir === 'up') { %>↑ up from nothing<% } else { %><%= dashMetrics.collected.count %> payments<% } %>
         </div>
-      </div>
-      <div class="ov-kpi">
-        <div class="ov-kpi-ic">🗂️</div>
+        <% if (pace && pace.partial) { %>
+          <div class="ov-kpi-note"><%= pace.note %> Same stretch: <%= peso(pace.compareTotal) %>.<% if (pace.fullPriorTotal != null) { %> Whole <%= pace.fullPriorLabel %>: <%= peso(pace.fullPriorTotal) %>.<% } %></div>
+        <% } %>
+      </button>
+      <button type="button" class="ov-kpi" onclick="dashGoto('games')">
         <div class="ov-kpi-l">Slot use</div>
         <div class="ov-kpi-v"><%= dashMetrics.slots.pct %>%</div>
         <div class="ov-kpi-d ov-flat"><%= dashMetrics.slots.filled %> of <%= dashMetrics.slots.total %> · <%= dashMetrics.slots.idle %> idle</div>
-      </div>
-      <div class="ov-kpi">
-        <div class="ov-kpi-ic">👥</div>
+      </button>
+      <button type="button" class="ov-kpi" onclick="dashOpen({tab:'customers'})">
         <div class="ov-kpi-l">Came back</div>
         <div class="ov-kpi-v"><%= dashMetrics.repeat.pct %>%</div>
         <div class="ov-kpi-d ov-flat"><%= dashMetrics.repeat.repeat %> of <%= dashMetrics.repeat.unique %> · by name</div>
-      </div>
+      </button>
     </div>
 
-    <!-- ── row: needs you now · stock & demand · recent activity ── -->
     <div class="row-3">
-
-      <div class="dash-section">
+      <div class="dash-section" id="ov-needs">
         <div class="dash-section-head">
           <span class="dash-section-title">🔔 Needs you now</span>
-          <button class="dash-section-link" onclick="switchTab('orders')">Orders →</button>
+          <button class="dash-section-link" onclick="dashOpen({tab:'orders', group:'now'})">Do now →</button>
         </div>
-        <% const nn = [
-             { n: qrPending.length, ic: '🕐', lbl: 'Sign-in' + (qrPending.length !== 1 ? 's' : '') + ' waiting', tab: 'orders', hot: qrPending.length > 0 },
-             { n: paymentsToApprove.length, ic: '💳', lbl: 'Payment' + (paymentsToApprove.length !== 1 ? 's' : '') + ' to approve', tab: 'orders', hot: paymentsToApprove.length > 0 },
-             { n: returnsToVerify.length, ic: '↩️', lbl: 'Return' + (returnsToVerify.length !== 1 ? 's' : '') + ' to verify', tab: 'orders', hot: false },
-             { n: needsReminder.length, ic: '⏰', lbl: 'Reminder' + (needsReminder.length !== 1 ? 's' : '') + ' due', tab: 'customers', hot: overdueReminders.length > 0 },
-             { n: unlinkedRentals.length, ic: '🗂️', lbl: 'Rental' + (unlinkedRentals.length !== 1 ? 's' : '') + ' with no slot', tab: 'customers', hot: unlinkedRentals.length > 0 }
-           ]; %>
         <% nn.forEach(x => { %>
-        <div class="dm-row" style="cursor:pointer;" onclick="switchTab('<%= x.tab %>')">
+        <div class="dm-row dash-hit" onclick="dashOpen(<%- JSON.stringify(x.dest).replace(/</g, '\\u003c') %>)">
           <span class="dm-row-n"><%= x.ic %> <%= x.lbl %></span>
-          <span class="dm-row-v <%= x.hot ? 'r' : (x.n ? 'y' : '') %>">
+          <span class="dm-row-v <%= x.hot ? 'hot' : (x.n ? 'y' : '') %>">
             <% if (x.n && x.ic === '🕐' && soonestQr && soonestQr.qr_expires_at) { %>
               <span class="oq-timer" data-expires="<%= soonestQr.qr_expires_at %>">--:--</span>
             <% } else { %><%= x.n %><% } %>
           </span>
         </div>
         <% }) %>
-        <% if (needsNow === 0) { %><div class="dm-note" style="margin-top:0.5rem;">Nothing advertised wrongly, no one overdue.</div><% } %>
+        <% if (needsNow === 0) { %><div class="dm-note" style="margin-top:0.5rem;">Nothing in the rental queue.</div><% } %>
       </div>
 
       <div class="dash-section">
         <div class="dash-section-head">
           <span class="dash-section-title">🎮 Stock &amp; demand</span>
-          <button class="dash-section-link" onclick="switchTab('games')">Games →</button>
+          <button class="dash-section-link" onclick="dashGoto('games')">Games &amp; slots →</button>
         </div>
-        <div class="dm-row"><span class="dm-row-n">🔥 Fully booked</span>
-          <span class="dm-row-v <%= dashMetrics.fullyBooked ? 'r' : '' %>"><%= dashMetrics.fullyBooked %></span></div>
-        <div class="dm-note">game<%= dashMetrics.fullyBooked !== 1 ? 's' : '' %> with no free slot — demand you can't serve</div>
+        <div class="dm-row dash-hit" onclick="dashOpen({tab:'games', nav:'games', gamesSub:'all', gamesChip:'soldout'})">
+          <span class="dm-row-n">🔥 Fully booked</span>
+          <span class="dm-row-v <%= dashMetrics.fullyBooked ? 'hot' : '' %>"><%= dashMetrics.fullyBooked %></span>
+        </div>
+        <div class="dm-note">game<%= dashMetrics.fullyBooked !== 1 ? 's' : '' %> with no free slot. Opens the sold-out filter.</div>
         <% if (dashMetrics.topRequest) { %>
-        <div class="dm-row" style="cursor:pointer;" onclick="switchTab('games')"><span class="dm-row-n">🗳️ <%= dashMetrics.topRequest.title %></span>
-          <span class="dm-row-v y"><%= dashMetrics.topRequest.votes %></span></div>
-        <div class="dm-note">top request · not stocked</div>
+        <div class="dm-row dash-hit" onclick="dashOpen({tab:'games', nav:'requests', gamesSub:'requests'})">
+          <span class="dm-row-n">🗳️ <%= dashMetrics.topRequest.title %></span>
+          <span class="dm-row-v y"><%= dashMetrics.topRequest.votes %></span>
+        </div>
+        <div class="dm-note">top request, not stocked</div>
         <% } %>
         <% const worst = dashMetrics.payback.rows[0]; if (worst && worst.multiple < 1) { %>
         <div class="dm-row"><span class="dm-row-n">💸 <%= worst.title %></span>
           <span class="dm-row-v y"><%= worst.multiple %>×</span></div>
-        <div class="dm-note">hasn't earned its cost back</div>
+        <div class="dm-note">has not earned its cost back</div>
         <% } %>
         <% if (dashMetrics.payback.missingCost) { %>
-        <div class="dm-row" style="cursor:pointer;" onclick="switchTab('games')"><span class="dm-row-n">➕ <%= dashMetrics.payback.missingCost %> games missing a cost</span>
-          <span class="dm-row-v" style="color:var(--ps-blue);">Add →</span></div>
-        <div class="dm-note">payback can't be scored without it</div>
+        <div class="dm-row dash-hit" onclick="dashOpen({tab:'games', nav:'games', gamesSub:'all'})">
+          <span class="dm-row-n">➕ <%= dashMetrics.payback.missingCost %> games missing a cost</span>
+          <span class="dm-row-v y">Games →</span>
+        </div>
+        <div class="dm-note">payback cannot be scored without it</div>
         <% } %>
       </div>
 
       <div class="dash-section">
         <div class="dash-section-head">
           <span class="dash-section-title">🕐 Recent activity</span>
-          <button class="dash-section-link" onclick="switchTab('orders')">Orders →</button>
+          <button class="dash-section-link" onclick="dashOpen({tab:'orders'})">All orders →</button>
         </div>
         <% if (!dashMetrics.recentActivity.length) { %>
           <div class="dm-empty">No order activity yet.</div>
@@ -154,74 +166,103 @@
           <% }) %>
         <% } %>
       </div>
-
     </div>
 
-    <!-- ── row: most rented · top customers · accounts ── -->
     <div class="row-3" style="margin-top:0.7rem;">
-
       <div class="dash-section">
         <div class="dash-section-head">
           <span class="dash-section-title">📈 Most rented</span>
-          <span style="font-size:0.7rem;color:#555;"><%= dashPeriod.label %></span>
+          <span class="dash-period-tag"><%= dashPeriod.label %></span>
         </div>
         <% if (!dashMetrics.topRented.length) { %>
           <div class="dm-empty">No rentals started in this period.</div>
         <% } else { %>
-          <% const rmax = dashMetrics.topRented[0][1]; %>
-          <% dashMetrics.topRented.forEach(([title, n], i) => { %>
-          <div class="dm-row"><span class="dm-row-n"><%= ['🥇','🥈','🥉'][i] || (i + 1) + '.' %> <%= title %></span>
+          <% const rentedRows = dashMetrics.topRented; const rmax = rentedRows[0][1]; const rentedShown = rentedRows.slice(0, 4); const rentedRest = rentedRows.slice(4); %>
+          <% rentedShown.forEach(([title, n], i) => { %>
+          <div class="dm-row"><span class="dm-row-n"><%= i + 1 %>. <%= title %></span>
             <span class="dm-row-v b"><%= n %>×</span></div>
           <div class="dm-bar"><i class="blue" style="width:<%= Math.round((n / rmax) * 100) %>%"></i></div>
           <% }) %>
+          <% if (rentedRest.length) { %>
+          <details class="dash-more">
+            <summary>Show <%= rentedRest.length %> more</summary>
+            <% rentedRest.forEach(([title, n], i) => { %>
+            <div class="dm-row"><span class="dm-row-n"><%= i + 5 %>. <%= title %></span>
+              <span class="dm-row-v b"><%= n %>×</span></div>
+            <div class="dm-bar"><i class="blue" style="width:<%= Math.round((n / rmax) * 100) %>%"></i></div>
+            <% }) %>
+          </details>
+          <% } %>
         <% } %>
       </div>
 
       <div class="dash-section">
         <div class="dash-section-head">
           <span class="dash-section-title">👑 Top customers</span>
-          <span style="font-size:0.7rem;color:#555;"><%= dashPeriod.label %></span>
+          <span class="dash-period-tag"><%= dashPeriod.label %></span>
         </div>
         <% if (!dashMetrics.topSpenders.length) { %>
           <div class="dm-empty">No payments recorded in this period.</div>
         <% } else { %>
-          <% const smax = dashMetrics.topSpenders[0].total; %>
-          <% dashMetrics.topSpenders.forEach((c, i) => { %>
-          <div class="dm-row"><span class="dm-row-n"><%= ['🥇','🥈','🥉'][i] || (i + 1) + '.' %> <%= c.name %></span>
-            <span class="dm-row-v g">₱<%= c.total.toLocaleString() %></span></div>
+          <% const spenders = dashMetrics.topSpenders; const smax = spenders[0].total; const spendShown = spenders.slice(0, 4); const spendRest = spenders.slice(4); %>
+          <% spendShown.forEach((c, i) => { %>
+          <div class="dm-row"><span class="dm-row-n"><%= i + 1 %>. <%= c.name %></span>
+            <span class="dm-row-v g"><%= peso(c.total) %></span></div>
           <div class="dm-bar"><i class="ok" style="width:<%= Math.round((c.total / smax) * 100) %>%"></i></div>
           <% }) %>
+          <% if (spendRest.length) { %>
+          <details class="dash-more">
+            <summary>Show <%= spendRest.length %> more</summary>
+            <% spendRest.forEach((c, i) => { %>
+            <div class="dm-row"><span class="dm-row-n"><%= i + 5 %>. <%= c.name %></span>
+              <span class="dm-row-v g"><%= peso(c.total) %></span></div>
+            <div class="dm-bar"><i class="ok" style="width:<%= Math.round((c.total / smax) * 100) %>%"></i></div>
+            <% }) %>
+          </details>
+          <% } %>
         <% } %>
       </div>
 
       <div class="dash-section">
         <div class="dash-section-head">
           <span class="dash-section-title">🗂️ Accounts</span>
-          <button class="dash-section-link" onclick="switchTab('accounts')">Manage →</button>
+          <button class="dash-section-link" onclick="dashOpen({tab:'accounts'})">Manage →</button>
         </div>
         <% if (!dashMetrics.accountsSlotUse.length) { %>
           <div class="dm-empty">No accounts yet.</div>
         <% } else { %>
-          <% dashMetrics.accountsSlotUse.slice(0, 4).forEach(a => { %>
+          <% const accRows = dashMetrics.accountsSlotUse; const accShown = accRows.slice(0, 4); const accRest = accRows.slice(4); %>
+          <% accShown.forEach(a => { %>
           <div class="dm-row"><span class="dm-row-n"><%= a.label %></span>
-            <span class="dm-row-v <%= a.idle >= a.total ? 'r' : a.idle ? 'y' : 'g' %>"><%= a.filled %>/<%= a.total %></span></div>
-          <div class="dm-bar"><i class="<%= a.idle >= a.total ? 'warn' : a.idle ? 'warn' : 'ok' %>" style="width:<%= a.pct %>%"></i></div>
+            <span class="dm-row-v <%= a.idle >= a.total ? 'hot' : a.idle ? 'y' : 'g' %>"><%= a.filled %>/<%= a.total %></span></div>
+          <div class="dm-bar"><i class="<%= a.idle ? 'warn' : 'ok' %>" style="width:<%= a.pct %>%"></i></div>
           <% if (a.idle) { %><div class="dm-note"><%= a.idle %> idle slot<%= a.idle !== 1 ? 's' : '' %></div><% } %>
           <% }) %>
+          <% if (accRest.length) { %>
+          <details class="dash-more">
+            <summary>Show <%= accRest.length %> more</summary>
+            <% accRest.forEach(a => { %>
+            <div class="dm-row"><span class="dm-row-n"><%= a.label %></span>
+              <span class="dm-row-v <%= a.idle >= a.total ? 'hot' : a.idle ? 'y' : 'g' %>"><%= a.filled %>/<%= a.total %></span></div>
+            <div class="dm-bar"><i class="<%= a.idle ? 'warn' : 'ok' %>" style="width:<%= a.pct %>%"></i></div>
+            <% if (a.idle) { %><div class="dm-note"><%= a.idle %> idle slot<%= a.idle !== 1 ? 's' : '' %></div><% } %>
+            <% }) %>
+          </details>
+          <% } %>
+          <button type="button" class="dash-section-link" style="margin-top:0.45rem;" onclick="dashGoto('games')">Slot picture on Games &amp; slots →</button>
         <% } %>
       </div>
-
     </div>
 
     <div class="dash-section" style="margin-top:0.7rem;">
       <div class="dash-section-head">
         <span class="dash-section-title">💬 Payment reminders</span>
-        <span style="font-size:0.7rem;color:#555;"><%= dashPeriod.label %></span>
+        <span class="dash-period-tag"><%= dashPeriod.label %></span>
       </div>
       <% const prStats = dashMetrics.reminders || { reminded: 0, recovered: 0, pesos: 0 }; %>
       <div class="dm-row"><span class="dm-row-n">Reminded</span><span class="dm-row-v"><%= prStats.reminded %></span></div>
       <div class="dm-row"><span class="dm-row-n">Paid after a reminder</span><span class="dm-row-v g"><%= prStats.recovered %></span></div>
-      <div class="dm-row"><span class="dm-row-n">₱ recovered</span><span class="dm-row-v g">₱<%= (prStats.pesos || 0).toLocaleString() %></span></div>
+      <div class="dm-row"><span class="dm-row-n">₱ recovered</span><span class="dm-row-v g"><%= peso(prStats.pesos || 0) %></span></div>
       <div class="dm-note">Orders nudged about an unpaid payment, and the ones that paid afterwards. Counted on Manila dates.</div>
     </div>
 
@@ -229,12 +270,12 @@
       <span style="font-size:1.5rem;">📊</span>
       <div>
         <div class="ov-deeper-t">Going deeper</div>
-        <div class="ov-deeper-s">The two tools that don't fit on a summary card have their own page.</div>
+        <div class="ov-deeper-s">Money, stock and slots, and site traffic each have their own tab.</div>
       </div>
       <div class="ov-deeper-go">
-        <button class="ov-deeper-btn" onclick="dashGoto('money')">💰 Money report →</button>
-        <button class="ov-deeper-btn" onclick="dashGoto('site')">🌐 Site &amp; traffic →</button>
+        <button class="ov-deeper-btn" onclick="dashGoto('money')">💰 Money →</button>
+        <button class="ov-deeper-btn" onclick="dashGoto('games')">🎮 Games &amp; slots →</button>
+        <button class="ov-deeper-btn" onclick="dashGoto('site')">🌐 Site →</button>
       </div>
     </div>
-
   </div>

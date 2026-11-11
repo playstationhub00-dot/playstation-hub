@@ -508,4 +508,91 @@ check('a costless or undated game does not appear in items for any month', () =>
   assert.deepStrictEqual(r.items, {});
 });
 
+// ── Manila greeting ──────────────────────────────────────────────────────────
+// 05:00 UTC is 13:00 in Manila. The old dashboard read the server hour and
+// said good morning at 1pm.
+check('greeting uses Asia/Manila, not the server clock', () => {
+  const afternoon = dash.manilaGreeting(new Date('2026-11-04T05:00:00.000Z'));
+  assert.strictEqual(afternoon.greeting, 'Good afternoon');
+  assert.ok(afternoon.line.includes('1:00 PM'));
+  assert.ok(afternoon.line.includes('Asia/Manila'));
+  assert.strictEqual(dash.manilaGreeting(new Date('2026-11-04T00:15:00.000Z')).greeting, 'Good morning');
+  assert.strictEqual(dash.manilaGreeting(new Date('2026-11-04T12:30:00.000Z')).greeting, 'Good evening');
+});
+
+// ── pace, so an early month is not "down 95%" ────────────────────────────────
+check('an open month is compared with the same days last month', () => {
+  const range = { key: 'month', from: '2026-09-01', to: '2026-09-30', label: 'September 2026' };
+  const pace = dash.collectionPace(range, new Date('2026-09-07T12:00:00.000Z'));
+  assert.strictEqual(pace.partial, true);
+  assert.strictEqual(pace.day, 7);
+  assert.strictEqual(pace.days, 30);
+  assert.strictEqual(pace.compare.from, '2026-08-01');
+  assert.strictEqual(pace.compare.to, '2026-08-07');
+  assert.ok(/not the whole previous month/i.test(pace.note));
+});
+
+check('the last day of a month is a full comparison', () => {
+  const range = { key: 'month', from: '2026-09-01', to: '2026-09-30', label: 'September 2026' };
+  const pace = dash.collectionPace(range, new Date('2026-09-30T02:00:00.000Z'));
+  assert.strictEqual(pace.partial, false);
+  assert.strictEqual(pace.compare, null);
+});
+
+check('an open year is compared with the same dates last year', () => {
+  const range = { key: 'year', from: '2026-01-01', to: '2026-12-31', label: '2026' };
+  const pace = dash.collectionPace(range, new Date('2026-09-07T12:00:00.000Z'));
+  assert.strictEqual(pace.partial, true);
+  assert.strictEqual(pace.compare.from, '2025-01-01');
+  assert.strictEqual(pace.compare.to, '2025-09-07');
+  assert.ok(/not the whole year/i.test(pace.note));
+});
+
+check('all time has no pace window', () => {
+  const pace = dash.collectionPace(dash.periodRange('all', NOW), NOW);
+  assert.strictEqual(pace.partial, false);
+});
+
+// ── payment method labels ────────────────────────────────────────────────────
+check('payment methods share one written form, and unknown keys are not shouted', () => {
+  assert.strictEqual(dash.paymentMethodLabel('gateway'), 'Gateway');
+  assert.strictEqual(dash.paymentMethodLabel('GATEWAY'), 'Gateway');
+  assert.strictEqual(dash.paymentMethodLabel(''), 'Not recorded');
+  assert.strictEqual(dash.paymentMethodLabel(null), 'Not recorded');
+  assert.strictEqual(dash.paymentMethodLabel('unrecorded'), 'Not recorded');
+  assert.strictEqual(dash.paymentMethodLabel('gcash'), 'GCash');
+  assert.strictEqual(dash.paymentMethodLabel('qrph'), 'QR Ph');
+  assert.strictEqual(dash.paymentMethodLabel('bank_transfer'), 'Bank Transfer');
+  assert.strictEqual(
+    dash.paymentMethodLabel('gcash', [{ key: 'gcash', label: 'GCash wallet' }]),
+    'GCash wallet'
+  );
+});
+
+check('slot picture slices add up and overdue stays inside rented', () => {
+  const pic = dash.slotPicture([
+    { slotView: {
+      trophy: { enabled: true, status: 'rented', due: 'overdue' },
+      non_trophy: { enabled: true, status: 'open' },
+      ps4_primary: { enabled: false, status: 'open' }
+    } },
+    { slotView: {
+      trophy: { enabled: true, status: 'buyed' },
+      non_trophy: { enabled: true, status: 'maintenance' },
+      ps4_primary: { enabled: true, status: 'na' }
+    } }
+  ]);
+  assert.strictEqual(pic.total, 5);
+  assert.strictEqual(pic.rented, 1);
+  assert.strictEqual(pic.open, 1);
+  assert.strictEqual(pic.bought, 1);
+  assert.strictEqual(pic.withdrawn, 2);
+  assert.strictEqual(pic.overdue, 1);
+  assert.strictEqual(pic.rented + pic.open + pic.bought + pic.withdrawn, pic.total);
+  assert.strictEqual(pic.pct, 40);
+  assert.strictEqual(pic.byType[1].label, 'Trophy');
+  assert.strictEqual(pic.byType[1].rented, 1);
+  assert.strictEqual(pic.byType[1].total, 2);
+});
+
 console.log('\n' + passed + ' assertions passed');

@@ -153,7 +153,7 @@
         </div>
         <% } %>
         <% if (typeof unlinkedRentals !== 'undefined' && unlinkedRentals.length) { %>
-        <div class="rem-panel unlinked-panel">
+        <div class="rem-panel unlinked-panel" id="sec-unlinked">
           <div class="rem-title">⚠ Renting, but no account slot linked (<%= unlinkedRentals.length %>)</div>
           <div class="unlinked-note">
             The site still shows these slots as free, so someone else can rent the same one.
@@ -172,7 +172,7 @@
         </div>
         <% } %>
         <% if (needsReminder.length) { %>
-        <div class="rem-panel">
+        <div class="rem-panel" id="sec-reminders">
           <div class="rem-title">🔔 Needs a reminder (<%= needsReminder.length %>)</div>
           <% needsReminder.forEach(r => { %>
           <div class="rem-row">

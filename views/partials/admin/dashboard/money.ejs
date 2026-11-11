@@ -1,4 +1,6 @@
-  <div class="dash-pane" id="dsub-money">
+  <div class="dash-pane<%= (typeof dashSub !== 'undefined' && dashSub === 'money') ? ' active' : '' %>" id="dsub-money">
+
+    <p class="dash-scope">These cards and Payment methods follow Summary period (<%= dashPeriod.label %>). Chart year, further down, only changes the monthly bars.</p>
 
     <div class="row-4">
       <div class="dm-tile">
@@ -28,7 +30,7 @@
     <%# Where the money actually arrived. Only paid orders count — an abandoned
         one names a method nobody paid with. %>
     <div class="dash-section" style="margin-top:0.85rem;">
-      <div class="dash-section-head"><span class="dash-section-title">💳 How they paid</span><span style="font-size:0.7rem;color:#444;"><%= dashPeriod.label %></span></div>
+      <div class="dash-section-head"><span class="dash-section-title">💳 Payment methods</span><span class="dash-period-tag"><%= dashPeriod.label %></span></div>
       <% if (!dashMetrics.paymentMix.length) { %>
         <div class="dm-empty">No paid orders in this period yet.</div>
       <% } else { %>
@@ -62,10 +64,11 @@
     <div class="dash-section">
       <div class="dash-section-head">
         <span class="dash-section-title">📈 Collected per month</span>
-        <div style="display:flex;align-items:center;gap:0.6rem;">
-          <select id="dashYearSelect" onchange="renderDashboard()" style="background:#111;border:1px solid #2a2a2a;border-radius:8px;color:#fff;padding:0.35rem 0.6rem;font-size:0.78rem;"></select>
-        </div>
+        <label class="dash-year">Chart year
+          <select id="dashYearSelect" onchange="renderDashboard()" aria-label="Chart year"></select>
+        </label>
       </div>
+      <p class="dash-year-note">Only this monthly chart. Summary period does not change these bars.</p>
 
       <%# Net Profit and Total Game Costs are gone: they subtracted every game
           ever bought from one period's revenue, which is two different clocks
@@ -74,19 +77,19 @@
           rate on the Customers pane is the version worth acting on. %>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.65rem;margin-bottom:0.65rem;">
         <div style="background:#0a1a0a;border:1px solid #1a3a1a;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
+          <div style="font-size:12px;color:#b5b5b5;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Total Earned</div>
           <div style="font-size:1.55rem;font-weight:900;color:#22c55e;line-height:1.1;" id="dashTotalEarned">₱0</div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashTransactions">0 transactions</div>
+          <div style="font-size:12px;color:#c8c8c8;margin-top:0.2rem;" id="dashTransactions">0 transactions</div>
         </div>
         <div style="background:#0a0f1a;border:1px solid #1a2a3a;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Revenue</div>
+          <div style="font-size:12px;color:#b5b5b5;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Rental Revenue</div>
           <div style="font-size:1.55rem;font-weight:900;color:#a78bfa;line-height:1.1;" id="dashRentRevenue">₱0</div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashRentSub">0 rentals · 0% of total</div>
+          <div style="font-size:12px;color:#c8c8c8;margin-top:0.2rem;" id="dashRentSub">0 rentals · 0% of total</div>
         </div>
         <div style="background:#0f0a1a;border:1px solid #2a1a3a;border-radius:12px;padding:0.9rem 1rem;">
-          <div style="font-size:0.65rem;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
+          <div style="font-size:12px;color:#b5b5b5;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.3rem;">Game Sales</div>
           <div style="font-size:1.55rem;font-weight:900;color:#60a5fa;line-height:1.1;" id="dashBuyRevenue">₱0</div>
-          <div style="font-size:0.65rem;color:#444;margin-top:0.2rem;" id="dashBuySub">0 games sold · 0% of total</div>
+          <div style="font-size:12px;color:#c8c8c8;margin-top:0.2rem;" id="dashBuySub">0 games sold · 0% of total</div>
         </div>
       </div>
 
@@ -95,13 +98,13 @@
 
         <!-- Monthly Bar Chart -->
         <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Monthly Revenue — <span id="dashChartYearLabel"></span> <span style="color:#333;font-weight:500;">(click a month for details)</span></div>
-          <div style="display:flex;align-items:flex-end;gap:0.4rem;height:122px;" id="dashBarChart"></div>
+          <div style="font-size:13px;font-weight:700;color:#d0d0d0;margin-bottom:0.85rem;">Monthly revenue, <span id="dashChartYearLabel"></span> <span style="color:#b5b5b5;font-weight:600;">(click a month for details)</span></div>
+          <div class="dash-bars" id="dashBarChart"></div>
         </div>
 
         <!-- Top Games -->
         <div style="background:#0d0d0d;border:1px solid #1e1e1e;border-radius:12px;padding:1rem;">
-          <div style="font-size:0.7rem;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.85rem;">Most Rented / Sold Games</div>
+          <div style="font-size:13px;font-weight:700;color:#d0d0d0;margin-bottom:0.85rem;">Most rented / sold games</div>
           <div id="dashTopGames"></div>
         </div>
 
@@ -346,18 +349,18 @@
           const isPeak = revs[i] === maxRev && maxRev > 0;
           const isSelected = dashSelectedMonth && dashSelectedMonth.year === year && dashSelectedMonth.month === i;
           const barColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#2a2a2a';
-          const valColor = isSelected ? '#F0A500' : isPeak ? '#3b82f6' : isCurrent ? '#22c55e' : '#555';
+          const valColor = isSelected ? '#F5B800' : isPeak ? '#8fc3ff' : isCurrent ? '#6fe39a' : '#d0d0d0';
           const valStr = revs[i] >= 1000 ? (revs[i]/1000).toFixed(1) + 'k' : revs[i];
-          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.2rem;height:100%;">' +
-            '<div style="flex:1;display:flex;align-items:flex-end;width:100%;">' +
-            '<div onclick="selectDashMonth(' + year + ',' + i + ')" ' +
+          return '<div class="dash-bar">' +
+            '<div class="dash-bar-plot">' +
+            '<div class="dash-bar-fill" onclick="selectDashMonth(' + year + ',' + i + ')" ' +
             'onmouseenter="showDashTip(event,\'' + lbl + ' ' + year + ': ₱' + revs[i].toLocaleString() + ' · ' + renters[i] + ' renter' + (renters[i]!==1?'s':'') + '\')" ' +
             'onmouseleave="hideDashTip()" onmousemove="moveDashTip(event)" ' +
-            'style="width:100%;height:' + pct + '%;background:' + barColor + ';border-radius:4px 4px 0 0;min-height:3px;cursor:pointer;transition:opacity 0.15s;' + (isSelected ? 'box-shadow:0 0 0 2px #F0A500;' : '') + '"></div></div>' +
-            '<div style="font-size:0.58rem;color:#444;white-space:nowrap;">' + lbl + '</div>' +
-            (revs[i] > 0 ? '<div style="font-size:0.58rem;font-weight:700;color:' + valColor + ';">₱' + valStr + '</div>' : '<div style="font-size:0.58rem;">&nbsp;</div>') +
-            (renters[i] > 0 ? '<div style="font-size:0.52rem;color:#555;">👤' + renters[i] + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
-            ((MONTH_LOGS[monthKeyFor(year, i)] && MONTH_LOGS[monthKeyFor(year, i)].ad_count > 0) ? '<div style="font-size:0.52rem;color:#F0A500;">📣' + MONTH_LOGS[monthKeyFor(year, i)].ad_count + '</div>' : '<div style="font-size:0.52rem;">&nbsp;</div>') +
+            'style="height:' + pct + '%;background:' + barColor + ';' + (isSelected ? 'box-shadow:0 0 0 2px #F0A500;' : '') + '"></div></div>' +
+            '<div class="dash-bar-lbl">' + lbl + '</div>' +
+            (revs[i] > 0 ? '<div class="dash-bar-val" style="color:' + valColor + ';">₱' + valStr + '</div>' : '<div class="dash-bar-val">&nbsp;</div>') +
+            (renters[i] > 0 ? '<div class="dash-bar-sub">👤' + renters[i] + '</div>' : '<div class="dash-bar-sub">&nbsp;</div>') +
+            ((MONTH_LOGS[monthKeyFor(year, i)] && MONTH_LOGS[monthKeyFor(year, i)].ad_count > 0) ? '<div class="dash-bar-sub" style="color:#F5B800;">📣' + MONTH_LOGS[monthKeyFor(year, i)].ad_count + '</div>' : '<div class="dash-bar-sub">&nbsp;</div>') +
             '</div>';
         }).join('');
       }
