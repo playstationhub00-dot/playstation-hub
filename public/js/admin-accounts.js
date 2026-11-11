@@ -226,6 +226,16 @@
     syncControls();
     apply();
 
+    window.accFocus = function (status, type) {
+      if (status && STATUS_VALUES.indexOf(status) !== -1) state.status = status;
+      if (type && TYPE_VALUES.indexOf(type) !== -1) state.type = type;
+      state.view = 'slots';
+      syncControls();
+      apply();
+      var panel = document.getElementById('tab-accounts');
+      if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
     return function handleClick(target, e) {
       var viewBtn = target.closest('[data-acc-view]');
       if (viewBtn) {

@@ -6205,6 +6205,12 @@ app.get('/admin', requireAuth, async (req, res) => {
   const reservationCustomersNow = customers.filter(c => c.status === 'reservation');
   const dashNowDate = new Date();
   const dashPeriod = dashboard.periodRange(req.query.dperiod, dashNowDate);
+  const DASH_SUBS = ['overview', 'money', 'games', 'site'];
+  const DASH_LEGACY_SUB = { now: 'overview', customers: 'overview' };
+  let dashSub = DASH_LEGACY_SUB[req.query.sub] || req.query.sub || 'overview';
+  if (!DASH_SUBS.includes(dashSub)) dashSub = 'overview';
+  // A month-log save comes back with ?month=YYYY-MM and must reopen Money.
+  if (req.query.month) dashSub = 'money';
   const rentalsStarted = customers.filter(c =>
     c && c.status !== 'bought' && dashboard.inPeriod(c.start_date || c.created_at, dashPeriod)
   ).length;
@@ -6223,29 +6229,47 @@ app.get('/admin', requireAuth, async (req, res) => {
   });
   const fullyBooked = [...bookedGameIds].filter(id => !freeGameIds.has(id)).length;
 
-  const PAY_LABELS = { gcash: 'GCash', maya: 'Maya', paypal: 'PayPal', qrph: 'QRPh (auto)', card: 'Card', unrecorded: 'Not recorded' };
+  const payMethods = (getSiteSettings().payment_methods) || [];
   // The equivalent window before this one, for the trend arrows. Null for
-  // "all time" — nothing to compare against.
+  // "all time": nothing to compare against. An open month or year is compared
+  // with the same stretch of the previous window, not the whole of it, so a
+  // few days in does not read as a collapse.
   const dashPriorPeriod = dashboard.priorPeriodRange(dashPeriod);
+  const collectedPace = dashboard.collectionPace(dashPeriod, dashNowDate);
+  const compareRange = (collectedPace.partial && collectedPace.compare) ? collectedPace.compare : dashPriorPeriod;
   const collectedNow = dashboard.collected(customers, dashPeriod);
-  const collectedPrior = dashPriorPeriod ? dashboard.collected(customers, dashPriorPeriod) : null;
+  const collectedPrior = compareRange ? dashboard.collected(customers, compareRange) : null;
+  const collectedFullPrior = (collectedPace.partial && dashPriorPeriod)
+    ? dashboard.collected(customers, dashPriorPeriod) : null;
   const dashMetrics = {
+    greeting: dashboard.manilaGreeting(dashNowDate),
     collected: collectedNow,
     collectedTrend: collectedPrior ? dashboard.trend(collectedNow.total, collectedPrior.total) : null,
+    collectedPace: collectedPace.partial ? {
+      partial: true,
+      day: collectedPace.day,
+      days: collectedPace.days,
+      note: collectedPace.note,
+      compareLabel: collectedPace.compare ? collectedPace.compare.label : '',
+      compareTotal: collectedPrior ? collectedPrior.total : 0,
+      fullPriorTotal: collectedFullPrior ? collectedFullPrior.total : null,
+      fullPriorLabel: dashPriorPeriod ? dashPriorPeriod.label : ''
+    } : null,
     split: dashboard.rentalVsSales(customers, dashPeriod),
     deposits: dashboard.depositsHeld(allOrders),
     ads: dashboard.adCost(monthLogs, dashPeriod, rentalsStarted),
     paymentMix: dashboard.paymentMix(allOrders, dashPeriod),
-    methodLabel: m => PAY_LABELS[m] || String(m || '').toUpperCase(),
+    methodLabel: m => dashboard.paymentMethodLabel(m, payMethods),
+    slotsPicture: dashboard.slotPicture(accountsView.accounts),
     slots: dashboard.slotUtilisation(accountsView.accounts),
     accountsSlotUse: dashboard.accountsSlotUse(accountsView.accounts),
     payback: dashboard.gamePayback(games, customers),
-    topRented: dashboard.topRented(customers, dashPeriod, 5),
+    topRented: dashboard.topRented(customers, dashPeriod, 12),
     recentActivity: dashboard.recentActivity(allOrders, 4),
     fullyBooked,
     topRequest: openRequests[0] || null,
     repeat: dashboard.repeatRate(customers),
-    topSpenders: dashboard.topSpenders(customers, dashPeriod, 5),
+    topSpenders: dashboard.topSpenders(customers, dashPeriod, 24),
     dormant: dashboard.dormant(customers, 60, dashNowDate),
     reviews: dashboard.reviewStats(reviews),
     // Drives the count on the "Now" pill, so the badge and the cards below it
@@ -6399,6 +6423,16 @@ app.get('/admin', requireAuth, async (req, res) => {
     rentMismatches, paymongoHealth, supportHandoffs, now: dashNowDate,
     newSlotOrders: notifications.pendingNewSlots(allOrders)
   });
+  // The bell lists every queue row plus deposits, reviews, support and record
+  // checks. The dashboard "needs you" number is only the rental queue, so the
+  // two counts differ on purpose and the overview says why.
+  const BELL_QUEUE = new Set(['qr_pending', 'verifying_payment', 'verifying_return', 'expiry_overdue', 'expiry_today', 'expiry_tomorrow', 'no_slot']);
+  const bellQueue = notifs.items.filter(i => i && BELL_QUEUE.has(i.kind)).length;
+  dashMetrics.bell = {
+    total: notifs.count,
+    queue: bellQueue,
+    other: Math.max(0, notifs.count - bellQueue)
+  };
 
   // Paid reservations per Coming Soon game, for the "N reserved" line and the
   // release confirm prompt. Read from the customer records a confirmed
@@ -6487,7 +6521,7 @@ app.get('/admin', requireAuth, async (req, res) => {
     accounts: getAccounts(),
     slotHistory: db.get('slot_history').value() || []
   });
-  res.render('admin', { todayView, returnsView, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
+  res.render('admin', { todayView, returnsView, dashSub, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
     // Behind requireAuth, so the detail is only ever shown to the owner.
     // It is deliberately the real message and stack: a generic "something

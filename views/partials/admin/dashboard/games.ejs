@@ -1,0 +1,185 @@
+  <div class="dash-pane<%= (typeof dashSub !== 'undefined' && dashSub === 'games') ? ' active' : '' %>" id="dsub-games">
+    <%
+      const pic = dashMetrics.slotsPicture || { total: 0, rented: 0, open: 0, bought: 0, withdrawn: 0, overdue: 0, pct: 0, byType: [] };
+      const gv = (typeof gamesView !== 'undefined' && gamesView) ? gamesView : { rows: [], upcoming: [], requests: { total: 0 }, counts: { all: 0 } };
+      const peso = n => '₱' + (Number(n) || 0).toLocaleString();
+      const byRev = (gv.rows || []).slice().sort((a, b) => (b.money.earned - a.money.earned) || String(a.title).localeCompare(String(b.title))).filter(r => r.money.earned > 0).slice(0, 8);
+      const byRent = dashMetrics.topRented || [];
+      const low = (gv.rows || []).filter(r => r.slots && r.slots.total <= 1)
+        .sort((a, b) => a.slots.total - b.slots.total || (b.rental.waiting - a.rental.waiting) || String(a.title).localeCompare(String(b.title)));
+      const lowShown = low.slice(0, 8);
+      const lowRest = low.slice(8);
+      const openReqs = (typeof gameRequestRows !== 'undefined' ? gameRequestRows : [])
+        .filter(r => r && r.status !== 'stocked' && r.status !== 'rejected')
+        .map(r => ({ title: r.title, votes: (r.voters || []).length }))
+        .sort((a, b) => b.votes - a.votes || String(a.title).localeCompare(String(b.title)));
+      const soon = (gv.upcoming || []).slice().sort((a, b) => b.reserved - a.reserved || String(a.title).localeCompare(String(b.title)));
+      const reserveTotal = soon.reduce((s, u) => s + (u.reserved || 0), 0);
+      const acctCount = (accountsView && accountsView.accounts) ? accountsView.accounts.length : 0;
+      const circ = 2 * Math.PI * 54;
+      let arcOff = 0;
+      const segs = [
+        { n: pic.rented, color: '#F5B800' },
+        { n: pic.open, color: '#3ccf6e' },
+        { n: pic.bought, color: '#8fc3ff' },
+        { n: pic.withdrawn, color: '#ff8a8a' }
+      ];
+      const behind = (dashMetrics.payback.rows || []).filter(r => r.multiple < 1).slice(0, 5);
+    %>
+
+    <p class="dash-scope">Slot counts are live. By rentals follows Summary period (<%= dashPeriod.label %>). Revenue is lifetime.</p>
+
+    <div class="gs-grid">
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">🗝️ Slot use</span>
+          <button class="dash-section-link" onclick="dashOpen({tab:'accounts'})">Accounts →</button>
+        </div>
+        <div class="gs-donut">
+          <svg width="148" height="148" viewBox="0 0 148 148" aria-hidden="true">
+            <circle cx="74" cy="74" r="54" fill="none" stroke="#262626" stroke-width="16"/>
+            <% segs.forEach(function (s) {
+              if (!pic.total || !s.n) return;
+              const len = circ * (s.n / pic.total);
+            %>
+            <circle cx="74" cy="74" r="54" fill="none" stroke="<%= s.color %>" stroke-width="16"
+              stroke-dasharray="<%= len.toFixed(2) %> <%= (circ - len).toFixed(2) %>"
+              stroke-dashoffset="<%= (-arcOff).toFixed(2) %>" transform="rotate(-90 74 74)"/>
+            <% arcOff += len; }); %>
+            <text x="74" y="70" text-anchor="middle" fill="#fff" font-size="22" font-weight="800"><%= pic.pct %>%</text>
+            <text x="74" y="88" text-anchor="middle" fill="#b5b5b5" font-size="11">in use · <%= pic.rented + pic.bought %>/<%= pic.total %></text>
+          </svg>
+          <div class="gs-legend">
+            <button type="button" class="dm-row dash-hit" onclick="dashOpen({tab:'accounts', accStatus:'rented'})"><span class="dm-row-n"><i class="gs-swatch" style="background:#F5B800"></i> Rented</span><span class="dm-row-v"><%= pic.rented %></span></button>
+            <button type="button" class="dm-row dash-hit" onclick="dashOpen({tab:'accounts', accStatus:'open'})"><span class="dm-row-n"><i class="gs-swatch" style="background:#3ccf6e"></i> Open</span><span class="dm-row-v"><%= pic.open %></span></button>
+            <button type="button" class="dm-row dash-hit" onclick="dashOpen({tab:'accounts', accStatus:'buyed'})"><span class="dm-row-n"><i class="gs-swatch" style="background:#8fc3ff"></i> Bought</span><span class="dm-row-v"><%= pic.bought %></span></button>
+            <div class="dm-row"><span class="dm-row-n"><i class="gs-swatch" style="background:#ff8a8a"></i> Withdrawn</span><span class="dm-row-v"><%= pic.withdrawn %></span></div>
+          </div>
+        </div>
+        <div class="dm-note">Withdrawn is maintenance or not available. Overdue: <%= pic.overdue %> of the rented slots. Reserved is not a slot state stored yet, so it is not a slice.</div>
+        <div class="gs-sub">Rented by account type</div>
+        <% pic.byType.forEach(function (row) {
+          const width = row.total ? Math.round((row.rented / row.total) * 100) : 0;
+        %>
+        <div class="dm-row"><span class="dm-row-n"><%= row.label %></span><span class="dm-row-v"><%= row.rented %> / <%= row.total %></span></div>
+        <div class="dm-bar"><i style="width:<%= width %>%"></i></div>
+        <% }) %>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">🏆 Top games</span>
+          <button class="dash-section-link" onclick="dashOpen({tab:'games', nav:'games', gamesSub:'all'})">All games →</button>
+        </div>
+        <div class="gs-toggle" id="gsTopToggle">
+          <button type="button" class="on" data-gs-top="rev">By revenue</button>
+          <button type="button" data-gs-top="rent">By rentals</button>
+        </div>
+        <div id="gsTopRev">
+          <% if (!byRev.length) { %><div class="dm-empty">No game revenue yet.</div><% } %>
+          <% byRev.forEach((r, i) => { %>
+          <div class="dm-row"><span class="dm-row-n"><%= i + 1 %>. <%= r.title %></span><span class="dm-row-v g"><%= peso(r.money.earned) %></span></div>
+          <% }) %>
+        </div>
+        <div id="gsTopRent" hidden>
+          <div class="dm-note" style="margin-bottom:0.35rem;"><%= dashPeriod.label %></div>
+          <% if (!byRent.length) { %><div class="dm-empty">No rentals started in this period.</div><% } %>
+          <% byRent.forEach(([title, n], i) => { %>
+          <div class="dm-row"><span class="dm-row-n"><%= i + 1 %>. <%= title %></span><span class="dm-row-v b"><%= n %>×</span></div>
+          <% }) %>
+        </div>
+        <div class="gs-sub">Catalog</div>
+        <div class="gs-mini">
+          <div>Games<b><%= gv.counts ? gv.counts.all : (gv.rows || []).length %></b></div>
+          <div>Accounts<b><%= acctCount %></b></div>
+          <div>Slots<b><%= pic.total %></b></div>
+        </div>
+        <% if (behind.length || dashMetrics.payback.missingCost) { %>
+        <div class="gs-sub">Not earned back</div>
+        <% behind.forEach(r => { %>
+        <div class="dm-row"><span class="dm-row-n"><%= r.title %></span><span class="dm-row-v y"><%= r.multiple %>×</span></div>
+        <% }) %>
+        <% if (dashMetrics.payback.missingCost) { %>
+        <div class="dm-note"><%= dashMetrics.payback.missingCost %> games have no cost, so they are not scored.</div>
+        <% } %>
+        <% } %>
+      </div>
+
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <span class="dash-section-title">🚦 Low availability</span>
+          <button class="dash-section-link" onclick="dashOpen({tab:'games', nav:'games', gamesSub:'all', gamesChip:'soldout'})">Sold out →</button>
+        </div>
+        <% if (!lowShown.length) { %>
+          <div class="dm-empty">Every listed game has more than one free slot.</div>
+        <% } %>
+        <% lowShown.forEach(r => {
+          const lowDest = { tab: 'games', nav: 'games', gamesSub: 'all', gamesChip: r.slots.total === 0 ? 'soldout' : 'all', gamesQ: r.title };
+        %>
+        <button type="button" class="dm-row dash-hit" onclick="dashOpen(<%- JSON.stringify(lowDest).replace(/</g, '\\u003c') %>)">
+          <span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-wa' %>"><%= r.slots.total === 0 ? 'Full' : 'Last slot' %></span> <%= r.title %></span>
+          <span class="dm-row-v"><%= r.rental.waiting ? r.rental.waiting + ' waiting' : (r.slots.total === 0 ? '0 left' : '1 left') %></span>
+        </button>
+        <% }) %>
+        <% if (lowRest.length) { %>
+        <details class="dash-more">
+          <summary>Show <%= lowRest.length %> more</summary>
+          <% lowRest.forEach(r => { %>
+          <div class="dm-row"><span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-wa' %>"><%= r.slots.total === 0 ? 'Full' : 'Last slot' %></span> <%= r.title %></span><span class="dm-row-v"><%= r.slots.total === 0 ? '0 left' : '1 left' %></span></div>
+          <% }) %>
+        </details>
+        <% } %>
+        <div class="dm-note">Waiting counts come from orders already in the queue. A separate waitlist feature is not stored yet.</div>
+      </div>
+    </div>
+
+    <div class="dash-section" style="margin-top:0.7rem;">
+      <div class="dash-section-head">
+        <span class="dash-section-title">🙋 Most-wanted upcoming</span>
+        <button class="dash-section-link" onclick="dashOpen({tab:'games', nav:'requests', gamesSub:'requests'})">Requests →</button>
+      </div>
+      <div class="gs-mini">
+        <div>Coming soon<b><%= soon.length %></b></div>
+        <div>Requests<b><%= openReqs.length %></b></div>
+        <div>Reserves<b><%= reserveTotal %></b></div>
+      </div>
+      <div class="gs-split">
+        <div>
+          <% if (!soon.length) { %><div class="dm-empty">No upcoming games.</div><% } %>
+          <% soon.slice(0, 6).forEach(u => { %>
+          <button type="button" class="dm-row dash-hit" onclick="dashOpen({tab:'games', nav:'games', gamesSub:'soon'})">
+            <span class="dm-row-n"><%= u.title %></span>
+            <span class="dm-row-v"><%= u.reserved %> reserve<%= u.reserved === 1 ? '' : 's' %></span>
+          </button>
+          <% }) %>
+        </div>
+        <div>
+          <% if (!openReqs.length) { %><div class="dm-empty">No open requests.</div><% } %>
+          <% openReqs.slice(0, 6).forEach(r => { %>
+          <button type="button" class="dm-row dash-hit" onclick="dashOpen({tab:'games', nav:'requests', gamesSub:'requests'})">
+            <span class="dm-row-n"><%= r.title %></span>
+            <span class="dm-row-v"><%= r.votes %> vote<%= r.votes === 1 ? '' : 's' %></span>
+          </button>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var root = document.getElementById('gsTopToggle');
+    if (!root) return;
+    root.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-gs-top]') : null;
+      if (!b || !root.contains(b)) return;
+      var key = b.getAttribute('data-gs-top');
+      Array.prototype.forEach.call(root.querySelectorAll('[data-gs-top]'), function (el) {
+        el.classList.toggle('on', el === b);
+      });
+      var rev = document.getElementById('gsTopRev');
+      var rent = document.getElementById('gsTopRent');
+      if (rev) rev.hidden = key !== 'rev';
+      if (rent) rent.hidden = key !== 'rent';
+    });
+  })();
+  </script>

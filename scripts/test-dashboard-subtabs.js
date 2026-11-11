@@ -127,4 +127,73 @@ ok('the restored sub-tab still applies its own pane, even though the URL is unto
   assert.strictEqual(overviewPane.classList.contains('active'), false);
 });
 
+ok('games is a real sub-tab and loading it does not rewrite the URL', () => {
+  const f = loadScript('?tab=dashboard&sub=games');
+  assert.deepStrictEqual(f.replacedUrls, []);
+  assert.strictEqual(f.win.document.getElementById('dsub-games').classList.contains('active'), true);
+  assert.strictEqual(f.win.document.getElementById('dsub-overview').classList.contains('active'), false);
+});
+
+ok('a games pill click writes sub=games and leaves the other dashboard URLs alone', () => {
+  const f = loadScript('?tab=dashboard');
+  f.win.switchDash('games');
+  assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard&sub=games');
+  f.win.switchDash('site');
+  assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard&sub=site');
+  f.win.switchDash('overview');
+  assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard');
+});
+
+ok('legacy sub=now still opens overview', () => {
+  const f = loadScript('?tab=dashboard&sub=now');
+  assert.strictEqual(f.win.document.getElementById('dsub-overview').classList.contains('active'), true);
+  assert.strictEqual(f.win.document.getElementById('dsub-games').classList.contains('active'), false);
+});
+
+const overview = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'admin', 'dashboard', 'overview.ejs'), 'utf8');
+const money = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'admin', 'dashboard', 'money.ejs'), 'utf8');
+const games = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'admin', 'dashboard', 'games.ejs'), 'utf8');
+const ordersJs = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'admin-orders.js'), 'utf8');
+const gamesJs = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'admin-games.js'), 'utf8');
+const accountsJs = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'admin-accounts.js'), 'utf8');
+
+ok('overview explains the bell, links to filtered views, and can show more rows', () => {
+  assert.ok(src.includes('id="dashLoading"'), 'loading state');
+  assert.ok(src.includes('Summary period'));
+  assert.ok(src.includes('Games &amp; slots') || src.includes('Games & slots'));
+  assert.ok(overview.includes('dashMetrics.greeting'));
+  assert.ok(overview.includes('The bell shows'));
+  assert.ok(overview.includes("chip: 'signin'"));
+  assert.ok(overview.includes("chip: 'review'"));
+  assert.ok(overview.includes("chip: 'verify'"));
+  assert.ok(overview.includes("chip:'out'"));
+  assert.ok(overview.includes('sec-reminders'));
+  assert.ok(overview.includes('sec-unlinked'));
+  assert.ok(overview.includes("gamesChip:'soldout'"));
+  assert.ok(overview.includes('class="dash-more"'));
+  assert.ok(overview.includes('>Money →') || overview.includes('Money →'));
+  assert.ok(!overview.includes('Money report'));
+  assert.ok(overview.includes('Reminded'));
+  assert.ok(overview.includes('dashMetrics.reminders'));
+});
+
+ok('money names the chart year separately from the summary period', () => {
+  assert.ok(money.includes('Chart year'));
+  assert.ok(money.includes('dash-year-note'));
+  assert.ok(money.includes('dash-bar-lbl'));
+  assert.ok(money.includes('Payment methods'));
+  assert.ok(!money.includes('>GATEWAY<'));
+});
+
+ok('games and slots collects stock, slots and accounts, and the focus helpers exist', () => {
+  assert.ok(games.includes('id="dsub-games"'));
+  assert.ok(games.includes('Slot use'));
+  assert.ok(games.includes('Low availability'));
+  assert.ok(games.includes('Most-wanted upcoming'));
+  assert.ok(games.includes('slotsPicture') || games.includes('pic.byType'));
+  assert.ok(ordersJs.includes('window.oqFocus'));
+  assert.ok(gamesJs.includes('window.gmSetChip'));
+  assert.ok(accountsJs.includes('window.accFocus'));
+});
+
 console.log('\n' + passed + ' assertions passed\n');

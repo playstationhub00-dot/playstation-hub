@@ -1,42 +1,91 @@
-  <div class="tab-panel" id="tab-dashboard">
+  <div class="tab-panel" id="tab-dashboard" data-dsub="<%= typeof dashSub === 'undefined' ? 'overview' : dashSub %>">
 
-    <%# One overview, plus the two tools that carry drill-downs of their own.
-        Now / Games / Customers were three thin panes with nothing to drill
-        into — they belong together on one glanceable page. Money (a chart with
-        a month drill-down) and Site (a funnel and a visit log) stay separate,
-        because squeezing them onto the overview is what made one long page
-        unbearable. %>
+    <%# Overview is the summary. Money keeps the chart and the month drill-down.
+        Games & slots is the stock and account picture. Site is unchanged. %>
+    <div id="dashLoading" class="dash-loading" role="status" aria-live="polite">
+      <div class="dash-loading-t">Loading the dashboard</div>
+      <div class="dash-skel-row">
+        <div class="dash-skel"></div><div class="dash-skel"></div><div class="dash-skel"></div><div class="dash-skel"></div>
+      </div>
+    </div>
     <div class="dsub-bar">
-      <div class="dsub-pills">
-        <button class="dsub-pill" data-dsub="overview" onclick="switchDash('overview')">📊 Overview<% if (dashMetrics.needsNowTotal) { %> <span class="dsub-n"><%= dashMetrics.needsNowTotal %></span><% } %></button>
-        <button class="dsub-pill" data-dsub="money" onclick="switchDash('money')">💰 Money</button>
-        <button class="dsub-pill" data-dsub="site" onclick="switchDash('site')">🌐 Site</button>
+      <div class="dsub-pills" role="tablist">
+        <button type="button" class="dsub-pill" data-dsub="overview" onclick="switchDash('overview')">Overview<% if (dashMetrics.needsNowTotal) { %> <span class="dsub-n"><%= dashMetrics.needsNowTotal %></span><% } %></button>
+        <button type="button" class="dsub-pill" data-dsub="money" onclick="switchDash('money')">Money</button>
+        <button type="button" class="dsub-pill" data-dsub="games" onclick="switchDash('games')"><span class="dsub-long">Games &amp; slots</span><span class="dsub-short">Games</span></button>
+        <button type="button" class="dsub-pill" data-dsub="site" onclick="switchDash('site')">Site</button>
       </div>
       <form method="GET" action="/admin" class="dsub-period" id="dsubPeriodForm">
         <input type="hidden" name="tab" value="dashboard">
-        <input type="hidden" name="sub" id="dsubPeriodSub" value="overview">
-        <select name="dperiod" onchange="this.form.submit()" title="Period for the overview and the money report">
-          <option value="month" <%= dashPeriod.key === 'month' ? 'selected' : '' %>>This month</option>
-          <option value="3m" <%= dashPeriod.key === '3m' ? 'selected' : '' %>>Last 3 months</option>
-          <option value="year" <%= dashPeriod.key === 'year' ? 'selected' : '' %>>This year</option>
-          <option value="all" <%= dashPeriod.key === 'all' ? 'selected' : '' %>>All time</option>
-        </select>
+        <input type="hidden" name="sub" id="dsubPeriodSub" value="<%= (typeof dashSub === 'undefined' || dashSub === 'overview') ? 'overview' : dashSub %>">
+        <span class="dsub-period-k">Summary period</span>
+        <div class="dsub-rng" role="group" aria-label="Summary period">
+          <% [['month','This month'],['3m','3 months'],['year','This year'],['all','All time']].forEach(([key, label]) => { %>
+          <button type="submit" name="dperiod" value="<%= key %>" class="<%= dashPeriod.key === key ? 'on' : '' %>"><%= label %></button>
+          <% }) %>
+        </div>
+        <span class="dsub-period-site">Does not change Site.</span>
       </form>
     </div>
 
     <%- include('dashboard/overview') %>
     <%- include('dashboard/money') %>
+    <%- include('dashboard/games') %>
     <%- include('dashboard/site') %>
 
     <style>
-      .dsub-bar { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; margin-bottom:1rem; padding-bottom:0.85rem; border-bottom:1px solid #191919; }
-      .dsub-pills { display:flex; gap:0.35rem; flex-wrap:wrap; }
-      .dsub-pill { display:flex; align-items:center; gap:0.4rem; background:#111; border:1px solid #222; border-radius:20px; padding:0.4rem 0.9rem; font-size:0.8rem; font-weight:700; color:#9a9a9a; cursor:pointer; }
-      .dsub-pill:hover { color:#fff; border-color:#333; }
-      .dsub-pill.active { background:var(--ps-blue); border-color:var(--ps-blue); color:#000; }
-      .dsub-n { background:rgba(0,0,0,0.28); border-radius:20px; padding:0 0.4rem; font-size:0.7rem; }
-      .dsub-pill:not(.active) .dsub-n { background:#ef4444; color:#fff; }
-      .dsub-period select { background:#111; border:1px solid #2a2a2a; border-radius:8px; color:#fff; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; }
+      .dash-loading { margin-bottom:14px; }
+      .dash-loading-t { font-size:13px; font-weight:700; color:#d0d0d0; margin-bottom:8px; }
+      .dash-skel-row { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+      .dash-skel { height:84px; border-radius:14px; background:linear-gradient(90deg,#171717 25%,#2a2a2a 50%,#171717 75%); background-size:200% 100%; animation:dashShimmer 1.1s linear infinite; }
+      @keyframes dashShimmer { from { background-position:100% 0; } to { background-position:-100% 0; } }
+      .dsub-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+      .dsub-pills { display:flex; gap:4px; background:#141414; border:1px solid #2a2a2a; border-radius:12px; padding:4px; width:fit-content; max-width:100%; }
+      .dsub-pill { display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; border:0; border-radius:9px; padding:8px 16px; font-size:14px; font-weight:700; color:#aaa; cursor:pointer; white-space:nowrap; }
+      .dsub-pill:hover { color:#fff; }
+      .dsub-pill.active { background:#F5B800; color:#0a0a0a; }
+      .dsub-n { background:rgba(0,0,0,0.18); border-radius:999px; padding:0 7px; font-size:11px; }
+      .dsub-pill:not(.active) .dsub-n { background:#3a1212; color:#ff8a8a; }
+      .dsub-short { display:none; }
+      .dsub-period { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0; }
+      .dsub-period-k { font-size:12px; font-weight:700; color:#b5b5b5; }
+      .dsub-rng { display:flex; border:1px solid #333; border-radius:10px; overflow:hidden; }
+      .dsub-rng button { background:#141414; color:#ddd; border:0; border-right:1px solid #333; padding:7px 12px; font-weight:700; font-size:13px; cursor:pointer; }
+      .dsub-rng button:last-child { border-right:0; }
+      .dsub-rng button.on { background:#F5B800; color:#0a0a0a; }
+      .dsub-period-site { display:none; font-size:12px; color:#b5b5b5; }
+      #tab-dashboard[data-dsub="site"] .dsub-period-site { display:inline; }
+      .dash-scope { font-size:12.5px; color:#c8c8c8; margin:0 0 12px; }
+      .dash-hit { width:100%; background:transparent; border:0; color:inherit; font:inherit; text-align:left; cursor:pointer; }
+      .dash-hit:hover .dm-row-n { color:#fff; }
+      .dash-more { margin-top:6px; }
+      .dash-more > summary { cursor:pointer; font-size:12.5px; font-weight:700; color:#F5B800; }
+      .dash-period-tag { font-size:12px; color:#b5b5b5; }
+      .dm-row-v.hot { color:#ff8a8a; }
+      .ov-kpi { text-align:left; font:inherit; color:inherit; cursor:pointer; width:100%; }
+      .ov-kpi-note { font-size:12px; color:#c8c8c8; margin-top:6px; line-height:1.4; font-weight:600; }
+      .gs-grid { display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:12px; }
+      .gs-donut { display:flex; gap:14px; align-items:center; }
+      .gs-legend { flex:1; min-width:0; }
+      .gs-swatch { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+      .gs-sub { font-size:11.5px; text-transform:uppercase; letter-spacing:.8px; color:#b5b5b5; font-weight:700; margin:12px 0 6px; }
+      .gs-toggle { display:flex; gap:6px; margin-bottom:8px; }
+      .gs-toggle button { font-size:12px; font-weight:700; border-radius:999px; padding:3px 10px; border:1px solid #333; color:#ccc; background:transparent; cursor:pointer; }
+      .gs-toggle button.on { background:#F5B800; color:#0a0a0a; border-color:#F5B800; }
+      .gs-mini { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:8px; }
+      .gs-mini div { background:#121212; border:1px solid #262626; border-radius:10px; padding:8px 10px; font-size:12px; color:#b5b5b5; }
+      .gs-mini b { display:block; font-size:19px; color:#fff; }
+      .gs-split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+      .dash-year { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#d0d0d0; }
+      .dash-year select { background:#161616; border:1px solid #3a3a3a; border-radius:8px; color:#fff; padding:6px 8px; font-size:13px; font-weight:700; }
+      .dash-year-note { font-size:12.5px; color:#c8c8c8; margin:0 0 10px; }
+      .dash-bars { display:flex; align-items:flex-end; gap:6px; }
+      .dash-bar { flex:1; display:flex; flex-direction:column; align-items:center; min-width:0; }
+      .dash-bar-plot { height:140px; width:100%; display:flex; align-items:flex-end; }
+      .dash-bar-fill { width:100%; border-radius:4px 4px 0 0; min-height:3px; cursor:pointer; }
+      .dash-bar-lbl { font-size:12px; font-weight:700; color:#d0d0d0; margin-top:6px; }
+      .dash-bar-val { font-size:12px; font-weight:800; color:#d0d0d0; }
+      .dash-bar-sub { font-size:11px; color:#b5b5b5; }
       .dash-pane { display:none; }
       .dash-pane.active { display:block; }
 
@@ -120,11 +169,20 @@
 
       /* ══ LIGHT MODE ══  (none of the above had a single light rule — the
          cards rendered black-on-black the moment the toggle was flipped) */
-      body.light-mode .dsub-bar { border-bottom-color:#e6e9ec; }
-      body.light-mode .dsub-pill { background:#fff; border-color:#e0e4e8; color:#5b636c; }
-      body.light-mode .dsub-pill:hover { color:#14171a; border-color:#c9d0d7; }
-      body.light-mode .dsub-pill.active { background:var(--ps-blue); border-color:var(--ps-blue); color:#000; }
-      body.light-mode .dsub-period select { background:#fff; border-color:#e0e4e8; color:#14171a; }
+      body.light-mode .dsub-pills { background:#f4f5f7; border-color:#e0e4e8; }
+      body.light-mode .dsub-pill { color:#5b636c; }
+      body.light-mode .dsub-pill:hover { color:#14171a; }
+      body.light-mode .dsub-pill.active { background:#F5B800; color:#0a0a0a; }
+      body.light-mode .dsub-rng { border-color:#d5dbe1; }
+      body.light-mode .dsub-rng button { background:#fff; color:#3f464d; border-right-color:#e0e4e8; }
+      body.light-mode .dsub-rng button.on { background:#F5B800; color:#0a0a0a; }
+      body.light-mode .dsub-period-k, body.light-mode .dsub-period-site, body.light-mode .dash-scope, body.light-mode .ov-kpi-note, body.light-mode .dash-year-note { color:#4b5259; }
+      body.light-mode .gs-mini div { background:#f7f8fa; border-color:#e6e9ec; color:#5b636c; }
+      body.light-mode .gs-mini b { color:#14171a; }
+      body.light-mode .dash-year select { background:#fff; border-color:#d5dbe1; color:#14171a; }
+      body.light-mode .dash-bar-lbl, body.light-mode .dash-bar-val { color:#2b3138; }
+      body.light-mode .gs-donut text { fill:#14171a; }
+      body.light-mode .dash-skel { background:linear-gradient(90deg,#eee 25%,#f7f7f7 50%,#eee 75%); background-size:200% 100%; }
 
       body.light-mode .dm-tile { background:#fff; border-color:#e6e9ec; }
       body.light-mode .dm-tile.warn { background:#fff7e6; border-color:#f0dca8; }
@@ -176,21 +234,29 @@
 
       @media (max-width: 1000px) {
         .ov-kpis { grid-template-columns:repeat(2,1fr); }
-        .row-2, .row-3, .row-4 { grid-template-columns:repeat(2,1fr); }
+        .row-2, .row-3, .row-4, .gs-grid { grid-template-columns:1fr 1fr; }
+        .dash-skel-row { grid-template-columns:1fr 1fr; }
       }
-      @media (max-width: 640px) {
-        .row-3, .row-4 { grid-template-columns:1fr; }
+      @media (max-width: 720px) {
+        .dsub-pills { width:100%; }
+        .dsub-pill { flex:1; padding:8px 4px; font-size:12.5px; }
+        .dsub-long { display:none; }
+        .dsub-short { display:inline; }
+        .dsub-period, .dsub-rng { width:100%; }
+        .dsub-rng button { flex:1; padding:7px 6px; }
+        .gs-grid, .gs-split, .row-3, .row-4 { grid-template-columns:1fr; }
+        .gs-donut { flex-wrap:wrap; }
       }
     </style>
 
     <script>
-    // ── Dashboard sub-tabs ── (Overview / Money / Site)
+    // ── Dashboard sub-tabs ── (Overview / Money / Games & slots / Site)
     (function () {
       const DSUB_KEY = 'adminDashSub';
-      const SUBS = ['overview', 'money', 'site'];
-      // Old bookmarks pointed at now/games/customers — all three now live on the
-      // overview, so send them there rather than to a pane that no longer exists.
-      const LEGACY = { now: 'overview', games: 'overview', customers: 'overview' };
+      const SUBS = ['overview', 'money', 'games', 'site'];
+      // now and customers were thin panes folded into the overview. games is a
+      // real tab again (stock and slots), so old ?sub=games bookmarks land there.
+      const LEGACY = { now: 'overview', customers: 'overview' };
 
       // updateUrl defaults to true for every real switch (a pill click, a
       // card link). The one call that must NOT touch the URL is the initial
@@ -213,6 +279,8 @@
         try { localStorage.setItem(DSUB_KEY, name); } catch (e) {}
         const carry = document.getElementById('dsubPeriodSub');
         if (carry) carry.value = name;
+        const root = document.getElementById('tab-dashboard');
+        if (root && root.setAttribute) root.setAttribute('data-dsub', name);
         if (!updateUrl) return;
         const q = new URLSearchParams(window.location.search);
         q.set('tab', 'dashboard');
@@ -222,6 +290,22 @@
       };
       // Jump into the sibling sub-tabs from a card link on the overview.
       window.dashGoto = function (name) { switchDash(name); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+      // Open another admin tab on the filtered view a card is describing.
+      window.dashOpen = function (dest) {
+        dest = dest || {};
+        if (dest.dash) { switchDash(dest.dash); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+        if (typeof switchTab === 'function') switchTab(dest.tab, dest.nav || dest.tab);
+        setTimeout(function () {
+          if ((dest.chip || dest.group) && window.oqFocus) window.oqFocus({ chip: dest.chip, group: dest.group });
+          if (dest.gamesSub && window.gmActivateSubtab) window.gmActivateSubtab(dest.gamesSub);
+          if ((dest.gamesChip || dest.gamesQ) && window.gmSetChip) window.gmSetChip(dest.gamesChip, dest.gamesQ);
+          if (dest.accStatus && window.accFocus) window.accFocus(dest.accStatus, dest.accType);
+          if (dest.anchor) {
+            var el = document.getElementById(dest.anchor);
+            if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 60);
+      };
 
       const params = new URLSearchParams(window.location.search);
       let initial = params.get('sub');
@@ -229,6 +313,8 @@
       if (params.get('month')) initial = 'money';
       initial = LEGACY[initial] || initial;
       switchDash(SUBS.includes(initial) ? initial : 'overview', false);
+      var loading = document.getElementById('dashLoading');
+      if (loading) loading.hidden = true;
     })();
     </script>
 
