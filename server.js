@@ -7652,8 +7652,14 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const editSwap = !wasUpcoming && editGame && editGame.id !== existing.game_id
     ? { from: existing.game_title, to: editGame.title } : null;
   const editGameTitle = editGame ? editGame.title : existing.game_title;
-  if (!isActive) {
-    // No longer renting/bought → free whatever slot was linked
+  // A reservation holds a shop slot the same way a live rental does. Edit
+  // Customer's "Assign to Account Slot" is how a paid pre-order is put on a
+  // PSN account, and that field is what the Accounts list reads. Treating
+  // every other status as "they left" dropped the posted slot, so the
+  // account stayed Open.
+  const keepsSlot = isActive || status === 'reservation';
+  if (!keepsSlot) {
+    // Done, cancelled, refunded → free whatever slot was linked
     if (priorAssign) freeAccountSlotsForCustomer(customerId, { how: 'returned' });
   } else if (submittedAssign !== priorAssign) {
     // Assignment target changed (or game/type changed under it) → free old,
