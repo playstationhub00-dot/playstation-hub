@@ -31,6 +31,15 @@ function item(status, due, type, gameIds, search) {
   return { status, due: due || '', type, gameIds: gameIds || [], search: search || '', disabled: false };
 }
 
+console.log('\nPS Plus expiry confirm');
+
+ok('a confirm is needed only when the expiry date changed', () => {
+  assert.strictEqual(F.expiryChanged('', ''), false);
+  assert.strictEqual(F.expiryChanged('2026-11-01', '2026-11-01'), false);
+  assert.strictEqual(F.expiryChanged('', '2026-12-01'), true);
+  assert.strictEqual(F.expiryChanged('2026-12-01', ''), true);
+});
+
 console.log('\nnormalizeState()');
 
 ok('defaults to the Slots view with nothing filtered', () => {

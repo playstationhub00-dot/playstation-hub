@@ -39,9 +39,28 @@ ok('webhooks are webhook paths; /api/* is system but not a webhook', () => {
   assert.strictEqual(f.isSystemPath('/webhookish'), false);
 });
 
+console.log('\nprobe and order-state paths');
+ok('scanner paths are probes, shop pages are not', () => {
+  ['/env', '/.env', '/Dockerfile', '/docker-compose.yml', '/wp-admin', '/.git/config', '/phpinfo.php'].forEach(p => {
+    assert.strictEqual(f.isProbePath(p), true, p);
+  });
+  ['/', '/browse', '/game/nba-2k', '/ps-plus', '/order/PH-100', '/order/PH-100/state', '/how-it-works'].forEach(p => {
+    assert.strictEqual(f.isProbePath(p), false, p);
+  });
+});
+ok('only the order status poll is an order-state path', () => {
+  assert.strictEqual(f.isOrderStatePath('/order/PH-100/state'), true);
+  assert.strictEqual(f.isOrderStatePath('/order/PH-100/state?x=1'), true);
+  assert.strictEqual(f.isOrderStatePath('/order/PH-100'), false);
+  assert.strictEqual(f.isOrderStatePath('/order/create'), false);
+});
+
 console.log('\nclassifyRequest');
 ok('classes', () => {
   assert.strictEqual(f.classifyRequest({ method: 'GET', path: '/browse', userAgent: IPHONE }), 'page');
+  assert.strictEqual(f.classifyRequest({ method: 'GET', path: '/Dockerfile', userAgent: IPHONE }), 'bot');
+  assert.strictEqual(f.classifyRequest({ method: 'GET', path: '/env', userAgent: IPHONE }), 'bot');
+  assert.strictEqual(f.classifyRequest({ method: 'GET', path: '/order/PH-1/state', userAgent: IPHONE }), 'page');
   assert.strictEqual(f.classifyRequest({ method: 'HEAD', path: '/', userAgent: IPHONE }), 'page');
   assert.strictEqual(f.classifyRequest({ method: 'POST', path: '/order/create', userAgent: IPHONE }), 'action');
   assert.strictEqual(f.classifyRequest({ method: 'GET', path: '/', userAgent: 'facebookexternalhit/1.1' }), 'bot');

@@ -108,7 +108,7 @@
       <% }) %>
     </div>
     <div class="td-card">
-      <h3>🌐 Site traffic · 7 days <button type="button" onclick="switchTab('dashboard','dashboard')">Details →</button></h3>
+      <h3>🌐 Site traffic · 7 days <button type="button" onclick="switchTab('dashboard','dashboard')">Traffic →</button></h3>
       <% if (!td.traffic) { %>
         <div class="td-note">Google Analytics traffic is coming in a later update. The shop does not store a GA4 feed yet.</div>
       <% } else { %>
@@ -121,6 +121,19 @@
       <% } %>
     </div>
   </div>
-  <p class="td-later">Coming in a later update: waitlist counts, a Reserved slot state, and PS Plus expiry dates. Those are not stored yet, so they are not shown here.</p>
+
+  <div class="td-card" style="margin-top:12px;">
+    <h3>⭐ PS Plus expiring <button type="button" onclick="switchTab('accounts','accounts')">Accounts →</button></h3>
+    <% if (!td.psplusExpiring || !td.psplusExpiring.count) { %>
+      <div class="td-empty">No accounts expire in the next 14 days. Dates stay blank until you add them on Accounts.</div>
+    <% } else { %>
+      <div class="td-n"><%= td.psplusExpiring.count %></div>
+      <% if (td.psplusExpiring.soonest) { %><div class="td-d">soonest: <%= td.psplusExpiring.soonest.label %> <%= td.psplusExpiring.soonest.when %></div><% } %>
+      <% td.psplusExpiring.items.forEach(function (row) { %>
+        <div class="td-li"><span><%= row.label %></span><span class="m"><%= row.when %></span></div>
+      <% }) %>
+    <% } %>
+  </div>
+  <p class="td-later">Coming in a later update: waitlist counts and a Reserved slot state. Those are not stored yet, so they are not shown here.</p>
 <% } %>
 </div>

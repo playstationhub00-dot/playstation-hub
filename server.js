@@ -50,6 +50,7 @@ const { textCompress } = require('./lib/text-compress');
 const psplusTitleSearch = require('./lib/psplus-title-search');
 const psplusMonthlyCoversStore = require('./lib/psplus-monthly-covers-store');
 const visitorFilter = require('./lib/visitor-filter');
+const trafficLib = require('./lib/traffic');
 const tracking = require('./lib/tracking');
 const visitorFunnel = require('./lib/visitor-funnel');
 const gamePsnView = require('./lib/game-psn-view');
@@ -1290,6 +1291,7 @@ function normalizeAccount(a) {
   });
   a.game_ids = Array.isArray(a.game_ids) ? a.game_ids : [];
   a.email = a.email || '';
+  a.psplus_expires = todayLib.cleanPsplusExpiry(a.psplus_expires);
   a.for_sale = a.for_sale === true;
   a.public_name = a.public_name || '';
   return a;
@@ -6145,49 +6147,37 @@ app.get('/admin', requireAuth, async (req, res) => {
     return askedCache[slug];
   }
 
-  // Most Visited Pages counts PAGE VIEWS, not sessions — it answers "which
-  // pages got looked at most", a different question from the session-scoped
-  // funnel. It is computed independently over the FULL visitors[] array
-  // (filtered by each row's own .date), not over sessionSummaries, so that:
-  //   1) "Today's Most Visited Pages" always agrees with the "Today's Visits"
-  //      KPI card (both count every row whose date is today), and
-  //   2) rows with no session_id (e.g. everything recorded before session
-  //      tracking launched) aren't silently dropped from "All-time".
-  // System paths (/api/*, webhooks) are never a page someone looked at.
-  function topPagesForWindow(dateFilter) {
-    const pageCounts = {};
-    (visitors || []).forEach(v => {
-      if (!dateFilter(v.date) || visitorFilter.isSystemPath(v.path)) return;
-      const key = v.page || v.path;
-      pageCounts[key] = (pageCounts[key] || 0) + 1;
-    });
-    return Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }
-
-  const winToday = new Date().toISOString().slice(0, 10);
-  const winWeek  = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const winMonth = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-  const winYear  = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
-
-  const visWindow = inWindow => ({
-    ...visitorFunnel.buildWindow({ summaries: sessionSummaries, taps: messageTaps, misses: searchMisses, skips: visitorSkips, inWindow, resolveGame: resolveAskedGame }),
-    topPages: topPagesForWindow(inWindow)
-  });
+  // One period object per window. lib/traffic.js drops scanner paths and
+  // order-status polls from top pages, and attaches UTM campaigns. The shop
+  // log is not a GA4 feed: decorate() sets ga4: false.
+  const trafficNow = Date.now();
+  const trafficSpans = trafficLib.spans(trafficNow);
+  const visWindow = span => trafficLib.decorate(
+    visitorFunnel.buildWindow({
+      summaries: sessionSummaries, taps: messageTaps, misses: searchMisses,
+      skips: visitorSkips, inWindow: span.inWindow, resolveGame: resolveAskedGame
+    }),
+    { span, summaries: sessionSummaries, visitors, orders: allOrders, taps: messageTaps }
+  );
   const VIS_WINDOWS = {
-    today: visWindow(d => d === winToday),
-    week:  visWindow(d => d >= winWeek),
-    month: visWindow(d => d >= winMonth),
-    year:  visWindow(d => d >= winYear),
-    all:   visWindow(() => true),
+    today: visWindow(trafficSpans.today),
+    week:  visWindow(trafficSpans.week),
+    month: visWindow(trafficSpans.month),
+    year:  visWindow(trafficSpans.year),
+    all:   visWindow(trafficSpans.all),
     byDate: {}
   };
+  const trafficCustom = trafficLib.customSpan(req.query.tfrom, req.query.tto);
+  if (trafficCustom) VIS_WINDOWS.custom = visWindow(trafficCustom);
+  res.locals.trafficChart = trafficLib.chartDays(visitors, trafficNow, 14);
+  res.locals.trafficFrom = trafficCustom ? trafficCustom.from : '';
+  res.locals.trafficTo = trafficCustom ? trafficCustom.to : '';
 
   // Only the fourteen chart bars are clickable, so only those dates need a
-  // precomputed entry. This mirrors the same fourteen days the view's own
-  // vLast14 chart renders.
+  // precomputed entry. This mirrors the chart the Traffic tab renders.
   for (let i = 13; i >= 0; i--) {
-    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
-    VIS_WINDOWS.byDate[d] = visWindow(vd => vd === d);
+    const d = new Date(trafficNow - i * 86400000).toISOString().slice(0, 10);
+    VIS_WINDOWS.byDate[d] = visWindow(trafficLib.daySpan(d));
   }
 
   const accountsView = buildAccountsView();
@@ -6206,7 +6196,8 @@ app.get('/admin', requireAuth, async (req, res) => {
   const dashNowDate = new Date();
   const dashPeriod = dashboard.periodRange(req.query.dperiod, dashNowDate);
   const DASH_SUBS = ['overview', 'money', 'games', 'site'];
-  const DASH_LEGACY_SUB = { now: 'overview', customers: 'overview' };
+  // traffic is the same pane as site, so old and new URLs both open it.
+  const DASH_LEGACY_SUB = { now: 'overview', customers: 'overview', traffic: 'site' };
   let dashSub = DASH_LEGACY_SUB[req.query.sub] || req.query.sub || 'overview';
   if (!DASH_SUBS.includes(dashSub)) dashSub = 'overview';
   // A month-log save comes back with ?month=YYYY-MM and must reopen Money.
@@ -6495,6 +6486,7 @@ app.get('/admin', requireAuth, async (req, res) => {
   const inVisitWeek = day => day >= weekFrom && day <= todayManila;
   const weekSessions = (sessionSummaries || []).filter(s => inVisitWeek(s.startDate));
   const weekMetrics = visitorFunnel.windowMetrics(weekSessions, visitorFunnel.skippedForWindow(visitorSkips, inVisitWeek));
+  const weekProbe = trafficLib.probeCount(visitors, inVisitWeek);
   const funnelCount = label => {
     const row = (weekMetrics.funnel || []).find(f => f.label === label);
     return row ? row.count : 0;
@@ -6511,7 +6503,7 @@ app.get('/admin', requireAuth, async (req, res) => {
       visitors: funnelCount('Landed'),
       messaged: funnelCount('Messaged us'),
       paid: funnelCount('Paid'),
-      botsFiltered: weekMetrics.skipped || 0
+      botsFiltered: (weekMetrics.skipped || 0) + weekProbe
     }
   });
   const returnsView = returnsLib.build({
@@ -6641,9 +6633,10 @@ app.get('/admin/api/notifications', requireAuth, asyncRoute(async (req, res) => 
 // day in the 14-day chart needs the full matching set, not just whatever of that day
 // survived the top-100 cutoff.
 app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
-  const date = req.query.date || '';
-  const matches = db.get('visitors').value().filter(v => v.date === date).reverse().slice(0, 500);
-  res.json(matches);
+  const date = trafficLib.cleanDay(req.query.date);
+  if (!date) return res.json([]);
+  const rows = db.get('visitors').value() || [];
+  res.json(trafficLib.recentFor(rows, d => d === date, 80));
 });
 
 // Upcoming CRUD
@@ -8409,7 +8402,7 @@ app.post('/admin/posters/background/remove', requireAuth, (req, res) => {
 
 app.post('/admin/accounts/add', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
-    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
+    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name, psplus_expires } = req.body;
   if (!label || !label.trim()) return res.redirect('/admin?tab=accounts&msg=account_error');
   db.get('accounts').push({
     id: newAccountId(),
@@ -8418,6 +8411,7 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
     game_ids: parseGameIds(game_ids),
     note: note || '',
     email: (email || '').trim(),
+    psplus_expires: todayLib.cleanPsplusExpiry(psplus_expires),
     price_permanent_tr: parseInt(price_permanent_tr) || 5000,
     price_permanent_nt: parseInt(price_permanent_nt) || 4500,
     for_sale: for_sale === 'on',
@@ -8434,7 +8428,7 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
 
 app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
-    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name } = req.body;
+    enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name, psplus_expires } = req.body;
   const existing = getAccount(req.params.id);
   if (!existing) return res.redirect('/admin?tab=accounts&msg=account_error');
   const slots = existing.slots;
@@ -8447,6 +8441,7 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     game_ids: parseGameIds(game_ids),
     note: note !== undefined ? note : existing.note,
     email: mask.resolveKeptSecret(email, existing.email, req.body.email_keep),
+    psplus_expires: psplus_expires !== undefined ? todayLib.cleanPsplusExpiry(psplus_expires) : (existing.psplus_expires || ''),
     price_permanent_tr: price_permanent_tr !== undefined && price_permanent_tr !== '' ? (parseInt(price_permanent_tr) || 0) : existing.price_permanent_tr,
     price_permanent_nt: price_permanent_nt !== undefined && price_permanent_nt !== '' ? (parseInt(price_permanent_nt) || 0) : existing.price_permanent_nt,
     for_sale: for_sale === 'on',

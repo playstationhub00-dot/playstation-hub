@@ -9,8 +9,8 @@
 
   function browsedHtml(win) {
     var b = win.browsed;
-    var s = 'Browsed the catalog — <strong>' + b.count + '</strong> of <strong>' + b.total +
-      '</strong> sessions <span class="vf-browsed-pct">' + (b.pct === null ? '—' : b.pct + '%') + '</span>';
+    var s = 'Browsed the catalog: <strong>' + b.count + '</strong> of <strong>' + b.total +
+      '</strong> sessions <span class="vf-browsed-pct">' + (b.pct === null ? 'n/a' : b.pct + '%') + '</span>';
     if (win.skipped > 0) s += ' · <strong>' + win.skipped + '</strong> robot / system hits not counted';
     return s;
   }

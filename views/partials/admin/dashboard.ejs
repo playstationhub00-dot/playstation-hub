@@ -13,7 +13,7 @@
         <button type="button" class="dsub-pill" data-dsub="overview" onclick="switchDash('overview')">Overview<% if (dashMetrics.needsNowTotal) { %> <span class="dsub-n"><%= dashMetrics.needsNowTotal %></span><% } %></button>
         <button type="button" class="dsub-pill" data-dsub="money" onclick="switchDash('money')">Money</button>
         <button type="button" class="dsub-pill" data-dsub="games" onclick="switchDash('games')"><span class="dsub-long">Games &amp; slots</span><span class="dsub-short">Games</span></button>
-        <button type="button" class="dsub-pill" data-dsub="site" onclick="switchDash('site')">Site</button>
+        <button type="button" class="dsub-pill" data-dsub="site" onclick="switchDash('site')">Traffic</button>
       </div>
       <form method="GET" action="/admin" class="dsub-period" id="dsubPeriodForm">
         <input type="hidden" name="tab" value="dashboard">
@@ -24,7 +24,7 @@
           <button type="submit" name="dperiod" value="<%= key %>" class="<%= dashPeriod.key === key ? 'on' : '' %>"><%= label %></button>
           <% }) %>
         </div>
-        <span class="dsub-period-site">Does not change Site.</span>
+        <span class="dsub-period-site">Does not change Traffic.</span>
       </form>
     </div>
 
@@ -256,7 +256,9 @@
       const SUBS = ['overview', 'money', 'games', 'site'];
       // now and customers were thin panes folded into the overview. games is a
       // real tab again (stock and slots), so old ?sub=games bookmarks land there.
-      const LEGACY = { now: 'overview', customers: 'overview' };
+      // traffic is the same pane as site, so both URLs open it. A click still
+      // writes sub=site, which is the address the rest of the admin already uses.
+      const LEGACY = { now: 'overview', customers: 'overview', traffic: 'site' };
 
       // updateUrl defaults to true for every real switch (a pill click, a
       // card link). The one call that must NOT touch the URL is the initial

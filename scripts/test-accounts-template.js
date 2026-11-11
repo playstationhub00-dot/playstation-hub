@@ -131,6 +131,17 @@ ok('the slot modal lists customers for the renter picker', () => {
   assert.ok(html.includes('<select class="qa-in" name="status" data-ss-skip>'));
 });
 
+ok('PS Plus expiry is a blank date until someone saves one', () => {
+  assert.ok(html.includes('name="psplus_expires"'));
+  assert.ok(html.includes('type="date"'));
+  const data = JSON.parse(html.match(/<script type="application\/json" id="accData">([\s\S]*?)<\/script>/)[1]);
+  assert.strictEqual(data.accounts['1'].psplus_expires, '');
+  const dated = render([account(3, 'Dated', { trophy: slot('open') }, { psplus_expires: '2026-11-20' })]);
+  assert.ok(dated.includes('PS Plus'));
+  const saved = JSON.parse(dated.match(/<script type="application\/json" id="accData">([\s\S]*?)<\/script>/)[1]);
+  assert.strictEqual(saved.accounts['3'].psplus_expires, '2026-11-20');
+});
+
 ok('the account modal offers every catalogue game as a checkbox', () => {
   assert.ok(html.includes('name="game_ids" value="12" data-title="NBA 2K27"'));
   assert.ok(html.includes('name="game_ids" value="3" data-title="Tekken 8"'));

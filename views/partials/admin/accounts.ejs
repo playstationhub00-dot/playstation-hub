@@ -27,6 +27,7 @@
     });
     accData.accounts[a.id] = {
       label: a.label, email_masked: a.email ? maskEmail(a.email) : '', has_email: !!a.email, games_text: a.games_text || '', note: a.note || '',
+      psplus_expires: a.psplus_expires || '',
       game_ids: a.game_ids, price_permanent_tr: a.price_permanent_tr, price_permanent_nt: a.price_permanent_nt,
       public_name: a.public_name || '', for_sale: !!a.for_sale, slots
     };
@@ -123,7 +124,7 @@
            const gamesLine = titles.length
              ? titles.slice(0, 2).join(', ') + (titles.length > 2 ? ' +' + (titles.length - 2) : '')
              : (a.games_text || '');
-           const meta = [gamesLine, a.note ? '📝 ' + a.note : ''].filter(Boolean);
+           const meta = [gamesLine, a.psplus_expires ? ('PS Plus ' + accShortDate(a.psplus_expires)) : '', a.note ? '📝 ' + a.note : ''].filter(Boolean);
       %>
       <div class="acc-arow" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, renters) %>">
         <div class="acc-a-main">
@@ -202,6 +203,8 @@
               </span>
             </label>
             <input type="hidden" name="email_keep" id="accEmailKeep" value="0">
+            <label class="qa-sub">PS Plus expiry<input class="qa-in" type="date" name="psplus_expires"></label>
+            <p class="qa-hint">When this account's PS Plus runs out. Leave it blank until you know the date. Saving a change asks you to confirm.</p>
             <label class="qa-sub">Internal note<input class="qa-in" type="text" name="note" placeholder="reminders, misc info…"></label>
             <label class="qa-sub">Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_tr" min="0"></label>
             <label class="qa-sub">Non-Trophy permanent price (₱)<input class="qa-in" type="number" name="price_permanent_nt" min="0"></label>

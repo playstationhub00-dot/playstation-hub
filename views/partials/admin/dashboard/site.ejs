@@ -1,98 +1,123 @@
   <div class="dash-pane<%= (typeof dashSub !== 'undefined' && dashSub === 'site') ? ' active' : '' %>" id="dsub-site">
     <style>
-      .vis-day-bar:hover > div:nth-child(2) { background: rgba(96,165,250,0.4) !important; }
-      .vis-day-bar.vis-day-active > div:nth-child(2) { background: #60a5fa !important; }
-      .vis-day-bar.vis-day-active > div:last-child { color: #60a5fa !important; font-weight: 700; }
-    </style>
-    <%
-      const vNow = new Date();
-      const vTodayStr = vNow.toISOString().slice(0, 10);
-      const vWeekAgo  = new Date(vNow - 7 * 86400000).toISOString().slice(0, 10);
-      const vMonthAgo = new Date(vNow - 30 * 86400000).toISOString().slice(0, 10);
-      const vYearAgo  = new Date(vNow - 365 * 86400000).toISOString().slice(0, 10);
-
-      const visToday = visitors.filter(v => v.date === vTodayStr);
-      const visWeek  = visitors.filter(v => v.date >= vWeekAgo);
-      const visMonth = visitors.filter(v => v.date >= vMonthAgo);
-      const visYear  = visitors.filter(v => v.date >= vYearAgo);
-
-      const uniqueToday = new Set(visToday.map(v => v.ip)).size;
-      const uniqueWeek  = new Set(visWeek.map(v => v.ip)).size;
-      const uniqueMonth = new Set(visMonth.map(v => v.ip)).size;
-      const uniqueAll   = new Set(visitors.map(v => v.ip)).size;
-
-      // topPages removed — per-period top pages computed below
-
-      const vLast14 = [];
-      for (let i = 13; i >= 0; i--) {
-        const vd = new Date(vNow - i * 86400000);
-        const vds = vd.toISOString().slice(0, 10);
-        const vlabel = vd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        vLast14.push({ date: vds, label: vlabel, count: visitors.filter(v => v.date === vds).length });
+      .tr-bar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+      .tr-seg { display:flex; border:1px solid #333; border-radius:10px; overflow:hidden; }
+      .tr-seg button { background:#141414; color:#ddd; border:0; border-right:1px solid #333; padding:7px 14px; font-weight:700; font-size:13px; cursor:pointer; }
+      .tr-seg button:last-child { border-right:0; }
+      .tr-seg button.on { background:#F5B800; color:#0a0a0a; }
+      .tr-cmp { font-size:13px; color:#d0d0d0; border:1px solid #333; border-radius:10px; padding:7px 12px; }
+      .tr-cmp b { color:#fff; }
+      .tr-custom { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+      .tr-custom[hidden] { display:none; }
+      .tr-custom label { font-size:12px; font-weight:700; color:#d0d0d0; display:flex; flex-direction:column; gap:4px; }
+      .tr-custom input { background:#141414; color:#fff; border:1px solid #333; border-radius:8px; padding:6px 8px; font-size:13px; }
+      .tr-custom button { height:32px; }
+      .tr-ban { background:#0f2135; border:1px solid #23466e; color:#d7e6ff; border-radius:12px; padding:10px 14px; font-size:13.5px; margin-bottom:14px; line-height:1.45; }
+      .tr-ban b { color:#9ec7ff; }
+      .tr-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+      .tr-kpi { background:#171717; border:1px solid #2a2a2a; border-radius:14px; padding:14px 16px; }
+      .tr-kpi .k { font-size:13px; color:#c8c8c8; font-weight:700; }
+      .tr-kpi .v { font-size:26px; font-weight:800; color:#fff; margin:4px 0 2px; }
+      .tr-kpi .s { font-size:12.5px; color:#c8c8c8; }
+      .tr-up { color:#6fe39a; font-weight:700; }
+      .tr-dn { color:#ff9a7a; font-weight:700; }
+      .tr-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+      .tr-card { background:#171717; border:1px solid #2a2a2a; border-radius:14px; padding:16px 18px; min-width:0; }
+      .tr-card h3 { font-size:15px; font-weight:800; color:#fff; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+      .tr-cap { font-size:13.5px; line-height:1.45; color:#e6e6e6; font-weight:600; margin:0 0 12px; }
+      .tr-src { margin-bottom:10px; }
+      .tr-src-l { display:flex; justify-content:space-between; gap:8px; font-size:13.5px; color:#eee; }
+      .tr-src-l b { font-weight:700; white-space:nowrap; }
+      .tr-barline { height:7px; background:#262626; border-radius:4px; margin-top:4px; overflow:hidden; }
+      .tr-barline i { display:block; height:100%; background:#F5B800; border-radius:4px; }
+      .tr-sub { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:#c8c8c8; font-weight:700; margin:12px 0 8px; }
+      .tr-fn { display:flex; gap:8px; }
+      .tr-fn div { flex:1; background:#121212; border:1px solid #262626; border-radius:10px; padding:10px 8px; text-align:center; font-size:12px; color:#c8c8c8; }
+      .tr-fn b { display:block; font-size:20px; color:#fff; }
+      .tr-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+      .tr-table th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:#c8c8c8; font-weight:700; padding:8px 6px; border-bottom:1px solid #2a2a2a; }
+      .tr-table td { padding:8px 6px; border-bottom:1px solid #232323; color:#eee; }
+      .tr-table .r { text-align:right; }
+      .tr-empty { color:#d0d0d0; font-size:13.5px; padding:8px 0; }
+      .tr-more { margin-top:4px; }
+      .tr-chart { display:flex; align-items:flex-end; gap:4px; height:120px; }
+      .tr-col { flex:1; display:flex; flex-direction:column; align-items:center; height:100%; cursor:pointer; background:transparent; border:0; color:inherit; padding:0; min-width:0; }
+      .tr-col .n { font-size:11px; color:#d0d0d0; font-weight:700; }
+      .tr-col .plot { flex:1; width:100%; display:flex; align-items:flex-end; }
+      .tr-col .fill { width:100%; background:rgba(245,184,0,0.35); border-top:2px solid #F5B800; border-radius:4px 4px 0 0; min-height:2px; }
+      .tr-col.on .fill { background:#F5B800; }
+      .tr-col .d { font-size:10px; color:#d0d0d0; text-align:center; line-height:1.2; }
+      .tr-scroll { max-height:420px; overflow:auto; }
+      @media (max-width: 900px) {
+        .tr-kpis, .tr-grid { grid-template-columns:1fr 1fr; }
+        .tr-fn { flex-wrap:wrap; }
+        .tr-fn div { flex:1 1 40%; }
       }
-      const vMaxBar = Math.max(...vLast14.map(d => d.count), 1);
+      @media (max-width: 640px) {
+        .tr-kpis, .tr-grid { grid-template-columns:1fr; }
+        .tr-seg { width:100%; }
+        .tr-seg button { flex:1; padding:7px 6px; }
+      }
+      body.light-mode .tr-seg { border-color:#d5dbe1; }
+      body.light-mode .tr-seg button { background:#fff; color:#3f464d; border-right-color:#e0e4e8; }
+      body.light-mode .tr-seg button.on { background:#F5B800; color:#0a0a0a; }
+      body.light-mode .tr-cmp, body.light-mode .tr-cap, body.light-mode .tr-empty, body.light-mode .tr-kpi .s, body.light-mode .tr-kpi .k { color:#3f464d; }
+      body.light-mode .tr-cmp b, body.light-mode .tr-kpi .v, body.light-mode .tr-card h3, body.light-mode .tr-src-l, body.light-mode .tr-fn b, body.light-mode .tr-table td { color:#14171a; }
+      body.light-mode .tr-kpi, body.light-mode .tr-card { background:#fff; border-color:#e6e9ec; }
+      body.light-mode .tr-ban { background:#eef5ff; border-color:#c5d7f2; color:#1d3b66; }
+      body.light-mode .tr-ban b { color:#1d4e89; }
+      body.light-mode .tr-fn div { background:#f7f8fa; border-color:#e6e9ec; color:#5b636c; }
+      body.light-mode .tr-custom input { background:#fff; color:#14171a; border-color:#d5dbe1; }
+      body.light-mode .tr-table th, body.light-mode .tr-sub { color:#5b636c; }
+      body.light-mode .tr-table td { border-bottom-color:#eef0f2; }
+    </style>
 
-      const recentVisitors = [...visitors].reverse().slice(0, 100);
+    <div class="tr-bar">
+      <div class="tr-seg" role="group" aria-label="Traffic period">
+        <button type="button" data-tr="today">Today</button>
+        <button type="button" data-tr="week">7 days</button>
+        <button type="button" data-tr="month">30 days</button>
+        <button type="button" data-tr="custom">Custom</button>
+      </div>
+      <span class="tr-cmp" id="trCompare"></span>
+    </div>
+    <form method="GET" action="/admin" class="tr-custom" id="trCustom" hidden>
+      <input type="hidden" name="tab" value="dashboard">
+      <input type="hidden" name="sub" value="site">
+      <label>From <input type="date" name="tfrom" value="<%= typeof trafficFrom !== 'undefined' ? trafficFrom : '' %>"></label>
+      <label>To <input type="date" name="tto" value="<%= typeof trafficTo !== 'undefined' ? trafficTo : '' %>"></label>
+      <button type="submit" class="adm-btn adm-btn-sm">Apply</button>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" data-tr-extra="year">Past year</button>
+      <button type="button" class="adm-btn adm-btn-secondary adm-btn-sm" data-tr-extra="all">All time</button>
+    </form>
 
-    %>
-    <div class="dash-section">
+    <div class="tr-ban"><b>Shop visit log.</b> These numbers are counted on this site. A Google Analytics feed is not connected, so nothing here is a GA4 report. <span id="trBots"></span></div>
 
-    <!-- KPI Cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:2rem;">
-      <div class="stat-card">
-        <div class="stat-card-label">Today's Visits</div>
-        <div class="stat-card-num" style="color:#22c55e;"><%= visToday.length %></div>
-        <div class="stat-card-sub"><%= uniqueToday %> unique visitor<%= uniqueToday!==1?'s':'' %></div>
+    <div class="tr-kpis">
+      <div class="tr-kpi"><div class="k">Real visitors</div><div class="v" id="trVisitors">0</div><div class="s" id="trVisitorsDelta"></div><div class="s" id="trBotsLine"></div></div>
+      <div class="tr-kpi"><div class="k">Site conversion</div><div class="v" id="trConv">0%</div><div class="s" id="trConvDelta"></div><div class="s">Visitors to paid orders</div></div>
+      <div class="tr-kpi"><div class="k">Orders from website</div><div class="v" id="trOrders">0 of 0</div><div class="s" id="trOrdersSub"></div><div class="s">The rest have no site session</div></div>
+      <div class="tr-kpi"><div class="k">Message Us taps</div><div class="v" id="trMsg">0</div><div class="s" id="trMsgDelta"></div><div class="s">On the site. No Messenger inbox tag.</div></div>
+    </div>
+
+    <div class="tr-grid">
+      <div class="tr-card">
+        <h3>Sources, real visitors</h3>
+        <p class="tr-cap">First visit of each session. Campaign names come from the link that brought them.</p>
+        <div id="trSources"></div>
+        <div class="tr-sub">Funnel</div>
+        <div class="tr-fn" id="trFunnel"></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Last 7 Days</div>
-        <div class="stat-card-num" style="color:#60a5fa;"><%= visWeek.length %></div>
-        <div class="stat-card-sub"><%= uniqueWeek %> unique visitor<%= uniqueWeek!==1?'s':'' %></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Last 30 Days</div>
-        <div class="stat-card-num" style="color:#a78bfa;"><%= visMonth.length %></div>
-        <div class="stat-card-sub"><%= uniqueMonth %> unique visitor<%= uniqueMonth!==1?'s':'' %></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">All-Time Visits</div>
-        <div class="stat-card-num" style="color:#ffc400;"><%= visitors.length %></div>
-        <div class="stat-card-sub"><%= uniqueAll %> unique visitor<%= uniqueAll!==1?'s':'' %></div>
+      <div class="tr-card">
+        <h3>Top UTM campaigns</h3>
+        <p class="tr-cap">Visits are sessions. Orders and revenue are joined when that session placed an order. Revenue is the paid amount, without the deposit.</p>
+        <div id="trCampaigns"></div>
       </div>
     </div>
 
-    <% const srcRows = (typeof trafficSources === 'function') ? trafficSources(visitors) : []; %>
-    <div class="table-card" style="border-color:rgba(96,165,250,0.2);margin-bottom:2rem;">
-      <h2 style="border-color:rgba(96,165,250,0.1);">Traffic sources</h2>
-      <div style="font-size:0.72rem;color:#555;margin-bottom:0.85rem;">First visit of each session. Campaign names come from the link that brought them.</div>
-      <% if (!srcRows.length) { %>
-        <div style="padding:1rem 0;color:#555;">No visits recorded yet.</div>
-      <% } else { %>
-      <table class="games-table" style="width:100%;">
-        <thead><tr><th>Source</th><th>Sessions</th></tr></thead>
-        <tbody>
-          <% srcRows.forEach(function (s) { %>
-          <tr>
-            <td style="color:#e8e8e8;font-weight:600;"><%= s.label %></td>
-            <td style="color:#aaa;"><%= s.count %></td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
-      <% } %>
-    </div>
-
-    <!-- Session Funnel + Exit Pages -->
-    <div class="vf-section">
-      <div class="vf-filter-row">
-        <span class="vf-filter-label">Sessions</span>
-        <button onclick="setFunnelFilter('today')" id="vfBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
-        <button onclick="setFunnelFilter('week')"  id="vfBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
-        <button onclick="setFunnelFilter('month')" id="vfBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
-        <button onclick="setFunnelFilter('year')"  id="vfBtn-year"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Yearly</button>
-        <button onclick="setFunnelFilter('all')"   id="vfBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
-        <span class="vf-day-label" id="vfDayLabel" style="display:none;"></span>
-      </div>
+    <div class="tr-card tr-more">
+      <h3>More from this period</h3>
+      <p class="tr-cap">Same period as the control above. Scanner paths and order status checks are left out.</p>
       <div class="vf-grid">
         <div class="vf-panel">
           <div class="vf-panel-label">Funnel</div>
@@ -104,263 +129,253 @@
           <div id="vfExitBody"></div>
         </div>
       </div>
-      <div class="vf-grid" style="margin-top:1.25rem;">
+      <div class="vf-grid" style="margin-top:12px;">
         <div class="vf-panel">
-          <div class="vf-panel-label">💬 Most asked-about games</div>
+          <div class="vf-panel-label">Most asked-about games</div>
           <div id="vfAskedBody"></div>
         </div>
-        <div class="vf-panel" id="vfMissesPanel" style="display:none;">
-          <div class="vf-panel-label">🔎 Searched, nothing found</div>
+        <div class="vf-panel" id="vfMissesPanel">
+          <div class="vf-panel-label">Searched, nothing found</div>
           <div id="vfMissesBody"></div>
         </div>
       </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem;">
-
-      <!-- Last 14 Days Bar Chart -->
-      <div class="table-card" style="border-color:rgba(96,165,250,0.2);">
-        <h2 style="border-color:rgba(96,165,250,0.1);margin-bottom:0.4rem;">📈 Visits — Last 14 Days</h2>
-        <div style="font-size:0.72rem;color:#555;margin-bottom:0.85rem;">Click a bar to see that day's visits below</div>
-        <div style="display:flex;align-items:flex-end;gap:0.25rem;height:120px;">
-          <% vLast14.forEach(day => { %>
-          <div class="vis-day-bar" data-date="<%= day.date %>" data-label="<%= day.label %>" onclick="filterVisitsByDate('<%= day.date %>','<%= day.label %>')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0.3rem;height:100%;cursor:pointer;" title="View visits for <%= day.label %>">
-            <div style="font-size:0.6rem;color:#555;"><%= day.count %></div>
-            <div style="width:100%;background:rgba(96,165,250,0.15);border-radius:4px 4px 0 0;border-top:2px solid #60a5fa;height:<%= day.count > 0 ? Math.round((day.count/vMaxBar)*85) : 2 %>px;min-height:2px;transition:background 0.15s;"></div>
-            <div style="font-size:0.56rem;color:#555;text-align:center;line-height:1.2;"><%= day.label %></div>
-          </div>
-          <% }) %>
+      <div class="tr-grid" style="margin-top:12px;">
+        <div>
+          <div class="tr-sub">Most visited pages</div>
+          <div id="topPagesBody"></div>
         </div>
-      </div>
-
-      <!-- Top Pages -->
-      <div class="table-card" style="border-color:rgba(167,139,250,0.2);">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-          <h2 style="border:none;margin:0;padding:0;">🔗 Most Visited Pages <span style="font-size:0.7rem;color:#555;">(Top 5)</span></h2>
-          <div style="display:flex;gap:0.35rem;">
-            <button onclick="setTopFilter('today')" id="tpBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
-            <button onclick="setTopFilter('week')"  id="tpBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
-            <button onclick="setTopFilter('month')" id="tpBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
-            <button onclick="setTopFilter('year')"  id="tpBtn-year"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Yearly</button>
-            <button onclick="setTopFilter('all')"   id="tpBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
-          </div>
-        </div>
-        <div id="topPagesBody"><!-- filled by JS --></div>
-      </div>
-    </div>
-
-    <!-- Recent Visits Table -->
-    <div class="table-card" style="border-color:rgba(34,197,94,0.15);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-        <h2 style="border:none;margin:0;padding:0;">🕐 Recent Visits</h2>
-        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-          <span id="rvDayLabel" style="display:none;font-size:0.72rem;color:#60a5fa;font-weight:700;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);border-radius:20px;padding:0.2rem 0.65rem;"></span>
-          <div style="display:flex;gap:0.35rem;">
-            <button onclick="setVisFilter('today')" id="rvBtn-today" class="vis-filter-btn vis-filter-active" style="font-size:0.7rem;padding:0.25rem 0.6rem;">Today</button>
-            <button onclick="setVisFilter('week')"  id="rvBtn-week"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Weekly</button>
-            <button onclick="setVisFilter('month')" id="rvBtn-month" class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Monthly</button>
-            <button onclick="setVisFilter('year')"  id="rvBtn-year"  class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">Yearly</button>
-            <button onclick="setVisFilter('all')"   id="rvBtn-all"   class="vis-filter-btn"                  style="font-size:0.7rem;padding:0.25rem 0.6rem;">All</button>
+        <div>
+          <div class="tr-sub">Last 14 days</div>
+          <p class="tr-cap">Click a day to use it as the period.</p>
+          <div class="tr-chart" id="trChart">
+            <% const chart = (typeof trafficChart !== 'undefined' && trafficChart) ? trafficChart : []; %>
+            <% const chartMax = Math.max.apply(null, chart.map(function (d) { return d.count; }).concat([1])); %>
+            <% chart.forEach(function (day) { %>
+            <button type="button" class="tr-col" data-date="<%= day.date %>" data-label="<%= day.label %>">
+              <span class="n"><%= day.count %></span>
+              <span class="plot"><span class="fill" style="height:<%= day.count > 0 ? Math.max(4, Math.round((day.count / chartMax) * 78)) : 2 %>px"></span></span>
+              <span class="d"><%= day.label %></span>
+            </button>
+            <% }) %>
           </div>
         </div>
       </div>
-      <% if (recentVisitors.length === 0) { %>
-        <div style="padding:2rem;text-align:center;color:#555;">No visits recorded yet. Share your website link to get visitors!</div>
-      <% } else { %>
-      <div style="max-height:420px;overflow-y:auto;border-radius:8px;">
-      <table class="games-table" style="width:100%;">
-        <thead>
-          <tr>
-            <th>Page</th>
-            <th>Date</th>
-            <th>Time</th>
-            <th>Session</th>
-          </tr>
-        </thead>
-        <tbody id="recentVisitsBody">
-          <% recentVisitors.forEach(v => { %>
-          <tr data-date="<%= v.date %>">
-            <td><span style="color:#22c55e;font-weight:600;"><%= v.page || v.path %></span></td>
-            <td style="color:#aaa;font-size:0.8rem;"><%= v.date %></td>
-            <td style="color:#aaa;font-size:0.8rem;"><%= v.time ? new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) : '' %></td>
-            <td style="color:#555;font-size:0.75rem;font-family:monospace;"><%= v.session_id ? v.session_id.slice(0,12) : '—' %></td>
-          </tr>
-          <% }) %>
-        </tbody>
-      </table>
+      <div class="tr-sub">Recent visits</div>
+      <p class="tr-cap">The same page in a row, in one session, is one line. Order status checks are not listed.</p>
+      <div class="tr-scroll">
+        <table class="tr-table">
+          <thead><tr><th>Page</th><th>Date</th><th>Time</th><th>Session</th></tr></thead>
+          <tbody id="recentVisitsBody"></tbody>
+        </table>
       </div>
-      <% } %>
     </div>
 
     <script src="/js/dashboard-visitors.js?v=<%= assetV %>"></script>
     <script>
     const VIS_WINDOWS = <%- JSON.stringify(VIS_WINDOWS).replace(/</g, '\\u003c') %>;
 
-    // Every value below can originate from req.path (the visitor-tracking
-    // middleware records whatever path a client requests, fully attacker
-    // controlled), so anything user-influenced must be escaped before it is
-    // concatenated into an innerHTML string.
     function escHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function peso(n) {
+      return '₱' + Math.round(Number(n) || 0).toLocaleString('en-US');
+    }
+    function deltaHtml(text, n) {
+      if (!text) return '';
+      var cls = n > 0 ? 'tr-up' : (n < 0 ? 'tr-dn' : '');
+      return '<span class="' + cls + '">' + escHtml(text) + '</span>';
+    }
+    function pctText(n) {
+      if (n == null) return '';
+      if (n === 0) return 'Same as the previous period';
+      return (n > 0 ? '+' : '') + n + '% vs previous';
+    }
+    function ptsText(n) {
+      if (n == null) return '';
+      if (n === 0) return 'Same as the previous period';
+      return (n > 0 ? '+' : '') + n + ' pts';
+    }
+    function absText(n) {
+      if (n == null) return '';
+      if (n === 0) return 'Same as the previous period';
+      return (n > 0 ? '+' : '') + n + ' vs previous';
+    }
+    function stageCount(win, label) {
+      var row = (win.funnel || []).filter(function (s) { return s.label === label; })[0];
+      return row ? row.count : 0;
     }
 
-    function renderFunnel(win) {
-      const body = document.getElementById('vfFunnelBody');
-      const browsedEl = document.getElementById('vfBrowsedStat');
-      if (!win || win.funnel[0].count === 0) {
-        browsedEl.innerHTML = win && win.skipped > 0 ? '<strong>' + win.skipped + '</strong> robot / system hits not counted' : '';
-        body.innerHTML = '<div class="vf-empty">No tracked sessions in this period.</div>';
+    function renderSources(win) {
+      var host = document.getElementById('trSources');
+      var rows = win.sources || [];
+      if (!rows.length) {
+        host.innerHTML = '<div class="tr-empty">No real visits in this period.</div>';
         return;
       }
-      browsedEl.innerHTML = DashVisitors.browsedHtml(win);
-      body.innerHTML = DashVisitors.funnelHtml(win);
+      host.innerHTML = rows.map(function (s) {
+        return '<div class="tr-src"><div class="tr-src-l"><span>' + escHtml(s.label) + '</span><b>' +
+          s.count.toLocaleString('en-US') + ' · ' + s.pct + '%</b></div><div class="tr-barline"><i style="width:' +
+          Math.max(0, Math.min(100, s.pct)) + '%"></i></div></div>';
+      }).join('');
     }
-
-    // The two cards under the funnel. They follow the same window object, so
-    // all of them always describe one period.
-    function renderAskedAndMisses(win) {
-      document.getElementById('vfAskedBody').innerHTML = DashVisitors.askedHtml(win);
-      const missesHtml = DashVisitors.missesHtml(win);
-      document.getElementById('vfMissesBody').innerHTML = missesHtml;
-      document.getElementById('vfMissesPanel').style.display = missesHtml ? '' : 'none';
+    function renderFunnelBoxes(win) {
+      var boxes = [
+        ['Visits', stageCount(win, 'Landed')],
+        ['Game page', stageCount(win, 'Viewed a game')],
+        ['Checkout', stageCount(win, 'Ordered on website')],
+        ['Paid', stageCount(win, 'Paid')]
+      ];
+      document.getElementById('trFunnel').innerHTML = boxes.map(function (b) {
+        return '<div>' + escHtml(b[0]) + '<b>' + Number(b[1]).toLocaleString('en-US') + '</b></div>';
+      }).join('');
     }
-
+    function renderCampaigns(win) {
+      var host = document.getElementById('trCampaigns');
+      var rows = win.campaigns || [];
+      if (!rows.length) {
+        host.innerHTML = '<div class="tr-empty">No campaign names on visits in this period. Names come from the link that brought them.</div>';
+        return;
+      }
+      host.innerHTML = '<table class="tr-table"><thead><tr><th>Campaign</th><th class="r">Visits</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>' +
+        rows.map(function (c) {
+          return '<tr><td>' + escHtml(c.campaign) + '</td><td class="r">' + c.visits + '</td><td class="r">' +
+            c.orders + '</td><td class="r">' + peso(c.revenue) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+    function renderKpis(win) {
+      var k = win.kpis || {};
+      document.getElementById('trVisitors').textContent = (k.visitors || 0).toLocaleString('en-US');
+      document.getElementById('trVisitorsDelta').innerHTML = deltaHtml(pctText(k.visitorsDelta), k.visitorsDelta);
+      document.getElementById('trBotsLine').textContent = 'Bots hidden: ' + (k.botsHidden || 0).toLocaleString('en-US');
+      document.getElementById('trBots').textContent = 'Bots hidden: ' + (k.botsHidden || 0).toLocaleString('en-US') + '.';
+      document.getElementById('trConv').textContent = k.conversion == null ? 'n/a' : (k.conversion + '%');
+      document.getElementById('trConvDelta').innerHTML = deltaHtml(ptsText(k.conversionDelta), k.conversionDelta);
+      document.getElementById('trOrders').textContent = (k.websiteOrders || 0) + ' of ' + (k.allOrders || 0);
+      var share = k.allOrders ? Math.round((k.websiteOrders / k.allOrders) * 100) : 0;
+      document.getElementById('trOrdersSub').textContent = share + '% from the site';
+      document.getElementById('trMsg').textContent = (k.messenger || 0).toLocaleString('en-US');
+      document.getElementById('trMsgDelta').innerHTML = deltaHtml(absText(k.messengerDelta), k.messengerDelta);
+      document.getElementById('trCompare').textContent = win.compareLabel || '';
+    }
+    function renderTopPages(pages) {
+      var body = document.getElementById('topPagesBody');
+      if (!pages || !pages.length) {
+        body.innerHTML = '<div class="tr-empty">No pages in this period.</div>';
+        return;
+      }
+      var maxCount = pages[0][1] || 1;
+      body.innerHTML = pages.map(function (row) {
+        var page = row[0], count = row[1];
+        return '<div class="tr-src"><div class="tr-src-l"><span>' + escHtml(page) + '</span><b>' + count +
+          '</b></div><div class="tr-barline"><i style="width:' + Math.round((count / maxCount) * 100) + '%"></i></div></div>';
+      }).join('');
+    }
     function renderExitPages(win) {
-      const body = document.getElementById('vfExitBody');
-      if (!win || !win.exitPages.length) {
+      var body = document.getElementById('vfExitBody');
+      var pages = (win && win.exitPages) || [];
+      if (!pages.length) {
         body.innerHTML = '<div class="vf-empty">Nothing to show yet.</div>';
         return;
       }
-      body.innerHTML = win.exitPages.map(ep =>
-        '<div class="vf-exit-row">' +
-          '<span class="vf-exit-path">' + escHtml(ep.path) + '</span>' +
-          '<span class="vf-exit-n"><strong>' + ep.count + '</strong> session' + (ep.count !== 1 ? 's' : '') + '</span>' +
-        '</div>'
-      ).join('');
+      body.innerHTML = pages.map(function (ep) {
+        return '<div class="vf-exit-row"><span class="vf-exit-path">' + escHtml(ep.path) + '</span><span class="vf-exit-n"><strong>' +
+          ep.count + '</strong> session' + (ep.count === 1 ? '' : 's') + '</span></div>';
+      }).join('');
     }
-
-    // Paints all three session-scoped panels from one window object, so they
-    // can never end up describing different periods.
-    function renderVisWindow(win) {
-      renderFunnel(win);
-      renderAskedAndMisses(win);
-      renderExitPages(win);
-      renderTopPages(win && win.topPages ? win.topPages : []);
-    }
-
-    function setFunnelFilter(f) {
-      setPeriodFilter(f);
-    }
-
-    function renderTopPages(pages) {
-      const body = document.getElementById('topPagesBody');
-      if (!pages || pages.length === 0) {
-        body.innerHTML = '<div style="color:#555;font-size:0.85rem;">No visits for this period.</div>';
+    function renderRecent(rows) {
+      var body = document.getElementById('recentVisitsBody');
+      if (!body) return;
+      if (!rows || !rows.length) {
+        body.innerHTML = '<tr><td colspan="4" class="tr-empty">No visits in this period.</td></tr>';
         return;
       }
-      const maxCount = pages[0][1];
-      body.innerHTML = pages.map(([page, count]) =>
-        `<div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;">
-          <div style="flex:1;font-size:0.82rem;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(page)}</div>
-          <div style="font-size:0.75rem;color:#a78bfa;font-weight:700;">${count}</div>
-          <div style="width:60px;height:6px;background:#1a1a1a;border-radius:3px;overflow:hidden;">
-            <div style="height:100%;background:#a78bfa;border-radius:3px;width:${Math.round((count/maxCount)*100)}%;"></div>
-          </div>
-        </div>`
-      ).join('');
+      body.innerHTML = rows.map(function (v) {
+        var when = v.time ? new Date(v.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+        var times = v.times > 1 ? ' <span style="color:#c8c8c8;">(' + v.times + ' times)</span>' : '';
+        var sid = v.session_id ? escHtml(String(v.session_id).slice(0, 12)) : '';
+        return '<tr><td>' + escHtml(v.page || v.path) + times + '</td><td>' + escHtml(v.date || '') +
+          '</td><td>' + escHtml(when) + '</td><td style="font-family:monospace;">' + sid + '</td></tr>';
+      }).join('');
     }
-
-    function setTopFilter(f) {
-      // Most Visited Pages and the funnel share one window, so selecting a
-      // period on either row moves both.
-      setFunnelFilter(f);
+    function renderDetail(win) {
+      var browsedEl = document.getElementById('vfBrowsedStat');
+      if (!win || !win.funnel || !win.funnel.length || win.funnel[0].count === 0) {
+        browsedEl.innerHTML = win && win.skipped > 0 ? '<strong>' + win.skipped + '</strong> robot / system hits not counted' : '';
+        document.getElementById('vfFunnelBody').innerHTML = '<div class="vf-empty">No tracked sessions in this period.</div>';
+      } else {
+        browsedEl.innerHTML = DashVisitors.browsedHtml(win);
+        document.getElementById('vfFunnelBody').innerHTML = DashVisitors.funnelHtml(win);
+      }
+      document.getElementById('vfAskedBody').innerHTML = DashVisitors.askedHtml(win);
+      var missesHtml = DashVisitors.missesHtml(win);
+      document.getElementById('vfMissesBody').innerHTML = missesHtml;
+      document.getElementById('vfMissesPanel').style.display = missesHtml ? '' : 'none';
+      renderExitPages(win);
+      renderTopPages(win && win.topPages ? win.topPages : []);
+      renderRecent(win && win.recent ? win.recent : []);
     }
-
-    // Recent Visits filter
-    const vTodayStr = '<%= new Date().toISOString().slice(0,10) %>';
-    const vWeekAgo  = '<%= new Date(Date.now()-7*86400000).toISOString().slice(0,10) %>';
-    const vMonthAgo = '<%= new Date(Date.now()-30*86400000).toISOString().slice(0,10) %>';
-    const vYearAgo  = '<%= new Date(Date.now()-365*86400000).toISOString().slice(0,10) %>';
-    // Kept so the day-drill-down (which replaces the table body with a fetched day's
-    // full results) can restore the original server-rendered rows afterward.
-    const ORIGINAL_TBODY_HTML = document.getElementById('recentVisitsBody') ? document.getElementById('recentVisitsBody').innerHTML : '';
-
-    // Single source of truth for "select a period" (today/week/month/year/all),
-    // reachable from any of the three button rows (vfBtn-*, tpBtn-*, rvBtn-*)
-    // or from the 14-day chart's own period buttons. Every path that used to
-    // paint only its "own half" of the tab now goes through here, so the
-    // funnel, exit pages, top pages, and Recent Visits table — plus all three
-    // button rows and both day labels — always agree on one period.
-    function setPeriodFilter(f) {
-      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.remove('vis-day-active'));
-      document.getElementById('vfDayLabel').style.display = 'none';
-      document.getElementById('rvDayLabel').style.display = 'none';
-      ['today','week','month','year','all'].forEach(k => {
-        document.getElementById('vfBtn-'+k).classList.toggle('vis-filter-active', k === f);
-        document.getElementById('tpBtn-'+k).classList.toggle('vis-filter-active', k === f);
-        document.getElementById('rvBtn-'+k).classList.toggle('vis-filter-active', k === f);
+    function markPeriod(key) {
+      var main = { today: 'today', week: 'week', month: 'month' };
+      var shown = main[key] || 'custom';
+      document.querySelectorAll('#dsub-site [data-tr]').forEach(function (b) {
+        b.classList.toggle('on', b.getAttribute('data-tr') === shown);
       });
-
-      renderVisWindow(VIS_WINDOWS[f]);
-
-      const tbody = document.getElementById('recentVisitsBody');
-      if (tbody) tbody.innerHTML = ORIGINAL_TBODY_HTML;
-      const rows = document.querySelectorAll('#recentVisitsBody tr');
-      rows.forEach(row => {
-        const d = row.dataset.date || '';
-        let show = true;
-        if (f === 'today') show = d === vTodayStr;
-        else if (f === 'week')  show = d >= vWeekAgo;
-        else if (f === 'month') show = d >= vMonthAgo;
-        else if (f === 'year')  show = d >= vYearAgo;
-        row.style.display = show ? '' : 'none';
+      var box = document.getElementById('trCustom');
+      if (box) box.hidden = shown !== 'custom';
+      document.querySelectorAll('#trChart .tr-col').forEach(function (col) {
+        col.classList.toggle('on', key === 'day:' + col.getAttribute('data-date'));
       });
     }
-
-    function setVisFilter(f) {
-      setPeriodFilter(f);
+    function applyWindow(key, win) {
+      if (!win) return;
+      markPeriod(key);
+      renderKpis(win);
+      renderSources(win);
+      renderFunnelBoxes(win);
+      renderCampaigns(win);
+      renderDetail(win);
     }
-
-    setPeriodFilter('today');
-
-    // Clicking a bar in the 14-day chart fetches that day's full visit list (the
-    // server-rendered table only has the 100 most recent rows overall, which may not
-    // include an older day at all once daily traffic exceeds that).
+    function setTrafficPeriod(key) {
+      if (key === 'custom') {
+        if (VIS_WINDOWS.custom) applyWindow('custom', VIS_WINDOWS.custom);
+        else {
+          var box = document.getElementById('trCustom');
+          if (box) box.hidden = false;
+        }
+        return;
+      }
+      var win = VIS_WINDOWS[key];
+      if (!win) return;
+      applyWindow(key, win);
+    }
     function filterVisitsByDate(date, label) {
-      document.querySelectorAll('.vis-filter-btn').forEach(b => b.classList.remove('vis-filter-active'));
-      document.querySelectorAll('.vis-day-bar').forEach(bar => bar.classList.toggle('vis-day-active', bar.dataset.date === date));
-
-      // The three session-scoped panels have this date precomputed; only the
-      // Recent Visits table needs a fetch, because the server-rendered table
-      // holds just the 100 most recent rows overall and may not contain an
-      // older day at all.
-      renderVisWindow(VIS_WINDOWS.byDate[date]);
-      const vfLabel = document.getElementById('vfDayLabel');
-      vfLabel.textContent = '📅 ' + label;
-      vfLabel.style.display = '';
-
-      const dayLabel = document.getElementById('rvDayLabel');
-      dayLabel.textContent = '📅 ' + label + ' — click a filter button above to clear';
-      dayLabel.style.display = '';
-      const tbody = document.getElementById('recentVisitsBody');
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:1.5rem;">Loading…</td></tr>';
+      var win = VIS_WINDOWS.byDate && VIS_WINDOWS.byDate[date];
+      if (win) applyWindow('day:' + date, win);
+      else markPeriod('day:' + date);
+      var tbody = document.getElementById('recentVisitsBody');
+      if (!tbody) return;
+      tbody.innerHTML = '<tr><td colspan="4" class="tr-empty">Loading ' + escHtml(label || date) + '...</td></tr>';
       fetch('/admin/api/visitors-by-date?date=' + encodeURIComponent(date))
-        .then(r => r.json())
-        .then(rows => {
-          if (!rows.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:1.5rem;">No visits on ' + label + '.</td></tr>';
-            return;
-          }
-          tbody.innerHTML = rows.map(v => `<tr data-date="${escHtml(v.date)}">
-            <td><span style="color:#22c55e;font-weight:600;">${escHtml(v.page || v.path)}</span></td>
-            <td style="color:#aaa;font-size:0.8rem;">${escHtml(v.date)}</td>
-            <td style="color:#aaa;font-size:0.8rem;">${v.time ? escHtml(new Date(v.time).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'})) : ''}</td>
-            <td style="color:#555;font-size:0.75rem;font-family:monospace;">${v.session_id ? escHtml(v.session_id.slice(0,12)) : '—'}</td>
-          </tr>`).join('');
-        })
-        .catch(() => { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:1.5rem;">Failed to load visits.</td></tr>'; });
+        .then(function (r) { return r.json(); })
+        .then(function (rows) { renderRecent(rows); })
+        .catch(function () {
+          tbody.innerHTML = '<tr><td colspan="4" class="tr-empty">Could not load that day.</td></tr>';
+        });
     }
+    document.querySelectorAll('#dsub-site [data-tr]').forEach(function (b) {
+      b.addEventListener('click', function () { setTrafficPeriod(b.getAttribute('data-tr')); });
+    });
+    document.querySelectorAll('#dsub-site [data-tr-extra]').forEach(function (b) {
+      b.addEventListener('click', function () { setTrafficPeriod(b.getAttribute('data-tr-extra')); });
+    });
+    var chart = document.getElementById('trChart');
+    if (chart) chart.addEventListener('click', function (e) {
+      var col = e.target.closest ? e.target.closest('[data-date]') : null;
+      if (!col) return;
+      filterVisitsByDate(col.getAttribute('data-date'), col.getAttribute('data-label'));
+    });
+    setTrafficPeriod(VIS_WINDOWS.custom ? 'custom' : 'week');
     </script>
-
-    </div><!-- /dash-section traffic -->
   </div>

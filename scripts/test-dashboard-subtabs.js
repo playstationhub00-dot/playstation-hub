@@ -144,6 +144,21 @@ ok('a games pill click writes sub=games and leaves the other dashboard URLs alon
   assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard');
 });
 
+ok('?sub=traffic opens the site pane and does not rewrite the URL', () => {
+  const f = loadScript('?tab=dashboard&sub=traffic');
+  assert.deepStrictEqual(f.replacedUrls, []);
+  assert.strictEqual(f.win.document.getElementById('dsub-site').classList.contains('active'), true);
+  assert.strictEqual(f.win.document.getElementById('dsub-overview').classList.contains('active'), false);
+});
+
+ok('the Traffic pill still writes the old sub=site URL', () => {
+  const f = loadScript('?tab=dashboard&sub=traffic');
+  f.win.switchDash('site');
+  assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard&sub=site');
+  assert.ok(src.includes('>Traffic</button>'));
+  assert.ok(src.includes("traffic: 'site'"));
+});
+
 ok('legacy sub=now still opens overview', () => {
   const f = loadScript('?tab=dashboard&sub=now');
   assert.strictEqual(f.win.document.getElementById('dsub-overview').classList.contains('active'), true);

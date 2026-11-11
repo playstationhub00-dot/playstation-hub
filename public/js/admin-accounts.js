@@ -71,6 +71,12 @@
 
   // The slot popup's History list: the newest ten lines unless "Show all" was
   // pressed, and that button's label ('' when nothing is left to show).
+  // A save confirms only when the expiry date itself changed. Blank to blank
+  // is not a change, so editing a label does not ask about PS Plus.
+  function expiryChanged(prev, next) {
+    return String(prev || '') !== String(next || '');
+  }
+
   function historyRows(view, showAll) {
     var lines = (view && view.lines) || [];
     var rows = showAll ? lines : lines.slice(0, HISTORY_SHOWN);
@@ -87,7 +93,8 @@
     activeFilterCount: activeFilterCount,
     isFiltering: isFiltering,
     plural: plural,
-    historyRows: historyRows
+    historyRows: historyRows,
+    expiryChanged: expiryChanged
   };
 
   // ── DOM wiring ───────────────────────────────────────────────────────────
@@ -352,6 +359,8 @@
         if (emailInput) emailInput.placeholder = 'e.g. pshub.account1@gmail.com';
       }
       setField('games_text', a ? a.games_text : '');
+      setField('psplus_expires', a ? (a.psplus_expires || '') : '');
+      accForm.setAttribute('data-psplus-expires', a ? (a.psplus_expires || '') : '');
       setField('note', a ? a.note : '');
       setField('price_permanent_tr', a ? a.price_permanent_tr : 5000);
       setField('price_permanent_nt', a ? a.price_permanent_nt : 4500);
@@ -486,6 +495,31 @@
     });
     accForm.addEventListener('change', function (e) {
       if (e.target && e.target.name === 'game_ids') renderGameChips();
+    });
+    accForm.addEventListener('submit', function (e) {
+      if (accForm.getAttribute('data-expiry-ok') === '1') {
+        accForm.removeAttribute('data-expiry-ok');
+        return;
+      }
+      var input = accForm.elements.psplus_expires;
+      if (!input) return;
+      var next = input.value || '';
+      var prev = accForm.getAttribute('data-psplus-expires') || '';
+      if (!expiryChanged(prev, next)) return;
+      e.preventDefault();
+      var body = next
+        ? ('PS Plus expiry will be saved as ' + next + (prev ? '. It was ' + prev + '.' : '. It was blank.'))
+        : ('This clears the PS Plus expiry' + (prev ? '. It was ' + prev + '.' : '.'));
+      var ask = window.adminConfirmAsk;
+      var pending = ask
+        ? ask({ title: 'Save PS Plus expiry?', body: body, ok: 'Save date', cancel: 'Go back' })
+        : Promise.resolve(false);
+      Promise.resolve(pending).then(function (ok) {
+        if (!ok) return;
+        accForm.setAttribute('data-expiry-ok', '1');
+        if (typeof accForm.requestSubmit === 'function') accForm.requestSubmit();
+        else accForm.submit();
+      });
     });
     gameChips.addEventListener('click', function (e) {
       var chip = e.target.closest('[data-uncheck]');
