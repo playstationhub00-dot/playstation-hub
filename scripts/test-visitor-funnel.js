@@ -36,6 +36,31 @@ ok('viewedGame / messaged / browsed come from rows and taps', () => {
   assert.strictEqual(by.d.messaged, false);
 });
 
+ok('probe paths are dropped, and an order-status poll is not the exit page', () => {
+  const s = f.buildSessionSummaries({
+    visitors: [
+      row('a', '/'), row('a', '/Dockerfile'), row('a', '/order/PH-1/state'),
+      row('bot', '/env'), row('bot', '/.env')
+    ],
+    taps: [], orderedSessionIds: NONE, paidSessionIds: NONE
+  });
+  assert.strictEqual(s.length, 1);
+  assert.strictEqual(s[0].sessionId, 'a');
+  assert.strictEqual(s[0].exitPath, '/');
+});
+
+ok('a session that only polled order state has no exit page', () => {
+  const s = f.buildSessionSummaries({
+    visitors: [row('p', '/order/PH-9/state'), row('p', '/order/PH-9/state')],
+    taps: [], orderedSessionIds: NONE, paidSessionIds: NONE
+  });
+  assert.strictEqual(s.length, 1);
+  assert.strictEqual(s[0].exitPath, '');
+  const m = f.windowMetrics(s, 0);
+  assert.strictEqual(m.exitPages.length, 0);
+  assert.strictEqual(m.funnel[0].count, 1);
+});
+
 ok('an ordering session counts as having viewed a game, and paid follows the paid set', () => {
   const s = f.buildSessionSummaries({
     visitors: [row('o', '/')], taps: [], orderedSessionIds: new Set(['o']), paidSessionIds: new Set(['o'])

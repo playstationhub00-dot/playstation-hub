@@ -1,7 +1,8 @@
 // Run: node scripts/test-today.js
 //
 // Today is built from records the admin already has. Counts the page cannot
-// know (waitlist size, a Reserved slot, PS Plus expiry, GA4) are left out.
+// know (waitlist size, a Reserved slot, GA4) are left out. PS Plus expiry
+// uses the date saved on the account, and a blank date stays blank.
 const assert = require('assert');
 const today = require('../lib/today');
 
@@ -212,7 +213,28 @@ ok('shop visit numbers are passed through, and GA4 is marked as not available', 
   assert.strictEqual(t.traffic.botsFiltered, 11);
   assert.strictEqual(t.traffic.source, 'shop');
   assert.ok(t.omitted.includes('ga4'));
-  assert.ok(t.omitted.includes('psplus-expiry'));
+  assert.ok(!t.omitted.includes('psplus-expiry'));
+  assert.ok(t.omitted.includes('waitlist'));
+  assert.ok(t.omitted.includes('reserved-slot'));
+  assert.strictEqual(t.psplusExpiring.count, 0);
+});
+
+ok('PS Plus expiry lists only saved dates, and only when they are due', () => {
+  const t = build({ accounts: [
+    { id: 7, label: 'Account #07', psplus_expires: '2026-11-06' },
+    { id: 8, label: 'Later', psplus_expires: '2026-12-01' },
+    { id: 9, label: 'Blank', psplus_expires: '' },
+    { id: 10, label: 'No field' },
+    { id: 11, label: 'Yesterday', psplus_expires: '2026-11-03' },
+    { id: 12, label: 'Bad', psplus_expires: 'soon' }
+  ]});
+  assert.strictEqual(t.psplusExpiring.count, 2);
+  assert.strictEqual(t.psplusExpiring.soonest.label, 'Yesterday');
+  assert.strictEqual(t.psplusExpiring.soonest.when, '1 day ago');
+  assert.strictEqual(t.psplusExpiring.items[1].label, 'Account #07');
+  assert.strictEqual(t.psplusExpiring.items[1].when, 'in 2 days');
+  assert.strictEqual(today.cleanPsplusExpiry('2026-02-31'), '');
+  assert.strictEqual(today.cleanPsplusExpiry(''), '');
 });
 
 ok('missing traffic is a later-update placeholder, not a zero pretending to be GA4', () => {

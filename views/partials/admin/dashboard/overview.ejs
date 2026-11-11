@@ -266,16 +266,33 @@
       <div class="dm-note">Orders nudged about an unpaid payment, and the ones that paid afterwards. Counted on Manila dates.</div>
     </div>
 
+    <% const px = (typeof todayView !== 'undefined' && todayView && todayView.psplusExpiring) ? todayView.psplusExpiring : null; %>
+    <div class="dash-section" style="margin-top:0.7rem;">
+      <div class="dash-section-head">
+        <span class="dash-section-title">⭐ PS Plus expiring</span>
+        <button type="button" class="dash-section-link" onclick="dashOpen({tab:'accounts', nav:'accounts'})">Accounts →</button>
+      </div>
+      <% if (!px || !px.count) { %>
+        <div class="dm-empty">No accounts expire in the next 14 days. Dates stay blank until you add them on Accounts.</div>
+      <% } else { %>
+        <div class="ov-kpi-v" style="font-size:1.6rem;"><%= px.count %></div>
+        <% if (px.soonest) { %><div class="ov-kpi-note">soonest: <%= px.soonest.label %> <%= px.soonest.when %></div><% } %>
+        <% px.items.forEach(function (row) { %>
+          <div class="dm-row"><span class="dm-row-n"><%= row.label %></span><span class="dm-row-v"><%= row.when %></span></div>
+        <% }) %>
+      <% } %>
+    </div>
+
     <div class="ov-deeper">
       <span style="font-size:1.5rem;">📊</span>
       <div>
         <div class="ov-deeper-t">Going deeper</div>
-        <div class="ov-deeper-s">Money, stock and slots, and site traffic each have their own tab.</div>
+        <div class="ov-deeper-s">Money, stock and slots, and traffic each have their own tab.</div>
       </div>
       <div class="ov-deeper-go">
         <button class="ov-deeper-btn" onclick="dashGoto('money')">💰 Money →</button>
         <button class="ov-deeper-btn" onclick="dashGoto('games')">🎮 Games &amp; slots →</button>
-        <button class="ov-deeper-btn" onclick="dashGoto('site')">🌐 Site →</button>
+        <button class="ov-deeper-btn" onclick="dashGoto('site')">🌐 Traffic →</button>
       </div>
     </div>
   </div>

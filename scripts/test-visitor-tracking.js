@@ -79,6 +79,18 @@ async function main() {
     assert.strictEqual((after.visitor_skips[day] || 0) - ((before.visitor_skips || {})[day] || 0), 1);
   });
 
+  await okAsync('scanner probes are not stored as visits, even with a browser user agent', async () => {
+    const before = readDb();
+    const day = new Date().toISOString().slice(0, 10);
+    const a = await call('GET', '/Dockerfile', { headers: { 'User-Agent': IPHONE } });
+    const b = await call('GET', '/env', { headers: { 'User-Agent': IPHONE } });
+    assert.ok(!/ph_sid=/.test(setCookie(a)) && !/ph_sid=/.test(setCookie(b)));
+    const after = readDb();
+    assert.strictEqual(after.visitors.length, before.visitors.length);
+    assert.ok(!(after.visitors || []).some(v => v.path === '/Dockerfile' || v.path === '/env'));
+    assert.strictEqual((after.visitor_skips[day] || 0) - ((before.visitor_skips || {})[day] || 0), 2);
+  });
+
   await okAsync('webhook posts record nothing, issue no cookie, and are tallied', async () => {
     const before = readDb();
     const day = new Date().toISOString().slice(0, 10);

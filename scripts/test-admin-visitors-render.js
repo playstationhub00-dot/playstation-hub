@@ -99,7 +99,26 @@ async function main() {
     assert.strictEqual(win.asked.other, 1);
     assert.deepStrictEqual(win.misses, [{ q: 'elden ring', count: 1 }]);
     assert.ok(!win.topPages.some(([p]) => p.startsWith('/api/') || p.startsWith('/webhooks')), 'system paths are not top pages');
+    assert.strictEqual(win.ga4, false);
+    assert.strictEqual(win.log, 'shop');
+    assert.strictEqual(win.kpis.botsHidden, 6);
     assert.ok(r.body.includes('/js/dashboard-visitors.js?v='));
+    assert.ok(r.body.includes('Shop visit log'));
+    assert.ok(r.body.includes('not connected'));
+    assert.ok(r.body.includes('data-tr="week"'));
+    assert.ok(r.body.includes('Top UTM campaigns'));
+    assert.ok(r.body.includes('name="psplus_expires"'));
+    assert.ok(r.body.includes('PS Plus expiring'));
+    assert.ok(!r.body.includes('ga4Visitors'));
+  });
+
+  await okAsync('sub=site and sub=traffic both open the Traffic pane', async () => {
+    for (const sub of ['site', 'traffic']) {
+      const r = await call('GET', '/admin?tab=dashboard&sub=' + sub, { headers: { Cookie: cookie, 'User-Agent': 'Mozilla/5.0 test', 'X-Forwarded-Proto': 'https' } });
+      assert.strictEqual(r.status, 200, sub);
+      assert.ok(r.body.includes('class="dash-pane active" id="dsub-site"'), sub + ' pane');
+      assert.ok(r.body.includes('>Traffic</button>'));
+    }
   });
 
   console.log('\n' + passed + ' assertions passed\n');
