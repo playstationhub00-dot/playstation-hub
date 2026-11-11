@@ -97,6 +97,15 @@ ok('game matches any account that contains it', () => {
   assert.ok(!F.slotMatches(item('open', '', 'trophy', ['3']), state({ game: '12' })));
 });
 
+ok('a coming soon game is a real filter, and a catalogue id is not the same game', () => {
+  assert.strictEqual(F.normalizeState({ game: 'upcoming_15' }).game, 'upcoming_15');
+  assert.strictEqual(F.normalizeState({ game: 'upcoming_' }).game, '');
+  assert.strictEqual(F.normalizeState({ game: 'upcoming_15; drop' }).game, '');
+  const f = state({ game: 'upcoming_15' });
+  assert.ok(F.slotMatches(item('open', '', 'trophy', ['upcoming_15', '4']), f));
+  assert.ok(!F.slotMatches(item('open', '', 'trophy', ['15']), f));
+});
+
 ok('search is case-insensitive and ignores surrounding spaces', () => {
   const s = item('rented', '', 'trophy', [], 'pshub nba pack ana cruz nba 2k27');
   assert.ok(F.slotMatches(s, state({ q: '  Ana CRUZ ' })));

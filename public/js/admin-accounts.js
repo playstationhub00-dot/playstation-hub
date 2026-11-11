@@ -23,7 +23,7 @@
       q: typeof r.q === 'string' ? r.q.slice(0, 100) : '',
       status: STATUS_VALUES.indexOf(r.status) !== -1 ? r.status : 'all',
       type: TYPE_VALUES.indexOf(r.type) !== -1 ? r.type : 'all',
-      game: /^\d+$/.test(String(r.game == null ? '' : r.game)) ? String(r.game) : ''
+      game: /^(?:\d+|upcoming_\d+)$/.test(String(r.game == null ? '' : r.game)) ? String(r.game) : ''
     };
   }
 

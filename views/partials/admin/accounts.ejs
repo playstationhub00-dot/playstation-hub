@@ -12,9 +12,19 @@
   const accGames = [...games].sort((a, b) => a.title.localeCompare(b.title));
   const accGameById = {};
   accGames.forEach(g => { accGameById[g.id] = g; });
+  // Coming soon titles are a separate list. Their ids overlap catalogue ids,
+  // so a link is upcoming_<id>, never the bare number.
+  const accUpcoming = (typeof upcoming !== 'undefined' && Array.isArray(upcoming) ? upcoming : [])
+    .slice().sort((a, b) => String(a.title).localeCompare(String(b.title)));
+  const accUpcomingById = {};
+  accUpcoming.forEach(g => { accUpcomingById[g.id] = g; });
   const accById = {};
   accountsView.accounts.forEach(a => { accById[a.id] = a; });
-  const accTitles = a => a.game_ids.map(id => (accGameById[id] ? accGameById[id].title : '')).filter(Boolean);
+  const accLinked = a => (a.game_ids || []).map(id => accGameById[id]).filter(Boolean)
+    .concat((a.upcoming_ids || []).map(id => accUpcomingById[id]).filter(Boolean));
+  const accTitles = a => accLinked(a).map(g => g.title);
+  const accGameKeys = a => (a.game_ids || []).map(String)
+    .concat((a.upcoming_ids || []).map(id => 'upcoming_' + id)).join(',');
   const accPillClass = s => 'st-' + (s.due || s.status);
   const accShortDate = d => (d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '');
   const accHaystack = (a, renters) => [a.label, a.games_text, accTitles(a).join(' '), renters].join(' ').toLowerCase();
@@ -28,7 +38,8 @@
     accData.accounts[a.id] = {
       label: a.label, email_masked: a.email ? maskEmail(a.email) : '', has_email: !!a.email, games_text: a.games_text || '', note: a.note || '',
       psplus_expires: a.psplus_expires || '',
-      game_ids: a.game_ids, price_permanent_tr: a.price_permanent_tr, price_permanent_nt: a.price_permanent_nt,
+      game_ids: (a.game_ids || []).concat((a.upcoming_ids || []).map(id => 'upcoming_' + id)),
+      price_permanent_tr: a.price_permanent_tr, price_permanent_nt: a.price_permanent_nt,
       public_name: a.public_name || '', for_sale: !!a.for_sale, slots
     };
   });
@@ -84,6 +95,11 @@
         <select id="accGame" aria-label="Game">
           <option value="">All games</option>
           <% accGames.forEach(g => { %><option value="<%= g.id %>"><%= g.title %></option><% }) %>
+          <% if (accUpcoming.length) { %>
+          <optgroup label="Coming soon">
+            <% accUpcoming.forEach(g => { %><option value="upcoming_<%= g.id %>"><%= g.title %></option><% }) %>
+          </optgroup>
+          <% } %>
         </select>
       </div>
       <a href="#" id="accClear" class="acc-clear" data-acc-clear hidden>✕ Clear</a>
@@ -98,9 +114,10 @@
     <% accountsView.slots.forEach(s => {
          const a = accById[s.account_id];
          const titles = accTitles(a);
-         const first = a.game_ids.length ? (accGameById[a.game_ids[0]] || null) : null;
+         const linked = accLinked(a);
+         const first = linked.length ? linked[0] : null;
     %>
-    <div class="acc-srow" data-status="<%= s.status %>" data-due="<%= s.due %>" data-type="<%= s.type %>" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, s.renter_name) %>">
+    <div class="acc-srow" data-status="<%= s.status %>" data-due="<%= s.due %>" data-type="<%= s.type %>" data-game-ids="<%= accGameKeys(a) %>" data-search="<%= accHaystack(a, s.renter_name) %>">
       <button type="button" class="slot-pill <%= accPillClass(s) %>" data-acc-slot="<%= a.id %>:<%= s.type %>"><%= s.pill %></button>
       <span class="acc-s-type"><%= ACC_TYPE_LABEL[s.type] %></span>
       <span class="acc-s-game">
@@ -126,13 +143,13 @@
              : (a.games_text || '');
            const meta = [gamesLine, a.psplus_expires ? ('PS Plus ' + accShortDate(a.psplus_expires)) : '', a.note ? '📝 ' + a.note : ''].filter(Boolean);
       %>
-      <div class="acc-arow" data-game-ids="<%= a.game_ids.join(',') %>" data-search="<%= accHaystack(a, renters) %>">
+      <div class="acc-arow" data-game-ids="<%= accGameKeys(a) %>" data-search="<%= accHaystack(a, renters) %>">
         <div class="acc-a-main">
           <div class="acc-covers">
-            <% a.game_ids.slice(0, 4).forEach(id => { const g = accGameById[id]; %>
-              <% if (g && g.cover_image) { %><img src="<%= g.cover_image %>" alt="" class="acc-cover-thumb" loading="lazy" title="<%= g.title %>"><% } else { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
+            <% accLinked(a).slice(0, 4).forEach(g => { %>
+              <% if (g.cover_image) { %><img src="<%= g.cover_image %>" alt="" class="acc-cover-thumb" loading="lazy" title="<%= g.title %>"><% } else { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
             <% }) %>
-            <% if (!a.game_ids.length) { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
+            <% if (!accLinked(a).length) { %><span class="acc-cover-thumb acc-cover-placeholder">🎮</span><% } %>
           </div>
           <div class="acc-a-text">
             <div class="acc-name"><%= a.label %><% if (a.for_sale) { %> <span class="acc-sale" title="Listed on the Buy page">🛒</span><% } %></div>
@@ -181,15 +198,21 @@
           <div class="qa-l">Account label *</div>
           <input class="qa-in" type="text" name="label" placeholder="e.g. PSHub Main Account" required>
 
-          <div class="qa-l">Linked catalogue games</div>
+          <div class="qa-l">Linked games</div>
           <div class="acc-gchips" id="accGameChips" hidden></div>
           <input class="qa-in" type="search" id="accGameSearch" placeholder="Search games to link…" autocomplete="off">
           <div class="acc-gpick">
             <% accGames.forEach(g => { %>
             <label class="acc-gpick-item"><input type="checkbox" name="game_ids" value="<%= g.id %>" data-title="<%= g.title %>"> <%= g.title %> <span class="acc-gpick-plat"><%= g.platform %></span></label>
             <% }) %>
+            <% if (accUpcoming.length) { %>
+            <div class="qa-l">Coming soon</div>
+            <% accUpcoming.forEach(g => { %>
+            <label class="acc-gpick-item"><input type="checkbox" name="game_ids" value="upcoming_<%= g.id %>" data-title="<%= g.title %>"> <%= g.title %> <span class="acc-gpick-plat"><%= g.platform %> · <%= g.release_date || 'TBA' %></span></label>
+            <% }) %>
+            <% } %>
           </div>
-          <div class="qa-hint">Linked games power the game-card availability and the Game filter.</div>
+          <div class="qa-hint">Linked games power the game-card availability and the Game filter. A Coming soon title stays on this account until it is released.</div>
 
           <div class="qa-l">Games in this account (free text, internal)</div>
           <textarea class="qa-in" name="games_text" rows="2" placeholder="e.g. NBA 2K25, Tekken 8, Call of Duty BO6…"></textarea>

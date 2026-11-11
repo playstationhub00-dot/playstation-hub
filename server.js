@@ -1290,6 +1290,9 @@ function normalizeAccount(a) {
     if (!ACCOUNT_STATUSES.includes(a.slots[t].status)) a.slots[t].status = 'open';
   });
   a.game_ids = Array.isArray(a.game_ids) ? a.game_ids : [];
+  a.upcoming_ids = Array.isArray(a.upcoming_ids)
+    ? a.upcoming_ids.map(id => parseInt(id, 10)).filter(id => id > 0)
+    : [];
   a.email = a.email || '';
   a.psplus_expires = todayLib.cleanPsplusExpiry(a.psplus_expires);
   a.for_sale = a.for_sale === true;
@@ -6884,6 +6887,7 @@ app.post('/admin/upcoming/delete/:id', requireAuth, (req, res) => {
     const fp = path.join(uploadsDir, path.basename(img));
     if (fs.existsSync(fp)) { try { fs.unlinkSync(fp); } catch (e) {} }
   });
+  relinkAccountUpcoming(req.params.id, null);
   db.get('upcoming').remove({ id: parseInt(req.params.id) }).write();
   res.redirect('/admin?msg=upcoming_deleted');
 });
@@ -6924,6 +6928,9 @@ app.post('/admin/upcoming/release/:id', requireAuth, asyncRoute(async (req, res)
           const key = 'upcoming_' + upcomingId;
           const rows = db.get('customers').filter(c => String(c.game_id) === key).value();
           rows.forEach(c => db.get('customers').find({ id: c.id }).assign({ game_id: gameId }).write());
+          // Accounts linked to this Coming soon title follow it onto the
+          // released game, same as the customer rows above.
+          relinkAccountUpcoming(upcomingId, gameId);
           return rows.length;
         },
         removeUpcoming: id => db.get('upcoming').remove({ id: parseInt(id) }).write()
@@ -8217,6 +8224,8 @@ function buildAccountsView() {
   const categories = getPriceCategories();
   const categoryById = {};
   categories.forEach(c => { categoryById[c.id] = c; });
+  const upcomingById = {};
+  (getUpcoming() || []).forEach(u => { if (u) upcomingById[u.id] = u; });
 
   // days_left, due state, urgency and pill text come from lib/accounts-view,
   // counted in Manila calendar days so "ENDS TODAY" means today in the PH.
@@ -8226,10 +8235,15 @@ function buildAccountsView() {
     ACCOUNT_SLOT_TYPES.forEach(t => {
       slotView[t] = accountsViewLib.decorateSlot(a.slots[t], today);
     });
-    // Category = the price category of the first linked game (if any)
+    // Category = the price category of the first linked catalogue game.
+    // A Coming soon link has no price category. On its own it is still a
+    // connection, so the account is grouped under Coming soon rather than
+    // left Uncategorized as if nothing was linked.
     const linkedGame = a.game_ids && a.game_ids.length ? gamesById[a.game_ids[0]] : null;
     const cat = linkedGame && linkedGame.price_category_id ? categoryById[linkedGame.price_category_id] : null;
-    return { ...a, slotView, category_id: cat ? cat.id : null, category_name: cat ? cat.name : 'Uncategorized' };
+    const soonLinked = (a.upcoming_ids || []).some(id => upcomingById[id]);
+    const categoryName = cat ? cat.name : (soonLinked && !linkedGame ? 'Coming soon' : 'Uncategorized');
+    return { ...a, slotView, category_id: cat ? cat.id : null, category_name: categoryName };
   });
 
   // Group by category name, sorted alphabetically by account label within each group
@@ -8260,10 +8274,44 @@ app.get('/admin/accounts', requireAuth, (req, res) => {
   res.redirect('/admin?tab=accounts' + q);
 });
 
-function parseGameIds(raw) {
-  if (Array.isArray(raw)) return raw.map(x => parseInt(x)).filter(Boolean);
-  if (typeof raw === 'string' && raw.trim()) return raw.split(',').map(x => parseInt(x)).filter(Boolean);
-  return [];
+// Catalogue ids stay numbers. Coming soon titles share that number space, so
+// a link to one is "upcoming_<id>" and is stored on upcoming_ids. Putting the
+// bare number in game_ids would attach a different released game.
+function parseAccountGameLinks(raw) {
+  const list = Array.isArray(raw) ? raw : (typeof raw === 'string' && raw.trim() ? raw.split(',') : []);
+  const gameIds = [];
+  const upcomingIds = [];
+  list.forEach(item => {
+    const s = String(item == null ? '' : item).trim();
+    const up = /^upcoming_(\d+)$/.exec(s);
+    if (up) {
+      const id = parseInt(up[1], 10);
+      if (id && !upcomingIds.includes(id)) upcomingIds.push(id);
+      return;
+    }
+    if (!/^\d+$/.test(s)) return;
+    const id = parseInt(s, 10);
+    if (id && !gameIds.includes(id)) gameIds.push(id);
+  });
+  const known = new Set((getUpcoming() || []).map(g => g && g.id));
+  return { gameIds, upcomingIds: upcomingIds.filter(id => known.has(id)) };
+}
+
+// Move or drop every account link to one Coming soon game. gameId set: the
+// title was released, so the link follows the new catalogue row. gameId
+// empty: the Coming soon record was deleted.
+function relinkAccountUpcoming(upcomingId, gameId) {
+  const id = parseInt(upcomingId, 10);
+  if (!id) return;
+  const next = gameId == null || gameId === '' ? null : parseInt(gameId, 10);
+  getAccounts().forEach(acc => {
+    const soon = (acc.upcoming_ids || []).map(n => parseInt(n, 10)).filter(n => n > 0);
+    if (!soon.includes(id)) return;
+    const upcoming_ids = soon.filter(x => x !== id);
+    const game_ids = (acc.game_ids || []).slice();
+    if (next && !game_ids.includes(next)) game_ids.push(next);
+    db.get('accounts').find({ id: acc.id }).assign({ upcoming_ids, game_ids }).write();
+  });
 }
 
 // Shared category display order (New Games → Deluxe → Special → Regular → Uncategorized last)
@@ -8410,11 +8458,13 @@ app.post('/admin/accounts/add', requireAuth, (req, res) => {
   const { label, games_text, game_ids, note, email, price_permanent_tr, price_permanent_nt,
     enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name, psplus_expires } = req.body;
   if (!label || !label.trim()) return res.redirect('/admin?tab=accounts&msg=account_error');
+  const links = parseAccountGameLinks(game_ids);
   db.get('accounts').push({
     id: newAccountId(),
     label: label.trim(),
     games_text: games_text || '',
-    game_ids: parseGameIds(game_ids),
+    game_ids: links.gameIds,
+    upcoming_ids: links.upcomingIds,
     note: note || '',
     email: (email || '').trim(),
     psplus_expires: todayLib.cleanPsplusExpiry(psplus_expires),
@@ -8437,6 +8487,7 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
     enable_trophy, enable_non_trophy, enable_ps4_primary, for_sale, public_name, psplus_expires } = req.body;
   const existing = getAccount(req.params.id);
   if (!existing) return res.redirect('/admin?tab=accounts&msg=account_error');
+  const links = parseAccountGameLinks(game_ids);
   const slots = existing.slots;
   slots.trophy.enabled = enable_trophy !== undefined;
   slots.non_trophy.enabled = enable_non_trophy !== undefined;
@@ -8444,7 +8495,8 @@ app.post('/admin/accounts/edit/:id', requireAuth, (req, res) => {
   db.get('accounts').find({ id: parseInt(req.params.id) }).assign({
     label: (label || existing.label).trim(),
     games_text: games_text !== undefined ? games_text : existing.games_text,
-    game_ids: parseGameIds(game_ids),
+    game_ids: links.gameIds,
+    upcoming_ids: links.upcomingIds,
     note: note !== undefined ? note : existing.note,
     email: mask.resolveKeptSecret(email, existing.email, req.body.email_keep),
     psplus_expires: psplus_expires !== undefined ? todayLib.cleanPsplusExpiry(psplus_expires) : (existing.psplus_expires || ''),
