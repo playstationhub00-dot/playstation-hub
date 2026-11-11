@@ -274,7 +274,11 @@
         if (!SUBS.includes(name)) name = 'overview';
         SUBS.forEach(s => {
           const pane = document.getElementById('dsub-' + s);
-          const pill = document.querySelector('[data-dsub=' + s + ']');
+          // The panel itself is #tab-dashboard[data-dsub], and .tab-panel is
+          // display:none until it has .active. An unscoped [data-dsub] lookup
+          // hits that panel before the pill and strips .active, which blanks
+          // the whole Dashboard. Only the pills are buttons.
+          const pill = document.querySelector('#tab-dashboard .dsub-pill[data-dsub="' + s + '"]');
           if (pane) pane.classList.toggle('active', s === name);
           if (pill) pill.classList.toggle('active', s === name);
         });

@@ -22,8 +22,9 @@ const src = fs.readFileSync(TEMPLATE, 'utf8');
 
 function stubEl(id) {
   const set = new Set();
-  return {
+  const el = {
     id, value: '',
+    attrs: {},
     classList: {
       add: c => set.add(c),
       remove: c => set.delete(c),
@@ -33,8 +34,11 @@ function stubEl(id) {
         if (want) set.add(c); else set.delete(c);
         return want;
       }
-    }
+    },
+    setAttribute(k, v) { el.attrs[k] = String(v); },
+    getAttribute(k) { return Object.prototype.hasOwnProperty.call(el.attrs, k) ? el.attrs[k] : null; }
   };
+  return el;
 }
 
 // Loads the real inline script against a stub DOM and a fake history/location,
@@ -44,11 +48,39 @@ function loadScript(search) {
   const m = src.match(/<script>([\s\S]*)<\/script>/);
   assert.ok(m, 'dashboard.ejs still has one inline <script> block');
 
-  const els = {};
+  // The real panel is <div id="tab-dashboard" class="tab-panel" data-dsub="...">
+  // and the pills are <button class="dsub-pill" data-dsub="overview"> inside it.
+  // .tab-panel is display:none until .active, which switchTab() adds when
+  // Dashboard is the open section. querySelector must walk in document order,
+  // because an unscoped [data-dsub=overview] hits the panel before the pill.
+  const SUB_NAMES = ['overview', 'money', 'games', 'site'];
+  const params = new URLSearchParams(search);
+  let serverSub = params.get('sub') || 'overview';
+  if (serverSub === 'traffic') serverSub = 'site';
+  if (params.get('month')) serverSub = 'money';
+  if (!SUB_NAMES.includes(serverSub)) serverSub = 'overview';
+
+  const panel = stubEl('tab-dashboard');
+  panel.setAttribute('data-dsub', serverSub);
+  panel.classList.add('active');
+  const pills = {};
+  SUB_NAMES.forEach(name => {
+    pills[name] = stubEl('pill-' + name);
+    pills[name].setAttribute('data-dsub', name);
+  });
+
+  const els = { 'tab-dashboard': panel };
   const store = {};
   const doc = {
     getElementById(id) { return (els[id] = els[id] || stubEl(id)); },
-    querySelector() { return stubEl('scratch'); }
+    querySelector(sel) {
+      const found = String(sel).match(/\[data-dsub=(?:"([^"]+)"|'([^']+)'|([^\]\s]+))\]/);
+      if (!found) return null;
+      const want = found[1] || found[2] || found[3];
+      const pillOnly = String(sel).indexOf('dsub-pill') !== -1;
+      if (!pillOnly && panel.getAttribute('data-dsub') === want) return panel;
+      return pills[want] || null;
+    }
   };
   const replacedUrls = [];
   const sandbox = {
@@ -157,6 +189,33 @@ ok('the Traffic pill still writes the old sub=site URL', () => {
   assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard&sub=site');
   assert.ok(src.includes('>Traffic</button>'));
   assert.ok(src.includes("traffic: 'site'"));
+});
+
+// The panel that holds the pills also carries data-dsub, so the open section
+// can show "Does not change Traffic." An unscoped [data-dsub=...] lookup hits
+// that panel first. switchDash then toggles .active on it. .tab-panel is
+// display:none without .active, so the whole Dashboard, pills included,
+// disappears and the content pane is blank.
+ok('choosing Traffic keeps the Dashboard panel on screen', () => {
+  const f = loadScript('?tab=dashboard');
+  const panel = f.win.document.getElementById('tab-dashboard');
+  assert.strictEqual(panel.classList.contains('active'), true, 'Dashboard started open');
+  f.win.switchDash('site');
+  assert.strictEqual(panel.classList.contains('active'), true,
+    'Dashboard panel lost .active, so the content pane is blank');
+  assert.strictEqual(f.win.document.getElementById('dsub-site').classList.contains('active'), true);
+  assert.strictEqual(f.win.document.querySelector('.dsub-pill[data-dsub="site"]').classList.contains('active'), true);
+  assert.strictEqual(f.replacedUrls[f.replacedUrls.length - 1], '/admin?tab=dashboard&sub=site');
+});
+
+ok('choosing Overview from Money does not blank the Dashboard', () => {
+  const f = loadScript('?tab=dashboard&sub=money');
+  const panel = f.win.document.getElementById('tab-dashboard');
+  f.win.switchDash('overview');
+  assert.strictEqual(panel.classList.contains('active'), true,
+    'Dashboard panel lost .active, so the content pane is blank');
+  assert.strictEqual(f.win.document.getElementById('dsub-overview').classList.contains('active'), true);
+  assert.strictEqual(f.win.document.querySelector('.dsub-pill[data-dsub="overview"]').classList.contains('active'), true);
 });
 
 ok('legacy sub=now still opens overview', () => {
