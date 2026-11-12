@@ -22,6 +22,10 @@
 
         <div class="form-group full">
           <label id="cust_game_label"><%= customer.status === 'reservation' ? 'Upcoming Game Reserved *' : 'Game Rented *' %></label>
+          <%# Reservation, Renting and Bought can all name a Coming soon title.
+              The search box skips a group with display:none, so hiding this
+              list is what made a permanent purchase show No matches. %>
+          <% const custUpcomingOk = customer.status === 'reservation' || customer.status === 'renting' || customer.status === 'bought'; %>
           <select name="game_id" id="cust_game" onchange="updateCustPrice()" required>
             <option value="">— Select a game —</option>
             <optgroup label="Available Games" id="cust_optgroup_regular" style="<%= customer.status === 'reservation' ? 'display:none' : '' %>">
@@ -37,7 +41,7 @@
               </option>
               <% }) %>
             </optgroup>
-            <optgroup label="Upcoming Games" id="cust_optgroup_upcoming" style="<%= customer.status !== 'reservation' ? 'display:none' : '' %>">
+            <optgroup label="Upcoming Games" id="cust_optgroup_upcoming" style="<%= custUpcomingOk ? '' : 'display:none' %>">
               <% upcoming.forEach(g => { %>
               <option value="upcoming_<%= g.id %>"
                 <%= String(customer.game_id) === 'upcoming_'+g.id ? 'selected' : '' %>>
@@ -179,20 +183,23 @@ function toggleCustStatus(status) {
   const grpUpcoming = document.getElementById('cust_optgroup_upcoming');
   const gameSel = document.getElementById('cust_game');
   const currentIsUpcoming = gameSel.value.startsWith('upcoming_');
+  // Same three statuses the select renders on first load. A Coming soon
+  // title can be reserved, rented, or bought outright. Done, cancelled and
+  // refunded still have no Coming soon list.
+  const upcomingOk = status === 'reservation' || status === 'renting' || status === 'bought';
   if (status === 'reservation') {
     daysGroup.setAttribute('hidden', '');
     grpRegular.style.display = 'none';
     grpUpcoming.style.display = '';
     gameLabel.textContent = 'Upcoming Game Reserved *';
-    // Only reset if the current selection isn't already an upcoming game —
-    // switching between non-reservation statuses (e.g. renting -> done)
-    // shouldn't blank out a selection that's still valid.
+    // A released game is not a reservation target. Switching between
+    // Renting and Bought keeps a Coming soon pick that is still valid.
     if (!currentIsUpcoming) gameSel.value = '';
   } else {
     grpRegular.style.display = '';
-    grpUpcoming.style.display = 'none';
+    grpUpcoming.style.display = upcomingOk ? '' : 'none';
     gameLabel.textContent = 'Game Rented *';
-    if (currentIsUpcoming) gameSel.value = '';
+    if (currentIsUpcoming && !upcomingOk) gameSel.value = '';
     if (status === 'bought') daysGroup.setAttribute('hidden', '');
     else { daysGroup.removeAttribute('hidden'); updateCustEndDate(); }
   }
