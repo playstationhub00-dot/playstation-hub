@@ -67,7 +67,7 @@ function load() {
     NEXT_DAYS: { tr: null, nt: null, ps4: null }
   };
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'game-detail.js'), 'utf8'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'game-film.js'), 'utf8'), ctx);
   return { ctx, dialog, img, count, shots, body, closeBtn, prev, next, focused: () => focused };
 }
 

@@ -269,3 +269,20 @@ body.gp-redesign .gp-rel small { font-size: 12px; color: #a8a8a8; }
   body.gp-redesign .gd-sb-amount { color: #fff; font-size: 20px; }
   body.gp-redesign .gd-sb-code { color: #7ee2a0; font-size: 12px; font-weight: 700; }
 }
+
+/* Coming soon page only. The rent page stays on body.gp-redesign without
+   .gp-upcoming, so these rules cannot change it. */
+body.gp-upcoming .rsv-full-banner { margin: 0 0 14px; }
+body.gp-upcoming .gp-mode button:only-child { grid-column: 1 / -1; }
+body.gp-upcoming #sumFinal { color: var(--theme-btn, #F5B800); font-size: 22px; font-weight: 800; }
+body.gp-upcoming .gd-order-name {
+  box-sizing: border-box; height: 46px; margin-top: 12px;
+  border: 1px solid #333; background: #0d0d0d; border-radius: 10px;
+}
+body.gp-upcoming .gd-order-btn:not(.gd-cta-wait) {
+  background: var(--theme-btn, #F5B800); color: #0a0a0a;
+  border-radius: 12px; font-weight: 800;
+}
+body.gp-upcoming .gd-order-btn:not(.gd-cta-wait):hover { opacity: 0.92; }
+body.gp-upcoming .gd-order-sub { color: #a8a8a8; line-height: 1.45; }
+body.gp-upcoming .gd-cta-link { color: #a8a8a8; }
