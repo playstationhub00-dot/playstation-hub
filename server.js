@@ -2470,23 +2470,63 @@ function adjustPs4Slots(gameId, delta) {
   }).write();
 }
 
-// A Coming Soon game's slot counts are stored as the total the owner
-// configured — they don't shrink on their own when a reservation comes in.
-// This subtracts active reservations (customers rows with status:'reservation'
-// against this game) so "slots left" reflects what's actually still open.
-// Single source of truth for that subtraction — every place that shows a
-// Coming Soon slot count to a customer must go through this, or it'll drift
-// out of sync with reality the way the homepage/browse cards just did.
+function holderName(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// A Coming Soon game's trophy_slots / non_trophy_slots stay the total the
+// owner configured. They do not shrink when a slot is taken. What a customer
+// can still reserve is that total, after everything Admin → Coming soon
+// already shows as taken:
+//
+//   - an account linked on upcoming_ids (never game_ids — Coming soon ids
+//     and released-game ids are separate lists and the numbers overlap)
+//     whose slot of this type is enabled and not Open, and
+//   - a Bought, Renting or Reservation customer stored as upcoming_<id>
+//     for this type, unless that person is already the renter on one of
+//     those taken slots (one person, one slot).
+//
+// With no linked account of this type, the configured total minus those
+// customers is the whole count. Every customer-facing Coming soon slot
+// count, and the reserve check, goes through here.
 function resolveUpcomingSlots(game) {
   const gameKey = 'upcoming_' + game.id;
-  const reservations = getCustomers().filter(c =>
-    String(c.game_id) === gameKey && c.status === 'reservation'
+  const gid = parseInt(game.id, 10);
+  const holding = { tr: [], nt: [] };
+  getCustomers().forEach(c => {
+    if (!c || String(c.game_id) !== gameKey) return;
+    if (c.status !== 'bought' && c.status !== 'renting' && c.status !== 'reservation') return;
+    if (c.account_type === 'tr' || c.account_type === 'nt') holding[c.account_type].push(c);
+  });
+  const linked = getAccounts().filter(a =>
+    (a.upcoming_ids || []).some(id => parseInt(id, 10) === gid)
   );
-  const reservedNt = reservations.filter(c => c.account_type === 'nt').length;
-  const reservedTr = reservations.filter(c => c.account_type === 'tr').length;
+
+  function free(type, configured, slotKey) {
+    const cap = Math.max(0, parseInt(configured, 10) || 0);
+    const holders = holding[type];
+    const slots = [];
+    linked.forEach(a => {
+      const s = a.slots && a.slots[slotKey];
+      if (s && s.enabled) slots.push(s);
+    });
+    if (!slots.length) return Math.max(0, cap - holders.length);
+    const taken = slots.filter(s => s.status !== 'open');
+    const open = slots.length - taken.length;
+    const extra = holders.filter(c => {
+      const id = String(c.id);
+      const name = holderName(c.customer_name);
+      return !taken.some(s => {
+        if (s.renter_id != null && s.renter_id !== '' && String(s.renter_id) === id) return true;
+        return !!(name && holderName(s.renter_name) === name);
+      });
+    }).length;
+    return Math.max(0, Math.min(cap, open - extra));
+  }
+
   return Object.assign({}, game, {
-    non_trophy_slots: Math.max(0, (game.non_trophy_slots || 0) - reservedNt),
-    trophy_slots:     Math.max(0, (game.trophy_slots     || 0) - reservedTr),
+    non_trophy_slots: free('nt', game.non_trophy_slots, 'non_trophy'),
+    trophy_slots: free('tr', game.trophy_slots, 'trophy')
   });
 }
 
@@ -3452,6 +3492,15 @@ app.post('/order/reserve', async (req, res) => {
     const left = resolveUpcomingSlots(game);
     newSlot = (type === 'tr' ? left.trophy_slots : left.non_trophy_slots) === 0;
   } else if (isUpcoming) {
+    // The page and this check share resolveUpcomingSlots. A type Admin shows
+    // as taken — a rented or bought account slot, or a Bought, Renting or
+    // Reservation customer — cannot be reserved. A permanent pre-order is
+    // the branch above and stays open when the type is full (new slot).
+    const left = resolveUpcomingSlots(game);
+    const free = type === 'tr' ? left.trophy_slots : left.non_trophy_slots;
+    if (!(free > 0)) {
+      return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=full');
+    }
     // Priced through lib/reservations so the admin's Quick Add records the
     // same reservation this route creates. Two copies of a price rule is
     // exactly how the Coming Soon pre-order came to quote one figure and
@@ -4906,9 +4955,9 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
   }
 
   // A confirmed Coming Soon reservation goes into the customers table the
-  // same way a Messenger-arranged one already does — the upcoming game's
-  // slot count is computed live from status:'reservation' rows (see
-  // /upcoming/:slug), so no game-record fields need updating here. An
+  // same way a Messenger-arranged one already does. The public slot count
+  // is computed live (resolveUpcomingSlots), so no game-record fields need
+  // updating here. An
   // available-game priority reservation (upcoming_game_id is null) has no
   // such slot-count mechanism — it stays as an order only, and the owner
   // sets the customer up manually once a slot actually frees, same as a

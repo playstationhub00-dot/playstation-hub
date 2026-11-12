@@ -168,14 +168,14 @@ function updateCta() {
   const price   = getPrices()[selectedDays] || 0;
   const deposit = selectedType === 'tr' ? 100 : 0;
   const total   = price + deposit;
-  const hasSlot = getSlots() > 0;
+  // A full type is not reservable. The pill already says Full Slot; the
+  // button must not take payment for a slot Admin shows as taken.
+  if (getSlots() <= 0) return setWait('Full Slot');
   const payNote = (typeof PAY_NOTE === 'string' && PAY_NOTE)
     ? PAY_NOTE
     : 'GCash or Maya for local customers · PayPal for international customers';
-  setReady((hasSlot ? '🎮 Reserve now — ₱' : '🎮 Request now — ₱') + total,
-    hasSlot
-      ? 'Pay in full · ' + payNote + ' · nothing more due on release'
-      : 'No slots free right now — pay in full to request one. We refund you if one never opens.');
+  setReady('🎮 Reserve now — ₱' + total,
+    'Pay in full · ' + payNote + ' · nothing more due on release');
 }
 
 // Rent-only. Buy Permanent's Messenger link is static (no duration, no split
@@ -229,6 +229,10 @@ function handleReserveClick(e, mode) {
 }
 
 function handleReserveSubmit(e) {
+  if (getSlots() <= 0) {
+    e.preventDefault();
+    return false;
+  }
   if (!selectedDays) {
     e.preventDefault();
     shakeDurGrid();
@@ -278,8 +282,9 @@ function syncUpcomingSticky() {
   const total = price + deposit;
   if (kicker) kicker.textContent = ready ? (selectedDays === 7 ? 'Weekly' : 'Monthly') : 'Reserve';
   if (amount) amount.textContent = ready && total ? ('₱' + total) : 'Pick a duration';
-  btn.textContent = ready ? (getSlots() > 0 ? 'Reserve' : 'Request') : 'Reserve';
-  btn.classList.toggle('gd-cta-wait', !ready);
+  const open = getSlots() > 0;
+  btn.textContent = !ready ? 'Reserve' : (open ? 'Reserve' : 'Full Slot');
+  btn.classList.toggle('gd-cta-wait', !ready || !open);
 }
 
 function upcomingStickyClick() {

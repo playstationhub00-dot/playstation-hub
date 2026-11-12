@@ -250,7 +250,9 @@
           </form>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
-          <% if (order_error === '1') { %>
+          <% if (order_error === 'full') { %>
+          <div class="gd-order-error">That account type has no slots left.</div>
+          <% } else if (order_error === '1') { %>
           <div class="gd-order-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
           <% } %>
         </div>

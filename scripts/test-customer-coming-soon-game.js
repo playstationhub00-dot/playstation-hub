@@ -6,10 +6,10 @@
 // Bought permanent access and a rental must be able to pick one too.
 //
 // Saving that pick stores upcoming_<id>, never the released game that happens
-// to use the same number, and does not change what the public pages say is
-// still available. The account slot picked on the form is the slot the
-// Accounts dashboard shows as taken. Add Customer (/admin/customers/add)
-// follows the same rules.
+// to use the same number. The account slot picked on the form is the slot
+// the Accounts dashboard shows as taken, and the Coming soon page counts
+// that slot as taken. Stored slot totals stay what the owner configured.
+// Add Customer (/admin/customers/add) follows the same rules.
 //
 // Throwaway only: a temp DATA_DIR, no Mongo, an in-memory session store,
 // a made-up admin password, and made-up names. No real customer data.
@@ -389,9 +389,12 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
       assert.ok(taken.includes('data-status="rented"') && taken.includes('Zzyzx Holder'), taken);
     });
 
-    await ok('public availability is unchanged, and the released game with the same id was not attached', async () => {
+    await ok('the Coming soon page counts the Trophy slots that are taken, and the released game with the same id was not attached', async () => {
       assert.deepStrictEqual(availability(), before);
-      assert.strictEqual(trophyCard(await upcomingHtml()), soonBefore);
+      const soonAfter = trophyCard(await upcomingHtml());
+      assert.ok(soonAfter.includes('1 slot left'), soonAfter);
+      assert.ok(!soonAfter.includes('2 slots left'), soonAfter);
+      assert.notStrictEqual(soonAfter, soonBefore);
       const releasedPage = await call('GET', '/game/zzyzx-released');
       assert.strictEqual(releasedPage.status, 200, releasedPage.body.slice(0, 200));
       assert.strictEqual(releasedCard(releasedPage.body), releasedBefore);
@@ -409,7 +412,7 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
       assert.ok(select[0].includes('value="15"'), 'released game stays listed beside it');
     });
 
-    await ok('adding a Bought customer onto a Coming soon game takes the slot and leaves public availability alone', async () => {
+    await ok('adding a Bought customer onto a Coming soon game takes the slot and leaves the stored totals alone', async () => {
       const loc = await post('/admin/customers/add', {
         customer_name: 'Zzyzx Added', game_id: 'upcoming_15', days: '30', account_type: 'tr',
         status: 'bought', start_date: '', end_date: '', price: '2500',
@@ -464,7 +467,7 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
       assert.ok(!rows.some(c => c.game_id === 15 || c.game_id === '15'));
     });
 
-    await ok('a Reservation still reduces the public Coming soon slot count', async () => {
+    await ok('a Reservation on top of taken Trophy slots does not put one back on sale', async () => {
       const loc = await post('/admin/customers/add', {
         customer_name: 'Zzyzx Reserve', game_id: 'upcoming_15', days: '30', account_type: 'tr',
         status: 'reservation', start_date: '', end_date: '', price: '999',
@@ -476,7 +479,8 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
       assert.strictEqual(saved.status, 'reservation');
       assert.deepStrictEqual(availability(), before, 'stored slot totals stay what the owner configured');
       const soon = trophyCard(await upcomingHtml());
-      assert.ok(soon.includes('1 slot left'), soon);
+      assert.ok(soon.includes('Full Slot'), soon);
+      assert.ok(!/slot left/.test(soon), soon);
       assert.strictEqual(slotOf(2).renter_id, 40, 'the Bought slot was not freed');
     });
 
