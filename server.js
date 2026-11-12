@@ -7507,7 +7507,8 @@ app.post('/admin/customers/add', requireAuth, (req, res) => {
   const { customer_name, game_id, days, custom_days, account_type, start_date, end_date, price, status, notes, account_assign } = req.body;
   const actualDays = days === 'custom' ? (parseInt(custom_days) || 1) : (parseInt(days) || 7);
   if (!customer_name || !customer_name.trim() || !game_id) return res.redirect('/admin?tab=customers&msg=error');
-  // Reservation uses upcoming game (prefixed id), others use regular game
+  // A Coming soon pick is "upcoming_<id>" on any status. Only a reservation
+  // drops the duration; Bought and Renting keep the days the form sent.
   const isReservation = (status || 'renting') === 'reservation';
   // Refuse before writing anything: a half-recorded rental is worse than a
   // rejected one, because the customer row exists and the slot still reads free.
@@ -7633,6 +7634,13 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const isActive = status === 'renting' || status === 'bought';
   const wasUpcoming = String(existing.game_id).startsWith('upcoming_');
   const isUpcomingNew = String(game_id || existing.game_id).startsWith('upcoming_');
+  // Coming soon ids are "upcoming_<n>" and are numbered separately from the
+  // catalogue, so upcoming_15 and released game 15 are different games.
+  // Resolve the Coming soon row before any catalogue lookup. A Bought or
+  // Renting save has to keep that title; leaving the old title in place made
+  // the row look like whichever game it had before.
+  const upcomingPick = /^upcoming_(\d+)$/.exec(String(game_id || ''));
+  const upcomingGame = upcomingPick ? getUpcomingGame(upcomingPick[1]) : null;
   // Same guard as the add route. Checked against whatever assignment would end
   // up applied — an existing one counts, so editing an already-linked rental
   // does not demand the slot be re-picked.
@@ -7658,7 +7666,7 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   const editGame = !isUpcomingNew ? (getGame(game_id) || getGame(existing.game_id)) : null;
   const editSwap = !wasUpcoming && editGame && editGame.id !== existing.game_id
     ? { from: existing.game_title, to: editGame.title } : null;
-  const editGameTitle = editGame ? editGame.title : existing.game_title;
+  const editGameTitle = upcomingGame ? upcomingGame.title : (editGame ? editGame.title : existing.game_title);
   // A reservation holds a shop slot the same way a live rental does. Edit
   // Customer's "Assign to Account Slot" is how a paid pre-order is put on a
   // PSN account, and that field is what the Accounts list reads. Treating
@@ -7718,7 +7726,12 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
     }
   }
   const newGame = !isUpcomingNew ? (getGame(game_id) || getGame(existing.game_id)) : null;
-  const finalGameId = isUpcomingNew ? String(game_id) : (parseInt(game_id) || existing.game_id);
+  // Prefer the parsed Coming soon id over String(game_id). That stays
+  // "upcoming_<n>" even if a released game uses the same number, and it never
+  // falls through to parseInt, which would store the catalogue id instead.
+  const finalGameId = upcomingPick
+    ? ('upcoming_' + upcomingPick[1])
+    : (isUpcomingNew ? String(game_id) : (parseInt(game_id) || existing.game_id));
 
   // ── Game swap pricing: if the game changed (catalog → catalog, not a reservation),
   // price the new game at the submitted duration/type with the active promo applied.
@@ -7766,7 +7779,7 @@ app.post('/admin/customers/edit/:id', requireAuth, async (req, res) => {
   db.get('customers').find({ id: parseInt(req.params.id) }).assign({
     customer_name: (customer_name || existing.customer_name).trim(),
     game_id: finalGameId,
-    game_title: newGame ? newGame.title : existing.game_title,
+    game_title: upcomingGame ? upcomingGame.title : (newGame ? newGame.title : existing.game_title),
     days: actualDays,
     account_type: account_type || existing.account_type,
     start_date: start_date || existing.start_date,
