@@ -21,9 +21,12 @@ ok('the extracted file has no leftover EJS tags', () => {
   assert.ok(!js.includes('<%'), 'an EJS tag was left in the extracted file');
 });
 
-ok('the extracted file still defines gpGo (gallery slider)', () => {
+ok('the old private slider is gone; the page uses the shared film script', () => {
   const js = fs.readFileSync(jsPath, 'utf8');
-  assert.ok(js.includes('function gpGo'), 'gpGo not found in the extracted file');
+  const film = fs.readFileSync(path.join(REPO_ROOT, 'public', 'js', 'game-film.js'), 'utf8');
+  assert.ok(!js.includes('function gpGo'), 'upcoming-detail.js still carries its own slider');
+  assert.ok(film.includes('function gdGo'), 'shared film script is missing gdGo');
+  assert.ok(/<script src="\/js\/game-film\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(viewSrc));
 });
 
 ok('the pre-existing data block (GAME_TITLE, NT_PRICES, etc.) is untouched', () => {
@@ -31,9 +34,9 @@ ok('the pre-existing data block (GAME_TITLE, NT_PRICES, etc.) is untouched', () 
   assert.ok(/const RENTAL_DURATIONS\s*=/.test(viewSrc), 'the pre-existing RENTAL_DURATIONS line was removed — it was out of scope for this task');
 });
 
-ok('ALL_FULL and gpSlideCount are still hoisted inline as globals', () => {
+ok('ALL_FULL and gdSlideCount are still hoisted inline as globals', () => {
   assert.ok(/const ALL_FULL\s*=/.test(viewSrc), 'ALL_FULL is no longer declared inline');
-  assert.ok(/const gpSlideCount\s*=/.test(viewSrc), 'gpSlideCount is no longer declared inline');
+  assert.ok(/const gdSlideCount\s*=/.test(viewSrc), 'gdSlideCount is no longer declared inline');
 });
 
 ok('the view loads the extracted file via a versioned <script src> at the right position', () => {

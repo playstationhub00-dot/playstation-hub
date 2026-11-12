@@ -17,15 +17,16 @@
   }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/game-page.css?v=<%= assetV %>">
 </head>
-<body>
+<body class="gd-page-booking-v2 gp-redesign gp-upcoming">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
 
 <%
   // PlayStation's trailer, screenshots and game info (lib/game-psn-view.js),
-  // exactly as on a released game's page; hasPsn:false leaves the page as it was.
-  const udPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, about: '', info: [] };
+  // exactly as on a released game's page; hasPsn:false leaves those blocks out.
+  const udPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, about: '', aboutParas: [], readMore: false, info: [], genre: game.genre || '' };
   const hasNt = !!(game.nt_price_7d || game.nt_price_30d);
   const hasTr = !!(game.tr_price_7d || game.tr_price_30d) && (game.trophy_slots || 0) >= 0;
   const showTr = hasTr;
@@ -37,17 +38,23 @@
     const udToday0 = new Date(); udToday0.setHours(0,0,0,0);
     udDaysLeft = Math.ceil((udReleaseDate - udToday0) / 86400000);
   }
-  let displayDate = 'TBA';
-  if (!udIsTba) {
-    const d = new Date(game.release_date + 'T00:00:00');
-    displayDate = d.toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  let udCountLabel = 'Date TBA';
+  if (!udIsTba && udDaysLeft > 1) udCountLabel = udDaysLeft + ' days until release';
+  else if (!udIsTba && udDaysLeft === 1) udCountLabel = '1 day until release';
+  else if (!udIsTba) udCountLabel = 'Any day now';
+
+  const UD_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function udShortDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    if (!m) return '';
+    const month = UD_MONTHS[parseInt(m[2], 10) - 1];
+    return month ? (month + ' ' + parseInt(m[3], 10) + ', ' + m[1]) : '';
   }
 
   const ntSlots = game.non_trophy_slots || 0;
   const trSlots = game.trophy_slots || 0;
   const totalSlots = ntSlots + trSlots;
   const allFull = totalSlots === 0;
-  // Same "one left" urgency cue as the released-game page, over the poster.
   const udIsLastSlot = totalSlots === 1;
 
   // Permanent pre-order. Paid in full now (no rental deposit to hold back
@@ -65,365 +72,349 @@
   // owner sets up on release (POST /order/reserve marks the order new_slot).
   const udNtNew = udBuyNt > 0 && ntSlots === 0;
   const udTrNew = udBuyTr > 0 && showTr && trSlots === 0;
+
+  const udGenre = udPsn.genre || game.genre || '';
+  const udChips = [];
+  if (udPsn.hasPsn && udPsn.info && udPsn.info.length) {
+    udPsn.info.forEach(r => {
+      if (r.label === 'Release date' || r.label === 'Genre' || r.label === 'Publisher' || r.label === 'Age rating') {
+        udChips.push({ label: r.label === 'Age rating' ? 'Rating' : r.label, value: r.value });
+      }
+    });
+  } else {
+    const rel = udIsTba ? 'TBA' : udShortDate(game.release_date);
+    if (rel) udChips.push({ label: 'Release date', value: rel });
+    if (game.genre) udChips.push({ label: 'Genre', value: game.genre });
+  }
+
+  const udReviews = (typeof reviews !== 'undefined' && reviews) ? reviews : [];
+  const udRec = (typeof recommend !== 'undefined' && recommend) ? recommend : null;
+  const udHasReviews = udReviews.length > 0 || !!(udRec && udRec.total > 0);
+  const udShowBefore = hasNt || showTr;
+  const udShowDetails = (udPsn.hasPsn && (udPsn.about || (udPsn.info && udPsn.info.length))) || (!udPsn.hasPsn && !!game.description);
+  const udFirstTab = udShowBefore ? 'before' : (udShowDetails ? 'details' : (udHasReviews ? 'reviews' : ''));
+  const udShots = (udPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src);
+  const udOwnGallery = (game.gallery || []).filter(Boolean);
+  const udFilm = udPsn.hideGallery ? udShots : udOwnGallery;
 %>
 
-<div class="usd-page">
-  <div class="usd-back"><a href="/browse">← Back to Catalog</a></div>
-
-  <!-- Branded hero: a fixed brand gradient rather than the game's own art. The
-       sharp, uncropped poster below carries the game's identity, so this band
-       only has to sit behind the title — which means no cover image can ever
-       be cropped, blurred, or muddy here, and every Coming Soon page matches. -->
-  <div class="usd-hero">
-    <div class="usd-hero-placeholder"></div>
-    <div class="usd-hero-scrim"></div>
-    <div class="usd-hero-in">
-      <div class="usd-badge-row">
-        <span class="usd-badge">🔜 Coming Soon</span>
-        <span class="usd-plat-chip"><%= game.platform %></span>
-        <% if (game.genre) { %><span class="usd-plat-chip"><%= game.genre %></span><% } %>
-      </div>
-      <h1 class="usd-title"><%= game.title %></h1>
-      <p class="seo-intro"><%= udSeo.intro %></p>
-      <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: udPsn }) %><% } %>
-      <div class="usd-hero-foot">
-        <div class="usd-cd-row">
-          <% if (udIsTba) { %>
-            <span class="usd-cd-n" style="font-size:1.4rem;">Date TBA</span>
-          <% } else if (udDaysLeft > 0) { %>
-            <span class="usd-cd-n"><%= udDaysLeft %></span>
-            <span class="usd-cd-u">day<%= udDaysLeft !== 1 ? 's' : '' %> until release</span>
-            <span class="usd-cd-date"><%= displayDate %></span>
-          <% } else { %>
-            <span class="usd-cd-n" style="font-size:1.4rem;">Any day now</span>
-          <% } %>
-        </div>
-        <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'usd-hero-brand', logoAlt: '', logoHidden: true }) %>
-      </div>
-    </div>
+<div class="gd-page">
+  <div class="gd-back gp-crumb">
+    <a href="/browse">← Back to Catalog</a>
+    <span> · </span>
+    <a href="/browse?tab=coming-soon">Coming soon</a>
+    <span> · <b><%= game.title %></b></span>
   </div>
 
-  <div class="usd-body">
-    <% if (allFull) { %>
-    <div class="rsv-full-banner">
-      <span class="rsv-full-icon">🚫</span>
-      <div>
-        <div class="rsv-full-title">All Slots Full</div>
-        <div class="rsv-full-sub">You can still request a slot below, or join the free waitlist.</div>
-      </div>
+  <% if (allFull) { %>
+  <div class="rsv-full-banner">
+    <span class="rsv-full-icon">🚫</span>
+    <div>
+      <div class="rsv-full-title">All Slots Full</div>
+      <div class="rsv-full-sub">You can still request a slot below, or join the free waitlist.</div>
     </div>
-    <% } %>
+  </div>
+  <% } %>
 
-    <!-- Same layout primitives as the rent page (.gd-layout / .gd-cover-col /
-         .gd-detail-col), not a parallel grid — that is what makes the poster
-         column and card the same width on both pages, and keeps them that way
-         if either is ever resized. -->
-    <div class="gd-layout">
-
+  <div class="gp-grid">
+    <div class="gp-hero">
       <div class="gd-cover-col">
         <% if (udPsn.media.length) { %>
           <%- include('partials/game-psn-media', { items: udPsn.media, title: game.title }) %>
         <% } else if (game.cover_image) { %>
-          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140">
+          <% const udFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
+          <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140" style="<%= udFocal %>">
+        <% } else { %>
+          <div class="gd-cover gd-cover-placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+            </svg>
+          </div>
         <% } %>
-        <!-- Same poster badges as the released-game page: platform corner chip,
-             plus an urgency banner when a rental slot is scarce. Meaningless
-             for a permanent pre-order (that has no slot pool), so it reflects
-             the RENT side's slot count either way — matches how it reads on
-             the released page too, where it sits above both panels. -->
-        <div class="gd-platform-badge"><%= game.platform %></div>
-        <% if (udIsLastSlot) { %>
-          <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
-        <% } else if (allFull) { %>
-          <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
-        <% } %>
-        <!-- Description only, matching the rent page. The release countdown used
-             to repeat here, but the banner directly above already states it
-             verbatim ("16 DAYS UNTIL RELEASE · September 15, 2026"). -->
-        <% if (game.description && !udPsn.hasPsn) { %>
+      </div>
+      <div class="gp-title">
+        <div class="gp-tags">
+          <span class="gp-tag gp-tag-y"><%= udCountLabel %></span>
+          <% if (udIsLastSlot) { %><span class="gp-tag gp-tag-y">Last slot</span><% } %>
+          <% if (allFull) { %><span class="gp-tag">Sold out</span><% } %>
+          <% if (game.platform) { %><span class="gp-tag"><%= game.platform %></span><% } %>
+          <span class="gp-tag">Coming soon</span>
+          <% if (udGenre) { udGenre.split('/').forEach(g => { if (g.trim()) { %><span class="gp-tag"><%= g.trim() %></span><% } }) } %>
+        </div>
+        <h1 class="usd-title"><%= game.title %></h1>
+        <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: udPsn }) %><% } %>
+        <% if (udPsn.hasPsn && udPsn.about) { %>
+          <p class="gp-clamp"><%= udPsn.aboutParas[0] || udPsn.about %></p>
+          <% if (udShowDetails && (udPsn.readMore || (udPsn.aboutParas && udPsn.aboutParas.length > 1))) { %><button type="button" class="gp-more" onclick="gpTab('gpPaneDetails', document.getElementById('gpTabDetails'))">Read more ›</button><% } %>
+        <% } else if (game.description) { %>
           <p class="gd-desc gdh-poster-desc"><%= game.description %></p>
         <% } %>
-        <%- include('partials/game-psn-about', { psnView: udPsn }) %>
-      </div>
-
-      <div class="gd-detail-col">
-        <!-- Shares the rent page's card classes (.gdh-card / .gd-type-pill /
-             .gd-duration-grid) rather than a parallel .rsv-* set, so the two
-             detail pages stay identical by construction and any future change
-             to one automatically applies to the other. -->
-        <div class="gdh-card">
-
-          <!-- Same Rent/Buy toggle markup as the rent page, including when this
-               game has no permanent price: that page still renders the bar with
-               a single button rather than dropping it, so this one does too. -->
-          <div style="display:flex;background:#111;border:1px solid #222;border-radius:12px;padding:4px;margin-bottom:1.5rem;gap:4px;">
-            <button type="button" id="udToggleRent" onclick="setUpcomingMode('rent')"
-              style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:var(--ps-blue);color:#000;transition:all 0.15s;letter-spacing:0.3px;">
-              ⏱️ Rent
-            </button>
-            <% if (udHasBuy) { %>
-            <button type="button" id="udToggleBuy" onclick="setUpcomingMode('buy')"
-              style="flex:1;padding:0.7rem;border-radius:9px;border:none;cursor:pointer;font-weight:800;font-size:0.9rem;background:transparent;color:#555;transition:all 0.15s;letter-spacing:0.3px;">
-              ♾️ Buy Permanent
-            </button>
-            <% } %>
-          </div>
-
-          <%- include('partials/account-guide-link') %>
-
-          <!-- ════════ RENT PANEL ════════ -->
-          <div id="udRentPanel">
-
-          <% if (hasNt || showTr) { %>
-          <div class="gd-type-options" id="typeOptions">
-            <% if (showTr) { %>
-            <label class="gd-type-card gd-type-pill" id="typeCard-tr">
-              <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
-              <span class="gd-type-icon">🏆</span>
-              <span class="gd-type-name">Trophy</span>
-              <% if (trSlots > 0) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
-              <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full Slot' %></span>
-            </label>
-            <% } %>
-            <% if (hasNt) { %>
-            <label class="gd-type-card gd-type-pill" id="typeCard-nt">
-              <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
-              <span class="gd-type-icon">🎮</span>
-              <span class="gd-type-name">Non-Trophy</span>
-              <% if (ntSlots > 0) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
-              <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full Slot' %></span>
-            </label>
-            <% } %>
-          </div>
-          <% } %>
-
-          <!-- Same "How setup works" disclosure as the rent page, reusing its
-               #setupToggle / #typeSetupWrap ids so one set of CSS and one pair
-               of JS handlers cover both pages. The copy is that page's Trophy /
-               Non-Trophy explanation verbatim, minus its stock-specific lines
-               ("next available in N days", "not stocked yet") — neither means
-               anything before a game has released. -->
-          <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
-            <span>How setup works</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
-            <% if (showTr) { %>
-            <div class="gd-setup-block" id="setup-tr">
-              <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
-              <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
-            </div>
-            <% } %>
-            <% if (hasNt) { %>
-            <div class="gd-setup-block" id="setup-nt">
-              <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
-              <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
-              <p style="color:#888;">On PS4, choose <strong>Do Not Activate</strong> if you are prompted.</p>
-            </div>
-            <% } %>
-          </div>
-
-          <!-- Own it instead: shown by public/js/upcoming-detail.js (updateOwnStrip)
-               when the picked type is full and has a permanent price. -->
-          <% if (udHasBuy) { %>
-          <div class="ud-own-strip" id="udOwnStrip" hidden>
-            <span class="ud-own-icon" aria-hidden="true">🔑</span>
-            <span class="ud-own-text"><b><span class="ud-own-type"></span> is full?</b> Own it instead — we'll add a new <span class="ud-own-type"></span> slot for you.</span>
-            <button type="button" class="ud-own-go" id="udOwnGo" onclick="ownInstead()"></button>
-          </div>
-          <% } %>
-
-          <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
-
-          <!-- Same summary box as the rent page down to the last element: always
-               visible, rows on top, a "To send now" final line, the green rider
-               beneath it and the grey hint below that. The rows are a reservation's
-               own breakdown (base + deposit); the total is paid in full now, same
-               as the rent page's own total is. -->
-          <div class="gd-total-box" id="orderSummary">
-            <div class="gd-total-label">ORDER SUMMARY</div>
-            <div class="gd-total-rows" id="sumRows"></div>
-            <div class="gd-total-final">
-              <span>To send now</span>
-              <span id="sumFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
-            </div>
-            <div class="gd-total-refund" id="sumRider" style="display:none;"></div>
-            <div class="gd-total-hint" id="sumHint" style="display:none;"></div>
-          </div>
-
-          <!-- Same closing stack as the rent page: name field and button inside
-               one form, a sub-line under the button, then the Messenger link.
-               The separate "Reserve a Slot / 50% Downpayment / Total • Pay now
-               • Remaining" header block that used to sit here is gone — every
-               figure it carried now reads off the summary box directly above. -->
-          <div id="ctaReserve">
-            <form method="POST" action="/order/reserve" class="gd-order-form" id="reserveForm" data-order-once onsubmit="return handleReserveSubmit(event)">
-              <input type="hidden" name="game_id" value="<%= game.id %>">
-              <%- include('partials/order-token') %>
-              <input type="hidden" name="account_type" id="reserveType" value="">
-              <input type="hidden" name="days" id="reserveDays" value="">
-              <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-              <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve Now →</button>
-              <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full · <%- include('partials/pay-note').trim() %> · nothing more due on release</div>
-            </form>
-            <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-               onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
-            <% if (order_error === '1') { %>
-            <div class="gd-order-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
-            <% } %>
-          </div>
-
-          <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
-            <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-               class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-              <div class="gd-reserve-icon">🎮</div>
-              <div class="gd-reserve-name">Fall in Line</div>
-              <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-              <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-              <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-            </a>
-          </div>
-
-          </div><!-- /udRentPanel -->
-
-          <!-- ════════ BUY PERMANENT PANEL ════════
-               Dedicated cards, not the shared type-pill/summary-box furniture
-               above — mirrors the released-game page's #buyPanel exactly (same
-               classes, same card shape) rather than reusing the reservation
-               layout, because a permanent price has nothing to reserve and no
-               balance to show: one price, one button. Paid in full now — no
-               downpayment split, since there is no rental deposit being held
-               back against that a later payment would need to complete. -->
-          <% if (udHasBuy) { %>
-          <div id="udBuyPanel" style="display:none;">
-
-            <% if (udBuyPromoOn) { %>
-            <div style="background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;border-radius:10px;padding:0.6rem 1rem;font-size:0.85rem;font-weight:800;text-align:center;margin-bottom:1.25rem;letter-spacing:0.3px;">
-              🎉 <%= udPromo.buy_promo_pct %>% OFF Permanent Access — Limited Time!
-            </div>
-            <% } %>
-
-            <div class="gd-section-label" style="margin-top:0;">SELECT ACCOUNT TYPE</div>
-
-            <% if (udBuyNt > 0) { %>
-            <div class="gd-type-card" id="udBuyNtCard" onclick="selectUdBuyType('nt')" style="cursor:pointer;margin-bottom:0.75rem;border-color:#222;">
-              <div style="display:none;"><input type="radio" name="udBuyType" value="nt" id="udBuyRadioNt"></div>
-              <div class="gd-type-body">
-                <div class="gd-type-header">
-                  <span class="gd-type-icon">🎮</span>
-                  <span class="gd-type-name">Non-Trophy — Permanent Access</span>
-                  <% if (udNtNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
-                </div>
-                <div class="gd-type-desc">Played on our account. No trophy tracking. One-time payment, lifetime access.</div>
-                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
-                  <% if (udBuyPromoOn) { %>
-                    <span style="font-size:0.85rem;color:#555;text-decoration:line-through;">₱<%= udBuyNt %></span>
-                  <% } %>
-                  <span style="font-size:1.5rem;font-weight:900;color:#22c55e;">₱<%= udBuyNtFinal %></span>
-                  <span style="font-size:0.72rem;color:#555;background:#1a1a1a;padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
-                </div>
-              </div>
-            </div>
-            <% } %>
-
-            <% if (udBuyTr > 0 && showTr) { %>
-            <div class="gd-type-card" id="udBuyTrCard" onclick="selectUdBuyType('tr')" style="cursor:pointer;margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
-              <div style="display:none;"><input type="radio" name="udBuyType" value="tr" id="udBuyRadioTr"></div>
-              <div class="gd-type-body">
-                <div class="gd-type-header">
-                  <span class="gd-type-icon">🏆</span>
-                  <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
-                  <% if (udTrNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
-                </div>
-                <div class="gd-type-desc" style="color:#886600;">Earn trophies on your own PSN account. Play at your own pace forever.</div>
-                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
-                  <% if (udBuyPromoOn) { %>
-                    <span style="font-size:0.85rem;color:#664d00;text-decoration:line-through;">₱<%= udBuyTr %></span>
-                  <% } %>
-                  <span style="font-size:1.5rem;font-weight:900;color:#ffc400;">₱<%= udBuyTrFinal %></span>
-                  <span style="font-size:0.72rem;color:#664d00;background:rgba(255,196,0,0.1);padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
-                </div>
-              </div>
-            </div>
-            <% } %>
-
-            <!-- What a new slot means — shown by selectUdBuyType for the picked type only -->
-            <% if (udNtNew) { %>
-            <div class="gd-newslot-note" id="udBuyNewSlotNote-nt" hidden>🆕 Pre-order now. On release day we set up a fresh Non-Trophy slot for you and message you.</div>
-            <% } %>
-            <% if (udTrNew) { %>
-            <div class="gd-newslot-note" id="udBuyNewSlotNote-tr" hidden>🆕 Pre-order now. On release day we set up a fresh Trophy slot for you and message you.</div>
-            <% } %>
-
-            <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
-              <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem;">What You Get</div>
-              <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
-                <div>♾️ &nbsp;Permanent access — no time limit, once <%= game.title %> releases</div>
-                <div>🔓 &nbsp;Play anytime, as many times as you want</div>
-                <div>💳 &nbsp;<%- include('partials/pay-note').trim() %></div>
-              </div>
-            </div>
-
-            <form method="POST" action="/order/reserve" class="gd-order-form" id="udBuyForm" data-order-once>
-              <input type="hidden" name="game_id" value="<%= game.id %>">
-              <%- include('partials/order-token') %>
-              <input type="hidden" name="account_type" id="udBuyOrderType" value="">
-              <input type="hidden" name="kind" value="buy">
-              <input type="text" name="fb_name" id="udBuyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-              <button type="submit" class="gd-order-btn" id="udBuyCtaBtn" onclick="return handleUdBuyClick(event)">
-                📘 Pre-order Permanent Access
-              </button>
-              <div class="gd-order-sub">Pay in full — nothing more due on release</div>
-            </form>
-            <div id="udBuyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
-            <% if (order_error === '1') { %>
-            <div class="gd-order-error">⚠️ Please pick an account type and enter your Facebook name, before continuing.</div>
-            <% } %>
-
-            <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-link" style="display:block;text-align:center;margin-top:0.5rem;">or message us on Facebook instead</a>
-
-          </div><!-- /udBuyPanel -->
-          <% } %>
-
+        <% if (udChips.length) { %>
+        <div class="gp-chips">
+          <% udChips.forEach(chip => { %><span><b><%= chip.label %></b><%= chip.value %></span><% }) %>
         </div>
-      </div>
-
-    </div>
-
-    <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
-
-    <% const gpGallery = udPsn.hideGallery ? [] : (game.gallery || []).filter(Boolean); %>
-    <% if (gpGallery.length) { %>
-    <div class="rsv-gallery-section">
-      <div class="rsv-gallery-label">Gameplay</div>
-      <div class="gd-slider" id="gpSlider">
-        <div class="gd-slider-track" id="gpSliderTrack">
-          <% gpGallery.forEach((img, i) => { %>
-            <div class="gd-slide"><img src="<%= img %>" alt="<%= game.title %> gameplay <%= i+1 %>" class="gd-cover rsv-gallery-img" width="1280" height="720"<% if (i > 0) { %> loading="lazy" decoding="async"<% } %>></div>
-          <% }) %>
-        </div>
-        <% if (gpGallery.length > 1) { %>
-          <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gpMove(-1)" aria-label="Previous">‹</button>
-          <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gpMove(1)" aria-label="Next">›</button>
-          <div class="gd-slider-dots" id="gpSliderDots">
-            <% gpGallery.forEach((img, i) => { %>
-              <button type="button" class="gd-dot<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)" aria-label="Go to image <%= i+1 %>"></button>
-            <% }) %>
-          </div>
         <% } %>
       </div>
-      <% if (gpGallery.length > 1) { %>
-      <div class="gd-thumbs" id="gpThumbs">
-        <% gpGallery.forEach((img, i) => { %>
-          <button type="button" class="gd-thumb<%= i===0 ? ' active' : '' %>" onclick="gpGo(<%= i %>)"><img <%- imgThumb(img) %> width="160" height="90" alt="thumbnail <%= i+1 %>" loading="lazy" decoding="async"></button>
-        <% }) %>
+    </div>
+
+    <div class="gd-detail-col gp-panel">
+      <div class="gdh-card">
+
+        <div class="gp-mode">
+          <button type="button" id="udToggleRent" class="on" onclick="setUpcomingMode('rent')">⏱️ Rent</button>
+          <% if (udHasBuy) { %>
+          <button type="button" id="udToggleBuy" onclick="setUpcomingMode('buy')">♾️ Buy permanent</button>
+          <% } %>
+        </div>
+
+        <%- include('partials/account-guide-link') %>
+
+        <!-- ════════ RENT PANEL ════════ -->
+        <div id="udRentPanel">
+
+        <% if (hasNt || showTr) { %>
+        <div class="gd-type-options" id="typeOptions">
+          <% if (showTr) { %>
+          <label class="gd-type-card gd-type-pill" id="typeCard-tr">
+            <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
+            <span class="gd-type-icon">🏆</span>
+            <span class="gd-type-name">Trophy</span>
+            <% if (trSlots > 0) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full Slot' %></span>
+          </label>
+          <% } %>
+          <% if (hasNt) { %>
+          <label class="gd-type-card gd-type-pill" id="typeCard-nt">
+            <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
+            <span class="gd-type-icon">🎮</span>
+            <span class="gd-type-name">Non-Trophy</span>
+            <% if (ntSlots > 0) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
+            <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full Slot' %></span>
+          </label>
+          <% } %>
+        </div>
+        <% } %>
+
+        <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
+          <span>How setup works</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
+          <% if (showTr) { %>
+          <div class="gd-setup-block" id="setup-tr">
+            <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
+            <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
+          </div>
+          <% } %>
+          <% if (hasNt) { %>
+          <div class="gd-setup-block" id="setup-nt">
+            <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
+            <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
+            <p style="color:#888;">On PS4, choose <strong>Do Not Activate</strong> if you are prompted.</p>
+          </div>
+          <% } %>
+        </div>
+
+        <!-- Own it instead: shown by public/js/upcoming-detail.js (updateOwnStrip)
+             when the picked type is full and has a permanent price. -->
+        <% if (udHasBuy) { %>
+        <div class="ud-own-strip" id="udOwnStrip" hidden>
+          <span class="ud-own-icon" aria-hidden="true">🔑</span>
+          <span class="ud-own-text"><b><span class="ud-own-type"></span> is full?</b> Own it instead — we'll add a new <span class="ud-own-type"></span> slot for you.</span>
+          <button type="button" class="ud-own-go" id="udOwnGo" onclick="ownInstead()"></button>
+        </div>
+        <% } %>
+
+        <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
+
+        <div class="gd-total-box" id="orderSummary">
+          <div class="gd-total-label">Total</div>
+          <div class="gd-total-rows" id="sumRows"></div>
+          <div class="gd-total-final">
+            <span>Total to send</span>
+            <span id="sumFinal"></span>
+          </div>
+          <div class="gd-total-refund" id="sumRider" style="display:none;"></div>
+          <div class="gd-total-hint" id="sumHint" style="display:none;"></div>
+        </div>
+
+        <div id="ctaReserve">
+          <form method="POST" action="/order/reserve" class="gd-order-form" id="reserveForm" data-order-once onsubmit="return handleReserveSubmit(event)">
+            <input type="hidden" name="game_id" value="<%= game.id %>">
+            <%- include('partials/order-token') %>
+            <input type="hidden" name="account_type" id="reserveType" value="">
+            <input type="hidden" name="days" id="reserveDays" value="">
+            <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+            <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve now</button>
+            <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full · <%- include('partials/pay-note').trim() %> · nothing more due on release</div>
+          </form>
+          <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+             onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
+          <% if (order_error === '1') { %>
+          <div class="gd-order-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
+          <% } %>
+        </div>
+
+        <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
+          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
+             class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
+            <div class="gd-reserve-icon">🎮</div>
+            <div class="gd-reserve-name">Fall in Line</div>
+            <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
+            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
+            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
+          </a>
+        </div>
+
+        </div><!-- /udRentPanel -->
+
+        <% if (udHasBuy) { %>
+        <div id="udBuyPanel" style="display:none;">
+
+          <% if (udBuyPromoOn) { %>
+          <div style="background:linear-gradient(135deg,#7b2ff7,#f107a3);color:#fff;border-radius:10px;padding:0.6rem 1rem;font-size:0.85rem;font-weight:800;text-align:center;margin-bottom:1.25rem;letter-spacing:0.3px;">
+            🎉 <%= udPromo.buy_promo_pct %>% OFF Permanent Access — Limited Time!
+          </div>
+          <% } %>
+
+          <div class="gd-section-label" style="margin-top:0;">SELECT ACCOUNT TYPE</div>
+
+          <% if (udBuyNt > 0) { %>
+          <div class="gd-type-card" id="udBuyNtCard" onclick="selectUdBuyType('nt')" style="cursor:pointer;margin-bottom:0.75rem;border-color:#222;">
+            <div style="display:none;"><input type="radio" name="udBuyType" value="nt" id="udBuyRadioNt"></div>
+            <div class="gd-type-body">
+              <div class="gd-type-header">
+                <span class="gd-type-icon">🎮</span>
+                <span class="gd-type-name">Non-Trophy — Permanent Access</span>
+                <% if (udNtNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
+              </div>
+              <div class="gd-type-desc">Played on our account. No trophy tracking. One-time payment, lifetime access.</div>
+              <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+                <% if (udBuyPromoOn) { %>
+                  <span style="font-size:0.85rem;color:#555;text-decoration:line-through;">₱<%= udBuyNt %></span>
+                <% } %>
+                <span style="font-size:1.5rem;font-weight:900;color:#22c55e;">₱<%= udBuyNtFinal %></span>
+                <span style="font-size:0.72rem;color:#555;background:#1a1a1a;padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+              </div>
+            </div>
+          </div>
+          <% } %>
+
+          <% if (udBuyTr > 0 && showTr) { %>
+          <div class="gd-type-card" id="udBuyTrCard" onclick="selectUdBuyType('tr')" style="cursor:pointer;margin-bottom:0.75rem;background:#1a1400;border-color:rgba(255,196,0,0.2);">
+            <div style="display:none;"><input type="radio" name="udBuyType" value="tr" id="udBuyRadioTr"></div>
+            <div class="gd-type-body">
+              <div class="gd-type-header">
+                <span class="gd-type-icon">🏆</span>
+                <span class="gd-type-name" style="color:#ffc400;">Trophy Account — Permanent Access</span>
+                <% if (udTrNew) { %><span class="gd-type-status gd-status-newslot">🆕 New slot · set up on order</span><% } %>
+              </div>
+              <div class="gd-type-desc" style="color:#886600;">Earn trophies on your own PSN account. Play at your own pace forever.</div>
+              <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.75rem;">
+                <% if (udBuyPromoOn) { %>
+                  <span style="font-size:0.85rem;color:#664d00;text-decoration:line-through;">₱<%= udBuyTr %></span>
+                <% } %>
+                <span style="font-size:1.5rem;font-weight:900;color:#ffc400;">₱<%= udBuyTrFinal %></span>
+                <span style="font-size:0.72rem;color:#664d00;background:rgba(255,196,0,0.1);padding:0.2rem 0.5rem;border-radius:20px;">ONE-TIME</span>
+              </div>
+            </div>
+          </div>
+          <% } %>
+
+          <% if (udNtNew) { %>
+          <div class="gd-newslot-note" id="udBuyNewSlotNote-nt" hidden>🆕 Pre-order now. On release day we set up a fresh Non-Trophy slot for you and message you.</div>
+          <% } %>
+          <% if (udTrNew) { %>
+          <div class="gd-newslot-note" id="udBuyNewSlotNote-tr" hidden>🆕 Pre-order now. On release day we set up a fresh Trophy slot for you and message you.</div>
+          <% } %>
+
+          <div style="background:#0d0d0d;border:1px solid #1a1a1a;border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;">
+            <div style="font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:0.6rem;">What You Get</div>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;font-size:0.82rem;color:#aaa;">
+              <div>♾️ &nbsp;Permanent access — no time limit, once <%= game.title %> releases</div>
+              <div>🔓 &nbsp;Play anytime, as many times as you want</div>
+              <div>💳 &nbsp;<%- include('partials/pay-note').trim() %></div>
+            </div>
+          </div>
+
+          <form method="POST" action="/order/reserve" class="gd-order-form" id="udBuyForm" data-order-once>
+            <input type="hidden" name="game_id" value="<%= game.id %>">
+            <%- include('partials/order-token') %>
+            <input type="hidden" name="account_type" id="udBuyOrderType" value="">
+            <input type="hidden" name="kind" value="buy">
+            <input type="text" name="fb_name" id="udBuyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+            <button type="submit" class="gd-order-btn" id="udBuyCtaBtn" onclick="return handleUdBuyClick(event)">
+              📘 Pre-order Permanent Access
+            </button>
+            <div class="gd-order-sub">Pay in full — nothing more due on release</div>
+          </form>
+          <div id="udBuyValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
+          <% if (order_error === '1') { %>
+          <div class="gd-order-error">⚠️ Please pick an account type and enter your Facebook name, before continuing.</div>
+          <% } %>
+
+          <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-cta-link" style="display:block;text-align:center;margin-top:0.5rem;">or message us on Facebook instead</a>
+
+        </div><!-- /udBuyPanel -->
+        <% } %>
+
+      </div>
+    </div>
+
+    <%- include('partials/game-film', { images: udFilm, title: game.title, filmClass: udPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
+
+    <% if (udFirstTab) { %>
+    <div class="gp-tabs" id="gpTabs">
+      <div class="gp-tablist" role="tablist">
+        <% if (udShowBefore) { %>
+        <button type="button" class="gp-tab<%= udFirstTab === 'before' ? ' on' : '' %>" id="gpTabBefore" role="tab" aria-selected="<%= udFirstTab === 'before' ? 'true' : 'false' %>" onclick="gpTab('gpPaneBefore', this)">Before you rent</button>
+        <% } %>
+        <% if (udShowDetails) { %>
+        <button type="button" class="gp-tab<%= udFirstTab === 'details' ? ' on' : '' %>" id="gpTabDetails" role="tab" aria-selected="<%= udFirstTab === 'details' ? 'true' : 'false' %>" onclick="gpTab('gpPaneDetails', this)">Details</button>
+        <% } %>
+        <% if (udHasReviews) { %>
+        <button type="button" class="gp-tab<%= udFirstTab === 'reviews' ? ' on' : '' %>" role="tab" aria-selected="<%= udFirstTab === 'reviews' ? 'true' : 'false' %>" onclick="gpTab('gpPaneReviews', this)">Customer reviews</button>
+        <% } %>
+      </div>
+      <% if (udShowBefore) { %>
+      <div class="gp-pane" id="gpPaneBefore"<%= udFirstTab === 'before' ? '' : ' hidden' %>>
+        <div class="gp-before">
+          <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
+          <% if (showTr) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
+          <% if (hasNt) { %><div class="gp-bi"><span>🎮</span><p><b>Non-Trophy</b>Our account. Leave Console Sharing off.</p></div><% } %>
+        </div>
+        <p class="gp-before-ft">
+          <% if (udRec && udRec.total > 0) { %><b><%= udRec.pct %>%</b> would recommend us · <%= udRec.up %> of <%= udRec.total %> renters asked · <% } %>
+          <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
+        </p>
+      </div>
+      <% } %>
+      <% if (udShowDetails) { %>
+      <div class="gp-pane" id="gpPaneDetails"<%= udFirstTab === 'details' ? '' : ' hidden' %>>
+        <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: udPsn }) %><% } %>
+        <% if (!udPsn.hasPsn && game.description) { %><p class="gp-details-copy"><%= game.description %></p><% } %>
+        <% if (!udPsn.hasPsn) { %>
+        <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
+        <% } %>
+      </div>
+      <% } %>
+      <% if (udHasReviews) { %>
+      <div class="gp-pane" id="gpPaneReviews"<%= udFirstTab === 'reviews' ? '' : ' hidden' %>>
+        <%- include('partials/review-block', { reviews: udReviews, reviewStats: (typeof reviewStats !== 'undefined' ? reviewStats : null), recommend: udRec, reviewBadge: (typeof reviewBadge !== 'undefined' ? reviewBadge : null), reviewDisplayName: (typeof reviewDisplayName !== 'undefined' ? reviewDisplayName : null) }) %>
       </div>
       <% } %>
     </div>
     <% } %>
+  </div>
 
-  </div><!-- /usd-body -->
-</div><!-- /usd-page -->
+  <div class="gd-sticky-bar" id="udStickyBar">
+    <div class="gd-sb-info">
+      <div class="gd-sb-kicker" id="udSbKicker">Reserve</div>
+      <div class="gd-sb-amount" id="udSbAmount"></div>
+    </div>
+    <button type="button" class="gd-sb-btn" id="udSbBtn" onclick="upcomingStickyClick()">Reserve</button>
+  </div>
+</div>
 
 <%- include('partials/footer') %>
 
@@ -440,9 +431,10 @@ const BUY_FINAL = { nt: <%= udBuyNtFinal %>, tr: <%= showTr ? udBuyTrFinal : 0 %
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
 const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
-const gpSlideCount = <%= gpGallery.length %>;
+const gdSlideCount = <%= udFilm.length %>;
 </script>
 <script src="/js/upcoming-detail.js?v=<%= assetV %>"></script>
+<script src="/js/game-film.js?v=<%= assetV %>"></script>
 <% if (udPsn.media.length || udPsn.about) { %><script src="/js/game-media.js?v=<%= assetV %>" defer></script><% } %>
 </body>
 </html>

@@ -4,7 +4,8 @@
 // blocks as a released game's page — trailer + screenshots in place of the
 // cover, tagline and rating under the title, "About this game" and "Game
 // info" — with the owner's own description and pictures winning. Without
-// PlayStation info the page is unchanged. Boots a throwaway instance (temp
+// PlayStation info the page keeps the cover, the owner's description, and a
+// gameplay strip of the owner's pictures. Boots a throwaway instance (temp
 // DATA_DIR, blank MONGODB_URI, in-memory sessions); nothing reaches
 // PlayStation or a database.
 const assert = require('assert');
@@ -98,23 +99,27 @@ async function main() {
   });
 
   console.log("\nthe owner's own words and pictures");
-  ok("the owner's description and gallery win, and the bottom gallery is not repeated", () => {
+  ok("the owner's description and pictures win, and PlayStation screenshots do not", () => {
     const b = own.body;
     assert.ok(b.includes('<p>The owner wrote this.</p>'));
     assert.ok(!b.includes('First paragraph from PlayStation.'));
     assert.ok(b.includes('id="gpMedia" data-count="3"'), 'trailer + 2 own pictures');
     assert.ok(b.includes('src="/uploads/own1.webp"'));
     assert.ok(!b.includes('src="https://image.api.playstation.com/shot1.jpg"'));
-    assert.ok(!b.includes('rsv-gallery-section'));
-    assert.ok(b.includes('const gpSlideCount = 0;'));
+    // The rent-page layout puts those same pictures in the gameplay strip.
+    // rsv-gallery-section is only the strip used when there is no PlayStation
+    // media at all, so it must not also appear here.
+    assert.ok(!b.includes('class="rsv-gallery-section"'));
+    assert.ok(b.includes('data-film') && b.includes('id="gpLightbox"'));
+    assert.ok(b.includes('const gdSlideCount = 2;'));
   });
 
   console.log('\nwithout PlayStation info');
-  ok('the page is as before: cover, description under it, Gameplay gallery at the bottom', () => {
+  ok('cover, the owner description, and the gameplay strip', () => {
     const b = plain.body;
-    assert.ok(b.includes('<img src="/uploads/cover3.webp" alt="Zzyzx Plain" class="gd-cover gdh-poster">'));
+    assert.ok(/<img src="\/uploads\/cover3\.webp" alt="Zzyzx Plain" class="gd-cover gdh-poster"/.test(b));
     assert.ok(b.includes('<p class="gd-desc gdh-poster-desc">Plain owner text.</p>'));
-    assert.ok(b.includes('rsv-gallery-section') && b.includes('const gpSlideCount = 2;'));
+    assert.ok(b.includes('class="rsv-gallery-section"') && b.includes('data-film') && b.includes('const gdSlideCount = 2;'));
     assert.ok(!b.includes('id="gpMedia"') && !b.includes('About this game') && !b.includes('gpa-headline'));
     assert.ok(!b.includes('/js/game-media.js'));
   });

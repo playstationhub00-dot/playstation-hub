@@ -23,9 +23,18 @@ ok('the extracted file has no leftover EJS tags', () => {
 
 ok('the extracted file still defines the functions the page depends on', () => {
   const js = fs.readFileSync(jsPath, 'utf8');
-  for (const fn of ['computeRentTotal', 'promoPctFor', 'updateReserveLinks', 'gdGo']) {
+  for (const fn of ['computeRentTotal', 'promoPctFor', 'updateReserveLinks']) {
     assert.ok(js.includes(fn), 'expected function `' + fn + '` not found in the extracted file');
   }
+});
+
+ok('the gameplay strip lives in the shared film script the view loads', () => {
+  const film = fs.readFileSync(path.join(REPO_ROOT, 'public', 'js', 'game-film.js'), 'utf8');
+  assert.ok(film.includes('function gdGo'), 'gdGo moved out of game-detail.js and must live in game-film.js');
+  assert.ok(
+    /<script src="\/js\/game-film\.js\?v=<%=\s*assetV\s*%>"><\/script>/.test(viewSrc),
+    'game-detail.ejs does not request /js/game-film.js'
+  );
 });
 
 ok('the view loads it via a versioned <script src> in the original position', () => {

@@ -1,0 +1,44 @@
+<%#
+  Gameplay strip and lightbox, shared by the released-game page and the
+  Coming soon page. Locals: images (src list), title, filmClass
+  (gp-gal when the shots already sit in the media block, otherwise
+  rsv-gallery-section). Renders nothing when there are no images.
+%>
+<% if (images && images.length) { %>
+<div class="<%= filmClass %>" data-film>
+  <div class="gp-gal-h">
+    <h2>Gameplay</h2>
+    <span class="gp-gal-count" id="gpGalCount">1 / <%= images.length %></span>
+    <% if (images.length > 1) { %><button type="button" class="gp-viewall" onclick="gpOpenFilm(gpFilmIndex())">View all <%= images.length %> ›</button><% } %>
+    <% if (images.length > 1) { %>
+    <button type="button" class="gd-slider-arrow gd-slider-prev" onclick="gdMove(-1)" aria-label="Previous">‹</button>
+    <button type="button" class="gd-slider-arrow gd-slider-next" onclick="gdMove(1)" aria-label="Next">›</button>
+    <% } %>
+  </div>
+  <div class="gd-slider" id="gdSlider">
+    <div class="gd-slider-track" id="gdSliderTrack">
+      <% images.forEach((img, i) => { %>
+        <button type="button" class="gp-shot<%= i === 0 ? ' on' : '' %>" onclick="gpOpenFilm(<%= i %>, this)"><img src="<%= img %>" alt="<%= title %> gameplay <%= i + 1 %>" width="1280" height="720"<% if (i > 0) { %> loading="lazy" decoding="async"<% } %>></button>
+      <% }) %>
+    </div>
+  </div>
+  <% if (images.length > 1) { %>
+  <div class="gd-slider-dots" id="gdSliderDots">
+    <% images.forEach((img, i) => { %>
+      <button type="button" class="gd-dot<%= i === 0 ? ' active' : '' %>" onclick="gdGo(<%= i %>)" aria-label="Go to image <%= i + 1 %>"></button>
+    <% }) %>
+  </div>
+  <% } %>
+  <dialog class="gp-lb" id="gpLightbox" aria-label="Gameplay images">
+    <div class="gp-lb-frame">
+      <div class="gp-lb-bar">
+        <span id="gpLbCount">1 / <%= images.length %></span>
+        <button type="button" class="gp-lb-x" id="gpLbClose" aria-label="Close">Close</button>
+      </div>
+      <button type="button" class="gp-lb-nav gp-lb-prev" id="gpLbPrev" aria-label="Previous image">‹</button>
+      <img id="gpLbImg" alt="" width="1280" height="720">
+      <button type="button" class="gp-lb-nav gp-lb-next" id="gpLbNext" aria-label="Next image">›</button>
+    </div>
+  </dialog>
+</div>
+<% } %>

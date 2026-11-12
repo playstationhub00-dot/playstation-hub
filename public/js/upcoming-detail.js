@@ -23,20 +23,12 @@ function setUpcomingMode(mode) {
 
   const rentBtn = document.getElementById('udToggleRent');
   const buyBtn  = document.getElementById('udToggleBuy');
-  // Guarded separately, not as a pair: the toggle bar now renders on every
-  // Coming Soon page the way it does on the rent page, so the Rent button is
-  // always present while the Buy button only exists when a permanent price is
-  // set. A combined `rentBtn && buyBtn` check would skip both in that case.
-  const on = 'var(--ps-blue)', onText = '#000', offText = '#555';
-  if (rentBtn) {
-    rentBtn.style.background = isRent ? on : 'transparent';
-    rentBtn.style.color      = isRent ? onText : offText;
-  }
-  if (buyBtn) {
-    buyBtn.style.background = isRent ? 'transparent' : 'linear-gradient(135deg,#7b2ff7,#f107a3)';
-    buyBtn.style.color      = isRent ? offText : '#fff';
-  }
+  // Guarded separately, not as a pair: the Rent button is always present
+  // while the Buy button only exists when a permanent price is set.
+  if (rentBtn) rentBtn.classList.toggle('on', isRent);
+  if (buyBtn) buyBtn.classList.toggle('on', !isRent);
   if (isRent) { updateSummary(); updateCta(); updateLinks(); }
+  syncUpcomingSticky();
 }
 
 // Setup-panel handlers, same behaviour as the rent page's: the disclosure
@@ -80,7 +72,7 @@ function renderDurButtons() {
   const p = getPrices();
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
-  const durLabelMap = { 7: 'Weekly', 30: 'Monthly' };
+  const durLabelMap = { 7: 'Weekly · 7 days', 30: 'Monthly · 30 days' };
   const available = RENTAL_DURATIONS.filter(d => p[d]);
 
   available.forEach(d => {
@@ -132,11 +124,12 @@ function updateSummary() {
   const isTrophy  = selectedType === 'tr';
   const deposit   = isTrophy ? 100 : 0;
   const total     = price + deposit;
+  const typeName  = isTrophy ? 'Trophy' : 'Non-Trophy';
+  const durName   = selectedDays === 7 ? 'Weekly' : 'Monthly';
 
   rowsEl.innerHTML =
-    '<div class="gd-total-row"><span>Base (' + selectedDays + ' days)</span><span>' + (price ? '₱' + price : '—') + '</span></div>' +
-    '<div class="gd-total-row gd-total-dep"><span>🔒 Security Deposit (refundable)</span><span>+₱' + deposit + '</span></div>' +
-    '<div class="gd-total-row"><span>Total</span><span>' + (total ? '₱' + total : '—') + '</span></div>';
+    '<div class="gd-total-row"><span>Rental · ' + typeName + ', ' + durName + '</span><span>' + (price ? '₱' + price : '—') + '</span></div>' +
+    '<div class="gd-total-row gd-total-dep"><span>🔒 Refundable deposit</span><span>+₱' + deposit + '</span></div>';
   // Paid in full now — nothing owed when the game releases. The deposit
   // (Trophy only) is still refundable on its own terms, independent of that;
   // the rider only exists to say so, and has nothing to say otherwise.
@@ -169,6 +162,7 @@ function updateCta() {
     if (sub) { sub.textContent = subText; sub.style.display = ''; }
   };
 
+  syncUpcomingSticky();
   if (!selectedDays) return setWait('Pick a duration');
 
   const price   = getPrices()[selectedDays] || 0;
@@ -262,6 +256,36 @@ function selectUdBuyType(type) {
   });
   const typeField = document.getElementById('udBuyOrderType');
   if (typeField) typeField.value = type;
+  syncUpcomingSticky();
+}
+
+function syncUpcomingSticky() {
+  const kicker = document.getElementById('udSbKicker');
+  const amount = document.getElementById('udSbAmount');
+  const btn = document.getElementById('udSbBtn');
+  if (!btn) return;
+  if (upcomingMode === 'buy') {
+    if (kicker) kicker.textContent = 'Buy permanent';
+    const price = selectedBuyType ? (BUY_FINAL[selectedBuyType] || 0) : 0;
+    if (amount) amount.textContent = price ? ('₱' + price) : 'Pick a type';
+    btn.textContent = 'Pre-order';
+    btn.classList.toggle('gd-cta-wait', !selectedBuyType);
+    return;
+  }
+  const ready = !!selectedDays;
+  const price = ready ? (getPrices()[selectedDays] || 0) : 0;
+  const deposit = ready && selectedType === 'tr' ? 100 : 0;
+  const total = price + deposit;
+  if (kicker) kicker.textContent = ready ? (selectedDays === 7 ? 'Weekly' : 'Monthly') : 'Reserve';
+  if (amount) amount.textContent = ready && total ? ('₱' + total) : 'Pick a duration';
+  btn.textContent = ready ? (getSlots() > 0 ? 'Reserve' : 'Request') : 'Reserve';
+  btn.classList.toggle('gd-cta-wait', !ready);
+}
+
+function upcomingStickyClick() {
+  const id = upcomingMode === 'buy' ? 'udBuyCtaBtn' : 'ctaReserveBtn';
+  const el = document.getElementById(id);
+  if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function handleUdBuyClick(e) {
@@ -322,58 +346,3 @@ renderDurButtons();
 updateSummary();
 updateCta();
 updateOwnStrip();
-
-// ── Gameplay gallery slider ──
-// Deliberately a small standalone copy rather than sharing the rent page's
-// gdGo/gdMove — those are intertwined with rent-only overlays (platform
-// badge, slot banner, cover focal-point handling) that don't apply here.
-let gpIndex = 0;
-function gpGo(i) {
-  if (gpSlideCount <= 1) return;
-  gpIndex = (i + gpSlideCount) % gpSlideCount;
-  const track = document.getElementById('gpSliderTrack');
-  if (track) track.style.transform = 'translateX(-' + (gpIndex * 100) + '%)';
-  document.querySelectorAll('#gpSliderDots .gd-dot').forEach((d, di) => d.classList.toggle('active', di === gpIndex));
-  const thumbsWrap = document.getElementById('gpThumbs');
-  document.querySelectorAll('#gpThumbs .gd-thumb').forEach((t, ti) => {
-    t.classList.toggle('active', ti === gpIndex);
-    // Horizontal-only, scoped to the thumbnail strip itself — scrollIntoView()
-    // can still move the whole page vertically to reveal an element that
-    // isn't fully in the viewport, which is exactly what happened here since
-    // this gallery sits far down the page during autoplay.
-    if (ti === gpIndex && thumbsWrap) {
-      const target = t.offsetLeft - (thumbsWrap.clientWidth - t.clientWidth) / 2;
-      thumbsWrap.scrollTo({ left: target, behavior: 'smooth' });
-    }
-  });
-}
-function gpMove(dir) { gpGo(gpIndex + dir); }
-(function() {
-  const slider = document.getElementById('gpSlider');
-  if (!slider || gpSlideCount <= 1) return;
-  let startX = 0;
-  slider.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
-  slider.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - startX;
-    if (Math.abs(dx) > 40) gpMove(dx < 0 ? 1 : -1);
-  }, { passive: true });
-})();
-// Autoplay: loop through the gallery every 4s. Pauses on hover/touch, resumes
-// on manual navigation, and stays off for anyone who has asked for reduced
-// motion — same pattern as the game detail page's own gallery.
-(function() {
-  const slider = document.getElementById('gpSlider');
-  if (!slider || gpSlideCount <= 1) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  let timer = null;
-  function start() { stop(); timer = setInterval(() => gpMove(1), 4000); }
-  function stop() { if (timer) { clearInterval(timer); timer = null; } }
-  slider.addEventListener('mouseenter', stop);
-  slider.addEventListener('mouseleave', start);
-  slider.addEventListener('touchstart', stop, { passive: true });
-  slider.addEventListener('touchend', () => setTimeout(start, 4000), { passive: true });
-  document.querySelectorAll('#gpSliderDots .gd-dot, #gpThumbs .gd-thumb, #gpSlider .gd-slider-arrow').forEach(el => {
-    el.addEventListener('click', start);
-  });
-  start();
-})();
