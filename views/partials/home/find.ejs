@@ -38,6 +38,9 @@
     <a class="hr-chip" href="<%= chip.href %>"><%= chip.label %></a>
     <% }) %>
   </nav>
+  <% if (home.trust && home.trust.people) { %>
+  <p class="hr-live" id="liveRenters"><b><%= home.trust.people.toLocaleString('en-US') %></b> renters</p>
+  <% } %>
   <ul class="hm-trust">
     <% if (home.trust.renters) { %><li><span class="hm-tick" aria-hidden="true">✓</span> <%= home.trust.renters %> players</li><% } %>
     <% if (home.trust.recommendPct != null) { %><li><span class="hm-tick" aria-hidden="true">✓</span> <%= home.trust.recommendPct %>% recommend us</li><% } else if (home.trust.reviewCount) { %><li><span class="hm-tick" aria-hidden="true">✓</span> <%= home.trust.reviewCount %> player reviews</li><% } %>

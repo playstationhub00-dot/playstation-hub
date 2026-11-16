@@ -57,6 +57,17 @@ document.addEventListener('submit', function (e) {
 </script>
 
 <footer>
+  <%
+    const ftPromo = (typeof settings !== 'undefined' && settings && settings.promo) ? settings.promo : {};
+    const ftDeposit = ftPromo.deposit != null && ftPromo.deposit !== '' ? Number(ftPromo.deposit) : 100;
+    const ftLate = ftPromo.late_fee_per_day != null && ftPromo.late_fee_per_day !== '' ? Number(ftPromo.late_fee_per_day) : 20;
+  %>
+  <ul class="hub-trust" aria-label="How renting works">
+    <li>Sign in with a QR code on Messenger. No password is shared.</li>
+    <li>Non-Trophy has a free 3-hour trial, no deposit and no late fee.</li>
+    <li>Trophy and PS4 Primary: ₱<%= ftDeposit %> refundable deposit, ₱<%= ftLate %> per late day.</li>
+    <li>Weekly or monthly PS5 and PS4 rentals in the Philippines.</li>
+  </ul>
   <div class="footer-inner">
     <div class="footer-grid">
       <div class="footer-col footer-brand">

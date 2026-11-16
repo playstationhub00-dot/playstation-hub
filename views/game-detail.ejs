@@ -251,6 +251,10 @@
 
         </div>
 
+        <% if (ntAvail) { %>
+        <p class="gd-trial" id="gdTrial">Non-Trophy has a free 3-hour trial — no deposit and no late fee.</p>
+        <% } %>
+
         <%
           // How long until a full type frees up, surfaced right under the type
           // cards rather than left buried inside the "How setup works" accordion
@@ -417,6 +421,10 @@
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="hidden" name="promo_code" id="orderPromoCode" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+          <label class="gd-agree">
+            <input type="checkbox" name="agree_rules" required>
+            <span>I agree to the rental rules. Trophy and PS4 Primary include a ₱<%= promo.deposit || 0 %> refundable deposit and ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day. Non-Trophy has no deposit and no late fee.<% if (ntAvail) { %> The Non-Trophy free trial is 3 hours.<% } %></span>
+          </label>
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
           <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
         </form>
@@ -620,7 +628,7 @@
       <div class="gp-related-row">
         <% gpRelated.forEach(item => { %>
         <a class="gp-rel" href="<%= item.href %>">
-          <% if (item.cover) { %><img src="<%= item.cover %>" alt="" width="46" height="60" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
+          <% if (item.cover) { %><img src="<%= item.cover %>" alt="<%= item.title %>" width="46" height="60" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
           <span><b><%= item.title %></b><small><%= item.status %></small></span>
         </a>
         <% }) %>
@@ -636,7 +644,7 @@
       <div class="gd-sb-amount" id="gdSbAmount">₱<%= gdFromPrice %></div>
       <div class="gd-sb-code" id="gdSbCode"></div>
     </div>
-    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? '💬 Ask us' : '💬 Message us' %></button>
+    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? 'Join the line' : 'Rent now' %></button>
   </div>
 </div>
 

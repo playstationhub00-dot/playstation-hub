@@ -62,6 +62,15 @@
 <% if (pageDesc) { %>
 <meta property="og:description" content="<%= pageDesc %>">
 <% } %>
+<% var ogIsSvg = /\.svg(?:$|\?)/i.test(String(img || '')); %>
+<% if (ogIsSvg) { %>
+<meta property="og:image" content="<%= seoApi.absoluteUrl('/og-cover.png') %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="PlayStation Hub — rent PS5 and PS4 games in the Philippines">
+<% } else { %>
+<meta property="og:image:alt" content="<%= pageTitle %>">
+<% } %>
 <meta property="og:image" content="<%= ogImage %>">
 <meta property="og:url" content="<%= canonical %>">
 <meta property="og:type" content="<%= ogType %>">
@@ -71,8 +80,10 @@
 <% if (pageDesc) { %>
 <meta name="twitter:description" content="<%= pageDesc %>">
 <% } %>
-<meta name="twitter:image" content="<%= ogImage %>">
+<meta name="twitter:image" content="<%= ogIsSvg ? seoApi.absoluteUrl('/og-cover.png') : ogImage %>">
 <link rel="icon" href="<%= fav %>" type="<%= seoApi.faviconType(fav) %>">
+<link rel="apple-touch-icon" href="/og-cover.png">
+<link rel="stylesheet" href="/css/hub.css?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>">
 <meta name="facebook-domain-verification" content="noj6ccmsehjq0v2oeq2e716fgyaqq0" />
 <% if (verify) { %>
 <meta name="google-site-verification" content="<%= verify %>">

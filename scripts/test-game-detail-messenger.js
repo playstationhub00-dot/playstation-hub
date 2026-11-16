@@ -94,7 +94,7 @@ async function main() {
     assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
     assert.ok(open.body.includes('id="gdOrderForm"'), 'the website order form is still there');
     assert.ok(!open.body.includes('id="ctaMsgLink"') && !open.body.includes('id="ctaHint"'));
-    assert.ok(/id="gdSbBtn"[^>]*>💬 Message us<\/button>/.test(open.body));
+    assert.ok(/id="gdSbBtn"[^>]*>Rent now<\/button>/.test(open.body));
   });
   await okAsync('loads messenger-text.js before game-detail.js', async () => {
     const a = open.body.indexOf('/js/messenger-text.js?v=');

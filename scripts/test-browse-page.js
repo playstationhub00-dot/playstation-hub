@@ -237,7 +237,7 @@ async function main() {
   await okAsync('the filter panel: tier, console, genre and price rows; a plain form that keeps tab, sort and search', async () => {
     const h = await page('/browse?tab=deals&sort=az&search=zzyzx');
     const form = between(h, 'bfForm', 'bfGo');
-    assert.deepStrictEqual([...form.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['tier', 'console', 'genre', 'price']);
+    assert.deepStrictEqual([...form.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['stock', 'account', 'tier', 'console', 'genre', 'price']);
     ['<input type="hidden" name="tab" value="deals">', '<input type="hidden" name="sort" value="az">', '<input type="hidden" name="search" value="zzyzx">'].forEach(t => assert.ok(form.includes(t), t));
     assert.ok(/<label class="bf-opt" data-group="tier" data-value="2">[\s\S]*?Big recent AAA games · from ₱149[\s\S]*?<input type="checkbox" name="tier" value="2">/.test(form));
     assert.ok(!between(all, 'bfForm', 'bfGo').includes('name="tab"'), 'All games needs no tab field');
@@ -250,7 +250,7 @@ async function main() {
     assert.deepStrictEqual([tekken.tier, tekken.rank, tekken.released, tekken.deal, tekken.availPs4], ['2', 1, '2024-01-26', 40, true]);
     assert.deepStrictEqual([d.games.find(g => g.id === 5).released, d.games.find(g => g.id === 1).rank], [null, null]);
     assert.deepStrictEqual(d.soon.map(u => [u.id, u.order]), [[3, 0], [1, 1], [2, 2]]);
-    assert.deepStrictEqual(d.state, { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [] });
+    assert.deepStrictEqual(d.state, { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [] });
     assert.deepStrictEqual(d.ctx.tiers[1], { id: '2', name: 'Deluxe', desc: 'Big recent AAA games' });
     assert.strictEqual(d.psplusFrom, 159);
     assert.ok(all.includes('\\u003c/script>\\u003cb>favourite'), 'a description cannot close the script');

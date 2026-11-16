@@ -153,14 +153,14 @@ ok('filters do not apply on Coming soon or PS Plus Deluxe (the panel keeps All g
 });
 ok('panel chips count what the tab would show; a chip nothing in the library has is left out', () => {
   const view = v({ tab: 'most-rented' });
-  assert.deepStrictEqual(view.groups.map(x => x.key), ['tier', 'console', 'genre', 'price']);
+  assert.deepStrictEqual(view.groups.map(x => x.key), ['stock', 'tier', 'console', 'genre', 'price']);
   assert.strictEqual(chip(view, 'console', 'ps4').count, 3);
   assert.deepStrictEqual([chip(view, 'tier', '3').count, chip(view, 'tier', '3').zero, chip(view, 'tier', '3').href], [0, true, null]);
   assert.strictEqual(chip(view, 'genre', 'Action').href, '/browse?tab=most-rented&genre=Action');
   const on = v({ tab: 'most-rented', genre: 'Action' });
   assert.deepStrictEqual([chip(on, 'genre', 'Action').on, chip(on, 'genre', 'Action').count], [true, 3]);
   const noBundle = C.view({ games: games.filter(f => f.tier !== '1'), soon, psplus }, C.emptyState(), ctx);
-  assert.ok(!noBundle.groups[0].chips.some(c => c.value === '1'));
+  assert.ok(!noBundle.groups.find(g => g.key === 'tier').chips.some(c => c.value === '1'));
 });
 ok('the filter bar: one chip per filter (no search chip); Clear all and the empty grid\'s reset', () => {
   const s = st({ tab: 'deals', sort: 'az', search: 'x', tier: '2', console: 'ps4', genre: 'Action', price: 'low' });
@@ -175,6 +175,17 @@ ok('the filter bar: one chip per filter (no search chip); Clear all and the empt
 ok('tier descriptions for the filtered tiers that have one', () => {
   assert.deepStrictEqual(v({ tier: '2,3' }).notes, [{ name: 'Deluxe', desc: 'Big recent AAA games' }]);
   assert.deepStrictEqual(v({}).notes, []);
+});
+ok('availability and account type narrow the grid', () => {
+  const typed = games.map(f => Object.assign({}, f, {
+    types: f.ps4 ? ['nt', 'tr', 'ps4'] : ['nt', 'tr'],
+    last: f.id === 6
+  }));
+  const full = C.view({ games: typed, soon: [], psplus: [] }, st({ stock: 'full' }), ctx);
+  assert.deepStrictEqual(full.ids, [3]);
+  const ps4 = C.view({ games: typed, soon: [], psplus: [] }, st({ account: 'ps4' }), ctx);
+  assert.ok(ps4.ids.indexOf(2) >= 0 && ps4.ids.indexOf(1) < 0, 'PS4 Primary is only games that offer it');
+  assert.deepStrictEqual(C.view({ games: typed, soon: [], psplus: [] }, st({ stock: 'last' }), ctx).ids, [6]);
 });
 ok('the results bar and the panel button', () => {
   assert.strictEqual(C.countText(v({ tab: 'most-rented' })), 'Most rented · 4 games');

@@ -14,7 +14,7 @@
       <% if (home.topRented.length) { %>
       <ol class="hr-rank">
         <% home.topRented.slice(0, 10).forEach(function (t, i) { %>
-        <li><a href="<%= seo.rentPath(t.game.title) %>"><span class="hr-rank-n"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="" width="42" height="42"><% } %><span class="hr-rank-t"><%= t.game.title %></span><% if (t.weekly) { %><span class="hr-rank-p">₱<%= t.weekly %></span><% } %></a></li>
+        <li><a href="<%= seo.rentPath(t.game.title) %>"><span class="hr-rank-n"><%= i + 1 %></span><% if (t.game.cover_image) { %><img <%- imgThumb(t.game.cover_image) %> alt="<%= t.game.title %>" width="42" height="42"><% } %><span class="hr-rank-t"><%= t.game.title %></span><% if (t.weekly) { %><span class="hr-rank-p">₱<%= t.weekly %></span><% } %></a></li>
         <% }) %>
       </ol>
       <% } %>
@@ -30,7 +30,7 @@
       <p class="hr-ps-sub">Play any of them for the length of your rental.</p>
       <% if (psplusPopular && psplusPopular.length) { %>
       <ul class="hr-ps-covers" aria-label="Games on PS Plus Deluxe">
-        <% psplusPopular.slice(0, psplusPopular.length >= 10 ? 10 : 5).forEach(function (row) { %><li><a href="/ps-plus"><% if (row.cover_image) { %><img <%- imgCard(row.cover_image) %> alt="" loading="lazy" decoding="async"><% } %><span><%= row.title %></span></a></li><% }) %>
+        <% psplusPopular.slice(0, psplusPopular.length >= 10 ? 10 : 5).forEach(function (row) { %><li><a href="/ps-plus"><% if (row.cover_image) { %><img <%- imgCard(row.cover_image) %> alt="<%= row.title %>" loading="lazy" decoding="async"><% } %><span><%= row.title %></span></a></li><% }) %>
       </ul>
       <% } %>
       <div class="hr-ps-acts">

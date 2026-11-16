@@ -13,4 +13,7 @@
   <span class="shop-meta"><%= g.platform %><%= g.genre ? ' · ' + g.genre : '' %></span>
   <span class="shop-title"><%= g.title %></span>
   <span class="shop-price">₱<%= g.price.toLocaleString('en-US') %><% if (g.was) { %> <s>₱<%= g.was.toLocaleString('en-US') %></s><% } %></span>
+  <% if (g.ntPrice || g.trPrice) { %>
+  <span class="shop-tiers"><% if (g.ntPrice) { %>Non-Trophy ₱<%= g.ntPrice.toLocaleString('en-US') %><% } %><% if (g.ntPrice && g.trPrice) { %> · <% } %><% if (g.trPrice) { %>Trophy ₱<%= g.trPrice.toLocaleString('en-US') %><% } %></span>
+  <% } %>
 </a>

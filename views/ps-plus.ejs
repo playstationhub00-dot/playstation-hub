@@ -20,7 +20,12 @@
       <div class="ppc-eyebrow">PlayStation Hub</div>
       <h1 class="ppc-title">PS PLUS <span>DELUXE</span></h1>
       <p class="ppc-lead">One rental, every game below. Trophy, Non-Trophy or PS4 Primary, weekly or monthly. Online play included.</p>
-      <p class="ppc-compare"><a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a> one game.</p>
+      <p class="ppc-compare"><a href="/guides/ps-plus-deluxe-vs-renting">PS Plus Deluxe vs renting</a> one game.<% if (typeof fromWeekly !== 'undefined' && fromWeekly && typeof singleWeekly !== 'undefined' && singleWeekly) { %> Deluxe from ₱<%= fromWeekly %>/week, or one game from ₱<%= singleWeekly %>/week.<% } %></p>
+      <ol class="ppc-signin">
+        <li>Pick Trophy, Non-Trophy or PS4 Primary, then weekly or monthly.</li>
+        <li>Pay on the order page. QR Ph and PayPal are on that page. GCash, Maya and bank transfer go through Messenger.</li>
+        <li>Sign in with the QR code we send on Messenger. No password is shared.</li>
+      </ol>
     </div>
     <div class="ppc-hero-side">
       <div class="ppc-stats">
@@ -146,6 +151,16 @@
 </section>
 <% } %>
 
+<% if (typeof thisMonth !== 'undefined' && thisMonth && thisMonth.games_list) { %>
+<section class="ppc-month-row" id="ppcThisMonth">
+  <h2>This month's games<% if (thisMonth.month_name) { %> · <%= thisMonth.month_name %><% } %></h2>
+  <ul>
+    <% String(thisMonth.games_list).split('\n').map(g => g.trim()).filter(Boolean).forEach(function (name) { %>
+    <li><%= name %></li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>
 <%- include('partials/psplus-catalog-grid') %>
 </div>
 
@@ -216,6 +231,7 @@
   <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
 </section>
 
+<a class="ppc-stick" href="/ps-plus/rent">Rent PS Plus Deluxe<% if (fromWeekly) { %> · ₱<%= fromWeekly %>/week<% } %></a>
 <%- include('partials/footer') %>
 
 <!-- PS PLUS MONTHLY DETAIL MODAL -->
@@ -273,6 +289,7 @@
   tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tab); }); });
 })();
 
+window.psplusDeposit = <%= (settings.promo && settings.promo.deposit != null && settings.promo.deposit !== '') ? Number(settings.promo.deposit) : 100 %>;
 function openPsplusModal(dataStr) {
   const d = JSON.parse(dataStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
   const modal = document.getElementById('psplusModal');
@@ -308,7 +325,7 @@ function openPsplusModal(dataStr) {
        <div style="font-size:0.7rem;color:#ffc400;font-weight:700;margin-bottom:0.4rem;">🏆 Trophy Account</div>
        <div style="font-size:0.8rem;color:#ddd;">Weekly — <b style="color:#ffc400;">₱${p.tr7||0}</b></div>
        <div style="font-size:0.8rem;color:#ddd;">Monthly — <b style="color:#ffc400;">₱${p.tr30||0}</b></div>
-       <div style="font-size:0.72rem;color:#664d00;margin-top:0.3rem;">+₱100 refundable deposit for Trophy and PS4 Primary</div>
+       <div style="font-size:0.72rem;color:#664d00;margin-top:0.3rem;">+₱${window.psplusDeposit || 0} refundable deposit for Trophy and PS4 Primary</div>
      </div>`;
 
   // Notes

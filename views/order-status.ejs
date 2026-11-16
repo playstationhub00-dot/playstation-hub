@@ -86,6 +86,16 @@
 %>
 
 <div class="ord-page">
+  <%
+    const ordPaidStep = !!(typeof isPaidOrder !== 'undefined' && isPaidOrder) || ['active', 'awaiting_qr', 'qr_pending', 'awaiting_return', 'verifying_return', 'closed', 'reserved'].includes(order.state);
+    const ordStep = ordPaidStep ? 4 : 3;
+  %>
+  <ol class="ord-steps" aria-label="Checkout">
+    <li class="done">1 Review</li>
+    <li class="done">2 Details</li>
+    <li class="<%= ordStep === 3 ? 'on' : 'done' %>">3 Pay</li>
+    <li class="<%= ordStep === 4 ? 'on' : '' %>">4 Confirm</li>
+  </ol>
   <div class="ord-ref-bar">
     <span class="ord-ref-label">Your reference</span>
     <span class="ord-ref-code"><%= order.ref %></span>

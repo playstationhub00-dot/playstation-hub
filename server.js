@@ -2000,7 +2000,8 @@ app.post('/requests/add', async (req, res) => {
     (getPsplusPopular().find(g => titleFixes.slugMatches(gameSlug(g.title), slug)) || {}).cover_image ||
     '';
 
-  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover });
+  const notify = req.body.notify === '1' || req.body.notify === 'on';
+  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover, notify });
   if (r.ok) {
     // Only a genuinely new title alerts. The 'exists' branch below turns a
     // repeat into a vote, and a buzz per vote on a popular request would be
@@ -2010,7 +2011,7 @@ app.post('/requests/add', async (req, res) => {
   }
   if (r.reason === 'exists') {
     // Someone already asked for this — add their vote rather than refusing.
-    const v = await gameRequests.addVote(r.slug, { fb_name, session_id: req.sessionId || null });
+    const v = await gameRequests.addVote(r.slug, { fb_name, session_id: req.sessionId || null, notify });
     return res.redirect('/requests?msg=' + (v.ok ? 'voted' : v.reason === 'duplicate' ? 'already' : 'error'));
   }
   return res.redirect('/requests?msg=error');
@@ -2022,7 +2023,8 @@ app.post('/requests/:slug/vote', async (req, res) => {
   }
   const fb_name = (req.body.fb_name || '').trim();
   if (!fb_name) return res.redirect('/requests?msg=missing');
-  const v = await gameRequests.addVote(req.params.slug, { fb_name, session_id: req.sessionId || null });
+  const notify = req.body.notify === '1' || req.body.notify === 'on';
+  const v = await gameRequests.addVote(req.params.slug, { fb_name, session_id: req.sessionId || null, notify });
   if (v.ok) return res.redirect('/requests?msg=voted');
   return res.redirect('/requests?msg=' + (v.reason === 'duplicate' ? 'already' : v.reason === 'not_found' ? 'error' : 'closed'));
 });
@@ -2050,11 +2052,13 @@ app.get('/ps-plus', (req, res) => {
   Object.keys(byYear).forEach(y => byYear[y].sort((a, b) => a.month - b.month));
   const years = Object.keys(byYear).sort((a, b) => b - a); // newest year first
   const popular = [...getPsplusPopular()].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-  // Pull slots from the "PS Plus Deluxe" game entry so they stay in sync
-  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus deluxe') || g.title.toLowerCase().includes('playstation plus deluxe'));
-  const slots = psplusGame
-    ? { nt_slots: psplusGame.non_trophy_slots || 0, tr_slots: psplusGame.trophy_slots || 0, ps4_slots: psplusGame.ps4_primary_slots || 0 }
-    : getPsplusSlots();
+  // Same open-slot count as /ps-plus/rent (linked accounts via
+  // computeAvailability). The hand-typed non_trophy_slots on the game row
+  // used to say 14 here while the rent page, which counts real accounts,
+  // said 4.
+  const live = psplusLiveSlots();
+  const psplusGame = live.game;
+  const slots = live.slots;
   const psplusSlug = psplusGame ? gameSlug(psplusGame.title) : null;
   // All Games tab: every PS Plus Deluxe game with the owner's monthly games
   // folded in (lib/psplus-catalog-view.js). Opens on that tab unless ?tab=
@@ -2064,28 +2068,42 @@ app.get('/ps-plus', (req, res) => {
   });
   const activeTab = ['games', 'monthly', 'pricing'].includes(req.query.tab) ? req.query.tab : (req.query.month ? 'monthly' : 'games');
   const fromWeekly = psplusFromWeekly();
+  const nowMonth = new Date();
+  const thisMonth = entries.find(e => Number(e.year) === nowMonth.getFullYear() && Number(e.month) === nowMonth.getMonth() + 1) || null;
+  const singleWeekly = getGames().reduce((min, g) => {
+    const n = Number(g.nt_price_7d) || 0;
+    return n > 0 && (min == null || n < min) ? n : min;
+  }, null);
   // PS Plus has one real catalog entry behind it, so a review naming it floats.
-  res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, catalog, activeTab, fromWeekly, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
+  res.render('ps-plus', Object.assign({ byYear, years, popular, prices: getPsplusPrices(), slots, catalog, activeTab, fromWeekly, singleWeekly, thisMonth, psplusGameId: psplusGame ? psplusGame.id : null, psplusSlug, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings() },
     reviewBlockLocals(psplusGame ? psplusGame.title : '')));
 });
 
+// Hero (/ps-plus) and the rent page (/ps-plus/rent) must count the same
+// Deluxe row the same way a game page counts slots. Prefer the Deluxe title
+// when several rows mention PS Plus, then fall back to the hand-typed
+// psplus_slots object only when there is no game row at all.
+function psplusLiveSlots() {
+  const games = getGames().filter(g => {
+    const t = String(g.title || '').toLowerCase();
+    return t.includes('ps plus') || t.includes('playstation plus');
+  });
+  const game = games.find(g => String(g.title || '').toLowerCase().includes('deluxe')) || games[0] || null;
+  if (!game) return { game: null, slots: getPsplusSlots(), nextDays: { tr: null, nt: null, ps4: null } };
+  const a = computeAvailability(game, gameAccountSummary(game.id));
+  return {
+    game,
+    slots: { nt_slots: a.ntSlots, tr_slots: a.trSlots, ps4_slots: a.ps4Slots },
+    nextDays: { tr: a.trNext, nt: a.ntNext, ps4: a.ps4Next }
+  };
+}
+
 app.get('/ps-plus/rent', async (req, res) => {
   const prices = getPsplusPrices();
-  const rawSlots = getPsplusSlots();
-  const psplusGame = getGames().find(g => g.title.toLowerCase().includes('ps plus') || g.title.toLowerCase().includes('playstation plus'));
-  // Open slots and "Available in N days" come from the accounts linked to the
-  // PS Plus row, counted the way a game page counts them (lib/availability.js).
-  // The row's own non_trophy_slots / trophy_slots / ps4_primary_slots are only
-  // the fallback for a type with no linked account: read on their own, those
-  // hand-entered numbers went stale and showed 9 open slots while every
-  // Trophy and Non-Trophy slot was rented.
-  let slots = rawSlots;
-  let nextDays = { tr: null, nt: null, ps4: null };
-  if (psplusGame) {
-    const a = computeAvailability(psplusGame, gameAccountSummary(psplusGame.id));
-    slots = { nt_slots: a.ntSlots, tr_slots: a.trSlots, ps4_slots: a.ps4Slots };
-    nextDays = { tr: a.trNext, nt: a.ntNext, ps4: a.ps4Next };
-  }
+  const live = psplusLiveSlots();
+  const psplusGame = live.game;
+  const slots = live.slots;
+  const nextDays = live.nextDays;
   const settings = getSiteSettings();
   // Use the catalogue entry's real cover. The view previously hardcoded
   // /images/psplus-deluxe-cover.jpg, which has never existed on this deploy —
@@ -2638,7 +2656,7 @@ app.get('/', (req, res) => {
       if (line && line.days === 30 && !promos.monthlyDiscountLive(promoContext().live)) return null;
       return line;
     })(),
-    trust: homeView.trust(reviewRules.backedRecommend(reviewRules.uniqueReviews(db.get('reviews').value() || [])), reviewRules.renterMilestone(reviewRules.countTransactions(getCustomers())), { reviews: homeReviews.reviews.length }),
+    trust: homeView.trust(reviewRules.backedRecommend(reviewRules.uniqueReviews(db.get('reviews').value() || [])), reviewRules.renterMilestone(reviewRules.countTransactions(getCustomers())), { reviews: homeReviews.reviews.length, people: reviewRules.countRenters(homeCustomers) }),
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,
@@ -2787,6 +2805,8 @@ function buyShopData() {
         platform: g.platform || '', ps4: g.platform === 'PS4' || g.platform === 'PS4/PS5', ps5: g.platform === 'PS5' || g.platform === 'PS4/PS5',
         genres, genre: genres[0] || '',
         price: offer.amount, was: offer.discounted ? offer.base : null,
+        ntPrice: nt.buyable ? buyPricing.priceFor(g, 'nt', promo).amount : null,
+        trPrice: tr.buyable ? buyPricing.priceFor(g, 'tr', promo).amount : null,
         nt: nt.buyable, tr: tr.buyable,
         // "In stock" when a type can be handed over now and the game has been
         // stocked before. Never stocked (its account is made on the first sale)
@@ -2924,6 +2944,10 @@ function browseGameFacts(g, accountSummaryMap, promo, rank, todayIso) {
     from: finals.length ? Math.min(...finals) : null,
     avail: !!(a.trAvail || a.ntAvail || (a.showPs4 && a.ps4Avail)),
     availPs4: !!(a.showPs4 && a.ps4Avail),
+    // Account-type filter: Non-Trophy and Trophy are offered on every game;
+    // PS4 Primary only when the game plays on PS4. `last` is a single slot left.
+    types: ['nt', 'tr'].concat(a.showPs4 ? ['ps4'] : []),
+    last: a.totalSlots === 1,
     buy: (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0,
     bundle: !!g.is_bundle,
     rank: rank || null,
@@ -5510,6 +5534,10 @@ app.get('/api/search-index', async (req, res) => {
   } catch (e) {
     console.error('[search-index] requests lookup failed', e.message);
   }
+
+  const deluxeNames = new Set([...psplus, ...psplusCatalogEntries, ...psplusMonthly]
+    .map(x => String(x.t || '').trim().toLowerCase()).filter(Boolean));
+  available.forEach(x => { if (deluxeNames.has(String(x.t || '').trim().toLowerCase())) x.deluxe = true; });
 
   res.set('Cache-Control', 'public, max-age=300');
   res.json([...available, ...soon, ...psplus, ...psplusCatalogEntries, ...psplusMonthly, ...requested]);
@@ -9685,6 +9713,19 @@ const orderCleanupTimer = setInterval(() => {
   }).catch(e => console.error('[order cleanup]', e && e.message ? e.message : e));
 }, paymentReminders.SWEEP_INTERVAL_MS);
 if (orderCleanupTimer.unref) orderCleanupTimer.unref();
+
+// Unknown public pages use the same 404 as a missing game. Admin, APIs and
+// webhooks keep a plain 404 so a missing JSON route does not return HTML.
+app.use((req, res) => {
+  const p = req.path || '';
+  const publicGet = req.method === 'GET'
+    && !p.startsWith('/api/')
+    && !p.startsWith('/admin')
+    && !p.startsWith('/webhooks')
+    && !p.startsWith('/uploads');
+  if (publicGet) return renderNotFound(res);
+  res.status(404).type('text').send('Not found');
+});
 
 function listen() {
   app.listen(PORT, () => {

@@ -442,8 +442,8 @@ function syncStickyBar() {
     kEl.textContent = 'From';
     aEl.textContent = '₱' + (amtEl ? amtEl.dataset.defaultAmount : '0');
   } else {
-    bEl.textContent = '💬 Message us';
     const rt = chargedRent(selectedType, selectedDays);
+    bEl.textContent = 'Rent now · ₱' + rt.total;
     kEl.textContent = 'Your total';
     aEl.textContent = '₱' + rt.total;
     const note = document.getElementById('gdSbCode');

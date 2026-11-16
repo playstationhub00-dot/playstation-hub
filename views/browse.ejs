@@ -49,8 +49,9 @@
   </div>
 </div>
 
-<!-- FILTER PANEL — full screen on phones, a centred pop-up on computers. A plain
-     GET form, so it also works (with reloads) without the page script. -->
+<!-- FILTERS — a sticky sidebar on a wide screen, a sheet on a phone.
+     A plain GET form, so it also works (with reloads) without the page script. -->
+<div class="bf-layout">
 <div class="bf-panel" id="bfPanel" role="dialog" aria-modal="true" aria-labelledby="bfPanelTitle">
   <a href="#" class="bf-backdrop" id="bfBackdrop" tabindex="-1" aria-hidden="true"></a>
   <form class="bf-sheet" id="bfForm" method="get" action="/browse">
@@ -84,6 +85,7 @@
     </div>
   </form>
 </div>
+<div class="bf-main">
 
 <%
   // Every card is on the page once; the active tab's matches come first, in
@@ -101,7 +103,8 @@
     <a class="btn btn-outline" id="bfReset" href="<%= resetHref %>">Clear filters</a>
   </div>
 
-  <div class="games-grid rentals-grid" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
+  <div class="games-grid rentals-grid bf-split" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
+    <h2 class="bf-full-head" id="bfFullHead"<%= view.kind === 'games' && gridFacts.some(f => leadGames.includes(f.id) && !f.avail) ? '' : ' hidden' %>>Full, join the waitlist</h2>
     <% gridFacts.forEach(f => { %><div class="bf-item" data-id="<%= f.id %>"<%= leadGames.includes(f.id) ? '' : ' hidden' %>><% if (f.rank && f.rank <= 10) { %><span class="bf-rank bf-rk-<%= f.rank %>"<%= view.ranked ? '' : ' hidden' %>>#<%= f.rank %></span><% } %><%- include('partials/game-card', { game: gamesById[f.id] }) %></div><% }) %>
   </div>
 
@@ -119,6 +122,8 @@
     <div class="games-grid rentals-grid" id="bfPsGrid"></div>
     <button type="button" class="btn btn-outline bf-ps-all" id="bfPsAll" hidden></button>
   </div>
+</div>
+</div>
 </div>
 
 <!-- RESERVE MODAL -->

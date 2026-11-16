@@ -13,6 +13,7 @@
 <% if (!catalog.counts.all) { %>
   <div class="ppc-soon">🎮 The full game list is coming soon.<span>Meanwhile, see this month's games in the Monthly tab, or message us to ask about a game.</span></div>
 <% } else { %>
+  <div class="ppc-tools">
   <div class="ppc-toolbar">
     <input type="search" id="ppcSearch" class="ppc-search" placeholder="Search <%= catalog.counts.all %> games — e.g. God of War" aria-label="Search PS Plus Deluxe games" autocomplete="off">
     <select id="ppcSort" class="ppc-select" aria-label="Sort games">
@@ -32,6 +33,7 @@
         .filter(c => c[0] === 'all' || c[2] > 0).forEach(c => { %>
     <button type="button" class="ppc-chip<%= c[0] === 'all' ? ' on' : '' %>" data-f="<%= c[0] %>" aria-pressed="<%= c[0] === 'all' %>"><%= c[1] %> <i><%= c[2] %></i></button>
     <% }) %>
+  </div>
   </div>
   <h2 class="ppc-heading" id="ppcHeading">🎮 All <%= catalog.counts.all %> games <small>· A–Z</small></h2>
   <div class="ppc-grid" id="ppcGrid"></div>
