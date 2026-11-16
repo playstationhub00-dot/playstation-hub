@@ -102,7 +102,7 @@
 
   <div class="body gc2-body">
     <% if (gcTier) { %><span class="tier-pill tier-<%= gcTier.color %>"><%= gcTier.name %></span><% } %>
-    <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>"><%= game.title %></div>
+    <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>" title="<%= game.title %>"><span class="gc-title-text"><%= game.title %></span></div>
     <div class="gc2-tags">
       <% if (gcBundle && gcStartPrice) { %>
       <div class="gc2-price"><%= gcBundle.count %> games from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
