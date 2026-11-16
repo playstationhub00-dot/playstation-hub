@@ -152,13 +152,20 @@
 <% } %>
 
 <% if (typeof thisMonth !== 'undefined' && thisMonth && thisMonth.games_list) { %>
-<section class="ppc-month-row" id="ppcThisMonth">
-  <h2>This month's games<% if (thisMonth.month_name) { %> · <%= thisMonth.month_name %><% } %></h2>
-  <ul>
+<section class="dx-sec ppc-month-row" id="ppcThisMonth">
+  <div class="dx-sec-h">
+    <h2>This month's games<% if (thisMonth.month_name) { %> · <%= thisMonth.month_name %> <%= thisMonth.year %><% } %></h2>
+  </div>
+  <div class="dx-month">
     <% String(thisMonth.games_list).split('\n').map(g => g.trim()).filter(Boolean).forEach(function (name) { %>
-    <li><%= name %></li>
+    <article class="dx-mcard">
+      <div class="body">
+        <div class="name"><%= name %></div>
+        <div class="meta"><%= thisMonth.month_name %> <%= thisMonth.year %></div>
+      </div>
+    </article>
     <% }) %>
-  </ul>
+  </div>
 </section>
 <% } %>
 <%- include('partials/psplus-catalog-grid') %>

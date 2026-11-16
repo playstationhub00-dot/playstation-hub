@@ -50,6 +50,15 @@
       <div class="req-hint" id="reqHint"></div>
     </div>
     <input type="text" name="fb_name" placeholder="Your Facebook name" required autocomplete="off">
+    <label class="req-field">Platform <span class="prop-tag">optional</span>
+      <select name="platform"><option value="">Any</option><option value="PS5">PS5</option><option value="PS4">PS4</option></select>
+    </label>
+    <label class="req-field">Account type <span class="prop-tag">optional</span>
+      <select name="account_type"><option value="">Any</option><option value="nt">Non-Trophy</option><option value="tr">Trophy</option><option value="ps4">PS4 Primary</option></select>
+    </label>
+    <label class="req-field">Length <span class="prop-tag">optional</span>
+      <select name="days"><option value="">Either</option><option value="7">Weekly</option><option value="30">Monthly</option></select>
+    </label>
     <label class="req-notify"><input type="checkbox" name="notify" value="1"> Notify me on Messenger when this is stocked</label>
     <button type="submit" class="btn btn-primary">Request</button>
   </form>

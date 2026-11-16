@@ -2001,7 +2001,10 @@ app.post('/requests/add', async (req, res) => {
     '';
 
   const notify = req.body.notify === '1' || req.body.notify === 'on';
-  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover, notify });
+  const platform = ['PS5', 'PS4'].includes(req.body.platform) ? req.body.platform : '';
+  const account_type = ['nt', 'tr', 'ps4'].includes(req.body.account_type) ? req.body.account_type : '';
+  const days = ['7', '30'].includes(String(req.body.days || '')) ? Number(req.body.days) : null;
+  const r = await gameRequests.createRequest({ title, fb_name, session_id: req.sessionId || null, cover_image: inheritedCover, notify, platform, account_type, days });
   if (r.ok) {
     // Only a genuinely new title alerts. The 'exists' branch below turns a
     // repeat into a vote, and a buzz per vote on a popular request would be

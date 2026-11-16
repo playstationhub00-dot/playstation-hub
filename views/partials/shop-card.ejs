@@ -1,19 +1,18 @@
-<%# One game in the Buy shop — on a storefront shelf, in the catalog grid: its
-    cover standing on the shelf, the stock tag, a best-seller sticker when
-    ranked, platform · genre, the title and the yellow price sticker (the
-    base price struck when the buy promo cuts it). Locals: g (a game from
-    server.js buyShopData), rank (1–3 or null), hideRank (the catalog shows
-    the sticker only on Best sellers in best-selling order). %>
+<%# Buy card. Outer class stays shop-card so the catalog tests can find it.
+    Inner layout matches the proposal: cover, stock badge, NT and Trophy prices. %>
 <a href="<%= seo.isPsplusDeluxeTitle(g.title) ? '/ps-plus' : '/game/' + g.slug + '?mode=buy' %>" class="shop-card">
-  <span class="shop-cover">
+  <span class="shop-cover art">
     <% if (g.cover) { %><img <%- imgCard(g.cover) %> alt="<%= g.title %>" loading="lazy" decoding="async" style="object-position: <%= g.fx != null ? g.fx : 50 %>% <%= g.fy != null ? g.fy : 50 %>%;"><% } else { %><span class="shop-nocover"><%= g.title %></span><% } %>
     <span class="shop-stock <%= g.ready ? 'shop-in' : 'shop-wait' %>"><%= g.ready ? 'In stock' : 'Set up on order' %></span>
     <% if (rank) { %><span class="shop-rank shop-rank-<%= rank %>"<%= hideRank ? ' hidden' : '' %>>#<%= rank %></span><% } %>
   </span>
-  <span class="shop-meta"><%= g.platform %><%= g.genre ? ' · ' + g.genre : '' %></span>
-  <span class="shop-title"><%= g.title %></span>
-  <span class="shop-price">₱<%= g.price.toLocaleString('en-US') %><% if (g.was) { %> <s>₱<%= g.was.toLocaleString('en-US') %></s><% } %></span>
-  <% if (g.ntPrice || g.trPrice) { %>
-  <span class="shop-tiers"><% if (g.ntPrice) { %>Non-Trophy ₱<%= g.ntPrice.toLocaleString('en-US') %><% } %><% if (g.ntPrice && g.trPrice) { %> · <% } %><% if (g.trPrice) { %>Trophy ₱<%= g.trPrice.toLocaleString('en-US') %><% } %></span>
-  <% } %>
+  <span class="shop-body body">
+    <span class="shop-meta"><%= g.platform %><%= g.genre ? ' · ' + g.genre : '' %></span>
+    <span class="shop-title"><%= g.title %></span>
+    <span class="shop-price">₱<%= g.price.toLocaleString('en-US') %><% if (g.was) { %> <s>₱<%= g.was.toLocaleString('en-US') %></s><% } %></span>
+    <% if (g.ntPrice || g.trPrice) { %>
+    <span class="shop-tiers price"><% if (g.ntPrice) { %>NT <b>₱<%= g.ntPrice.toLocaleString('en-US') %></b><% } %><% if (g.ntPrice && g.trPrice) { %> · <% } %><% if (g.trPrice) { %>Trophy <span class="tr">₱<%= g.trPrice.toLocaleString('en-US') %></span><% } %></span>
+    <% } %>
+    <span class="rcta">Buy</span>
+  </span>
 </a>

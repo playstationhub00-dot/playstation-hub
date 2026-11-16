@@ -85,7 +85,7 @@
   const gdFromPrice = gdPricePairs.length ? gdPricePairs.reduce((a, b) => b.final < a.final ? b : a).final : 0;
 %>
 
-<div class="gd-page">
+<div class="gd-page wrap gd-shell">
   <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
   <% const gpShots = (gdPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src); %>
   <% const gpFilm = gdPsn.hideGallery ? gpShots : gdhGallery; %>
@@ -102,8 +102,8 @@
     <span> · <b><%= game.title %></b></span>
   </div>
 
-  <div class="gp-grid">
-    <div class="gp-hero">
+  <div class="gp-grid gd-shell-grid">
+    <div class="gp-hero gd-hero-left">
     <div class="gd-cover-col">
       <% if (gdPsn.media.length) { %>
         <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
@@ -133,7 +133,7 @@
         <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="gp-tag"><%= g.trim() %></span><% }) } %>
       </div>
       <%# One h1. "Rent … in the Philippines" stays in the title tag, meta description, and JSON-LD. %>
-      <h1 class="usd-title"><%= game.title %></h1>
+      <h1 class="usd-title gd-title"><%= game.title %></h1>
       <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
       <% if (game.description && !gdPsn.hasPsn) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
       <% if (gdPsn.hasPsn && gdPsn.about) { %>
@@ -175,7 +175,7 @@
 
       <!-- Booking card: everything a customer interacts with to place an order
            lives in one contained surface, matching the reservation page. -->
-      <div class="gdh-card">
+      <div class="gdh-card rental<%= allUnavail ? '' : ' available' %>">
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div class="gp-mode">
@@ -573,14 +573,14 @@
     <%- include('partials/game-film', { images: gpFilm, title: game.title, filmClass: gdPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
 
     <div class="gp-tabs" id="gpTabs">
-      <div class="gp-tablist" role="tablist">
-        <button type="button" class="gp-tab on" id="gpTabBefore" role="tab" aria-selected="true" onclick="gpTab('gpPaneBefore', this)">Before you rent</button>
-        <button type="button" class="gp-tab" id="gpTabDetails" role="tab" aria-selected="false" onclick="gpTab('gpPaneDetails', this)">Details</button>
-        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ<% if (gdSeo.faqs && gdSeo.faqs.length) { %> (<%= gdSeo.faqs.length %>)<% } %></button>
-        <%# Shared pool on every game (lib/reviews.js). A number here is the shop-wide "renters asked" total, which read as reviews of this title. %>
-        <button type="button" class="gp-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Customer reviews</button>
+      <div class="gp-tablist gd-tabs" role="tablist">
+        <button type="button" class="gp-tab gd-tab on" id="gpTabDetails" role="tab" aria-selected="true" onclick="gpTab('gpPaneDetails', this)">Description</button>
+        <button type="button" class="gp-tab gd-tab" id="gpTabBefore" role="tab" aria-selected="false" onclick="gpTab('gpPaneBefore', this)">Why rent it</button>
+        <button type="button" class="gp-tab gd-tab" id="gpTabSignin" role="tab" aria-selected="false" onclick="gpTab('gpPaneSignin', this)">Sign-in</button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ<% if (gdSeo.faqs && gdSeo.faqs.length) { %> (<%= gdSeo.faqs.length %>)<% } %></button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews</button>
       </div>
-      <div class="gp-pane" id="gpPaneBefore">
+      <div class="gp-pane gd-panel" id="gpPaneBefore" hidden>
         <div class="gp-before">
           <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
           <% if (hasTrophy) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
@@ -593,14 +593,23 @@
           · <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
         </p>
       </div>
-      <div class="gp-pane" id="gpPaneDetails" hidden>
+      <div class="gp-pane gd-panel" id="gpPaneDetails">
         <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: gdPsn }) %><% } %>
         <% if (!gdPsn.hasPsn && game.description) { %><p class="gp-details-copy"><%= game.description %></p><% } %>
         <% if (!gdPsn.hasPsn) { %>
         <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
         <% } %>
       </div>
-      <div class="gp-pane" id="gpPaneFaq" hidden>
+      <div class="gp-pane gd-panel" id="gpPaneSignin" hidden>
+        <div class="how-mini">
+          <div class="how-step"><div class="num">STEP 1</div><h3>Place the order</h3><p>Pick an account type and Weekly or Monthly. You’ll get an order page with your reference number.</p></div>
+          <div class="how-step"><div class="num">STEP 2</div><h3>Pay</h3><p>QR Ph or PayPal on that page when they’re on. GCash, Maya, and bank transfer stay on Messenger. Card is not live yet.</p></div>
+          <div class="how-step"><div class="num">STEP 3</div><h3>Scan the QR</h3><p>Bring up the sign-in screen on your console and send the QR or code. We never ask for your PSN password.</p></div>
+          <div class="how-step"><div class="num">STEP 4</div><h3>Play or swap</h3><p>Trophy: enable Console Sharing. Non-Trophy: play on our account. A free 3-hour trial applies when a Non-Trophy slot is open.</p></div>
+        </div>
+        <p class="how-note"><a href="/how-to-sign-in">Full sign-in steps</a></p>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneFaq" hidden>
         <% if (gdSeo.faqs && gdSeo.faqs.length) { %>
         <section class="gd-faq" id="game-faq">
           <h2 class="gd-faq-title"><%= game.title %> rental FAQ</h2>
@@ -613,7 +622,7 @@
         <p class="gp-details-copy">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>.</p>
         <% } %>
       </div>
-      <div class="gp-pane" id="gpPaneReviews" hidden>
+      <div class="gp-pane gd-panel" id="gpPaneReviews" hidden>
         <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
       </div>
     </div>
@@ -638,7 +647,7 @@
   </div>
 
   <!-- ══ MOBILE STICKY BAR (≤820px) ══ -->
-  <div class="gd-sticky-bar" id="gdStickyBar">
+  <div class="gd-sticky-bar rent-bar" id="gdStickyBar">
     <div class="gd-sb-info">
       <div class="gd-sb-kicker" id="gdSbKicker">From</div>
       <div class="gd-sb-amount" id="gdSbAmount">₱<%= gdFromPrice %></div>

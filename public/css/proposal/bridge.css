@@ -113,6 +113,45 @@ body.home2.hub .card-grid { display: grid; grid-template-columns: repeat(4, minm
 body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
 @media (max-width: 900px) { body.home2.hub .card-grid { grid-template-columns: 1fr 1fr; } }
 
+/* Buy cards and box sets */
+body.shop-page .shop-card {
+  display: flex; flex-direction: column; background: #141414; border: 1px solid #262626;
+  border-radius: 12px; overflow: hidden; color: inherit; text-decoration: none; min-width: 140px;
+}
+body.shop-page .shop-cover { position: relative; display: block; aspect-ratio: 2/3; background: #0d0d0d; }
+body.shop-page .shop-cover img { width: 100%; height: 100%; object-fit: cover; }
+body.shop-page .shop-stock { position: absolute; top: 8px; left: 8px; border-radius: 99px; font-size: 10px; font-weight: 800; padding: 3px 7px; }
+body.shop-page .shop-in { background: #0f2a1c; color: #3fd68f; }
+body.shop-page .shop-wait { background: #2a1e08; color: #F5B800; }
+body.shop-page .shop-body { display: flex; flex-direction: column; gap: 3px; padding: 8px; }
+body.shop-page .shop-title { font-weight: 800; font-size: 13px; }
+body.shop-page .rcta { display: block; margin-top: 6px; text-align: center; background: #F5B800; color: #0a0a0a; font-weight: 800; border-radius: 8px; padding: 7px; font-size: 12px; }
+body.shop-page .shop-box { background: #141414; border: 1px solid #262626; border-radius: 14px; padding: 12px; }
+
+/* Game page: booking box beside the tabs */
+body.gp-redesign.hub .gp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 22px;
+  align-items: start;
+}
+body.gp-redesign.hub .gp-hero { grid-column: 1; grid-template-columns: 140px minmax(0, 1fr); }
+body.gp-redesign.hub .gp-panel { grid-column: 2; grid-row: 1 / span 4; position: sticky; top: 80px; }
+body.gp-redesign.hub .gdh-card.rental { background: #141414; border: 1px solid #262626; border-radius: 14px; padding: 14px; }
+body.gp-redesign.hub .gp-tabs { grid-column: 1; background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; }
+body.gp-redesign.hub .gd-tabs { background: #101010; border-bottom: 1px solid #262626; }
+body.gp-redesign.hub .gd-tab.on { color: #F5B800; border-bottom: 2px solid #F5B800; }
+@media (max-width: 900px) {
+  body.gp-redesign.hub .gp-grid { display: flex; flex-direction: column; }
+  body.gp-redesign.hub .gp-panel { position: static; }
+  body.gd-compact { padding-bottom: 72px; }
+  body.gd-compact .rent-bar { display: flex; }
+}
+
+body.sec-page .req-row { display: grid; grid-template-columns: auto 56px 1fr auto; gap: 10px; align-items: center; background: #141414; border: 1px solid #262626; border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+body.sec-page .req-votes { font-weight: 800; color: #F5B800; text-align: center; }
+body.sec-page .req-form select, body.sec-page .req-field select { width: 100%; background: #101010; color: #fff; border: 1px solid #262626; border-radius: 10px; padding: 8px; margin-top: 4px; }
+
 /* Game page rental box */
 body.gp-redesign.hub .gdh-card,
 body.gp-redesign.hub .gp-panel {
