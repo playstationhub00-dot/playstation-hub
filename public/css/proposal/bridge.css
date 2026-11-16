@@ -321,6 +321,34 @@ body.hub .rcard .rcta {
 }
 body.hub .rcard .rcta.rent { background: #F5B800; color: #111; border: 1.5px solid #F5B800; }
 body.hub .rcard .rcta.line { background: transparent; color: #F5B800; border: 1.5px solid #F5B800; }
+/* Desktop hover: lift and gold glow. Phones keep the resting card. */
+@media (hover: hover) and (pointer: fine) {
+  body.hub a.rcard.gc2-card {
+    transition: transform 200ms ease-out, border-color 200ms ease-out, box-shadow 200ms ease-out;
+  }
+  body.hub a.rcard.gc2-card .rcta {
+    transition: background-color 200ms ease-out, color 200ms ease-out, border-color 200ms ease-out;
+  }
+  body.hub a.rcard.gc2-card:hover,
+  body.hub a.rcard.gc2-card:focus-within {
+    transform: translateY(-8px);
+    border-color: #F5B800;
+    box-shadow: 0 14px 32px rgba(245, 184, 0, 0.28);
+    z-index: 2;
+  }
+  body.hub a.rcard.gc2-card:hover .rcta,
+  body.hub a.rcard.gc2-card:focus-within .rcta {
+    background: #F5B800;
+    color: #111;
+    border-color: #F5B800;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  body.hub a.rcard.gc2-card,
+  body.hub a.rcard.gc2-card .rcta { transition: none; }
+  body.hub a.rcard.gc2-card:hover,
+  body.hub a.rcard.gc2-card:focus-within { transform: none; }
+}
 body.hub .rcard.full { opacity: 1; }
 body.hub .rcard.full .gc2-cover,
 body.hub .rcard.full .gc2-cover-placeholder { filter: none; }
