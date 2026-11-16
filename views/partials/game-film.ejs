@@ -7,7 +7,7 @@
 <% if (images && images.length) { %>
 <div class="<%= filmClass %>" data-film>
   <div class="gp-gal-h">
-    <h2>Gameplay</h2>
+    <h2><%= (typeof filmTitle !== 'undefined' && filmTitle) ? filmTitle : 'Gameplay' %></h2>
     <span class="gp-gal-count" id="gpGalCount">1 / <%= images.length %></span>
     <% if (images.length > 1) { %><button type="button" class="gp-viewall" onclick="gpOpenFilm(gpFilmIndex())">View all <%= images.length %> ›</button><% } %>
     <% if (images.length > 1) { %>

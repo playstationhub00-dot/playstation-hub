@@ -181,6 +181,25 @@ function toggleSetupPanel() {
   btn.setAttribute('aria-expanded', String(!open));
 }
 
+function fillVoucherCode(code) {
+  const input = document.getElementById('voucherInput');
+  const btn = document.getElementById('voucherApply');
+  if (!input) return;
+  input.value = code;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.focus();
+  if (btn && !btn.disabled) btn.click();
+}
+
+function toggleFeesPanel(force) {
+  const panel = document.getElementById('feesPanel');
+  const btn = document.getElementById('feesToggle');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !open;
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+
 // Shows only the selected type's setup block. Called from onTypeChange so the
 // panel's contents always match the pill the customer just picked.
 function syncSetupPanel() {
@@ -275,12 +294,12 @@ function updateTotal() {
   let rows = `<div class="gd-total-row"><span>${baseLabel}</span><span>₱${base}</span></div>`;
   if (voucherCode && discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>${voucherCode} (−${pct}%)</span><span>−₱${discount}</span></div>`;
   else if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
-  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Refundable deposit</span><span>+₱${deposit}</span></div>`;
+  if (deposit > 0) rows += `<div class="gd-total-row gd-total-dep"><span>Refundable deposit</span><span>₱${deposit}</span></div>`;
   rowsEl.innerHTML = rows;
   finalEl.textContent = '₱' + total;
 
   if (refundEl) {
-    if (deposit > 0) { refundEl.textContent = '↩ You get ₱' + deposit + ' back when you finish — real cost ₱' + (total - deposit) + '.'; refundEl.style.display = ''; }
+    if (deposit > 0) { refundEl.textContent = '₱' + deposit + ' comes back when you return on time.'; refundEl.style.display = ''; }
     else { refundEl.style.display = 'none'; }
   }
 
@@ -499,9 +518,18 @@ function updateReserveLinks() {
   const msgLink = document.getElementById('ctaMsgPrimary');
   if (msgLink) msgLink.href = PHMessengerText.messengerHref(msgText);
   const msgMain = document.getElementById('ctaMsgMain');
-  if (msgMain) msgMain.textContent = booked ? '💬 Ask us about this game' : '💬 Message us about this game';
+  if (msgMain) {
+    if (booked) msgMain.textContent = '💬 Ask us about this game';
+    else if (selectedType && selectedDays) {
+      const typeWord = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+      const durWord = selectedDays === 7 ? 'Weekly' : 'Monthly';
+      msgMain.textContent = 'Rent now · ' + typeWord + ' ' + durWord;
+    } else msgMain.textContent = 'Rent now';
+  }
   const msgSub = document.getElementById('ctaMsgSub');
   if (msgSub) msgSub.textContent = booked ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there';
+  const msgAsk = document.getElementById('ctaMsgAsk');
+  if (msgAsk && msgLink) msgAsk.href = msgLink.href;
   const msgPreview = document.getElementById('ctaMsgPreview');
   if (msgPreview) msgPreview.textContent = msgText;
   // Fully booked: the "get in line" card is the main action, so the big

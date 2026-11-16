@@ -16,7 +16,17 @@
       var label = document.createElement('span');
       label.className = 'gd-promo-label';
       label.setAttribute('data-kind', item.kind || 'promo');
-      label.textContent = item.label || 'Promo';
+      var blob = String(item.text || '');
+      var chip = item.label || 'Promo';
+      if (item.kind === 'punch') {
+        var nth = blob.match(/(\d+(?:st|nd|rd|th))/i);
+        if (nth) chip = '🎁 ' + nth[1] + ' rental free';
+      } else if (item.kind === 'rebook') {
+        var peso = blob.match(/₱\s*[\d,]+/);
+        if (peso) chip = '↻ Rebook ' + peso[0].replace(/\s+/g, '') + ' off';
+      }
+      label.textContent = chip;
+      row.title = blob;
       var text = document.createElement('span');
       text.className = 'gd-promo-text';
       text.textContent = item.text;

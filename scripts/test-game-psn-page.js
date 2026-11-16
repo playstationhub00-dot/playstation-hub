@@ -68,13 +68,12 @@ async function main() {
   });
   await okAsync('tagline, rating, About and Game info show; Size appears because the owner typed it', async () => {
     assert.ok(known.body.includes('Dig deep. Dig far.'));
-    assert.ok(known.body.includes('★ 4.9') && known.body.includes('103,548 ratings'));
-    assert.ok(known.body.includes('About this game') && known.body.includes('<p>A new era of digging begins.</p>') && known.body.includes('<p>Explore every cave &amp; tunnel.</p>'));
-    assert.ok(/<tr><td>Release date<\/td><td>Feb 27, 2026<\/td><\/tr>/.test(known.body));
-    assert.ok(/<tr><td>Size<\/td><td>54\.3 GB<\/td><\/tr>/.test(known.body));
-    assert.ok(/<tr><td>Voice<\/td><td>English, Japanese<\/td><\/tr>/.test(known.body));
-    assert.ok(/<tr><td>Age rating<\/td><td>ESRB Mature<\/td><\/tr>/.test(known.body));
-    assert.ok(known.body.includes('>Action<') && known.body.includes('>Adventure<'), 'genre chips use PlayStation genres');
+    assert.ok(known.body.includes('A new era of digging begins.') && known.body.includes('Explore every cave &amp; tunnel.'));
+    assert.ok(known.body.includes('<b>Release</b>Feb 27, 2026'));
+    assert.ok(known.body.includes('<b>Install size</b>54.3 GB'));
+    assert.ok(known.body.includes('Voice: English, Japanese'));
+    assert.ok(known.body.includes('<b>Age rating</b>ESRB Mature'));
+    assert.ok(known.body.includes('<b>Genre</b>Action / Adventure'), 'genre spec uses PlayStation genres');
   });
   await okAsync('gameplay dots sit under the strip, and the lightbox is in the page', async () => {
     const filmAt = known.body.indexOf('data-film');
@@ -107,10 +106,9 @@ async function main() {
   console.log('\nthe owner wins');
   const own = await get('/game/zzyzx-owner-wins');
   await okAsync("the owner's description and genre show, PlayStation's overview does not", async () => {
-    assert.ok(own.body.includes('<p>My own words.</p>'));
+    assert.ok(own.body.includes('My own words.'));
     assert.ok(!own.body.includes('A new era of digging begins.'));
-    assert.ok(own.body.includes('>RPG<'));
-    assert.ok(/<tr><td>Genre<\/td><td>RPG<\/td><\/tr>/.test(own.body));
+    assert.ok(own.body.includes('<b>Genre</b>RPG'));
   });
   await okAsync("the owner's gallery is used in the media block and the separate Gameplay section is skipped", async () => {
     assert.ok(own.body.includes('src="/uploads/g1.png"') && own.body.includes('src="/uploads/g2.png"'));

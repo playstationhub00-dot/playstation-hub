@@ -22,7 +22,38 @@
       if (count) count.textContent = (i + 1) + ' / ' + slides.length;
     };
 
+    var play = document.getElementById('gpmPlay');
+    var syncPlay = function () {
+      if (!play) return;
+      var slide = slides[cur];
+      var video = slide && slide.querySelector('video');
+      play.hidden = !video || root.classList.contains('is-playing');
+    };
+    if (play) {
+      // The markup keeps controls so the trailer still works if this script
+      // does not run. Until Play is tapped, the still is the poster.
+      root.querySelectorAll('video').forEach(function (video) { video.removeAttribute('controls'); });
+      play.addEventListener('click', function () {
+        var video = slides[cur] && slides[cur].querySelector('video');
+        if (!video) return;
+        root.classList.add('is-playing');
+        video.setAttribute('controls', '');
+        var started = video.play();
+        if (started && started.catch) started.catch(function () {});
+        syncPlay();
+      });
+    }
+    var showAndSync = show;
+    show = function (i) {
+      showAndSync(i);
+      if (root.classList.contains('is-playing')) {
+        var video = slides[cur] && slides[cur].querySelector('video');
+        if (!video) root.classList.remove('is-playing');
+      }
+      syncPlay();
+    };
     thumbs.forEach(function (t, k) { t.addEventListener('click', function () { show(k); }); });
+    syncPlay();
 
     // Swipe on the picture (ignored while the video's own controls are used).
     var stage = document.getElementById('gpmStage');

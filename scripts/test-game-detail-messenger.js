@@ -88,7 +88,7 @@ async function main() {
   await okAsync('has the big Messenger button, preview, collapsed website order, and no old link or hint', async () => {
     assert.strictEqual(open.status, 200);
     assert.ok(/<a href="http:\/\/m\.me\/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">/.test(open.body));
-    assert.ok(open.body.includes('💬 Message us about this game'));
+    assert.ok(open.body.includes('>Rent now</span>'));
     assert.ok(open.body.includes('YOUR MESSAGE WILL SAY') && open.body.includes('id="ctaMsgPreview"'));
     assert.ok(/<div id="gdOrderBlock" hidden>/.test(open.body), 'order block starts collapsed');
     assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
@@ -143,7 +143,7 @@ async function main() {
     const text = 'Hi! I want to RENT a game 🎮\nGame: Zzyzx Open Game';
     assert.strictEqual(p.els.ctaMsgPreview.textContent, text);
     assert.strictEqual(p.els.ctaMsgPrimary.href, 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(text));
-    assert.strictEqual(p.els.ctaMsgMain.textContent, '💬 Message us about this game');
+    assert.strictEqual(p.els.ctaMsgMain.textContent, 'Rent now');
   });
   await okAsync('type and duration picked: they and the total join the message', async () => {
     const p = loadPage({ allUnavail: false, avail: { nt: true, tr: true, ps4: false } });
