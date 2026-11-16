@@ -1,24 +1,26 @@
 /* Maps the live storefront onto the proposal sheets without removing
    the ids the page scripts already use. */
 
-body.hub { background: #0a0a0a; color: #fff; }
+body.hub { background: #0a0a0a; color: #fff; --max: 1440px; }
 body.hub nav { height: 64px; background: rgba(10,10,10,0.94); border-bottom: 1px solid #262626; }
 body.hub .nav-links a.active { color: #F5B800; }
 body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; font-weight: 700; }
 
 /* Rent catalog */
-body.browse-page.hub .browse-header { max-width: 1360px; margin: 0 auto; padding: 18px 24px 0; }
+body.browse-page.hub .browse-header { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
 body.browse-page.hub .browse-header h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0; }
 body.browse-page.hub .bf-top { position: static; background: transparent; border: 0; backdrop-filter: none; }
-body.browse-page.hub .bf-top-in { max-width: 1360px; padding: 8px 24px 0; }
+body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 8px 0 0; box-sizing: border-box; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 22px;
-  max-width: 1360px;
+  width: min(1440px, calc(100% - 48px));
+  max-width: none;
   margin: 14px auto 0;
-  padding: 0 24px 40px;
+  padding: 0 0 40px;
+  box-sizing: border-box;
   align-items: start;
 }
 body.browse-page.hub .bf-panel {
@@ -94,7 +96,10 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .rentals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 700px) {
-  body.browse-page.hub .bf-layout { grid-template-columns: 1fr; padding: 0 14px 80px; }
+  body.browse-page.hub .browse-header,
+  body.browse-page.hub .bf-top-in,
+  body.browse-page.hub .bf-layout { width: calc(100% - 32px); }
+  body.browse-page.hub .bf-layout { grid-template-columns: 1fr; padding: 0 0 80px; }
   body.browse-page.hub .bf-panel { display: none; position: fixed; inset: 0; z-index: 2000; border-radius: 0; top: auto; }
   body.browse-page.hub .bf-panel.bf-show { display: block; }
   body.browse-page.hub .bf-backdrop { display: block; }
@@ -105,10 +110,20 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .bf-open { display: inline-flex !important; }
 }
 
+/* One container. Sections must not add a second max-width inside .wrap. */
+body.home2.hub .section { max-width: none; width: 100%; padding-left: 0; padding-right: 0; }
+
 /* Home: the live announcement is first. Search sits under it, with no hero panel. */
-body.home2.hub .ann-banner { padding-top: 0; }
+body.home2.hub .ann-banner {
+  width: min(1440px, calc(100% - 48px));
+  max-width: none;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+}
 body.home2.hub .ann-banner.ann-banner-fx { height: 420px; }
-body.home2.hub .ann-banner.ann-banner-fx .ann-banner-slide { top: 0; }
+body.home2.hub .ann-banner.ann-banner-fx .ann-banner-slide,
+body.home2.hub .ann-banner-sweep { top: 0; left: 0; right: 0; }
 body.home2.hub .home-search-band {
   background: none;
   padding: 16px 0 4px;
@@ -129,9 +144,9 @@ body.home2.hub .home-search-band h1.hm-sr {
 }
 body.home2.hub .home-search-band .search {
   display: block;
-  width: min(860px, 100%);
-  max-width: 860px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 body.home2.hub .home-search-band .hs { max-width: none; width: 100%; margin: 0; padding: 0; }
 body.home2.hub .hs-box { display: block; }
@@ -166,17 +181,66 @@ body.home2.hub #how .step:not(:last-child)::after {
   body.home2.hub .ann-banner { padding-top: 0; }
   body.home2.hub .ann-banner.ann-banner-fx { height: 680px; }
   body.home2.hub .ann-banner.ann-banner-fx .ann-banner-slide,
-  body.home2.hub .ann-banner-sweep { top: 0; }
+  body.home2.hub .ann-banner-sweep { top: 0; left: 0; right: 0; }
   body.home2.hub .home-search-band { padding: 12px 0 0; }
   body.home2.hub .home-search-band .hs-input { font-size: 16px; min-height: 52px; padding: 14px 16px; }
   body.home2.hub #newReleasesSection { padding-top: 16px; }
 }
 @media (max-width: 700px) {
+  body.home2.hub .ann-banner { width: calc(100% - 32px); }
   body.home2.hub #how .step::after { display: none; }
 }
-body.home2.hub .card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+body.home2.hub .card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
 body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
-@media (max-width: 900px) { body.home2.hub .card-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) {
+  body.home2.hub .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* The proposal .plus-hero grid was squeezing the live Deluxe hero into one column. */
+body.hub section.ppc-hero.plus-hero {
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+@media (max-width: 700px) {
+  body.hub .ppc-toolbar { flex-wrap: wrap; max-width: 100%; }
+}
+
+/* Buy, PS Plus and requests share the same 1440px edges as the home page. */
+body.shop-page .buy-page,
+body.sec-page .sec-wrap,
+body.hub .ppc-hero-inner,
+body.hub .ppc-tabs,
+body.hub .ppc-mostplayed,
+body.hub .ppc-games,
+body.hub .ppc-month,
+body.hub .dx-wrap {
+  width: min(1440px, calc(100% - 48px));
+  max-width: none;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+}
+@media (max-width: 700px) {
+  body.shop-page .buy-page { width: calc(100% - 32px); padding: 1.25rem 0 3rem; }
+  body.sec-page .sec-wrap,
+  body.hub .ppc-hero-inner,
+  body.hub .ppc-tabs,
+  body.hub .ppc-mostplayed,
+  body.hub .ppc-games,
+  body.hub .dx-wrap { width: calc(100% - 32px); }
+}
 
 /* Buy cards and box sets */
 body.shop-page .shop-card {
@@ -198,9 +262,11 @@ body.shop-page .shop-box { background: #141414; border: 1px solid #262626; borde
    whole page into the right column and stacking a second box behind the card. */
 body.gp-redesign.hub .gd-page {
   display: block;
-  max-width: 1180px;
+  width: min(1440px, calc(100% - 48px));
+  max-width: none;
   margin: 0 auto;
-  padding: 14px 24px 48px;
+  padding: 14px 0 48px;
+  box-sizing: border-box;
 }
 body.gp-redesign.hub .gp-grid {
   display: grid;
@@ -268,6 +334,7 @@ body.gp-redesign.hub .gp-tabs { background: #141414; border: 1px solid #262626; 
 body.gp-redesign.hub .gd-tabs { background: #101010; border-bottom: 1px solid #262626; }
 body.gp-redesign.hub .gd-tab.on { color: #F5B800; border-bottom: 2px solid #F5B800; }
 @media (max-width: 900px) {
+  body.gp-redesign.hub .gd-page { width: calc(100% - 32px); padding: 8px 0 6rem; }
   body.gp-redesign.hub .gp-grid { display: flex; flex-direction: column; }
   body.gp-redesign.hub .gp-hero { grid-template-columns: 112px minmax(0, 1fr); }
   body.gp-redesign.hub .gp-panel { position: static; width: 100%; }
