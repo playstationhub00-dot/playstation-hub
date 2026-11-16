@@ -312,16 +312,6 @@
         <p class="gd-muted" id="gdTrial"><% if (ntAvail) { %>Non-Trophy: free 3-hour trial, no deposit.<% } %><% if (!showPs4) { %> PS4 Primary not offered.<% } %></p>
         <% } %>
 
-        <div class="gd-total-box" id="totalBox">
-          <div class="gd-total-rows" id="totalRows"></div>
-          <div class="gd-total-final">
-            <span>Total to send</span>
-            <span id="totalFinal"></span>
-          </div>
-          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
-          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
-        </div>
-
         <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
         <div class="gd-perks">
           <% if (gdPromoLines.length) { %>
@@ -331,8 +321,30 @@
           <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
           <% } %>
           <% if (typeof voucherHint !== 'undefined' && voucherHint) { %>
-          <button type="button" class="gd-perk gd-perk-code" id="voucherHint" onclick="togglePromoPanel(true)"><%= voucherHint.code %> −<%= voucherHint.pct %>%</button>
+          <button type="button" class="gd-perk gd-perk-code" id="voucherHint" onclick="fillVoucherCode('<%= voucherHint.code %>')"><%= voucherHint.code %> −<%= voucherHint.pct %>%</button>
           <% } %>
+        </div>
+
+        <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
+          <div class="lb" id="voucherLabel">Promo code</div>
+          <div class="vok" id="voucherApplied" hidden></div>
+          <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
+          <div class="vrow" id="voucherEntry">
+            <input class="vin" id="voucherInput" maxlength="24" placeholder="Promo code" autocomplete="off" aria-label="Promo code">
+            <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
+          </div>
+          <div class="verr" id="voucherError" hidden></div>
+          <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
+        </div>
+
+        <div class="gd-total-box" id="totalBox">
+          <div class="gd-total-rows" id="totalRows"></div>
+          <div class="gd-total-final">
+            <span>Total to send</span>
+            <span id="totalFinal"></span>
+          </div>
+          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
+          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
         </div>
 
         <!-- PRIMARY: Messenger. It always opens, whatever has (or has not) been
@@ -352,23 +364,8 @@
         </div><!-- /ctaMsgWrap -->
 
         <div class="gd-folds">
-          <button type="button" class="gd-fold" id="promoFold" aria-expanded="<%= voucher_error ? 'true' : 'false' %>" onclick="togglePromoPanel()">+ Promo code</button>
           <button type="button" class="gd-fold" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">How setup works</button>
           <button type="button" class="gd-fold" id="feesToggle" aria-expanded="<%= order_error ? 'true' : 'false' %>" onclick="toggleFeesPanel()">Fees &amp; payment</button>
-        </div>
-
-        <div id="promoPanel"<%= voucher_error ? '' : ' hidden' %>>
-          <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
-            <div class="lb" id="voucherLabel">Have a promo code?</div>
-            <div class="vok" id="voucherApplied" hidden></div>
-            <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
-            <div class="vrow" id="voucherEntry">
-              <input class="vin" id="voucherInput" maxlength="24" placeholder="Enter code" autocomplete="off" aria-label="Promo code">
-              <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
-            </div>
-            <div class="verr" id="voucherError" hidden></div>
-            <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
-          </div>
         </div>
 
         <div class="gd-type-setup" id="typeSetupWrap" data-open="0">

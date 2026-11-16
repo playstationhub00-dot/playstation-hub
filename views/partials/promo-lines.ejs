@@ -4,10 +4,10 @@
     var blob = String(item.text || '');
     if (item.kind === 'punch') {
       var nth = blob.match(/(\d+(?:st|nd|rd|th))/i);
-      if (nth) chipLabel = nth[1] + ' rental free';
+      if (nth) chipLabel = '🎁 ' + nth[1] + ' rental free';
     } else if (item.kind === 'rebook') {
       var peso = blob.match(/₱\s*[\d,]+/);
-      if (peso) chipLabel = 'Rebook ' + peso[0].replace(/\s+/g, '') + ' off';
+      if (peso) chipLabel = '↻ Rebook ' + peso[0].replace(/\s+/g, '') + ' off';
     }
   }
 %>

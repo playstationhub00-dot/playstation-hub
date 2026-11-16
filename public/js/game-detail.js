@@ -181,17 +181,14 @@ function toggleSetupPanel() {
   btn.setAttribute('aria-expanded', String(!open));
 }
 
-function togglePromoPanel(force) {
-  const panel = document.getElementById('promoPanel');
-  const btn = document.getElementById('promoFold');
-  if (!panel) return;
-  const open = typeof force === 'boolean' ? force : panel.hidden;
-  panel.hidden = !open;
-  if (btn) btn.setAttribute('aria-expanded', String(open));
-  if (open) {
-    const input = document.getElementById('voucherInput');
-    if (input) input.focus();
-  }
+function fillVoucherCode(code) {
+  const input = document.getElementById('voucherInput');
+  const btn = document.getElementById('voucherApply');
+  if (!input) return;
+  input.value = code;
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.focus();
+  if (btn && !btn.disabled) btn.click();
 }
 
 function toggleFeesPanel(force) {

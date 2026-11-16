@@ -467,7 +467,7 @@ body.gp-redesign.hub .gd-page {
 }
 body.gp-redesign.hub .gp-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 400px;
   column-gap: 28px;
   row-gap: 18px;
   align-items: start;
@@ -674,22 +674,71 @@ body.gp-redesign.hub .gd-total-box {
 body.gp-redesign.hub .gd-total-row { font-size: 13px; padding: 2px 0; }
 body.gp-redesign.hub .gd-total-final { font-size: 16px; margin-top: 4px; padding-top: 6px; }
 body.gp-redesign.hub .gd-total-refund { color: #9a9a9a; }
-body.gp-redesign.hub .gd-perks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
-body.gp-redesign.hub .gd-promo-note { display: contents; }
-body.gp-redesign.hub .gd-promo-item,
-body.gp-redesign.hub .gd-perk {
-  display: inline-flex;
+body.gp-redesign.hub .gd-perks {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+body.gp-redesign.hub .gd-promo-note { display: contents; }
+body.gp-redesign.hub .gd-perks .gd-promo-item,
+body.gp-redesign.hub .gd-perks .gd-perk {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  width: auto;
+  max-width: none;
+  height: 24px;
+  margin: 0;
+  padding: 0 6px;
+  gap: 0;
+  white-space: nowrap;
   background: #161616;
   border: 1px solid #3a3a3a;
   color: #eee;
   border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  box-sizing: border-box;
+}
+body.gp-redesign.hub .gd-perks .gd-promo-label {
+  display: inline;
+  flex: none;
+  max-width: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  border-radius: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
+  white-space: nowrap;
+}
+body.gp-redesign.hub .gd-perks .gd-promo-label::before { content: none; }
+body.gp-redesign.hub .gd-perks .gd-promo-text { display: none; }
+body.gp-redesign.hub .gd-perk-code {
+  background: none;
+  border-color: #6b5420;
+  color: #F5B800;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
   font-weight: 700;
 }
-body.gp-redesign.hub .gd-promo-text { display: none; }
-body.gp-redesign.hub .gd-perk-code { background: none; border-color: #6b5420; color: #F5B800; cursor: pointer; }
+body.gp-redesign.hub #voucherBox { margin: 6px 0 0; }
+body.gp-redesign.hub #voucherBox .lb,
+body.gp-redesign.hub #voucherBox .vfine { display: none; }
+body.gp-redesign.hub #voucherBox .vin,
+body.gp-redesign.hub #voucherBox .vbtn { height: 34px; }
+body.gp-redesign.hub #voucherBox .verr { margin-top: 6px; }
+body.gp-redesign.hub .gdh-card { padding: 12px; }
+body.gp-redesign.hub .gp-mode { margin-bottom: 8px; }
 body.gp-redesign.hub .gd-folds { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
 body.gp-redesign.hub .gd-fold {
   background: none; border: 0; padding: 0; color: #F5B800;
