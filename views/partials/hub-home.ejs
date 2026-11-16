@@ -16,33 +16,20 @@
   }
   const hhNt = hhMin(['nt_price_7d']);
   const hhTr = hhMin(['tr_price_7d']);
-  const hhFrom = [hhNt, hhTr].filter(function (n) { return n; });
-  const hhWeek = hhFrom.length ? Math.min.apply(null, hhFrom) : null;
-  const hhPeople = home && home.trust && home.trust.people;
   const hhQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); });
   const hhNew = (home && home.newGames && home.newGames.length) ? home.newGames.slice(0, 4) : hhGames.slice(0, 4);
   const hhMonthly = home && home.powerUp && home.powerUp.days === 30 ? home.powerUp.pct : 0;
 %>
-<% if (hhMonthly) { %>
-<div class="promo-bar">Monthly rentals are <b><%= hhMonthly %>% off</b> while this promo is on. One use per customer. The code is on the game page.</div>
-<% } %>
-<div class="wrap hero" id="find">
+<%- include('announcement-banner') %>
+<div class="wrap home-search-band" id="find">
   <h1 class="hm-tagline hm-sr">Rent the latest PS5 &amp; PS4 games. Sign in by QR — no password.</h1>
   <div class="search">
     <%- include('home-search', { featured: typeof featured !== 'undefined' ? featured : [], compact: true }) %>
   </div>
-  <div class="hero-actions">
-    <a class="btn-primary btn-lg" href="/browse">Browse games</a>
-    <a class="btn-ghost btn-lg" href="/how-it-works">Try 3 hours free</a>
-  </div>
-  <div class="trust-line" id="liveRenters">
-    <% if (hhPeople) { %><div class="stat"><%= hhPeople.toLocaleString('en-US') %> players served<small>Live from admin customer records</small></div><% } %>
-    <div class="stat"><%= hhGames.length %> games to rent<small>As listed on Browse</small></div>
-    <% if (hhWeek) { %><div class="stat">From ₱<%= hhWeek %> a week<small>Exact price depends on the game</small></div><% } %>
-    <% if (hhQuotes.length) { %><div class="stat"><%= hhQuotes.length %> player review<%= hhQuotes.length === 1 ? '' : 's' %><small>Shown once, below</small></div><% } %>
-  </div>
 </div>
-<%- include('announcement-banner') %>
+<% if (hhMonthly) { %>
+<div class="promo-bar">Monthly rentals are <b><%= hhMonthly %>% off</b> while this promo is on. One use per customer. The code is on the game page.</div>
+<% } %>
 
 <section class="section" id="newReleasesSection">
   <div class="wrap">

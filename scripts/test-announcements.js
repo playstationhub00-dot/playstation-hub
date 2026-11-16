@@ -489,8 +489,8 @@ async function main() {
     const heroAt = body.indexOf('id="find"');
     assert.ok(barAt > 0 && barAt < navAt, 'bar above the header');
     assert.ok(bellAt > navAt && bellAt < navEnd, 'bell inside the header');
-    assert.ok(bannerAt > heroAt, 'banner directly under the hero');
-    assert.ok(body.indexOf('id="newReleasesSection"') > bannerAt, 'new releases follow the banner');
+    assert.ok(bannerAt > navEnd && bannerAt < heroAt, 'banner under the nav and above the search');
+    assert.ok(body.indexOf('id="newReleasesSection"') > heroAt, 'new releases follow the search');
     assert.ok(!body.includes('id="hmBanner"'));
     assert.ok(body.indexOf('Read this first') < body.indexOf('Michael wrote this'));
     assert.ok(body.includes('class="ann-bar-slide on'));
