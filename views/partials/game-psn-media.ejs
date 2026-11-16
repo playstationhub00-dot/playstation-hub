@@ -19,6 +19,9 @@
     </div>
     <% }) %>
     <% if (items.length > 1) { %><span class="gpm-count" id="gpmCount">1 / <%= items.length %></span><% } %>
+    <% if (items.some(m => m.type === 'video')) { %>
+    <button type="button" class="gpm-play" id="gpmPlay" aria-label="Play trailer"><span aria-hidden="true"></span></button>
+    <% } %>
   </div>
   <% if (items.length > 1) { %>
   <div class="gpm-thumbs" id="gpmThumbs">
