@@ -152,14 +152,28 @@ body.home2.hub .home-search-band .hs { max-width: none; width: 100%; margin: 0; 
 body.home2.hub .hs-box { display: block; }
 body.home2.hub .home-search-band .hs-input {
   width: 100%;
-  background: #101010;
-  border: 2px solid #F5B800;
-  border-radius: 14px;
+  border: 2px solid transparent;
+  border-radius: 999px;
   padding: 16px 22px;
   color: #fff;
   font-size: 18px;
   min-height: 58px;
-  box-shadow: 0 0 0 4px rgba(245, 184, 0, 0.14);
+  background:
+    linear-gradient(#161616, #161616) padding-box,
+    linear-gradient(120deg, #6b5420, #F5B800, #fff1b8, #F5B800, #6b5420) border-box;
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, 0% 50%;
+  box-shadow: 0 0 18px rgba(245, 184, 0, 0.35);
+  animation: hs-border 5.5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.home2.hub .home-search-band .hs-input {
+    animation: none;
+    background:
+      linear-gradient(#161616, #161616) padding-box,
+      linear-gradient(#F5B800, #F5B800) border-box;
+    box-shadow: 0 0 0 1px rgba(245, 184, 0, 0.45);
+  }
 }
 body.home2.hub #newReleasesSection { padding-top: 20px; }
 /* The old step line was drawn through the card titles. Keep a short gold
@@ -198,6 +212,86 @@ body.home2.hub .card-grid {
 body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
 @media (max-width: 700px) {
   body.home2.hub .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.home2.hub .hh-count { font-size: 11px; gap: 4px; padding: 4px; }
+}
+body.home2.hub .hh-soon {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #141414;
+  border: 1px solid #3a2460;
+  border-radius: 14px;
+  overflow: hidden;
+}
+body.home2.hub .hh-soon-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #1c1c1c;
+}
+body.home2.hub .hh-soon-cover img,
+body.home2.hub .hh-soon-ph {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+body.home2.hub .hh-soon-ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-weight: 700;
+}
+body.home2.hub .hh-count {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(10, 10, 10, 0.82);
+  color: #fff;
+  text-align: center;
+}
+body.home2.hub .hh-count span { flex: 1; }
+body.home2.hub .hh-count b { display: block; font-size: 16px; }
+body.home2.hub .hh-count small { font-size: 9px; letter-spacing: 0.06em; color: #ccc; }
+body.home2.hub .hh-count-tba { justify-content: center; font-weight: 800; }
+body.home2.hub .hh-soon-band {
+  background: #6d28d9;
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+}
+body.home2.hub .hh-soon-title {
+  display: block;
+  margin: 8px 10px 0;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.home2.hub .hh-soon-when { margin: 4px 10px 8px; color: #bdbdbd; font-size: 12px; }
+body.home2.hub .hh-soon-go {
+  display: block;
+  margin: auto 10px 10px;
+  text-align: center;
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 8px 10px;
 }
 
 /* Reference game card: cover, category bar, prices, account rows, button. */
@@ -265,7 +359,52 @@ body.hub .rcard .st-badge {
 }
 body.hub .rcard .st-avail { background: #178a45; color: #fff; }
 body.hub .rcard .st-last { background: #e23d2b; color: #fff; }
+body.hub .rcard .st-last::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #fff;
+  animation: gc-blink 1.2s steps(1) infinite;
+}
 body.hub .rcard .st-full { background: #2c2c2c; color: #e6e6e6; }
+body.hub a.rcard.gc-last {
+  border-color: #F5B800;
+  box-shadow: 0 0 0 1px #F5B800, 0 0 16px rgba(245, 184, 0, 0.45);
+  animation: gc-last-glow 2.6s ease-in-out infinite;
+}
+body.hub a.rcard.gc2-full .gc2-cover,
+body.hub a.rcard.gc2-full .gc2-cover-placeholder { filter: grayscale(1) brightness(0.45); }
+body.hub a.rcard.gc2-full .gc2-title,
+body.hub a.rcard.gc2-full .gc2-price,
+body.hub a.rcard.gc2-full .tier-pill { opacity: 0.72; }
+body.hub .gc-full-mark {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+body.hub .gc-full-mark b { font-size: 28px; letter-spacing: 0.12em; }
+body.hub .gc-full-mark span { font-size: 12px; font-weight: 700; }
+@keyframes gc-blink { 50% { opacity: 0; } }
+@keyframes gc-last-glow {
+  50% { box-shadow: 0 0 0 1px #F5B800, 0 0 26px rgba(245, 184, 0, 0.75); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.hub .rcard .st-last::before,
+  body.hub a.rcard.gc-last { animation: none; }
+}
 body.hub .rcard .card-ribbon,
 body.hub .rcard .gc2-badge-last { display: none; }
 body.hub .rcard .gc2-badges { top: 8px; left: auto; right: 8px; align-items: flex-end; width: auto; }
@@ -344,10 +483,27 @@ body.hub .rcard .gc2-price { margin: 0; padding: 0 10px; font-size: 13px; color:
 body.hub .rcard .gc-price-bit { white-space: nowrap; }
 body.hub .rcard .gc2-price b { color: #F5B800; font-weight: 800; }
 body.hub .rcard .gc2-deal { padding: 0 10px; }
-body.hub .rcard .gc-slots { display: flex; flex-direction: column; gap: 4px; padding: 2px 10px 0; }
-body.hub .rcard .slot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e8e8e8; min-width: 0; }
-body.hub .rcard .slot > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.hub .rcard .slot > span:last-child { white-space: nowrap; flex: none; }
+body.hub .rcard .gc-slots { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 0; }
+body.hub .rcard .slot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #e8e8e8;
+  min-width: 0;
+  margin: 0 10px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: #161616;
+}
+body.hub .rcard .slot-tr { border-left: 3px solid #F5B800; }
+body.hub .rcard .slot-tr > span:nth-child(2),
+body.hub .rcard .slot-tr .gc-ico { color: #F5B800; }
+body.hub .rcard .slot-nt { border-left: 3px solid #3b82f6; }
+body.hub .rcard .slot-nt > span:nth-child(2),
+body.hub .rcard .slot-nt .gc-ico { color: #60a5fa; }
+body.hub .rcard .slot > span:nth-child(2) { flex: none; }
+body.hub .rcard .slot > span:last-child { white-space: normal; text-align: right; line-height: 1.15; max-width: 62%; }
 body.hub .rcard .slot .gc-ico { display: inline-flex; width: 14px; height: 14px; color: #cfcfcf; flex: none; }
 body.hub .rcard .slot .gc-ico svg { width: 14px; height: 14px; }
 body.hub .rcard .slot span:last-child { margin-left: auto; font-weight: 700; }
@@ -395,7 +551,7 @@ body.hub .rcard .rcta.line { background: transparent; color: #F5B800; border: 1.
 }
 body.hub .rcard.full { opacity: 1; }
 body.hub .rcard.full .gc2-cover,
-body.hub .rcard.full .gc2-cover-placeholder { filter: none; }
+body.hub .rcard.full .gc2-cover-placeholder { filter: grayscale(1) brightness(0.45); }
 
 /* The proposal .plus-hero grid was squeezing the live Deluxe hero into one column. */
 body.hub section.ppc-hero.plus-hero {

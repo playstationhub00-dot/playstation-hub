@@ -11,19 +11,22 @@
   const ntDaysLeft = gcAvailability.ntNext, trDaysLeft = gcAvailability.trNext, ps4DaysLeft = gcAvailability.ps4Next;
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
+  const gcWaits = [ntDaysLeft, trDaysLeft, showPs4 ? ps4DaysLeft : null].filter(d => d != null && Number(d) > 0).map(Number);
+  const gcSoonest = gcWaits.length ? Math.min.apply(null, gcWaits) : null;
   const gcOneTypes = (ntSlots === 1 ? 1 : 0) + (trSlots === 1 ? 1 : 0) + (showPs4 && ps4Slots === 1 ? 1 : 0);
   const gcManyTypes = (ntSlots > 1 ? 1 : 0) + (trSlots > 1 ? 1 : 0) + (showPs4 && ps4Slots > 1 ? 1 : 0);
   let gcPill = 'Available', gcPillClass = 'st-avail';
   if (!totalSlots) { gcPill = 'Full'; gcPillClass = 'st-full'; }
   else if (totalSlots === 1) { gcPill = 'Last slot'; gcPillClass = 'st-last'; }
   else if (gcOneTypes >= 2 && !gcManyTypes) { gcPill = 'Last slots'; gcPillClass = 'st-last'; }
+  const gcLast = gcPillClass === 'st-last';
   const gcSlotText = (n, days) => {
     if (n > 1) return n + ' slots left';
     if (n === 1) return '1 slot left';
     if (days != null && Number(days) > 0) return 'Full · back in ' + days + (Number(days) === 1 ? ' day' : ' days');
     return 'Full';
   };
-  const gcSlotClass = n => n > 1 ? 'ok' : (n === 1 ? 'low' : 'full');
+  const gcSlotClass = n => n > 0 ? 'ok' : 'full';
   // Gated on slot state for the same reason as the detail page: a card must never
   // advertise "Buy ₱X" for an account that has already been sold, since the detail
   // page it links to will (correctly) refuse to offer it.
@@ -70,7 +73,7 @@
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
   const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
 %>
-<a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card rcard<%= allUnavail ? ' full gc2-full' : '' %>">
+<a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card rcard<%= allUnavail ? ' full gc2-full' : '' %><%= gcLast ? ' gc-last' : '' %>">
   <div class="art gc2-art">
     <% if (game.cover_image) { %>
       <img <%- imgCard(game.cover_image) %> width="480" height="720" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
@@ -84,6 +87,9 @@
     <% } %>
 
     <span class="st-badge <%= gcPillClass %>"><%= gcPill %></span>
+    <% if (allUnavail) { %>
+    <div class="gc-full-mark"><b>FULL</b><% if (gcSoonest) { %><span>Next slot in <%= gcSoonest %> day<%= gcSoonest === 1 ? '' : 's' %></span><% } %></div>
+    <% } %>
     <% if (!isLastSlot && allUnavail) { %>
       <%# The corner ribbon replaces the old "No slots" pill rather than joining
           it — two labels saying the same thing crowded the card, and this is the
@@ -124,8 +130,8 @@
       <div class="gc2-deal">🔥 <%= gcDeal.pct %>% OFF · <%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %></div>
       <% } %>
       <div class="slots gc-slots">
-        <% if (hasTrophy) { %><div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span><span>Trophy</span><span class="<%= gcSlotClass(trSlots) %>"><%= gcSlotText(trSlots, trDaysLeft) %></span></div><% } %>
-        <div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots, ntDaysLeft) %></span></div>
+        <% if (hasTrophy) { %><div class="slot slot-tr"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span><span>Trophy</span><span class="<%= gcSlotClass(trSlots) %>"><%= gcSlotText(trSlots, trDaysLeft) %></span></div><% } %>
+        <div class="slot slot-nt"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots, ntDaysLeft) %></span></div>
         <% if (showPs4) { %><div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 10h3M9.5 8.5v3M15 9.5h.01M17 12h.01"/></svg></span><span>PS4 Primary</span><span class="<%= gcSlotClass(ps4Slots) %>"><%= gcSlotText(ps4Slots, ps4DaysLeft) %></span></div><% } %>
       </div>
       <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
