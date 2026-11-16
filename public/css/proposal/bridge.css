@@ -626,7 +626,8 @@ body.gp-redesign.hub .gpm-badge {
 body.gp-redesign.hub .gpm-open {
   position: absolute; inset: 0; padding: 0; border: 0; background: none; cursor: pointer;
 }
-/* Many screenshots keep the same tile size as a 4-across row and scroll. */
+/* Many screenshots: JS sizes a whole number of tiles to the row. The rest
+   scroll in with the arrows and stay clipped, so nothing peeks at the edge. */
 body.gp-redesign.hub .gp-trailer,
 body.gp-redesign.hub .gpm.gpm-many { min-width: 0; max-width: 100%; }
 body.gp-redesign.hub .gpm.gpm-many { position: relative; }
@@ -634,17 +635,9 @@ body.gp-redesign.hub .gpm.gpm-many .gpm-stage {
   width: 100%;
   min-width: 0;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
 body.gp-redesign.hub .gpm.gpm-many .gpm-stage::-webkit-scrollbar { display: none; }
-body.gp-redesign.hub .gpm.gpm-many .gpm-slide {
-  flex: 0 0 calc((100% - 24px) / 4.35);
-  scroll-snap-align: start;
-}
-body.gp-redesign.hub .gpm.gpm-many .gpm-slide:first-child:has(video) {
-  flex: 0 0 calc((100% - 24px) * 1.35 / 4.35);
-}
 body.gp-redesign.hub .gpm-more {
   position: absolute; inset: 0; z-index: 4;
   display: grid; place-items: center;
@@ -1033,11 +1026,7 @@ body.gp-redesign.hub #gpPaneDetails .gpa-info td:last-child { color: #fff; font-
   body.gp-redesign.hub .gp-panel { order: 4; position: static; width: 100%; }
   body.gp-redesign.hub .gp-similar,
   body.gp-redesign.hub .gp-related { order: 5; }
-  body.gp-redesign.hub .gpm-stage { overflow-x: auto; scroll-snap-type: x mandatory; }
-  body.gp-redesign.hub .gpm-slide,
-  body.gp-redesign.hub .gpm.gpm-many .gpm-slide { flex: 0 0 168px; scroll-snap-align: start; }
-  body.gp-redesign.hub .gpm-slide:first-child,
-  body.gp-redesign.hub .gpm.gpm-many .gpm-slide:first-child:has(video) { flex-basis: 220px; }
+  body.gp-redesign.hub .gpm.gpm-many .gpm-stage { scroll-snap-type: none; }
   body.gp-redesign.hub .gp-why { grid-template-columns: 1fr; }
   body.gp-redesign.hub #typeOptions .gd-wait { font-size: 9px; padding: 2px 5px; }
   body.gp-redesign.hub .gp-sim-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
