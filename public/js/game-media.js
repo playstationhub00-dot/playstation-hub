@@ -60,6 +60,7 @@
     var x0 = null;
     stage.addEventListener('touchstart', function (e) { x0 = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
     stage.addEventListener('touchend', function (e) {
+      if (root.classList.contains('gpm-many')) { x0 = null; return; }
       if (x0 === null || e.target.tagName === 'VIDEO') { x0 = null; return; }
       var dx = e.changedTouches[0].clientX - x0;
       x0 = null;
@@ -160,43 +161,113 @@
     }
 
     if (root.classList.contains('gpm-many') && stage) {
-      var more = document.createElement('button');
-      more.type = 'button';
-      more.className = 'gpm-more';
-      more.hidden = true;
-      more.addEventListener('click', function (e) {
+      var moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'gpm-more';
+      moreBtn.hidden = true;
+      moreBtn.addEventListener('click', function (e) {
+        e.preventDefault();
         e.stopPropagation();
-        lbOpen(Number(more.dataset.index));
+        var index = Number(moreBtn.dataset.index);
+        // Open on the next turn so this same click does not fall through onto
+        // the dialog and close it immediately.
+        setTimeout(function () { lbOpen(index); }, 0);
       });
-      function updateMore() {
-        var box = stage.getBoundingClientRect();
-        var last = -1;
-        slides.forEach(function (s, i) {
-          var r = s.getBoundingClientRect();
-          if (r.right > box.left + 8 && r.left < box.right - 8) last = i;
-        });
-        var rest = slides.length - last - 1;
-        if (last < 0 || rest <= 0) {
-          more.hidden = true;
-          return;
-        }
-        more.hidden = false;
-        more.dataset.index = String(last);
-        more.textContent = '+' + rest;
-        if (more.parentNode !== slides[last]) slides[last].appendChild(more);
-      }
       var prev = document.getElementById('gpmPrev');
       var next = document.getElementById('gpmNext');
+      var gap = 8;
+
+      // How many whole tiles fit this row. The trailer, when it is first,
+      // counts as a slightly wider tile. Extra tiles keep the screenshot
+      // width so the arrows can scroll to them, but they start past the edge.
+      function layoutRow() {
+        var width = Math.floor(stage.getBoundingClientRect().width) || stage.clientWidth;
+        if (!width || !slides.length) return 0;
+        var minTile = width < 700 ? 140 : 180;
+        var fit = Math.floor((width + gap) / (minTile + gap));
+        if (fit < 1) fit = 1;
+        if (fit > slides.length) fit = slides.length;
+        var trailer = slides[0].querySelector('video') ? 1.2 : 1;
+        var units = trailer + (fit - 1);
+        var gaps = gap * (fit - 1);
+        var px = (width - gaps) / units;
+        var assigned = 0;
+        var widths = [];
+        for (var i = 0; i < fit; i++) {
+          var w = (i === fit - 1) ? (width - gaps - assigned) : Math.floor(px * (i === 0 ? trailer : 1));
+          if (w < 1) w = 1;
+          widths.push(w);
+          assigned += w;
+        }
+        var extra = widths[widths.length - 1];
+        slides.forEach(function (s, i) {
+          var basis = (i < fit ? widths[i] : extra) + 'px';
+          if (s.style.flexBasis !== basis) s.style.flex = '0 0 ' + basis;
+          if (s.hidden) s.hidden = false;
+        });
+        var overflow = slides.length > fit;
+        if (prev) prev.hidden = !overflow;
+        if (next) next.hidden = !overflow;
+        if (!overflow) stage.scrollLeft = 0;
+        return fit;
+      }
+
+      var laying = false;
+      function paintBadge() {
+        if (userMoved && stage.scrollLeft > 2) {
+          moreBtn.hidden = true;
+          return;
+        }
+        var edge = stage.getBoundingClientRect();
+        var live = stage.querySelectorAll('.gpm-slide');
+        var fit = 0;
+        for (var i = 0; i < live.length; i++) {
+          var r = live[i].getBoundingClientRect();
+          if (r.width > 2 && r.left >= edge.left - 1 && r.right <= edge.right + 1) fit = i + 1;
+        }
+        var rest = live.length - fit;
+        if (fit < 1 || rest <= 0) {
+          moreBtn.hidden = true;
+          return;
+        }
+        var host = live[fit - 1];
+        var opener = host.querySelector('.gpm-open');
+        moreBtn.dataset.index = opener ? opener.getAttribute('data-index') : (shots[0] ? String(shots[0].index) : '0');
+        moreBtn.textContent = '+' + rest;
+        moreBtn.setAttribute('aria-label', 'Show ' + rest + ' more screenshots');
+        moreBtn.hidden = false;
+        if (moreBtn.parentNode !== host) host.appendChild(moreBtn);
+      }
+      function updateMore() {
+        if (laying) return;
+        laying = true;
+        layoutRow();
+        laying = false;
+        requestAnimationFrame(paintBadge);
+      }
+      var userMoved = false;
       function scrollDir(dir) {
-        var w = slides[0].getBoundingClientRect().width + 8;
-        stage.scrollBy({ left: dir * w, behavior: 'smooth' });
+        userMoved = true;
+        moreBtn.hidden = true;
+        var w = slides[0].getBoundingClientRect().width + gap;
+        var left = Math.max(0, stage.scrollLeft + dir * w);
+        stage.scrollLeft = left;
       }
       if (prev) prev.addEventListener('click', function () { scrollDir(-1); });
       if (next) next.addEventListener('click', function () { scrollDir(1); });
-      stage.addEventListener('scroll', updateMore, { passive: true });
+      stage.addEventListener('scroll', function () {
+        if (!userMoved || laying) return;
+        if (stage.scrollLeft <= 2) {
+          userMoved = false;
+          paintBadge();
+        } else {
+          moreBtn.hidden = true;
+        }
+      }, { passive: true });
       window.addEventListener('resize', updateMore);
       if (window.ResizeObserver) new ResizeObserver(updateMore).observe(stage);
       updateMore();
+      setTimeout(updateMore, 400);
       requestAnimationFrame(function () { requestAnimationFrame(updateMore); });
     }
   }
