@@ -67,11 +67,11 @@ async function main() {
     assert.ok(!known.body.includes('gdh-poster'), 'the static poster is not drawn');
   });
   await okAsync('tagline, rating, About and Game info show; Size appears because the owner typed it', async () => {
-    assert.ok(known.body.includes('Dig deep. Dig far.'));
+    assert.ok(!known.body.includes('>Description</button>'), 'the Description tab is gone');
     assert.ok(known.body.includes('A new era of digging begins.') && known.body.includes('Explore every cave &amp; tunnel.'));
     assert.ok(known.body.includes('<b>Release</b>Feb 27, 2026'));
     assert.ok(known.body.includes('<b>Install size</b>54.3 GB'));
-    assert.ok(known.body.includes('Voice: English, Japanese'));
+    assert.ok(known.body.includes('<b>Voice</b>English, Japanese'));
     assert.ok(known.body.includes('<b>Age rating</b>ESRB Mature'));
     assert.ok(known.body.includes('<b>Genre</b>Action / Adventure'), 'genre spec uses PlayStation genres');
   });
