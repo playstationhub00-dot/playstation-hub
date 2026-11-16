@@ -11,6 +11,19 @@
   const ntDaysLeft = gcAvailability.ntNext, trDaysLeft = gcAvailability.trNext, ps4DaysLeft = gcAvailability.ps4Next;
   const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
+  const gcOneTypes = (ntSlots === 1 ? 1 : 0) + (trSlots === 1 ? 1 : 0) + (showPs4 && ps4Slots === 1 ? 1 : 0);
+  const gcManyTypes = (ntSlots > 1 ? 1 : 0) + (trSlots > 1 ? 1 : 0) + (showPs4 && ps4Slots > 1 ? 1 : 0);
+  let gcPill = 'Available', gcPillClass = 'st-avail';
+  if (!totalSlots) { gcPill = 'Full'; gcPillClass = 'st-full'; }
+  else if (totalSlots === 1) { gcPill = 'Last slot'; gcPillClass = 'st-last'; }
+  else if (gcOneTypes >= 2 && !gcManyTypes) { gcPill = 'Last slots'; gcPillClass = 'st-last'; }
+  const gcSlotText = (n, days) => {
+    if (n > 1) return n + ' slots left';
+    if (n === 1) return '1 slot left';
+    if (days != null && Number(days) > 0) return 'Full · back in ' + days + (Number(days) === 1 ? ' day' : ' days');
+    return 'Full';
+  };
+  const gcSlotClass = n => n > 1 ? 'ok' : (n === 1 ? 'low' : 'full');
   // Gated on slot state for the same reason as the detail page: a card must never
   // advertise "Buy ₱X" for an account that has already been sold, since the detail
   // page it links to will (correctly) refuse to offer it.
@@ -70,7 +83,7 @@
       </div>
     <% } %>
 
-    <span class="st-badge <%= isLastSlot ? 'st-last' : (allUnavail ? 'st-full' : 'st-avail') %>"><%= isLastSlot ? 'Last slot' : (allUnavail ? 'Full' : 'Available') %></span>
+    <span class="st-badge <%= gcPillClass %>"><%= gcPill %></span>
     <% if (!isLastSlot && allUnavail) { %>
       <%# The corner ribbon replaces the old "No slots" pill rather than joining
           it — two labels saying the same thing crowded the card, and this is the
@@ -88,9 +101,9 @@
   </div>
 
   <div class="body gc2-body">
+    <% if (gcTier) { %><span class="tier-pill tier-<%= gcTier.color %>"><%= gcTier.name %></span><% } %>
     <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>"><%= game.title %></div>
     <div class="gc2-tags">
-      <% if (gcTier) { %><span class="tier-pill tier-<%= gcTier.color %>"><%= gcTier.name %></span><% } %>
       <% if (gcBundle && gcStartPrice) { %>
       <div class="gc2-price"><%= gcBundle.count %> games from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
       <% } else if (gcShowDealPrice) { %>
@@ -103,7 +116,7 @@
         const gcWeekShow = gcWeekBases.length ? Math.min.apply(null, gcWeekBases.map(b => gcFinal(b, 7))) : null;
         const gcMonthShow = gcMonthBases.length ? Math.min.apply(null, gcMonthBases.map(b => gcFinal(b, 30))) : null;
       %>
-      <div class="prices gc2-price"><% if (gcWeekShow) { %>Weekly from <b>₱<%= gcWeekShow %></b><% } else { %>from <b>₱<%= gcStartPrice %></b><% } %><% if (gcMonthShow) { %> <span class="slash">·</span> Monthly <b>₱<%= gcMonthShow %></b><% } %><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
+      <div class="prices gc2-price"><% if (gcWeekShow) { %><span class="gc-price-bit">Weekly from <b>₱<%= gcWeekShow %></b></span><% } else { %><span class="gc-price-bit">from <b>₱<%= gcStartPrice %></b></span><% } %><% if (gcMonthShow) { %> · <span class="gc-price-bit">Monthly <b>₱<%= gcMonthShow %></b></span><% } %><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
       <% } else { %>
       <div class="gc2-price">See pricing</div>
       <% } %>
@@ -111,9 +124,9 @@
       <div class="gc2-deal">🔥 <%= gcDeal.pct %>% OFF · <%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %></div>
       <% } %>
       <div class="slots gc-slots">
-        <div class="slot"><span>Non-Trophy</span><span class="<%= ntSlots > 1 ? 'ok' : (ntSlots === 1 ? 'low' : 'full') %>"><%= ntSlots ? (ntSlots + ' left') : 'Full' %></span></div>
-        <% if (hasTrophy) { %><div class="slot"><span>Trophy</span><span class="<%= trSlots > 1 ? 'ok' : (trSlots === 1 ? 'low' : 'full') %>"><%= trSlots ? (trSlots + ' left') : 'Full' %></span></div><% } %>
-        <% if (showPs4) { %><div class="slot"><span>PS4 Primary</span><span class="<%= ps4Slots > 1 ? 'ok' : (ps4Slots === 1 ? 'low' : 'full') %>"><%= ps4Slots ? (ps4Slots + ' left') : 'Full' %></span></div><% } %>
+        <% if (hasTrophy) { %><div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span><span>Trophy</span><span class="<%= gcSlotClass(trSlots) %>"><%= gcSlotText(trSlots, trDaysLeft) %></span></div><% } %>
+        <div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots, ntDaysLeft) %></span></div>
+        <% if (showPs4) { %><div class="slot"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 10h3M9.5 8.5v3M15 9.5h.01M17 12h.01"/></svg></span><span>PS4 Primary</span><span class="<%= gcSlotClass(ps4Slots) %>"><%= gcSlotText(ps4Slots, ps4DaysLeft) %></span></div><% } %>
       </div>
       <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
     </div>
