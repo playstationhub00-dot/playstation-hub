@@ -181,6 +181,28 @@ function toggleSetupPanel() {
   btn.setAttribute('aria-expanded', String(!open));
 }
 
+function togglePromoPanel(force) {
+  const panel = document.getElementById('promoPanel');
+  const btn = document.getElementById('promoFold');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !open;
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const input = document.getElementById('voucherInput');
+    if (input) input.focus();
+  }
+}
+
+function toggleFeesPanel(force) {
+  const panel = document.getElementById('feesPanel');
+  const btn = document.getElementById('feesToggle');
+  if (!panel) return;
+  const open = typeof force === 'boolean' ? force : panel.hidden;
+  panel.hidden = !open;
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+
 // Shows only the selected type's setup block. Called from onTypeChange so the
 // panel's contents always match the pill the customer just picked.
 function syncSetupPanel() {
@@ -275,12 +297,12 @@ function updateTotal() {
   let rows = `<div class="gd-total-row"><span>${baseLabel}</span><span>₱${base}</span></div>`;
   if (voucherCode && discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>${voucherCode} (−${pct}%)</span><span>−₱${discount}</span></div>`;
   else if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
-  rows += `<div class="gd-total-row gd-total-dep"><span>🔒 Refundable deposit</span><span>+₱${deposit}</span></div>`;
+  if (deposit > 0) rows += `<div class="gd-total-row gd-total-dep"><span>Refundable deposit</span><span>₱${deposit}</span></div>`;
   rowsEl.innerHTML = rows;
   finalEl.textContent = '₱' + total;
 
   if (refundEl) {
-    if (deposit > 0) { refundEl.textContent = '↩ You get ₱' + deposit + ' back when you finish — real cost ₱' + (total - deposit) + '.'; refundEl.style.display = ''; }
+    if (deposit > 0) { refundEl.textContent = '₱' + deposit + ' comes back when you return on time.'; refundEl.style.display = ''; }
     else { refundEl.style.display = 'none'; }
   }
 

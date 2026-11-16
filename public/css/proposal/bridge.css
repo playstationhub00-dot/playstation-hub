@@ -614,7 +614,91 @@ body.gp-redesign.hub .gd-rent-head h2 { margin: 0; font-size: 18px; }
 body.gp-redesign.hub .gd-rent-from b { color: #F5B800; font-size: 22px; }
 body.gp-redesign.hub .gd-rent-from small { color: #aaa; font-size: 12px; font-weight: 600; }
 body.gp-redesign.hub .gd-rent-hint { margin: 4px 0 10px; color: #9a9a9a; font-size: 12px; }
-body.gp-redesign.hub #typeOptions { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+body.gp-redesign.hub #typeOptions,
+body.gp-redesign.hub #durationGrid {
+  display: flex;
+  gap: 4px;
+  margin: 8px 0 0 !important;
+  padding: 3px;
+  background: #101010;
+  border: 1px solid #2a2a2a;
+  border-radius: 999px;
+}
+body.gp-redesign.hub #typeOptions .gd-type-pill,
+body.gp-redesign.hub #durationGrid .gd-dur-btn {
+  flex: 1;
+  width: auto;
+  margin: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 7px 8px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  min-height: 0;
+}
+body.gp-redesign.hub #typeOptions .gd-type-name,
+body.gp-redesign.hub #durationGrid .gd-dur-days,
+body.gp-redesign.hub #durationGrid .gd-dur-price {
+  font-size: 13px;
+  font-weight: 800;
+  color: #eee;
+}
+body.gp-redesign.hub #typeOptions .gd-slots-left {
+  margin: 0;
+  padding: 0;
+  background: none;
+  color: #9a9a9a;
+  font-size: 12px;
+  font-weight: 700;
+}
+body.gp-redesign.hub #typeOptions .gd-slots-left::before { content: "· "; }
+body.gp-redesign.hub #typeOptions .gd-type-pill.gd-type-selected,
+body.gp-redesign.hub #durationGrid .gd-dur-btn.active {
+  background: #F5B800;
+  border: 0;
+}
+body.gp-redesign.hub #typeOptions .gd-type-pill.gd-type-selected .gd-type-name,
+body.gp-redesign.hub #typeOptions .gd-type-pill.gd-type-selected .gd-slots-left,
+body.gp-redesign.hub #durationGrid .gd-dur-btn.active .gd-dur-days,
+body.gp-redesign.hub #durationGrid .gd-dur-btn.active .gd-dur-price { color: #111; }
+body.gp-redesign.hub .gd-muted { margin: 8px 2px 0; color: #8d8d8d; font-size: 12px; line-height: 1.4; }
+body.gp-redesign.hub .gd-total-box {
+  margin: 8px 0 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+body.gp-redesign.hub .gd-total-row { font-size: 13px; padding: 2px 0; }
+body.gp-redesign.hub .gd-total-final { font-size: 16px; margin-top: 4px; padding-top: 6px; }
+body.gp-redesign.hub .gd-total-refund { color: #9a9a9a; }
+body.gp-redesign.hub .gd-perks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+body.gp-redesign.hub .gd-promo-note { display: contents; }
+body.gp-redesign.hub .gd-promo-item,
+body.gp-redesign.hub .gd-perk {
+  display: inline-flex;
+  align-items: center;
+  background: #161616;
+  border: 1px solid #3a3a3a;
+  color: #eee;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+body.gp-redesign.hub .gd-promo-text { display: none; }
+body.gp-redesign.hub .gd-perk-code { background: none; border-color: #6b5420; color: #F5B800; cursor: pointer; }
+body.gp-redesign.hub .gd-folds { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 8px; }
+body.gp-redesign.hub .gd-fold {
+  background: none; border: 0; padding: 0; color: #F5B800;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+body.gp-redesign.hub .gd-type-setup { margin-top: 8px; padding: 8px 10px; background: #101010; border: 1px solid #2a2a2a; border-radius: 10px; }
+body.gp-redesign.hub #feesPanel,
+body.gp-redesign.hub #promoPanel { margin-top: 8px; }
+body.gp-redesign.hub .gd-ask { font-size: 12.5px; font-weight: 600; color: #cfcfcf; }
 body.gp-redesign.hub .gd-no-ps4,
 body.gp-redesign.hub .gd-fine { margin: 8px 0 0; color: #9a9a9a; font-size: 12.5px; line-height: 1.45; }
 body.gp-redesign.hub .gd-msg-sub { display: none; }
@@ -625,11 +709,25 @@ body.gp-redesign.hub .gd-ask {
 }
 body.gp-redesign.hub .gd-ask:hover { color: #F5B800; }
 body.gp-redesign.hub .gp-mode {
-  display: flex; justify-content: flex-end; background: none; border: 0; padding: 0; margin: 0 0 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: #101010;
+  border: 1px solid #2a2a2a;
+  border-radius: 999px;
+  padding: 3px;
+  margin: 0 0 10px;
 }
-body.gp-redesign.hub .gp-mode button { background: none; color: #F5B800; padding: 0; font-size: 13px; }
-body.gp-redesign.hub .gp-mode button.on,
-body.gp-redesign.hub .gp-mode button:only-child { display: none; }
+body.gp-redesign.hub .gp-mode button {
+  background: transparent;
+  color: #cfcfcf;
+  border-radius: 999px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+body.gp-redesign.hub .gp-mode button.on { background: #F5B800; color: #111; }
+body.gp-redesign.hub .gp-mode button:only-child { grid-column: 1 / -1; }
 body.gp-redesign.hub .gp-sim-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -751,28 +849,6 @@ body.hub .gc2-cover-placeholder {
 body.hub .gc2-cover-placeholder span { opacity: 1; color: #bdbdbd; font-size: 12px; font-weight: 700; }
 body.hub .gc2-cover-placeholder svg { width: 36px; height: 36px; opacity: 0.9; color: #bdbdbd; }
 
-/* Game page rental box */
-body.gp-redesign.hub .gd-type-pill,
-body.gp-redesign.hub .gd-dur-btn {
-  border-radius: 12px;
-  border: 1px solid #2a2a2a;
-  background: #101010;
-}
-body.gp-redesign.hub .gd-type-card.gd-type-pill.gd-type-selected,
-body.gp-redesign.hub .gd-dur-btn.active {
-  border: 2px solid #F5B800;
-  background: #161204;
-}
-body.gp-redesign.hub .gd-dur-price { color: #F5B800; font-weight: 800; }
-body.gp-redesign.hub .gd-type-pill .gd-slots-left {
-  margin-left: auto;
-  background: #0f2a1c;
-  color: #3ddc84;
-  border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 12px;
-  font-weight: 800;
-}
 body.gp-redesign.hub [data-film] .gp-shot.on img { border: 2px solid #F5B800; }
 body.gp-redesign.hub .gd-order-btn,
 body.gp-redesign.hub .gd-sb-btn,

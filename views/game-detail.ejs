@@ -183,9 +183,9 @@
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div class="gp-mode">
-        <button type="button" id="toggleRent" class="on" onclick="setMode('rent')">⏱️ Rent</button>
+        <button type="button" id="toggleRent" class="on" onclick="setMode('rent')">Rent</button>
         <% if (hasBuy) { %>
-        <button type="button" id="toggleBuy" onclick="setMode('buy')">♾️ Buy permanent</button>
+        <button type="button" id="toggleBuy" onclick="setMode('buy')">Buy</button>
         <% } %>
       </div>
 
@@ -204,8 +204,6 @@
         </div>
       </div>
 
-      <%- include('partials/account-guide-link') %>
-
       <!-- ════════════════════════════════
            RENT PANEL
            ════════════════════════════════ -->
@@ -215,7 +213,6 @@
           <h2>Rent this game</h2>
           <% if (gdFromPrice) { %><div class="gd-rent-from"><b>₱<%= gdFromPrice %></b> <small>from / week</small></div><% } %>
         </div>
-        <p class="gd-rent-hint">Prices and slots for this title. Not a shop-wide rate.</p>
 
         <!-- SELECT RENTAL TYPE -->
         <% if (noneStocked) { %>
@@ -236,7 +233,7 @@
             <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🏆</span>
             <span class="gd-type-name">Trophy</span>
-            <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> slot<%= trLeft !== 1 ? 's' : '' %> left</span><% } %>
+            <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> left</span><% } %>
             <span class="gd-type-status <%= trNotStocked ? 'gd-status-notstocked' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= trNotStocked ? 'Set up on order' : (trAvail ? 'Available' : 'Full Slot') %></span>
           </label>
           <% } %>
@@ -245,7 +242,7 @@
             <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🎮</span>
             <span class="gd-type-name">Non-Trophy</span>
-            <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> left</span><% } %>
+            <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> left</span><% } %>
             <span class="gd-type-status <%= ntNotStocked ? 'gd-status-notstocked' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ntNotStocked ? 'Set up on order' : (ntAvail ? 'Available' : 'Full Slot') %></span>
           </label>
 
@@ -254,7 +251,7 @@
             <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🕹️</span>
             <span class="gd-type-name">PS4 Primary</span>
-            <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> slot<%= ps4Left !== 1 ? 's' : '' %> left</span><% } %>
+            <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> left</span><% } %>
             <span class="gd-type-status <%= ps4NotStocked ? 'gd-status-notstocked' : (ps4Avail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ps4NotStocked ? 'Set up on order' : (ps4Avail ? 'Available' : 'Full Slot') %></span>
           </label>
           <% } %>
@@ -300,87 +297,22 @@
         </div>
         <% } %>
 
-        <!-- Shared setup guide. Each type's original copy is preserved verbatim;
-             only the selected type's block is shown, so nothing is lost by
-             consolidating the three per-card accordions into one. -->
-        <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
-          <span>How setup works</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
-          <% if (hasTrophy) { %>
-          <div class="gd-setup-block" id="setup-tr">
-            <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
-            <p style="color:#22c55e;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
-            <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
-            <% if (!trAvail && trSoon != null && trSoon > 0) { %>
-            <p class="gd-avail-soon">📅 Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
-            <% } %>
-            <% if (trNotStocked) { %>
-            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-            <% } %>
-          </div>
-          <% } %>
-          <div class="gd-setup-block" id="setup-nt">
-            <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
-            <p style="color:#888;">Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
-            <p style="color:#888;">On PS4, choose <strong>Do Not Activate</strong> if you are prompted.</p>
-            <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
-            <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
-            <p class="gd-avail-soon">📅 Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
-            <% } %>
-            <% if (ntNotStocked) { %>
-            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-            <% } %>
-          </div>
-          <% if (showPs4) { %>
-          <div class="gd-setup-block" id="setup-ps4">
-            <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
-            <p style="color:#22c55e;">Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
-            <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
-            <p class="gd-avail-soon">📅 Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
-            <% } %>
-            <% if (ps4NotStocked) { %>
-            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
-            <% } %>
-          </div>
-          <% } %>
-        </div>
-
         <!-- SELECT DURATION -->
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
           <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = gameDiscountPct(game, d, promo); %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
-            <span class="gd-dur-days"><%= d === 7 ? 'Weekly · 7 days' : 'Monthly · 30 days' %></span>
+            <span class="gd-dur-days"><%= d === 7 ? 'Weekly' : 'Monthly' %></span>
             <span class="gd-dur-price" id="price-<%= d %>"><%- rentPriceHtml(game, 'nt', d, promo) %></span>
             <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
           </button>
           <% }) %>
         </div>
 
-        <% if (!showPs4) { %>
-        <p class="gd-no-ps4">PS4 Primary is not offered<% if (game.platform && !/ps4/i.test(String(game.platform))) { %> — <%= game.platform %> only<% } %>.<% if (game.nt_price_7d || game.nt_price_30d) { %> Non-Trophy:<% if (game.nt_price_7d) { %> ₱<%= game.nt_price_7d %> / week<% } %><% if (game.nt_price_30d) { %><%= game.nt_price_7d ? ',' : '' %> ₱<%= game.nt_price_30d %> / month<% } %>.<% } %></p>
+        <% if (ntAvail || !showPs4) { %>
+        <p class="gd-muted" id="gdTrial"><% if (ntAvail) { %>Non-Trophy: free 3-hour trial, no deposit.<% } %><% if (!showPs4) { %> PS4 Primary not offered.<% } %></p>
         <% } %>
 
-        <% if (typeof voucherHint !== 'undefined' && voucherHint) { %>
-        <div class="gp-hint" id="voucherHint">Renting monthly? Use <code><%= voucherHint.code %></code> for <%= voucherHint.pct %>% off.</div>
-        <% } %>
-        <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
-          <div class="lb" id="voucherLabel">Have a promo code?</div>
-          <div class="vok" id="voucherApplied" hidden></div>
-          <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
-          <div class="vrow" id="voucherEntry">
-            <input class="vin" id="voucherInput" maxlength="24" placeholder="Enter code" autocomplete="off" aria-label="Promo code">
-            <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
-          </div>
-          <div class="verr" id="voucherError" hidden></div>
-          <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
-        </div>
-
-        <!-- TOTAL BREAKDOWN. Visible with the voucher box so the figure matches
-             the order before the website form is opened. -->
         <div class="gd-total-box" id="totalBox">
-          <div class="gd-total-label">Total</div>
           <div class="gd-total-rows" id="totalRows"></div>
           <div class="gd-total-final">
             <span>Total to send</span>
@@ -388,18 +320,20 @@
           </div>
           <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
           <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
-          <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
+        </div>
+
+        <% const gdPromoLines = (typeof promoCheckoutLines === 'function') ? promoCheckoutLines(game.id, null) : []; %>
+        <div class="gd-perks">
           <% if (gdPromoLines.length) { %>
           <div class="gd-promo-note" id="gdPromoNote" data-game-id="<%= game.id %>">
-            <%- include('partials/promo-lines', { items: gdPromoLines }) %>
+            <%- include('partials/promo-lines', { items: gdPromoLines, compact: true }) %>
           </div>
           <script src="/js/promo-checkout.js?v=<%= assetV %>" defer></script>
           <% } %>
+          <% if (typeof voucherHint !== 'undefined' && voucherHint) { %>
+          <button type="button" class="gd-perk gd-perk-code" id="voucherHint" onclick="togglePromoPanel(true)"><%= voucherHint.code %> −<%= voucherHint.pct %>%</button>
+          <% } %>
         </div>
-
-        <% if (ntAvail) { %>
-        <p class="gd-trial" id="gdTrial">Non-Trophy has a free 3-hour trial<% if (ntLeft) { %> — <%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> <%= ntLeft === 1 ? 'is' : 'are' %> open on this title<% } %>. No deposit and no late fee on that type.</p>
-        <% } %>
 
         <!-- PRIMARY: Messenger. It always opens, whatever has (or has not) been
              picked; a picked type and duration just fill in the message.
@@ -415,39 +349,97 @@
           <div class="gd-msg-preview-label">YOUR MESSAGE WILL SAY</div>
           <div class="gd-msg-preview-text" id="ctaMsgPreview"></div>
         </div>
-        <p class="gd-fine">Trophy<% if (showPs4) { %> and PS4 Primary<% } %>: ₱<%= promo.deposit || 0 %> refundable deposit · ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day, taken from the deposit. Return on time and you get the deposit back.</p>
-        <p class="gd-fine gd-payline"><%- include('partials/pay-note').trim() %></p>
-        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask" id="ctaMsgAsk" data-track-source="game">Have a question? Message us on Messenger</a>
         </div><!-- /ctaMsgWrap -->
-        <% if (!allUnavail) { %>
-        <!-- SECONDARY: order on the website. Tapping opens the price summary,
-             name field and pay button below. -->
-        <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' || order_error === 'code' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
-          Or order here on the website
-          <small><%- include('partials/pay-note').trim() %></small>
-        </button>
-        <div id="gdOrderBlock"<%= order_error === '1' || order_error === 'code' ? '' : ' hidden' %>>
-        <% } %>
+
+        <div class="gd-folds">
+          <button type="button" class="gd-fold" id="promoFold" aria-expanded="<%= voucher_error ? 'true' : 'false' %>" onclick="togglePromoPanel()">+ Promo code</button>
+          <button type="button" class="gd-fold" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">How setup works</button>
+          <button type="button" class="gd-fold" id="feesToggle" aria-expanded="<%= order_error ? 'true' : 'false' %>" onclick="toggleFeesPanel()">Fees &amp; payment</button>
+        </div>
+
+        <div id="promoPanel"<%= voucher_error ? '' : ' hidden' %>>
+          <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
+            <div class="lb" id="voucherLabel">Have a promo code?</div>
+            <div class="vok" id="voucherApplied" hidden></div>
+            <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
+            <div class="vrow" id="voucherEntry">
+              <input class="vin" id="voucherInput" maxlength="24" placeholder="Enter code" autocomplete="off" aria-label="Promo code">
+              <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
+            </div>
+            <div class="verr" id="voucherError" hidden></div>
+            <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
+          </div>
+        </div>
+
+        <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
+          <%- include('partials/account-guide-link') %>
+          <% if (hasTrophy) { %>
+          <div class="gd-setup-block" id="setup-tr">
+            <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
+            <p>Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>Enable</strong></p>
+            <% const trSoon = trNext != null && trNext > 0 ? trNext : null; %>
+            <% if (!trAvail && trSoon != null && trSoon > 0) { %>
+            <p class="gd-avail-soon">Next available in <strong><%= trSoon %> day<%= trSoon !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (trNotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% } %>
+          <div class="gd-setup-block" id="setup-nt">
+            <p>🎮 Play the game on <strong>OUR account</strong> only. Trophies <strong>won't</strong> count on your own profile.</p>
+            <p>Setup: Settings → Users and Accounts → Other → Console Sharing and Offline Play → <strong>leave disabled</strong></p>
+            <p>On PS4, choose <strong>Do Not Activate</strong> if you are prompted.</p>
+            <% const ntSoon = ntNext != null && ntNext > 0 ? ntNext : null; %>
+            <% if (!ntAvail && ntSoon != null && ntSoon > 0) { %>
+            <p class="gd-avail-soon">Next available in <strong><%= ntSoon %> day<%= ntSoon !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (ntNotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% if (showPs4) { %>
+          <div class="gd-setup-block" id="setup-ps4">
+            <p>🕹️ Set our account as <strong>PS4 primary</strong> — play on your PS4 and earn trophies on your own profile.</p>
+            <p>Setup: Settings → Account Management → Activate as Your Primary PS4 → <strong>Activate</strong></p>
+            <% if (!ps4Avail && ps4Next != null && ps4Next > 0) { %>
+            <p class="gd-avail-soon">Next available in <strong><%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></strong></p>
+            <% } %>
+            <% if (ps4NotStocked) { %>
+            <p class="gd-notstocked-note">Not stocked yet — we create the account after you book. Ready the same day.</p>
+            <% } %>
+          </div>
+          <% } %>
+        </div>
+
+        <div id="feesPanel"<%= order_error ? '' : ' hidden' %>>
+          <p class="gd-fine">Trophy<% if (showPs4) { %> and PS4 Primary<% } %>: ₱<%= promo.deposit || 0 %> refundable deposit · ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day, taken from the deposit. Return on time and you get the deposit back.</p>
+          <p class="gd-fine gd-payline"><%- include('partials/pay-note').trim() %></p>
+          <% if (!allUnavail) { %>
+          <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' || order_error === 'code' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
+            Or order here on the website
+          </button>
+          <div id="gdOrderBlock"<%= order_error === '1' || order_error === 'code' ? '' : ' hidden' %>>
+          <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm" data-order-once>
+            <input type="hidden" name="game_id" value="<%= game.id %>">
+            <%- include('partials/order-token') %>
+            <input type="hidden" name="account_type" id="orderType" value="">
+            <input type="hidden" name="days" id="orderDays" value="">
+            <input type="hidden" name="promo_code" id="orderPromoCode" value="">
+            <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
+            <label class="gd-agree">
+              <input type="checkbox" name="agree_rules" required>
+              <span>I agree to the rental rules. Trophy and PS4 Primary include a ₱<%= promo.deposit || 0 %> refundable deposit and ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day. Non-Trophy has no deposit and no late fee.<% if (ntAvail) { %> The Non-Trophy free trial is 3 hours.<% } %></span>
+            </label>
+            <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
+            <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
+          </form>
+          </div><!-- /gdOrderBlock -->
+          <% } %>
+        </div>
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask" id="ctaMsgAsk" data-track-source="game">Questions? Message us on Messenger</a>
 
         <% if (!allUnavail) { %>
-        <!-- Website order: the name field and the price button run as one
-             action. Lives inside #gdOrderBlock, opened by #orderToggle. -->
-        <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm" data-order-once>
-          <input type="hidden" name="game_id" value="<%= game.id %>">
-          <%- include('partials/order-token') %>
-          <input type="hidden" name="account_type" id="orderType" value="">
-          <input type="hidden" name="days" id="orderDays" value="">
-          <input type="hidden" name="promo_code" id="orderPromoCode" value="">
-          <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-          <label class="gd-agree">
-            <input type="checkbox" name="agree_rules" required>
-            <span>I agree to the rental rules. Trophy and PS4 Primary include a ₱<%= promo.deposit || 0 %> refundable deposit and ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day. Non-Trophy has no deposit and no late fee.<% if (ntAvail) { %> The Non-Trophy free trial is 3 hours.<% } %></span>
-          </label>
-          <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
-          <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
-        </form>
-        </div><!-- /gdOrderBlock -->
-
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
         <% if (order_error === '1') { %>
         <div class="gd-order-error">⚠️ Please pick an account type and duration, and enter your Facebook name, before continuing.</div>
