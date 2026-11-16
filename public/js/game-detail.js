@@ -499,9 +499,18 @@ function updateReserveLinks() {
   const msgLink = document.getElementById('ctaMsgPrimary');
   if (msgLink) msgLink.href = PHMessengerText.messengerHref(msgText);
   const msgMain = document.getElementById('ctaMsgMain');
-  if (msgMain) msgMain.textContent = booked ? '💬 Ask us about this game' : '💬 Message us about this game';
+  if (msgMain) {
+    if (booked) msgMain.textContent = '💬 Ask us about this game';
+    else if (selectedType && selectedDays) {
+      const typeWord = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+      const durWord = selectedDays === 7 ? 'Weekly' : 'Monthly';
+      msgMain.textContent = 'Rent now · ' + typeWord + ' ' + durWord;
+    } else msgMain.textContent = 'Rent now';
+  }
   const msgSub = document.getElementById('ctaMsgSub');
   if (msgSub) msgSub.textContent = booked ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there';
+  const msgAsk = document.getElementById('ctaMsgAsk');
+  if (msgAsk && msgLink) msgAsk.href = msgLink.href;
   const msgPreview = document.getElementById('ctaMsgPreview');
   if (msgPreview) msgPreview.textContent = msgText;
   // Fully booked: the "get in line" card is the main action, so the big

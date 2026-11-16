@@ -93,23 +93,40 @@
   <% const gdPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null; %>
   <% const gpInfo = (gdPsn.info || []); %>
   <% const gpInfoValue = (label) => { const row = gpInfo.find(r => r.label === label); return row ? row.value : ''; }; %>
+  <% const gdTabCopy = String((gdPsn.hasPsn ? gdPsn.about : (game.description || '')) || '').trim(); %>
+  <% const gdTagline = String(gdPsn.tagline || '').trim(); %>
+  <% const gdHeaderLead = (gdTagline && gdTagline !== gdTabCopy) ? gdTagline : ''; %>
+  <% const gdVoice = gpInfoValue('Voice'); %>
+  <% const gdPublisher = gpInfoValue('Publisher'); %>
+  <% const gdGenre = gdPsn.genre || game.genre || ''; %>
+  <% const gdRelease = gpInfoValue('Release date'); %>
+  <% const gdAge = gpInfoValue('Age rating'); %>
+  <% const gdSize = gpInfoValue('Size'); %>
+  <% const gdEyebrow = []; %>
+  <% if (game.platform && !/ps4/i.test(String(game.platform))) { gdEyebrow.push(String(game.platform).toUpperCase() + ' ONLY'); } else if (game.platform) { gdEyebrow.push(String(game.platform).toUpperCase()); } %>
+  <% if (gdFromPrice) { gdEyebrow.push('FROM ₱' + gdFromPrice + ' A WEEK'); } %>
+  <% if (allUnavail) { gdEyebrow.push('SOLD OUT'); } else if (isLastSlot) { gdEyebrow.push('LAST SLOT'); } else if (totalSlots > 0) { gdEyebrow.push('SLOTS OPEN'); } %>
+  <% const gdSpecs = []; %>
+  <% if (game.platform) gdSpecs.push(['Platform', game.platform]); %>
+  <% if (gdGenre) gdSpecs.push(['Genre', gdGenre]); %>
+  <% if (gdRelease) gdSpecs.push(['Release', gdRelease]); %>
+  <% if (gdAge) gdSpecs.push(['Age rating', gdAge]); %>
+  <% gdSpecs.push(['Install size', gdSize || 'Not listed']); %>
 
   <div class="gd-back gp-crumb">
-    <a href="/browse">← Back to Catalog</a>
-    <span> · </span>
-    <a href="/browse">Rent</a>
-    <% if (game._category_name) { %><span> · <%= game._category_name %></span><% } %>
-    <span> · <b><%= game.title %></b></span>
+    <a href="/browse">Browse</a>
+    <span> / </span>
+    <a href="/browse">Games</a>
+    <span> / </span>
+    <b><%= game.title %></b>
   </div>
 
   <div class="gp-grid">
     <div class="gp-hero">
     <div class="gd-cover-col">
-      <% if (gdPsn.media.length) { %>
-        <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
-      <% } else if (game.cover_image) { %>
+      <% if (game.cover_image) { %>
         <% const gdhFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
-        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140" style="<%= gdhFocal %>">
+        <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover<%= gdPsn.media.length ? ' gd-portrait' : ' gdh-poster' %>" width="760" height="1140" style="<%= gdhFocal %>">
       <% } else { %>
         <div class="gd-cover gd-cover-placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -118,35 +135,21 @@
           <span>No cover</span>
         </div>
       <% } %>
-      <% if (isLastSlot) { %>
-        <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
-      <% } else if (noSlot) { %>
-        <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
-      <% } %>
     </div>
     <div class="gp-title">
-      <div class="gp-tags">
-        <% if (isLastSlot) { %><span class="gp-tag gp-tag-y">🔥 Last slot</span><% } %>
-        <% if (noSlot) { %><span class="gp-tag">Sold out</span><% } %>
-        <% if (game.platform) { %><span class="gp-tag"><%= game.platform %></span><% } %>
-        <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
-        <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
-        <% if (gdPsn.genre) { gdPsn.genre.split('/').forEach(g => { %><span class="gp-tag"><%= g.trim() %></span><% }) } %>
-      </div>
+      <% if (gdEyebrow.length) { %><div class="gd-kicker"><%= gdEyebrow.join(' · ') %></div><% } %>
+      <% if (gdTier) { %><span class="tier-pill tier-<%= gdTier.color %> usd-tier-pill"><%= gdTier.name %></span><% } %>
+      <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
       <%# One h1. "Rent … in the Philippines" stays in the title tag, meta description, and JSON-LD. %>
       <h1 class="usd-title gd-title"><%= game.title %></h1>
-      <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: gdPsn }) %><% } %>
-      <% if (game.description && !gdPsn.hasPsn) { %><p class="gd-desc gdh-poster-desc"><%= game.description %></p><% } %>
-      <% if (gdPsn.hasPsn && gdPsn.about) { %>
-        <p class="gp-clamp"><%= gdPsn.aboutParas[0] || gdPsn.about %></p>
-        <% if (gdPsn.readMore || (gdPsn.aboutParas && gdPsn.aboutParas.length > 1)) { %><button type="button" class="gp-more" onclick="gpTab('gpPaneDetails', document.getElementById('gpTabDetails'))">Read more ›</button><% } %>
-      <% } %>
-      <% if (gpInfo.length) { %>
-      <div class="gp-chips">
-        <% ['Release date', 'Genre', 'Publisher', 'Age rating'].forEach(label => { const value = gpInfoValue(label); if (!value) return; %>
-        <span><b><%= label === 'Release date' ? 'Released' : label === 'Age rating' ? 'Rating' : label %></b><%= value %></span>
-        <% }) %>
+      <% if (gdPublisher) { %><p class="gd-pub">Publisher <b><%= gdPublisher %></b></p><% } %>
+      <% if (gdSpecs.length) { %>
+      <div class="gd-specs">
+        <% gdSpecs.forEach(pair => { %><span class="gd-spec"><b><%= pair[0] %></b><%= pair[1] %></span><% }) %>
       </div>
+      <% } %>
+      <% if (gdHeaderLead || gdVoice) { %>
+      <p class="gd-lead"><%= gdHeaderLead %><% if (gdVoice && gdHeaderLead.indexOf(gdVoice) === -1) { %><%= gdHeaderLead ? ' ' : '' %>Voice: <%= gdVoice %>.<% } %></p>
       <% } %>
       <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
     </div>
@@ -208,6 +211,12 @@
            ════════════════════════════════ -->
       <div id="rentPanel">
 
+        <div class="gd-rent-head">
+          <h2>Rent this game</h2>
+          <% if (gdFromPrice) { %><div class="gd-rent-from"><b>₱<%= gdFromPrice %></b> <small>from / week</small></div><% } %>
+        </div>
+        <p class="gd-rent-hint">Prices and slots for this title. Not a shop-wide rate.</p>
+
         <!-- SELECT RENTAL TYPE -->
         <% if (noneStocked) { %>
         <!-- NOT-YET-STOCKED banner -->
@@ -252,9 +261,6 @@
 
         </div>
 
-        <% if (ntAvail) { %>
-        <p class="gd-trial" id="gdTrial">Non-Trophy has a free 3-hour trial — no deposit and no late fee.</p>
-        <% } %>
 
         <%
           // How long until a full type frees up, surfaced right under the type
@@ -352,6 +358,10 @@
           <% }) %>
         </div>
 
+        <% if (!showPs4) { %>
+        <p class="gd-no-ps4">PS4 Primary is not offered<% if (game.platform && !/ps4/i.test(String(game.platform))) { %> — <%= game.platform %> only<% } %>.<% if (game.nt_price_7d || game.nt_price_30d) { %> Non-Trophy:<% if (game.nt_price_7d) { %> ₱<%= game.nt_price_7d %> / week<% } %><% if (game.nt_price_30d) { %><%= game.nt_price_7d ? ',' : '' %> ₱<%= game.nt_price_30d %> / month<% } %>.<% } %></p>
+        <% } %>
+
         <% if (typeof voucherHint !== 'undefined' && voucherHint) { %>
         <div class="gp-hint" id="voucherHint">Renting monthly? Use <code><%= voucherHint.code %></code> for <%= voucherHint.pct %>% off.</div>
         <% } %>
@@ -387,6 +397,10 @@
           <% } %>
         </div>
 
+        <% if (ntAvail) { %>
+        <p class="gd-trial" id="gdTrial">Non-Trophy has a free 3-hour trial<% if (ntLeft) { %> — <%= ntLeft %> slot<%= ntLeft !== 1 ? 's' : '' %> <%= ntLeft === 1 ? 'is' : 'are' %> open on this title<% } %>. No deposit and no late fee on that type.</p>
+        <% } %>
+
         <!-- PRIMARY: Messenger. It always opens, whatever has (or has not) been
              picked; a picked type and duration just fill in the message.
              Hidden when what they're looking at is fully booked: the "get in
@@ -394,13 +408,16 @@
              Messenger link (public/js/game-detail.js updateReserveLinks). -->
         <div id="ctaMsgWrap"<%= allUnavail ? ' hidden' : '' %>>
         <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">
-          <span class="gd-msg-main" id="ctaMsgMain"><%= allUnavail ? '💬 Ask us about this game' : '💬 Message us about this game' %></span>
+          <span class="gd-msg-main" id="ctaMsgMain"><%= allUnavail ? '💬 Ask us about this game' : 'Rent now' %></span>
           <span class="gd-msg-sub" id="ctaMsgSub"><%= allUnavail ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there' %></span>
         </a>
         <div class="gd-msg-preview">
           <div class="gd-msg-preview-label">YOUR MESSAGE WILL SAY</div>
           <div class="gd-msg-preview-text" id="ctaMsgPreview"></div>
         </div>
+        <p class="gd-fine">Trophy<% if (showPs4) { %> and PS4 Primary<% } %>: ₱<%= promo.deposit || 0 %> refundable deposit · ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day, taken from the deposit. Return on time and you get the deposit back.</p>
+        <p class="gd-fine gd-payline"><%- include('partials/pay-note').trim() %></p>
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask" id="ctaMsgAsk" data-track-source="game">Have a question? Message us on Messenger</a>
         </div><!-- /ctaMsgWrap -->
         <% if (!allUnavail) { %>
         <!-- SECONDARY: order on the website. Tapping opens the price summary,
@@ -571,7 +588,7 @@
 
     </div>
 
-    <%- include('partials/game-film', { images: gpFilm, title: game.title, filmClass: gdPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
+    <%- include('partials/game-film', { images: gpFilm, title: game.title, filmTitle: 'Screenshots', filmClass: gdPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
 
     <div class="gp-tabs" id="gpTabs">
       <div class="gp-tablist gd-tabs" role="tablist">
@@ -595,9 +612,13 @@
         </p>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneDetails">
-        <% if (gdPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: gdPsn }) %><% } %>
-        <% if (!gdPsn.hasPsn && game.description) { %><p class="gp-details-copy"><%= game.description %></p><% } %>
-        <% if (!gdPsn.hasPsn) { %>
+        <% if (gdPsn.hasPsn && gdPsn.aboutParas && gdPsn.aboutParas.length) { %>
+          <% gdPsn.aboutParas.forEach(function (para) { if (String(para).trim() && String(para).trim() !== gdHeaderLead) { %>
+          <p class="gp-details-copy"><%= para %></p>
+          <% } }); %>
+        <% } else if (gdTabCopy && gdTabCopy !== gdHeaderLead) { %>
+        <p class="gp-details-copy"><%= gdTabCopy %></p>
+        <% } else if (!gdTabCopy) { %>
         <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
         <% } %>
       </div>
@@ -628,18 +649,30 @@
       </div>
     </div>
 
+    <% if (gdPsn.media.length) { %>
+    <div class="gp-trailer">
+      <h2>Trailer and screenshots</h2>
+      <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
+    </div>
+    <% } %>
+
     <% const gpRelated = (typeof related !== 'undefined' && related) ? related : []; %>
     <% if (gpRelated.length) { %>
-    <div class="gp-related">
+    <div class="gp-related gp-similar">
       <div class="gp-related-h">
-        <h2><span class="gp-o">○</span> You might also like</h2>
+        <h2>Similar games</h2>
         <a href="/browse">See all games ›</a>
       </div>
-      <div class="gp-related-row">
+      <div class="gp-sim-grid">
         <% gpRelated.forEach(item => { %>
-        <a class="gp-rel" href="<%= item.href %>">
-          <% if (item.cover) { %><img src="<%= item.cover %>" alt="<%= item.title %>" width="46" height="60" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
-          <span><b><%= item.title %></b><small><%= item.status %></small></span>
+        <% const simFull = /^full/i.test(String(item.status || '')); %>
+        <a class="gp-sim" href="<%= item.href %>">
+          <span class="gp-sim-cover">
+            <% if (item.cover) { %><img src="<%= item.cover %>" alt="<%= item.title %>" width="300" height="450" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
+            <span class="gp-sim-badge<%= simFull ? ' gp-sim-full' : ' gp-sim-open' %>"><%= simFull ? 'Full' : 'Available' %></span>
+          </span>
+          <span class="gp-sim-name"><%= item.title %></span>
+          <span class="gp-sim-status<%= simFull ? ' is-full' : ' is-open' %>"><%= item.status %></span>
         </a>
         <% }) %>
       </div>
