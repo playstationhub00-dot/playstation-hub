@@ -213,8 +213,28 @@ body.hub a.rcard.gc2-card {
   color: inherit;
   text-decoration: none;
 }
-body.hub .games-grid,
-body.hub .card-grid { align-items: stretch; }
+/* Same height in a row. .games-grid sets align-items: start so each card
+   stays as tall as its own rows; rental grids stretch instead, and the
+   button sits at the bottom. A missing PS4 row is just empty space. */
+body.home2.hub .card-grid,
+body.browse-page.hub .games-grid,
+body.browse-page.hub .rentals-grid {
+  align-items: stretch;
+}
+body.browse-page.hub .bf-item {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  height: auto;
+  min-height: 100%;
+}
+body.home2.hub .card-grid > a.rcard.gc2-card,
+body.browse-page.hub .bf-item > a.rcard.gc2-card {
+  flex: 1 1 auto;
+  align-self: stretch;
+  height: auto !important;
+  min-height: 100%;
+}
 body.hub .rcard .gc2-art {
   position: relative;
   width: 100%;
