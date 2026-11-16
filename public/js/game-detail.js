@@ -610,4 +610,23 @@ window.addEventListener('DOMContentLoaded', () => {
     const buyBtn = document.getElementById('toggleBuy');
     if (buyBtn) setMode('buy');
   }
+  const about = document.getElementById('gdAbout');
+  const aboutBtn = document.getElementById('gdAboutMore');
+  if (about && aboutBtn) {
+    const fits = () => {
+      const wasOpen = about.classList.contains('is-open');
+      about.classList.add('is-open');
+      const full = about.scrollHeight;
+      const line = parseFloat(getComputedStyle(about).lineHeight) || 22;
+      about.classList.toggle('is-open', wasOpen);
+      aboutBtn.hidden = full <= line * 4 + 2;
+    };
+    aboutBtn.addEventListener('click', () => {
+      const open = about.classList.toggle('is-open');
+      aboutBtn.textContent = open ? 'Show less' : 'Read more';
+      aboutBtn.setAttribute('aria-expanded', String(open));
+    });
+    fits();
+    window.addEventListener('resize', () => { if (!about.classList.contains('is-open')) fits(); });
+  }
 });

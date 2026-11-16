@@ -95,7 +95,8 @@
   <% const gpInfoValue = (label) => { const row = gpInfo.find(r => r.label === label); return row ? row.value : ''; }; %>
   <% const gdTabCopy = String((gdPsn.hasPsn ? gdPsn.about : (game.description || '')) || '').trim(); %>
   <% const gdTagline = String(gdPsn.tagline || '').trim(); %>
-  <% const gdHeaderLead = (gdTagline && gdTagline !== gdTabCopy) ? gdTagline : ''; %>
+  <% const gdAbout = gdTabCopy || gdTagline; %>
+  <% const gdAboutParas = (gdAbout && gdPsn.hasPsn && gdTabCopy && gdPsn.aboutParas && gdPsn.aboutParas.length) ? gdPsn.aboutParas : (gdAbout ? [gdAbout] : []); %>
   <% const gdVoice = gpInfoValue('Voice'); %>
   <% const gdPublisher = gpInfoValue('Publisher'); %>
   <% const gdGenre = gdPsn.genre || game.genre || ''; %>
@@ -111,6 +112,7 @@
   <% if (gdGenre) gdSpecs.push(['Genre', gdGenre]); %>
   <% if (gdRelease) gdSpecs.push(['Release', gdRelease]); %>
   <% if (gdAge) gdSpecs.push(['Age rating', gdAge]); %>
+  <% if (gdVoice) gdSpecs.push(['Voice', gdVoice]); %>
   <% gdSpecs.push(['Install size', gdSize || 'Not listed']); %>
 
   <div class="gd-back gp-crumb">
@@ -148,8 +150,11 @@
         <% gdSpecs.forEach(pair => { %><span class="gd-spec"><b><%= pair[0] %></b><%= pair[1] %></span><% }) %>
       </div>
       <% } %>
-      <% if (gdHeaderLead || gdVoice) { %>
-      <p class="gd-lead"><%= gdHeaderLead %><% if (gdVoice && gdHeaderLead.indexOf(gdVoice) === -1) { %><%= gdHeaderLead ? ' ' : '' %>Voice: <%= gdVoice %>.<% } %></p>
+      <% if (gdAboutParas.length) { %>
+      <div class="gd-about" id="gdAbout">
+        <% gdAboutParas.forEach(function (para) { if (String(para).trim()) { %><p><%= para %></p><% } }); %>
+      </div>
+      <button type="button" class="gd-about-more" id="gdAboutMore" hidden aria-expanded="false">Read more</button>
       <% } %>
       <% if (game.link_url) { %><a href="<%= game.link_url %>" target="_blank" rel="noopener" class="spotlight-link">🔗 <%= game.link_label || 'Learn More' %> →</a><% } %>
     </div>
@@ -581,13 +586,12 @@
 
     <div class="gp-tabs" id="gpTabs">
       <div class="gp-tablist gd-tabs" role="tablist">
-        <button type="button" class="gp-tab gd-tab on" id="gpTabDetails" role="tab" aria-selected="true" onclick="gpTab('gpPaneDetails', this)">Description</button>
-        <button type="button" class="gp-tab gd-tab" id="gpTabBefore" role="tab" aria-selected="false" onclick="gpTab('gpPaneBefore', this)">Why rent it</button>
+        <button type="button" class="gp-tab gd-tab on" id="gpTabBefore" role="tab" aria-selected="true" onclick="gpTab('gpPaneBefore', this)">Why rent it</button>
         <button type="button" class="gp-tab gd-tab" id="gpTabSignin" role="tab" aria-selected="false" onclick="gpTab('gpPaneSignin', this)">Sign-in</button>
         <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ<% if (gdSeo.faqs && gdSeo.faqs.length) { %> (<%= gdSeo.faqs.length %>)<% } %></button>
         <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews</button>
       </div>
-      <div class="gp-pane gd-panel" id="gpPaneBefore" hidden>
+      <div class="gp-pane gd-panel" id="gpPaneBefore">
         <div class="gp-before">
           <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
           <% if (hasTrophy) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
@@ -599,17 +603,6 @@
           <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %> · <%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %> renters served<% } %>
           · <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
         </p>
-      </div>
-      <div class="gp-pane gd-panel" id="gpPaneDetails">
-        <% if (gdPsn.hasPsn && gdPsn.aboutParas && gdPsn.aboutParas.length) { %>
-          <% gdPsn.aboutParas.forEach(function (para) { if (String(para).trim() && String(para).trim() !== gdHeaderLead) { %>
-          <p class="gp-details-copy"><%= para %></p>
-          <% } }); %>
-        <% } else if (gdTabCopy && gdTabCopy !== gdHeaderLead) { %>
-        <p class="gp-details-copy"><%= gdTabCopy %></p>
-        <% } else if (!gdTabCopy) { %>
-        <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
-        <% } %>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneSignin" hidden>
         <div class="how-mini">

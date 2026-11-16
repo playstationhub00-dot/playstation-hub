@@ -547,7 +547,21 @@ body.gp-redesign.hub .gd-spec b {
   color: #8d8d8d;
   margin-bottom: 2px;
 }
-body.gp-redesign.hub .gd-lead { margin: 0; color: #ddd; font-size: 14.5px; line-height: 1.5; }
+body.gp-redesign.hub .gd-about { margin: 0; color: #ddd; font-size: 14.5px; line-height: 1.5; }
+body.gp-redesign.hub .gd-about p { margin: 0 0 0.6em; }
+body.gp-redesign.hub .gd-about p:last-child { margin-bottom: 0; }
+body.gp-redesign.hub .gd-about:not(.is-open) {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+body.gp-redesign.hub .gd-about.is-open { display: block; }
+body.gp-redesign.hub .gd-about-more {
+  margin-top: 4px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: #F5B800; font-weight: 700; font-size: 14px;
+}
+body.gp-redesign.hub .gd-about-more[hidden] { display: none !important; }
 body.gp-redesign.hub .gp-trailer { grid-column: 1; }
 body.gp-redesign.hub .gp-trailer h2,
 body.gp-redesign.hub [data-film] .gp-gal-h h2 { font-size: 18px; margin: 0 0 10px; }
