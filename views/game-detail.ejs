@@ -85,7 +85,7 @@
   const gdFromPrice = gdPricePairs.length ? gdPricePairs.reduce((a, b) => b.final < a.final ? b : a).final : 0;
 %>
 
-<div class="gd-page wrap gd-shell">
+<div class="gd-page">
   <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
   <% const gpShots = (gdPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src); %>
   <% const gpFilm = gdPsn.hideGallery ? gpShots : gdhGallery; %>
@@ -102,8 +102,8 @@
     <span> · <b><%= game.title %></b></span>
   </div>
 
-  <div class="gp-grid gd-shell-grid">
-    <div class="gp-hero gd-hero-left">
+  <div class="gp-grid">
+    <div class="gp-hero">
     <div class="gd-cover-col">
       <% if (gdPsn.media.length) { %>
         <%- include('partials/game-psn-media', { items: gdPsn.media, title: game.title }) %>
@@ -112,9 +112,10 @@
         <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140" style="<%= gdhFocal %>">
       <% } else { %>
         <div class="gd-cover gd-cover-placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
           </svg>
+          <span>No cover</span>
         </div>
       <% } %>
       <% if (isLastSlot) { %>
@@ -175,7 +176,7 @@
 
       <!-- Booking card: everything a customer interacts with to place an order
            lives in one contained surface, matching the reservation page. -->
-      <div class="gdh-card rental<%= allUnavail ? '' : ' available' %>">
+      <div class="gdh-card">
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div class="gp-mode">

@@ -128,23 +128,85 @@ body.shop-page .shop-title { font-weight: 800; font-size: 13px; }
 body.shop-page .rcta { display: block; margin-top: 6px; text-align: center; background: #F5B800; color: #0a0a0a; font-weight: 800; border-radius: 8px; padding: 7px; font-size: 12px; }
 body.shop-page .shop-box { background: #141414; border: 1px solid #262626; border-radius: 14px; padding: 12px; }
 
-/* Game page: booking box beside the tabs */
+/* Game page: cover and tabs on the left, one booking card on the right.
+   The proposal sheet's .gd-shell grid is not used here — it was placing the
+   whole page into the right column and stacking a second box behind the card. */
+body.gp-redesign.hub .gd-page {
+  display: block;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 24px 48px;
+}
 body.gp-redesign.hub .gp-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  column-gap: 28px;
+  row-gap: 18px;
   align-items: start;
 }
-body.gp-redesign.hub .gp-hero { grid-column: 1; grid-template-columns: 140px minmax(0, 1fr); }
-body.gp-redesign.hub .gp-panel { grid-column: 2; grid-row: 1 / span 4; position: sticky; top: 80px; }
-body.gp-redesign.hub .gdh-card.rental { background: #141414; border: 1px solid #262626; border-radius: 14px; padding: 14px; }
-body.gp-redesign.hub .gp-tabs { grid-column: 1; background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; }
+body.gp-redesign.hub .gp-hero {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  min-width: 0;
+}
+/* style.css gives every .gd-cover-col a fixed 380px width. Inside the 168px
+   hero track that box overflows and paints over the title. */
+body.gp-redesign.hub .gd-cover-col {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+body.gp-redesign.hub .gp-title { min-width: 0; color: #fff; }
+body.gp-redesign.hub .gp-title h1 { color: #fff; }
+body.gp-redesign.hub .gp-panel {
+  grid-column: 2;
+  grid-row: 1 / span 4;
+  position: sticky;
+  top: 80px;
+  align-self: start;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+body.gp-redesign.hub .gdh-card {
+  position: static;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 14px;
+  padding: 14px;
+}
+body.gp-redesign.hub .gd-cover-col .gd-cover,
+body.gp-redesign.hub .gd-cover-placeholder {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1c1c1c;
+  color: #bdbdbd;
+  border: 1px dashed #3a3a3a;
+  border-radius: 12px;
+}
+body.gp-redesign.hub .gd-cover-placeholder svg { width: 42px; height: 42px; opacity: 0.9; color: #bdbdbd; }
+body.gp-redesign.hub [data-film],
+body.gp-redesign.hub .gp-tabs { grid-column: 1; }
+body.gp-redesign.hub .gp-tabs { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; }
 body.gp-redesign.hub .gd-tabs { background: #101010; border-bottom: 1px solid #262626; }
 body.gp-redesign.hub .gd-tab.on { color: #F5B800; border-bottom: 2px solid #F5B800; }
 @media (max-width: 900px) {
   body.gp-redesign.hub .gp-grid { display: flex; flex-direction: column; }
-  body.gp-redesign.hub .gp-panel { position: static; }
-  body.gd-compact { padding-bottom: 72px; }
+  body.gp-redesign.hub .gp-hero { grid-template-columns: 112px minmax(0, 1fr); }
+  body.gp-redesign.hub .gp-panel { position: static; width: 100%; }
+  body.gd-compact { padding-bottom: 76px; }
   body.gd-compact .rent-bar { display: flex; }
 }
 
@@ -152,14 +214,27 @@ body.sec-page .req-row { display: grid; grid-template-columns: auto 56px 1fr aut
 body.sec-page .req-votes { font-weight: 800; color: #F5B800; text-align: center; }
 body.sec-page .req-form select, body.sec-page .req-field select { width: 100%; background: #101010; color: #fff; border: 1px solid #262626; border-radius: 10px; padding: 8px; margin-top: 4px; }
 
-/* Game page rental box */
-body.gp-redesign.hub .gdh-card,
-body.gp-redesign.hub .gp-panel {
-  background: #141414;
-  border: 1px solid #262626;
-  border-radius: 14px;
+/* Missing covers: a visible frame, not a blank black rectangle. */
+body.hub .gc2-art,
+body.hub .rcard .art { position: relative; aspect-ratio: 2 / 3; background: #161616; overflow: hidden; min-height: 160px; }
+body.hub .gc2-cover-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-top: 12%;
+  background: #1c1c1c;
+  color: #bdbdbd;
+  border: 1px dashed #3a3a3a;
+  box-sizing: border-box;
 }
-body.gp-redesign.hub .gp-panel { position: sticky; top: 80px; }
+body.hub .gc2-cover-placeholder span { opacity: 1; color: #bdbdbd; font-size: 12px; font-weight: 700; }
+body.hub .gc2-cover-placeholder svg { width: 36px; height: 36px; opacity: 0.9; color: #bdbdbd; }
+
+/* Game page rental box */
 body.gp-redesign.hub .gd-type-pill,
 body.gp-redesign.hub .gd-dur-btn {
   border-radius: 12px;
