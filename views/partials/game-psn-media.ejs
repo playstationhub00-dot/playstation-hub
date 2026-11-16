@@ -6,7 +6,11 @@
 
   Locals: items [{ type: 'video'|'image', src, poster? }], title
 %>
-<div class="gpm" id="gpMedia" data-count="<%= items.length %>">
+<div class="gpm<%= items.length > 4 ? ' gpm-many' : '' %>" id="gpMedia" data-count="<%= items.length %>">
+  <% if (items.length > 4) { %>
+  <button type="button" class="gpm-arrow gpm-arrow-prev" id="gpmPrev" aria-label="Previous screenshots">‹</button>
+  <button type="button" class="gpm-arrow gpm-arrow-next" id="gpmNext" aria-label="Next screenshots">›</button>
+  <% } %>
   <div class="gpm-stage" id="gpmStage">
     <% items.forEach((m, i) => { %>
     <div class="gpm-slide"<%= i === 0 ? '' : ' hidden' %>>
@@ -15,7 +19,9 @@
       <button type="button" class="gpm-play" id="gpmPlay" aria-label="Play trailer"><span aria-hidden="true"></span></button>
       <span class="gpm-badge">▶ TRAILER</span>
       <% } else { %>
-      <img src="<%= m.src %>" alt="<%= title %> screenshot <%= i + 1 %>" width="1280" height="720" decoding="async"<% if (i > 0) { %> loading="lazy"<% } %>>
+      <button type="button" class="gpm-open" data-index="<%= i %>" aria-label="<%= title %> screenshot <%= i + 1 %>">
+        <img src="<%= m.src %>" alt="<%= title %> screenshot <%= i + 1 %>" width="1280" height="720" decoding="async"<% if (i > 0) { %> loading="lazy"<% } %>>
+      </button>
       <% } %>
     </div>
     <% }) %>
@@ -31,4 +37,16 @@
     <% }) %>
   </div>
   <% } %>
+  <dialog class="gpm-lb" id="gpmLightbox" aria-label="Screenshots">
+    <div class="gpm-lb-frame">
+      <div class="gpm-lb-bar">
+        <span id="gpmLbCount"></span>
+        <button type="button" class="gpm-lb-x" id="gpmLbClose">Close</button>
+      </div>
+      <button type="button" class="gpm-lb-nav gpm-lb-prev" id="gpmLbPrev" aria-label="Previous image">‹</button>
+      <img id="gpmLbImg" alt="" width="1280" height="720">
+      <button type="button" class="gpm-lb-nav gpm-lb-next" id="gpmLbNext" aria-label="Next image">›</button>
+      <div class="gpm-lb-thumbs" id="gpmLbThumbs"></div>
+    </div>
+  </dialog>
 </div>
