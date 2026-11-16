@@ -220,17 +220,6 @@
         </div>
 
         <!-- SELECT RENTAL TYPE -->
-        <% if (noneStocked) { %>
-        <!-- NOT-YET-STOCKED banner -->
-        <div class="gd-notstocked-banner">
-          <span class="gd-notstocked-icon">⚡</span>
-          <div>
-            <div class="gd-notstocked-title">Be the first to rent this</div>
-            <div class="gd-notstocked-sub">Nobody has rented this yet, so the account isn't made. Book it and we'll have it ready within a few hours — same day.</div>
-          </div>
-        </div>
-        <% } %>
-
         <div class="gd-type-options" id="typeOptions">
 
           <% if (hasTrophy) { %>
@@ -239,7 +228,8 @@
             <span class="gd-type-icon">🏆</span>
             <span class="gd-type-name">Trophy</span>
             <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> left</span><% } %>
-            <span class="gd-type-status <%= trNotStocked ? 'gd-status-notstocked' : (trAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= trNotStocked ? 'Set up on order' : (trAvail ? 'Available' : 'Full Slot') %></span>
+            <% if (trAvail) { %><span class="gd-wait is-now">Available now</span>
+            <% } else if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %>
           </label>
           <% } %>
 
@@ -248,7 +238,8 @@
             <span class="gd-type-icon">🎮</span>
             <span class="gd-type-name">Non-Trophy</span>
             <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> left</span><% } %>
-            <span class="gd-type-status <%= ntNotStocked ? 'gd-status-notstocked' : (ntAvail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ntNotStocked ? 'Set up on order' : (ntAvail ? 'Available' : 'Full Slot') %></span>
+            <% if (ntAvail) { %><span class="gd-wait is-now">Available now</span>
+            <% } else if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %>
           </label>
 
           <% if (showPs4) { %>
@@ -257,50 +248,13 @@
             <span class="gd-type-icon">🕹️</span>
             <span class="gd-type-name">PS4 Primary</span>
             <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> left</span><% } %>
-            <span class="gd-type-status <%= ps4NotStocked ? 'gd-status-notstocked' : (ps4Avail ? 'gd-status-avail' : 'gd-status-rented') %>"><%= ps4NotStocked ? 'Set up on order' : (ps4Avail ? 'Available' : 'Full Slot') %></span>
+            <% if (ps4Avail) { %><span class="gd-wait is-now">Available now</span>
+            <% } else if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %>
           </label>
           <% } %>
 
         </div>
 
-
-        <%
-          // How long until a full type frees up, surfaced right under the type
-          // cards rather than left buried inside the "How setup works" accordion
-          // below — the moment someone sees "Full Slot" is the moment they want
-          // to know when that changes. Only shown when the date is actually
-          // known (a linked account's slot carries its renter's end date; a
-          // legacy-only game has nothing to count down to) and only for a type
-          // that has genuinely been rented before — "set up on order" already
-          // covers the type nobody has stocked yet.
-          //
-          // One slot per VISIBLE type card, in the same order and behind the
-          // same hasTrophy/showPs4 gates #typeOptions uses above — not just one
-          // entry per type that happens to be soon. flex-grow on .gd-avail-soon
-          // divides the row across however many items THIS row has, with no
-          // knowledge of the cards row above it; if Trophy alone is full, a
-          // one-item row would stretch that single pill across the full width
-          // and center it between both cards instead of sitting under Trophy's
-          // own column. Keeping one slot per card (blank ones invisible but
-          // still occupying their flex share) makes the two rows divide the
-          // same width into the same number of pieces, so every pill lands
-          // under the card it describes regardless of which types are full.
-          const soonSlots = [];
-          if (hasTrophy) soonSlots.push((!trAvail && !trNotStocked && trNext != null && trNext > 0) ? { icon: '🏆', days: trNext } : null);
-          soonSlots.push((!ntAvail && !ntNotStocked && ntNext != null && ntNext > 0) ? { icon: '🎮', days: ntNext } : null);
-          if (showPs4) soonSlots.push((!ps4Avail && !ps4NotStocked && ps4Next != null && ps4Next > 0) ? { icon: '🕹️', days: ps4Next } : null);
-        %>
-        <% if (soonSlots.some(s => s)) { %>
-        <div class="gd-avail-soon-row">
-          <% soonSlots.forEach(s => { %>
-          <% if (s) { %>
-          <span class="gd-avail-soon"><%= s.icon %> Available in <strong><%= s.days %> day<%= s.days !== 1 ? 's' : '' %></strong></span>
-          <% } else { %>
-          <span class="gd-avail-soon" aria-hidden="true" style="visibility:hidden;"></span>
-          <% } %>
-          <% }) %>
-        </div>
-        <% } %>
 
         <!-- SELECT DURATION -->
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
@@ -332,12 +286,16 @@
 
         <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
           <div class="lb" id="voucherLabel">Promo code</div>
-          <div class="vok" id="voucherApplied" hidden></div>
           <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
           <div class="vrow" id="voucherEntry">
-            <input class="vin" id="voucherInput" maxlength="24" placeholder="Promo code" autocomplete="off" aria-label="Promo code">
+            <span class="vin-wrap">
+              <input class="vin" id="voucherInput" maxlength="24" placeholder="Promo code" autocomplete="off" aria-label="Promo code">
+              <span class="vcheck" id="voucherCheck" hidden aria-hidden="true">✓</span>
+            </span>
             <button type="button" class="vbtn dis" id="voucherApply" disabled>Apply</button>
+            <button type="button" class="vremove" id="voucherRemove" hidden>Remove</button>
           </div>
+          <div class="vok" id="voucherApplied" hidden></div>
           <div class="verr" id="voucherError" hidden></div>
           <div class="vfine" id="voucherFine">One code per order. Codes can't be combined with other vouchers or Rewards.</div>
         </div>
@@ -592,16 +550,37 @@
         <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews</button>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneBefore">
-        <div class="gp-before">
-          <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
-          <% if (hasTrophy) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
-          <div class="gp-bi"><span>🎮</span><p><b>Non-Trophy</b>Our account. Leave Console Sharing off.</p></div>
-          <% if (showPs4) { %><div class="gp-bi"><span>🕹️</span><p><b>PS4 Primary</b>Your PS4. Activate as primary.</p></div><% } %>
+        <p class="gp-online"><span aria-hidden="true">🌐</span> <b>Online play</b> needs your own PS Plus.</p>
+        <div class="gp-why">
+          <% if (hasTrophy) { %>
+          <article class="gp-why-card">
+            <header><span aria-hidden="true">🏆</span> <b>Trophy</b> <em>YOUR ACCOUNT</em></header>
+            <p>Play on your own profile and earn trophies. ₱<%= promo.deposit || 0 %> refundable deposit.</p>
+            <ol>
+              <li><span>1</span><div>On your console, open the PSN sign-in screen and send us the QR or code on Messenger. We never ask for a password.</div></li>
+              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-on">Enable</span></span></div></li>
+              <li><span>3</span><div>Download the game, switch back to your own profile, and play.</div></li>
+            </ol>
+            <p class="gp-why-note">Keep Console Sharing on for the whole rental.</p>
+          </article>
+          <% } %>
+          <article class="gp-why-card">
+            <header><span aria-hidden="true">🎮</span> <b>Non-Trophy</b> <em>OUR ACCOUNT</em></header>
+            <p>Play on our account. Trophies won't show on your profile. No deposit.</p>
+            <ol>
+              <li><span>1</span><div>Open the PSN sign-in screen and send us the QR or code on Messenger.</div></li>
+              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-off">Leave disabled</span></span></div></li>
+              <li><span>3</span><div>Download the game and play on our account.</div></li>
+            </ol>
+            <p class="gp-why-note">On PS4, choose Do Not Activate if you're asked.</p>
+          </article>
         </div>
+        <% if (showPs4) { %><p class="gp-why-ps4"><span aria-hidden="true">🕹️</span> <b>PS4 Primary</b> Your PS4. Activate as primary.</p><% } %>
         <p class="gp-before-ft">
+          <% const gdHasStats = (typeof recommend !== 'undefined' && recommend && recommend.total > 0) || (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0); %>
           <% if (typeof recommend !== 'undefined' && recommend && recommend.total > 0) { %><b><%= recommend.pct %>%</b> would recommend us · <%= recommend.up %> of <%= recommend.total %> renters asked<% } %>
-          <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %> · <%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %> renters served<% } %>
-          · <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
+          <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %><%= (typeof recommend !== 'undefined' && recommend && recommend.total > 0) ? ' · ' : '' %><%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %> renters served<% } %>
+          <% if (gdHasStats) { %> · <% } %><a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Full setup guide ›</a>
         </p>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneSignin" hidden>

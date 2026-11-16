@@ -69,28 +69,38 @@
     errorEl.appendChild(document.createTextNode(message));
   }
 
+  function planName(quote) {
+    var limit = Number(quote.duration_days) || 0;
+    if (limit === 30) return 'Monthly';
+    if (limit === 7) return 'Weekly';
+    return 'Weekly and Monthly';
+  }
+
+  function showCodeField(on) {
+    var check = document.getElementById('voucherCheck');
+    var remove = document.getElementById('voucherRemove');
+    if (check) check.hidden = !on;
+    if (remove) remove.hidden = !on;
+    if (applyBtn) applyBtn.hidden = !!on;
+    if (input) input.readOnly = !!on;
+  }
+
   function paintApplied(quote) {
-    if (!appliedEl) return;
-    appliedEl.hidden = false;
-    appliedEl.textContent = '';
-    appliedEl.appendChild(document.createTextNode('✓ '));
-    var span = document.createElement('span');
-    var code = document.createElement('code');
-    code.textContent = quote.code;
-    span.appendChild(code);
-    span.appendChild(document.createTextNode(' applied, −' + quote.pct + '%'));
-    appliedEl.appendChild(span);
-    var remove = document.createElement('button');
-    remove.type = 'button';
-    remove.textContent = 'Remove';
-    remove.addEventListener('click', clearApplied);
-    appliedEl.appendChild(remove);
+    if (entry) entry.hidden = false;
+    if (input) {
+      input.value = quote.code;
+      input.classList.remove('err', 'f');
+      input.classList.add('ok');
+    }
+    showCodeField(true);
+    if (appliedEl) {
+      appliedEl.hidden = false;
+      appliedEl.textContent = (quote.pct || 0) + '% off ' + planName(quote) + ' applied.';
+    }
     if (labelEl) labelEl.textContent = 'Promo code';
     if (fineEl) fineEl.textContent = quote.fine || 'One code per order. Codes can\'t be combined with other vouchers or Rewards.';
-    if (entry) entry.hidden = true;
-    if (input) { input.value = ''; input.classList.remove('err', 'f'); }
     var another = document.getElementById('voucherAnother');
-    if (another) another.hidden = false;
+    if (another) another.hidden = true;
     if (hintEl) hintEl.hidden = true;
     setApplyEnabled();
   }
@@ -98,11 +108,12 @@
   function clearApplied() {
     applied = null;
     phSetVoucherQuote(null);
-    if (appliedEl) appliedEl.hidden = true;
+    if (appliedEl) { appliedEl.hidden = true; appliedEl.textContent = ''; }
     var another = document.getElementById('voucherAnother');
     if (another) another.hidden = true;
     if (entry) entry.hidden = false;
-    if (input) { input.value = ''; input.classList.remove('err', 'f'); }
+    showCodeField(false);
+    if (input) { input.value = ''; input.classList.remove('err', 'f', 'ok'); }
     showError('');
     if (labelEl) labelEl.textContent = 'Have a promo code?';
     if (fineEl) fineEl.textContent = defaultFine;
@@ -154,10 +165,12 @@
       if (!data.ok) {
         applied = null;
         phSetVoucherQuote(null);
-        if (appliedEl) appliedEl.hidden = true;
+        if (appliedEl) { appliedEl.hidden = true; appliedEl.textContent = ''; }
         if (entry) entry.hidden = false;
+        showCodeField(false);
         if (input) {
           input.value = code;
+          input.classList.remove('ok');
           input.classList.add('f');
           input.classList.toggle('err', data.error === 'monthly_only' || data.error === 'unknown' || data.error === 'expired' || data.error === 'used' || data.error === 'loyalty');
         }
@@ -189,6 +202,8 @@
     });
   }
   if (applyBtn) applyBtn.addEventListener('click', function () { requestQuote(input && input.value); });
+  var removeBtn = document.getElementById('voucherRemove');
+  if (removeBtn) removeBtn.addEventListener('click', clearApplied);
   var anotherBtn = document.getElementById('voucherAnother');
   if (anotherBtn) anotherBtn.addEventListener('click', function () {
     anotherBtn.hidden = true;

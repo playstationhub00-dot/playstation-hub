@@ -21,6 +21,7 @@ function chargedRent(type, days) {
 }
 
 function refreshVoucherPrices() {
+  updatePrices();
   updateTotal();
   updateCtaState();
   updateReserveLinks();
@@ -233,18 +234,55 @@ function onDurChange(btn) {
   syncStickyBar();
 }
 
+function codeCoversDays(days) {
+  if (!voucherQuote || !voucherQuote.ok) return false;
+  const limit = Number(voucherQuote.duration_days) || 0;
+  return !limit || limit === Number(days);
+}
+
 function updatePrices() {
   if (!selectedType) return;
+  const coded = !!document.getElementById('voucherBox');
   RENTAL_DURATIONS.forEach(d => {
     const el = document.getElementById('price-' + d);
     if (!el) return;
     const base = PRICES[selectedType][d];
-    const pct = promoPctFor(d);
-    if (pct > 0) {
+    const btn = el.closest ? el.closest('button') : null;
+    if (!coded) {
+      const pct = promoPctFor(d);
+      if (pct > 0) {
+        const final = base - Math.round(base * pct / 100);
+        el.innerHTML = '<span class="gd-dur-price-orig">₱' + base + '</span> ₱' + final;
+      } else {
+        el.textContent = '₱' + base;
+      }
+      return;
+    }
+    if (btn) btn.querySelectorAll('.gd-dur-promo:not(.gd-code-off)').forEach(node => { node.hidden = true; });
+    if (codeCoversDays(d)) {
+      const pct = Number(voucherQuote.pct) || 0;
       const final = base - Math.round(base * pct / 100);
       el.innerHTML = '<span class="gd-dur-price-orig">₱' + base + '</span> ₱' + final;
+      if (btn) {
+        btn.classList.add('code-applies');
+        let badge = btn.querySelector('.gd-code-off');
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'gd-dur-promo gd-code-off';
+          btn.appendChild(badge);
+        }
+        badge.hidden = false;
+        badge.textContent = pct + '% OFF';
+      }
     } else {
-      el.textContent = '₱' + base;
+      const pct = promoPctFor(d);
+      const final = pct > 0 ? base - Math.round(base * pct / 100) : base;
+      el.textContent = '₱' + final;
+      if (btn) {
+        btn.classList.remove('code-applies');
+        const badge = btn.querySelector('.gd-code-off');
+        if (badge) badge.remove();
+      }
     }
   });
 }
