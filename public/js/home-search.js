@@ -18,20 +18,37 @@
     return e;
   }
 
+  var waiters = [];
   function load(done) {
-    if (index || loading) return;
+    if (index) { if (done) done(); return; }
+    if (done) waiters.push(done);
+    if (loading) return;
     loading = true;
     fetch('/api/search-index').then(function (r) { return r.json(); })
       .then(function (d) { index = Array.isArray(d) ? d : []; })
       .catch(function () { failed = true; })
-      .then(function () { loading = false; if (done) done(); });
+      .then(function () {
+        loading = false;
+        var cbs = waiters.splice(0);
+        cbs.forEach(function (fn) { try { fn(); } catch (err) {} });
+      });
   }
 
   function open() { box.hidden = false; dim.hidden = false; }
   function close() { box.hidden = true; dim.hidden = true; }
 
+  function face(e) {
+    if (e.y === 'soon') return { cls: 'hs-soon', text: 'Coming soon · Reserve' };
+    if (e.y === 'now' && e.s === 1 && e.pr) return { cls: 'hs-last', text: 'Last slot · ₱' + e.pr + '/wk' };
+    if (e.y === 'now' && e.s > 1) return { cls: 'hs-free', text: 'Available' };
+    if (e.y === 'now' && e.s === 0) return { cls: 'hs-booked', text: 'Full' };
+    var st = core.statusOf(e);
+    return { cls: 'hs-' + st.kind, text: st.text };
+  }
+
   function row(e) {
     var st = core.statusOf(e);
+    var label = face(e);
     var a = el('a', 'hs-row' + (st.kind === 'booked' ? ' hs-row-booked' : ''));
     a.href = e.u;
     var img = el('img', 'hs-img');
@@ -41,14 +58,8 @@
     a.appendChild(img);
     var body = el('span', 'hs-body');
     body.appendChild(el('span', 'hs-name', e.t));
-    body.appendChild(el('span', 'hs-meta hs-' + st.kind, st.text));
-    var badges = el('span', 'hs-badges');
-    if (e.y === 'now' && e.pr) badges.appendChild(el('span', 'hs-badge', 'Rent from ₱' + e.pr));
-    if (e.y === 'now' && e.bpr) badges.appendChild(el('span', 'hs-badge', 'Buy ₱' + e.bpr));
-    if (e.y === 'psplus' || e.deluxe) badges.appendChild(el('span', 'hs-badge hs-badge-plus', 'Included in Deluxe'));
-    if (badges.childNodes.length) body.appendChild(badges);
     a.appendChild(body);
-    if (st.price) a.appendChild(el('span', 'hs-price', st.price));
+    a.appendChild(el('span', 'hs-status ' + label.cls, label.text));
     return a;
   }
 
@@ -103,7 +114,50 @@
     hits.forEach(function (e) { box.appendChild(row(e)); });
   }
 
-  input.addEventListener('focus', function () { load(render); });
+  var basePlaceholder = (input.getAttribute && input.getAttribute('placeholder')) || 'What game are you looking for?';
+  var reduceMotion = false;
+  try { reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (err) { reduceMotion = false; }
+  var typeTimer = null;
+  var typeNames = [];
+  var typeAt = 0;
+
+  function stopType() {
+    clearTimeout(typeTimer);
+    typeTimer = null;
+  }
+  function resumeType() {
+    stopType();
+    if (reduceMotion || document.activeElement === input || String(input.value || '').trim() || !typeNames.length) {
+      if (!String(input.value || '').trim() && document.activeElement !== input) input.placeholder = basePlaceholder;
+      return;
+    }
+    var name = typeNames[typeAt % typeNames.length];
+    var full = 'Try ' + name + '…';
+    var n = 0;
+    input.placeholder = '';
+    function step() {
+      if (document.activeElement === input || String(input.value || '').trim()) return;
+      n += 1;
+      input.placeholder = full.slice(0, n);
+      typeTimer = setTimeout(n < full.length ? step : function () { typeAt += 1; resumeType(); }, n < full.length ? 55 : 1400);
+    }
+    step();
+  }
+  function armType() {
+    if (reduceMotion) return;
+    load(function () {
+      typeNames = (index || []).filter(function (e) { return e && e.y === 'now' && e.t; }).map(function (e) { return e.t; });
+      resumeType();
+    });
+  }
+
+  input.addEventListener('focus', function () {
+    stopType();
+    input.placeholder = basePlaceholder;
+    load(render);
+  });
+  input.addEventListener('blur', function () { if (!String(input.value || '').trim()) resumeType(); });
+  armType();
   input.addEventListener('input', function () { load(render); render(); });
   dim.addEventListener('click', close);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });

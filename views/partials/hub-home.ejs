@@ -48,6 +48,69 @@
   </div>
 </section>
 
+<%
+  const hhToday = new Date().toISOString().slice(0, 10);
+  const hhSeenSoon = {};
+  const hhSoon = [];
+  (typeof upcoming !== 'undefined' && upcoming ? upcoming : []).forEach(function (g) {
+    if (!g || hhSeenSoon[g.id]) return;
+    if (g.release_date && g.release_date !== 'TBA' && g.release_date < hhToday) return;
+    hhSeenSoon[g.id] = true;
+    hhSoon.push(g);
+  });
+  hhSoon.sort(function (a, b) {
+    const da = (!a.release_date || a.release_date === 'TBA') ? '9999-99-99' : a.release_date;
+    const db = (!b.release_date || b.release_date === 'TBA') ? '9999-99-99' : b.release_date;
+    return da < db ? -1 : da > db ? 1 : String(a.title).localeCompare(String(b.title));
+  });
+  const hhSoonShow = hhSoon.slice(0, 6);
+  function hhReleaseLabel(ymd) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+    if (!m) return 'Date TBA';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[Number(m[2]) - 1] + ' ' + Number(m[3]) + ', ' + m[1];
+  }
+%>
+<% if (hhSoonShow.length) { %>
+<section class="section" id="comingSoon">
+  <div class="wrap">
+    <div class="row-head">
+      <div>
+        <h2>Coming soon</h2>
+        <p class="lede">Reserve now and we’ll hold your spot in line on Messenger.</p>
+      </div>
+      <a href="/browse?tab=coming-soon">View all ›</a>
+    </div>
+    <div class="card-grid hh-soon-grid">
+      <% hhSoonShow.forEach(function (g) {
+        const hhDated = g.release_date && g.release_date !== 'TBA';
+        const hhPlat = g.platform || 'PS5';
+      %>
+      <article class="hh-soon">
+        <a class="hh-soon-cover" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>">
+          <% if (g.cover_image) { %>
+          <img src="<%= g.cover_image %>" alt="" width="320" height="180" loading="lazy" decoding="async">
+          <% } else { %><span class="hh-soon-ph">No cover</span><% } %>
+          <% if (hhDated) { %>
+          <span class="hh-count" data-release="<%= g.release_date %>T00:00:00">
+            <span><b>0</b><small>DAYS</small></span>
+            <span><b>0</b><small>HRS</small></span>
+            <span><b>0</b><small>MIN</small></span>
+          </span>
+          <% } else { %><span class="hh-count hh-count-tba">Date TBA</span><% } %>
+        </a>
+        <div class="hh-soon-band">Coming soon</div>
+        <a class="hh-soon-title" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>"><%= g.title %></a>
+        <p class="hh-soon-when">Releases <%= hhReleaseLabel(g.release_date) %> · <%= hhPlat %></p>
+        <a class="hh-soon-go" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>">Reserve a slot</a>
+      </article>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<script src="/js/home-soon.js?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>" defer></script>
+<% } %>
+
 <section class="section" id="how" style="padding-top:0">
   <div class="wrap">
     <h2>How renting works</h2>

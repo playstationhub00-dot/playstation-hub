@@ -3,8 +3,24 @@
 .hs-title { margin: 0; font-size: 1.15rem; font-weight: 900; color: #fff; }
 .hs-sub { margin: 0.2rem 0 0.7rem; font-size: 0.82rem; color: #999; }
 .hs-box { position: relative; text-align: left; }
-.hs-input { width: 100%; box-sizing: border-box; padding: 0.85rem 1.1rem; border-radius: 50px; border: 2px solid #f0a500; background: #fff; color: #111; font-size: 1rem; font-weight: 600; outline: none; box-shadow: 0 6px 24px rgba(240, 165, 0, 0.22); }
-.hs-input::placeholder { color: #888; font-weight: 500; }
+.hs-input {
+  width: 100%; box-sizing: border-box; padding: 0.85rem 1.1rem; border-radius: 50px;
+  border: 2px solid transparent; color: #fff; font-size: 1rem; font-weight: 600; outline: none;
+  background:
+    linear-gradient(#161616, #161616) padding-box,
+    linear-gradient(120deg, #6b5420, #F5B800, #fff1b8, #F5B800, #6b5420) border-box;
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, 0% 50%;
+  box-shadow: 0 0 18px rgba(245, 184, 0, 0.28);
+  animation: hs-border 5.5s linear infinite;
+}
+@keyframes hs-border {
+  to { background-position: 0 0, 100% 50%; }
+}
+.hs-input::placeholder { color: #bdbdbd; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) {
+  .hs-input { animation: none; box-shadow: 0 0 0 1px rgba(245, 184, 0, 0.45); }
+}
 .hs-results { position: absolute; left: 0; right: 0; top: calc(100% + 0.5rem); background: #141414; border: 1px solid #2a2a2a; border-radius: 14px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7); overflow: hidden; max-height: 70vh; overflow-y: auto; }
 .hs-results[hidden], .hs-dim[hidden] { display: none; }
 .hs-dim { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.45); }
@@ -15,10 +31,12 @@
 .hs-row-booked .hs-img { filter: grayscale(0.6); }
 .hs-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
 .hs-name { font-size: 0.9rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hs-status { margin-left: auto; flex: none; font-size: 0.78rem; font-weight: 800; text-align: right; white-space: nowrap; }
 .hs-meta { font-size: 0.74rem; font-weight: 800; }
-.hs-free { color: #22c55e; }
-.hs-booked { color: #f87171; }
-.hs-soon { color: #60a5fa; }
+.hs-free { color: #3dce7a; }
+.hs-last { color: #F5B800; }
+.hs-booked { color: #9a9a9a; }
+.hs-soon { color: #c084fc; }
 .hs-psplus { color: #ffd700; }
 .hs-requested { color: #a78bfa; }
 .hs-price { flex: none; font-size: 0.8rem; font-weight: 800; color: #fff; text-align: right; }
