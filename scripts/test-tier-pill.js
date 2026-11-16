@@ -123,7 +123,7 @@ async function main() {
     const titleAt = partial.indexOf('class="gc2-title');
     const tierAt = partial.indexOf('tier-pill');
     const priceAt = partial.indexOf('class="gc2-price"');
-    assert.ok(titleAt > 0 && titleAt < tierAt && tierAt < priceAt, 'name, then tier tag, then price');
+    assert.ok(tierAt > 0 && tierAt < titleAt && titleAt < priceAt, 'tier tag, then name, then price');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
     assert.ok(css.includes('.gc2-badges {') && css.includes('flex-direction: column'), 'badges stack instead of sharing one line');
     const split = css.slice(css.indexOf('.gc2-split .gc2-body'));

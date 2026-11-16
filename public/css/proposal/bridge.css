@@ -200,6 +200,131 @@ body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #26262
   body.home2.hub .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* Reference game card: cover, category bar, prices, account rows, button. */
+body.hub a.rcard.gc2-card {
+  aspect-ratio: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+body.hub .games-grid,
+body.hub .card-grid { align-items: stretch; }
+body.hub .rcard .gc2-art {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  flex: none;
+  overflow: hidden;
+  background: #161616;
+}
+body.hub .rcard .gc2-cover,
+body.hub .rcard .gc2-cover-placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+body.hub .rcard .st-badge {
+  top: 8px;
+  left: 8px;
+  z-index: 4;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+body.hub .rcard .st-avail { background: #178a45; color: #fff; }
+body.hub .rcard .st-last { background: #e23d2b; color: #fff; }
+body.hub .rcard .st-full { background: #2c2c2c; color: #e6e6e6; }
+body.hub .rcard .card-ribbon,
+body.hub .rcard .gc2-badge-last { display: none; }
+body.hub .rcard .gc2-badges { top: 8px; left: auto; right: 8px; align-items: flex-end; width: auto; }
+body.hub .rcard .gc2-body {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0;
+  padding: 0 0 10px;
+  text-shadow: none;
+  background: #111;
+}
+body.hub .rcard .tier-pill {
+  display: block;
+  align-self: stretch;
+  width: auto;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+  text-shadow: none;
+  padding: 6px 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  background: #2a2a2a;
+  color: #eee;
+}
+body.hub .rcard .tier-pill.tier-blue { background: #F5B800; color: #111; }
+body.hub .rcard .gc2-title,
+body.hub .rcard .gc2-title-muted { color: #fff; }
+body.hub .rcard .gc2-title {
+  margin: 0;
+  padding: 10px 10px 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: none;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+}
+body.hub .rcard .gc2-tags { display: flex; flex-direction: column; flex: 1; gap: 6px; min-height: 0; }
+body.hub .rcard .gc2-price { margin: 0; padding: 0 10px; font-size: 13px; color: #d0d0d0; text-shadow: none; }
+body.hub .rcard .gc-price-bit { white-space: nowrap; }
+body.hub .rcard .gc2-price b { color: #F5B800; font-weight: 800; }
+body.hub .rcard .gc2-deal { padding: 0 10px; }
+body.hub .rcard .gc-slots { display: flex; flex-direction: column; gap: 4px; padding: 2px 10px 0; }
+body.hub .rcard .slot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #e8e8e8; min-width: 0; }
+body.hub .rcard .slot > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.hub .rcard .slot > span:last-child { white-space: nowrap; flex: none; }
+body.hub .rcard .slot .gc-ico { display: inline-flex; width: 14px; height: 14px; color: #cfcfcf; flex: none; }
+body.hub .rcard .slot .gc-ico svg { width: 14px; height: 14px; }
+body.hub .rcard .slot span:last-child { margin-left: auto; font-weight: 700; }
+body.hub .rcard .slot .ok { color: #3dce7a; }
+body.hub .rcard .slot .low { color: #F5B800; }
+body.hub .rcard .slot .full { color: #8d8d8d; font-weight: 600; }
+body.hub .rcard .rcta {
+  display: block;
+  margin: auto 10px 0;
+  text-align: center;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+body.hub .rcard .rcta.rent { background: #F5B800; color: #111; border: 1.5px solid #F5B800; }
+body.hub .rcard .rcta.line { background: transparent; color: #F5B800; border: 1.5px solid #F5B800; }
+body.hub .rcard.full { opacity: 1; }
+body.hub .rcard.full .gc2-cover,
+body.hub .rcard.full .gc2-cover-placeholder { filter: none; }
+
 /* The proposal .plus-hero grid was squeezing the live Deluxe hero into one column. */
 body.hub section.ppc-hero.plus-hero {
   display: block;
