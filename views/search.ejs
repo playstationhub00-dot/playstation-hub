@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { title: (q ? q + ' — ' : '') + 'Search — PlayStation Hub', description: 'Search PS5 and PS4 games to rent, buy, or play on PS Plus Deluxe.', canonicalPath: '/search' }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+</head>
+<body class="hub">
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: '' }) %>
+<div class="sr-wrap">
+  <header class="dx-head">
+    <div class="dx-kicker">Site-wide search</div>
+    <h1>Search results</h1>
+  </header>
+  <form class="sr-field" method="get" action="/search" role="search">
+    <input type="search" name="q" value="<%= q %>" placeholder="Search games" aria-label="Search games">
+    <button class="btn-primary" type="submit">Search</button>
+  </form>
+  <div id="srHits"></div>
+</div>
+<%- include('partials/footer') %>
+<script>
+(function () {
+  var q = <%- JSON.stringify(q) %>;
+  var deluxeFrom = <%= Number(deluxeFrom) || 0 %>;
+  var box = document.getElementById('srHits');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  if (!q.trim()) { box.innerHTML = '<p class="lede">Type a game name.</p>'; return; }
+  fetch('/api/search-index').then(function (r) { return r.json(); }).then(function (index) {
+    var t = q.trim().toLowerCase();
+    var byTitle = {};
+    index.forEach(function (e) {
+      var key = String(e.t || '').toLowerCase();
+      if (key.indexOf(t) < 0 && String(e.k || '').toLowerCase().indexOf(t) < 0) return;
+      if (!byTitle[key]) byTitle[key] = { t: e.t, img: e.img, p: e.p, u: e.u, y: e.y };
+      var row = byTitle[key];
+      if (e.y === 'now') { row.rent = e.pr; row.buy = e.bpr; row.slots = e.s; row.rentUrl = e.u; row.deluxe = e.deluxe; row.img = e.img || row.img; }
+      if (e.y === 'psplus') { row.plus = true; row.plusUrl = e.u; row.img = row.img || e.img; }
+    });
+    var rows = Object.keys(byTitle).map(function (k) { return byTitle[k]; }).slice(0, 12);
+    if (!rows.length) { box.innerHTML = '<p class="lede">No games match. <a href="/requests?title=' + encodeURIComponent(q) + '">Request it</a>.</p>'; return; }
+    box.innerHTML = rows.map(function (e) {
+      var badges = '';
+      if (e.plus || e.deluxe) badges += '<span class="sr-badge plus">Included in PS Plus Deluxe</span>';
+      if (e.rent) badges += '<span class="sr-badge rent">Rent' + (e.slots > 0 ? ' · ' + e.slots + ' slot' + (e.slots === 1 ? '' : 's') + ' free' : ' · join the line') + '</span>';
+      if (e.buy) badges += '<span class="sr-badge buy">Buy</span>';
+      var prices = '';
+      if (e.rent) prices += '<div>Rent this game from <b>₱' + e.rent + '</b> / week</div>';
+      if (e.buy) prices += '<div>Buy to own from <b>₱' + e.buy + '</b></div>';
+      if ((e.plus || e.deluxe) && deluxeFrom) prices += '<div>Or play it in PS Plus Deluxe from <b>₱' + deluxeFrom + '</b> / week</div>';
+      var note = '';
+      if (e.rent && deluxeFrom && e.rent < deluxeFrom) {
+        note = '<div class="sr-callout"><b>Deluxe is not cheaper for this title alone.</b> A single rental starts at ₱' + e.rent + ', which is less than Deluxe at ₱' + deluxeFrom + ' a week.</div>';
+      }
+      var href = e.rentUrl || e.plusUrl || e.u || '/browse';
+      return '<a class="sr-hit" href="' + esc(href) + '">' +
+        (e.img ? '<img src="' + esc(e.img) + '" alt="' + esc(e.t) + '">' : '<img alt="">') +
+        '<div><h2>' + esc(e.t) + '</h2><div class="plat">' + esc(e.p || '') + '</div><div class="sr-badges">' + badges + '</div><div class="sr-prices">' + prices + '</div>' + note + '</div></a>';
+    }).join('');
+  }).catch(function () { box.innerHTML = '<p class="lede">Search is unavailable right now.</p>'; });
+})();
+</script>
+</body>
+</html>

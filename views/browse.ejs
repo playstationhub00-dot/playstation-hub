@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/browse-filters.css?v=<%= assetV %>">
 </head>
-<body class="browse-page">
+<body class="browse-page hub rent-page">
 
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
@@ -18,8 +18,10 @@
   and filter change with the same rules (public/js/browse-filter-core.js),
   showing, hiding and ordering these same cards — no reload.
 %>
-<div class="browse-header">
-  <h1>Browse games</h1>
+<div class="browse-header rent-head">
+  <div class="rent-kicker">Rent · All games</div>
+  <h1>Browse PS5 &amp; PS4 games</h1>
+  <p class="rent-lede">Available titles first, then full games you can still join the waitlist for. Weekly prices and slot counts come from each game.</p>
 </div>
 
 <!-- SEARCH, TABS AND RESULTS BAR — pinned under the menu (on phones the search box scrolls away) -->

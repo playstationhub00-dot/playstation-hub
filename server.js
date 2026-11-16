@@ -5464,6 +5464,17 @@ function slotsFreeFor(g, accountSummaryMap) {
   return avail.ntSlots + avail.trSlots + (avail.showPs4 ? avail.ps4Slots : 0);
 }
 
+app.get('/search', (req, res) => {
+  const q = String(req.query.q || req.query.search || '').slice(0, 80);
+  res.render('search', {
+    q,
+    deluxeFrom: psplusFromWeekly(),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: getSiteSettings()
+  });
+});
+
 app.get('/api/search-index', async (req, res) => {
   const accountSummaryMap = buildAccountSummaryMap();
   const available = getGames().map(resolveGamePrices).map(resolveSlotDays).map(g => {

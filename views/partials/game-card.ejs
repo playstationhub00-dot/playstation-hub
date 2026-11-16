@@ -57,8 +57,8 @@
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
   const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
 %>
-<a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card gc2-split<%= allUnavail ? ' gc2-full' : '' %>">
-  <div class="gc2-art">
+<a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card rcard<%= allUnavail ? ' full gc2-full' : '' %>">
+  <div class="art gc2-art">
     <% if (game.cover_image) { %>
       <img <%- imgCard(game.cover_image) %> width="480" height="720" alt="<%= game.title %>" class="gc2-cover" loading="lazy" decoding="async" style="object-position: <%= game.cover_focal_x != null ? game.cover_focal_x : 50 %>% <%= game.cover_focal_y != null ? game.cover_focal_y : 50 %>%;">
     <% } else { %>
@@ -70,6 +70,7 @@
       </div>
     <% } %>
 
+    <span class="st-badge <%= isLastSlot ? 'st-last' : (allUnavail ? 'st-full' : 'st-avail') %>"><%= isLastSlot ? 'Last slot' : (allUnavail ? 'Full' : 'Available') %></span>
     <% if (!isLastSlot && allUnavail) { %>
       <%# The corner ribbon replaces the old "No slots" pill rather than joining
           it — two labels saying the same thing crowded the card, and this is the
@@ -86,7 +87,7 @@
     <% } %>
   </div>
 
-  <div class="gc2-body">
+  <div class="body gc2-body">
     <div class="gc2-title<%= allUnavail ? ' gc2-title-muted' : '' %>"><%= game.title %></div>
     <div class="gc2-tags">
       <% if (gcTier) { %><span class="tier-pill tier-<%= gcTier.color %>"><%= gcTier.name %></span><% } %>
@@ -96,19 +97,25 @@
       <% const gcDealBase = Math.min(...[game['nt_price_' + gcDeal.days + 'd'], hasTrophy ? game['tr_price_' + gcDeal.days + 'd'] : 0].filter(p => p > 0)); %>
       <div class="gc2-price"><%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %> <b>₱<%= gcFinal(gcDealBase, gcDeal.days) %></b><s class="gc2-price-was">₱<%= gcDealBase %></s></div>
       <% } else if (gcStartPrice) { %>
-      <div class="gc2-price"><% if (gcCheapest && gcCheapest.days === 7) { %>Weekly <% } %>from <b>₱<%= gcStartPrice %></b><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
+      <%
+        const gcWeekBases = [game.nt_price_7d, hasTrophy ? game.tr_price_7d : 0].filter(p => p > 0);
+        const gcMonthBases = [game.nt_price_30d, hasTrophy ? game.tr_price_30d : 0].filter(p => p > 0);
+        const gcWeekShow = gcWeekBases.length ? Math.min.apply(null, gcWeekBases.map(b => gcFinal(b, 7))) : null;
+        const gcMonthShow = gcMonthBases.length ? Math.min.apply(null, gcMonthBases.map(b => gcFinal(b, 30))) : null;
+      %>
+      <div class="prices gc2-price"><% if (gcWeekShow) { %>Weekly from <b>₱<%= gcWeekShow %></b><% } else { %>from <b>₱<%= gcStartPrice %></b><% } %><% if (gcMonthShow) { %> <span class="slash">·</span> Monthly <b>₱<%= gcMonthShow %></b><% } %><% if (gcStartWas) { %><s class="gc2-price-was">₱<%= gcStartWas %></s><% } %></div>
       <% } else { %>
       <div class="gc2-price">See pricing</div>
       <% } %>
       <% if (gcDeal) { %>
       <div class="gc2-deal">🔥 <%= gcDeal.pct %>% OFF · <%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %></div>
       <% } %>
-      <div class="gc-slots">
-        <span class="<%= ntSlots > 0 ? 'gc-slot-on' : 'gc-slot-off' %>" title="Non-Trophy slots left">NT <%= ntSlots %></span>
-        <% if (hasTrophy) { %><span class="<%= trSlots > 0 ? 'gc-slot-on' : 'gc-slot-off' %>" title="Trophy slots left">TR <%= trSlots %></span><% } %>
-        <% if (showPs4) { %><span class="<%= ps4Slots > 0 ? 'gc-slot-on' : 'gc-slot-off' %>" title="PS4 Primary slots left">PS4 <%= ps4Slots %></span><% } %>
+      <div class="slots gc-slots">
+        <div class="slot"><span>Non-Trophy</span><span class="<%= ntSlots > 1 ? 'ok' : (ntSlots === 1 ? 'low' : 'full') %>"><%= ntSlots ? (ntSlots + ' left') : 'Full' %></span></div>
+        <% if (hasTrophy) { %><div class="slot"><span>Trophy</span><span class="<%= trSlots > 1 ? 'ok' : (trSlots === 1 ? 'low' : 'full') %>"><%= trSlots ? (trSlots + ' left') : 'Full' %></span></div><% } %>
+        <% if (showPs4) { %><div class="slot"><span>PS4 Primary</span><span class="<%= ps4Slots > 1 ? 'ok' : (ps4Slots === 1 ? 'low' : 'full') %>"><%= ps4Slots ? (ps4Slots + ' left') : 'Full' %></span></div><% } %>
       </div>
-      <span class="gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
+      <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
     </div>
   </div>
 </a>

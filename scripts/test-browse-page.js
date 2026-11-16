@@ -124,7 +124,7 @@ async function main() {
 
   console.log('\nthe page');
   await okAsync('title, search box, the tab row with counts (no Bundles tab: there are none), All games on', async () => {
-    assert.ok(all.includes('<h1>Browse games</h1>'));
+    assert.ok(all.includes('<h1>Browse PS5 &amp; PS4 games</h1>'));
     assert.ok(opening(all, 'bfSearch').includes('placeholder="Search 6 games…"'));
     assert.ok(opening(all, 'bfSearch').includes('value=""'));
     assert.deepStrictEqual(tabs(all).map(t => t.key + ' ' + t.count), ['all 6', 'most-rented 3', 'new 3', 'coming-soon 3', 'deals 1', 'available 5', 'buy 1', 'psplus 2']);

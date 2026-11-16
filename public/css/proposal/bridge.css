@@ -1,0 +1,162 @@
+/* Maps the live storefront onto the proposal sheets without removing
+   the ids the page scripts already use. */
+
+body.hub { background: #0a0a0a; color: #fff; }
+body.hub nav { height: 64px; background: rgba(10,10,10,0.94); border-bottom: 1px solid #262626; }
+body.hub .nav-links a.active { color: #F5B800; }
+body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; font-weight: 700; }
+
+/* Rent catalog */
+body.browse-page.hub .browse-header { max-width: 1360px; margin: 0 auto; padding: 18px 24px 0; }
+body.browse-page.hub .browse-header h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0; }
+body.browse-page.hub .bf-top { position: static; background: transparent; border: 0; backdrop-filter: none; }
+body.browse-page.hub .bf-top-in { max-width: 1360px; padding: 8px 24px 0; }
+body.browse-page.hub .bf-tabs { display: none; }
+body.browse-page.hub .bf-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 22px;
+  max-width: 1360px;
+  margin: 14px auto 0;
+  padding: 0 24px 40px;
+  align-items: start;
+}
+body.browse-page.hub .bf-panel {
+  display: block;
+  position: sticky;
+  top: 80px;
+  inset: auto;
+  z-index: 2;
+  height: auto;
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 14px;
+  padding: 12px;
+}
+body.browse-page.hub .bf-backdrop,
+body.browse-page.hub .bf-x,
+body.browse-page.hub .bf-foot { display: none; }
+body.browse-page.hub .bf-sheet {
+  width: 100%;
+  max-height: calc(100vh - 100px);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: auto;
+}
+body.browse-page.hub .bf-head { padding: 0 0 8px; border: 0; }
+body.browse-page.hub .bf-head h2 { font-size: 13px; }
+body.browse-page.hub .bf-body { padding: 0; overflow: visible; }
+body.browse-page.hub .bf-sec-head h3 {
+  font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #888;
+}
+body.browse-page.hub .bf-sec { display: flex; flex-wrap: wrap; gap: 6px; }
+body.browse-page.hub .bf-sec-head { width: 100%; margin: 10px 0 4px; }
+body.browse-page.hub .bf-opt {
+  display: inline-flex;
+  width: auto;
+  border: 1px solid #262626;
+  border-radius: 99px;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #101010;
+  gap: 5px;
+}
+body.browse-page.hub .bf-opt input { width: 14px; height: 14px; }
+body.browse-page.hub .bf-results { padding-top: 0; }
+body.browse-page.hub .games-grid,
+body.browse-page.hub .rentals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+body.browse-page.hub .rcard {
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+body.browse-page.hub .rcard.full { opacity: 0.78; }
+body.browse-page.hub .rcard .art { position: relative; aspect-ratio: 2/3; background: #0d0d0d; }
+body.browse-page.hub .rcard .art img,
+body.browse-page.hub .rcard .gc2-cover { width: 100%; height: 100%; object-fit: cover; }
+body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margin: 8px 0; }
+
+@media (max-width: 1100px) {
+  body.browse-page.hub .games-grid,
+  body.browse-page.hub .rentals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  body.browse-page.hub .bf-layout { grid-template-columns: 1fr; padding: 0 14px 80px; }
+  body.browse-page.hub .bf-panel { display: none; position: fixed; inset: 0; z-index: 2000; border-radius: 0; top: auto; }
+  body.browse-page.hub .bf-panel.bf-show { display: block; }
+  body.browse-page.hub .bf-backdrop { display: block; }
+  body.browse-page.hub .bf-foot, body.browse-page.hub .bf-x { display: flex; }
+  body.browse-page.hub .bf-sheet { background: #121212; border-radius: 18px 18px 0 0; position: fixed; left: 0; right: 0; bottom: 0; max-height: 86vh; width: 100%; }
+  body.browse-page.hub .games-grid,
+  body.browse-page.hub .rentals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.browse-page.hub .bf-open { display: inline-flex !important; }
+}
+
+/* Home cards share the rent card look */
+body.home2.hub .hero .search { display: block; max-width: 640px; }
+body.home2.hub .hs-box { display: flex; gap: 10px; }
+body.home2.hub .hs-input { flex: 1; background: #101010; border: 1px solid #262626; border-radius: 12px; padding: 12px 14px; color: #fff; font-size: 15px; }
+body.home2.hub .card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
+@media (max-width: 900px) { body.home2.hub .card-grid { grid-template-columns: 1fr 1fr; } }
+
+/* Game page rental box */
+body.gp-redesign.hub .gdh-card,
+body.gp-redesign.hub .gp-panel {
+  background: #141414;
+  border: 1px solid #262626;
+  border-radius: 14px;
+}
+body.gp-redesign.hub .gp-panel { position: sticky; top: 80px; }
+body.gp-redesign.hub .gd-type-pill,
+body.gp-redesign.hub .gd-dur-btn {
+  border-radius: 12px;
+  border: 1px solid #262626;
+  background: #161616;
+}
+body.gp-redesign.hub .gd-order-btn,
+body.gp-redesign.hub .gd-sb-btn,
+body.gp-redesign.hub .gd-msg-primary {
+  border-radius: 12px;
+  background: #F5B800;
+  color: #0a0a0a;
+  font-weight: 800;
+}
+body.gp-redesign.hub .gd-trial, body.hub .callout.ok, body.hub .callout.trial {
+  background: #0f2a1c; border: 1px solid #1d5a3a; color: #baf5d4; border-radius: 12px;
+}
+
+/* Checkout progress */
+body.hub .ord-page { width: min(680px, calc(100% - 48px)); margin: 18px auto 40px; }
+body.hub .ord-steps { gap: 6px; }
+body.hub .ord-steps li { background: #161616; border-radius: 99px; border: 1px solid #262626; }
+body.hub .ord-steps li.on { background: #F5B800; color: #0a0a0a; }
+body.hub .ord-card, body.hub .ord-step { background: #141414; border: 1px solid #262626; border-radius: 14px; }
+
+/* Search hits */
+.sr-wrap { width: min(760px, calc(100% - 48px)); margin: 24px auto 48px; }
+.sr-hit { display: grid; grid-template-columns: 92px 1fr; gap: 14px; background: #141414; border: 1px solid #262626; border-radius: 14px; padding: 12px; margin-top: 12px; color: inherit; text-decoration: none; }
+.sr-hit img { width: 92px; height: 128px; object-fit: cover; border-radius: 8px; background: #111; }
+.sr-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.sr-badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 99px; background: #1a1a1a; border: 1px solid #333; }
+.sr-badge.plus { color: #fde68a; }
+.sr-badge.rent { color: #86efac; border-color: #14532d; }
+.sr-badge.buy { color: #93c5fd; }
+.sr-prices { font-size: 13.5px; color: #ccc; display: grid; gap: 2px; }
+.sr-prices b { color: #F5B800; }
+.sr-field { display: flex; gap: 8px; }
+.sr-field input { flex: 1; background: #101010; border: 1px solid #262626; color: #fff; border-radius: 12px; padding: 12px 14px; font: inherit; }
+.sr-callout { margin-top: 12px; background: #1f1a08; border: 1px solid #3a2f0a; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: #f3e3a6; }

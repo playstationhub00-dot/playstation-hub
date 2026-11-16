@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/psplus-catalog.css?v=<%= assetV %>">
 </head>
-<body>
+<body class="hub sec-page">
 
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'psplus' }) %>
@@ -14,7 +14,7 @@
 <%
   const heroSlots = ((slots || {}).nt_slots || 0) + ((slots || {}).tr_slots || 0) + ((slots || {}).ps4_slots || 0);
 %>
-<section class="ppc-hero">
+<section class="ppc-hero plus-hero">
   <div class="ppc-hero-inner">
     <div>
       <div class="ppc-eyebrow">PlayStation Hub</div>

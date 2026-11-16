@@ -1,0 +1,131 @@
+<%
+  const hhGames = (typeof games !== 'undefined' && games) ? games : [];
+  const hhPromo = (typeof promo !== 'undefined' && promo) ? promo : {};
+  const hhDeposit = hhPromo.deposit != null && hhPromo.deposit !== '' ? Number(hhPromo.deposit) : 100;
+  const hhLate = hhPromo.late_fee_per_day != null && hhPromo.late_fee_per_day !== '' ? Number(hhPromo.late_fee_per_day) : 20;
+  function hhMin(keys) {
+    const vals = [];
+    hhGames.forEach(function (g) {
+      if (/ps plus|playstation plus/i.test(g.title || '')) return;
+      keys.forEach(function (k) {
+        const n = Number(g[k]) || 0;
+        if (n > 0) vals.push(n);
+      });
+    });
+    return vals.length ? Math.min.apply(null, vals) : null;
+  }
+  const hhNt = hhMin(['nt_price_7d']);
+  const hhTr = hhMin(['tr_price_7d']);
+  const hhFrom = [hhNt, hhTr].filter(function (n) { return n; });
+  const hhWeek = hhFrom.length ? Math.min.apply(null, hhFrom) : null;
+  const hhPeople = home && home.trust && home.trust.people;
+  const hhQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); });
+  const hhNew = (home && home.newGames && home.newGames.length) ? home.newGames.slice(0, 4) : hhGames.slice(0, 4);
+  const hhMonthly = home && home.powerUp && home.powerUp.days === 30 ? home.powerUp.pct : 0;
+%>
+<% if (hhMonthly) { %>
+<div class="promo-bar">Monthly rentals are <b><%= hhMonthly %>% off</b> while this promo is on. One use per customer. The code is on the game page.</div>
+<% } %>
+<div class="wrap hero" id="find">
+  <h1 class="hm-tagline">Rent the latest <em>PS5 &amp; PS4</em> games. Sign in by QR — no password.</h1>
+  <p class="sub">Weekly or monthly, prices depend on the game.<% if (hhNt) { %> Starting from ₱<%= hhNt %> a week on Non-Trophy<% if (hhTr) { %>, or ₱<%= hhTr %> a week on Trophy and PS4 Primary<% } %>.<% } %> Ready in minutes, no discs or meetups.</p>
+  <div class="search">
+    <%- include('home-search', { featured: typeof featured !== 'undefined' ? featured : [], compact: true }) %>
+  </div>
+  <div class="hero-actions">
+    <a class="btn-primary btn-lg" href="/browse">Browse games</a>
+    <a class="btn-ghost btn-lg" href="/how-it-works">Try 3 hours free</a>
+  </div>
+  <div class="trust-line" id="liveRenters">
+    <% if (hhPeople) { %><div class="stat"><%= hhPeople.toLocaleString('en-US') %> players served<small>Live from admin customer records</small></div><% } %>
+    <div class="stat"><%= hhGames.length %> games to rent<small>As listed on Browse</small></div>
+    <% if (hhWeek) { %><div class="stat">From ₱<%= hhWeek %> a week<small>Exact price depends on the game</small></div><% } %>
+    <% if (hhQuotes.length) { %><div class="stat"><%= hhQuotes.length %> player review<%= hhQuotes.length === 1 ? '' : 's' %><small>Shown once, below</small></div><% } %>
+  </div>
+</div>
+
+<section class="section" id="newReleasesSection">
+  <div class="wrap">
+    <div class="row-head">
+      <div>
+        <h2>New releases</h2>
+        <p class="lede">Each card shows that game’s weekly and monthly price, plus Trophy and Non-Trophy status.</p>
+      </div>
+      <a href="/browse?tab=new">View all ›</a>
+    </div>
+    <div class="card-grid">
+      <% hhNew.forEach(function (g) { %>
+        <%- include('game-card', { game: g, showWeekly: true }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how" style="padding-top:0">
+  <div class="wrap">
+    <h2>How renting works</h2>
+    <p class="lede">Ready in minutes. You never share a password.</p>
+    <div class="steps">
+      <div class="step"><div class="num">01</div><h3>Pick a game</h3><p>Choose from the PS5 and PS4 library. Weekly or monthly — longer rentals cost less per day. Prices depend on the game.</p></div>
+      <div class="step"><div class="num">02</div><h3>Pay your way</h3><p>GCash or Maya for local customers, PayPal for international customers. QR Ph is on the order page when it is switched on. Bank transfer stays on Messenger. Card checkout is not live yet.</p></div>
+      <div class="step"><div class="num">03</div><h3>Sign in by QR</h3><p>Scan a QR code from your own screen and send it on Messenger. Our account signs in. Your password never leaves your hands.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="players" style="padding-top:0">
+  <div class="wrap">
+    <h2>Choose your account type</h2>
+    <p class="lede">Not sure which one fits? Here’s the simple comparison. Exact weekly and monthly prices are on each game’s page.</p>
+    <div class="accounts">
+      <div class="account">
+        <div class="tier">NON-TROPHY</div>
+        <div class="price"><% if (hhNt) { %>From ₱<%= hhNt %> <% } %><span>/ week</span></div>
+        <ul>
+          <li>Play on our account</li>
+          <li>Free 3-hour try before you pay</li>
+          <li>No deposit, no late fee</li>
+          <li>Trophies do not go to your profile</li>
+        </ul>
+        <p class="fine">Exact weekly and monthly prices depend on the game.</p>
+      </div>
+      <div class="account">
+        <div class="tier">TROPHY</div>
+        <div class="price"><% if (hhTr) { %>From ₱<%= hhTr %> <% } %><span>/ week</span></div>
+        <ul>
+          <li>Play on your own PSN profile</li>
+          <li>Trophies and saves stay yours</li>
+          <li>₱<%= hhDeposit %> refundable deposit</li>
+          <li>₱<%= hhLate %> per late day, from the deposit</li>
+        </ul>
+        <p class="fine">Exact weekly and monthly prices depend on the game.</p>
+      </div>
+      <div class="account">
+        <div class="tier regular">PS4 PRIMARY</div>
+        <div class="price"><% if (hhTr) { %>From ₱<%= hhTr %> <% } %><span>/ week</span></div>
+        <ul>
+          <li>Same starting weekly price as Trophy</li>
+          <li>For games that support PS4</li>
+          <li>Play on your own PSN profile</li>
+          <li>₱<%= hhDeposit %> refundable deposit, ₱<%= hhLate %> late fee</li>
+        </ul>
+        <p class="fine">Ask about PS4 Primary on a PS4 or PS4/PS5 game.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="reviewsSection" style="padding-top:0">
+  <div class="wrap">
+    <h2>What players actually say</h2>
+    <p class="lede">Real reviews from people who already rented with us. Each quote is shown once.</p>
+    <% if (hhQuotes.length) { %>
+    <div class="reviews">
+      <% hhQuotes.forEach(function (r) { %>
+      <div class="quote"><p>“<%= r.text %>”</p><cite><%= reviewDisplayName(r) %></cite></div>
+      <% }) %>
+    </div>
+    <% } %>
+    <a class="fb-link" href="https://facebook.com/PlaystationHub00">More reviews on our Facebook Page →</a>
+  </div>
+</section>
