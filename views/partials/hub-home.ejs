@@ -17,7 +17,7 @@
   const hhNt = hhMin(['nt_price_7d']);
   const hhTr = hhMin(['tr_price_7d']);
   const hhQuotes = (reviews || []).filter(function (r) { return r && String(r.text || '').trim(); });
-  const hhNew = (home && home.newGames && home.newGames.length) ? home.newGames.slice(0, 4) : hhGames.slice(0, 4);
+  const hhNew = (home && home.newGames && home.newGames.length) ? home.newGames.slice(0, 6) : hhGames.slice(0, 6);
   const hhMonthly = home && home.powerUp && home.powerUp.days === 30 ? home.powerUp.pct : 0;
 %>
 <%- include('announcement-banner') %>
