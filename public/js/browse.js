@@ -102,6 +102,21 @@
     $('bfEmpty').hidden = v.count > 0;
     $('bfReset').href = C.href(C.resetState(state));
     renderPsplus(v);
+    syncFullHead();
+    if (!draft) {
+      draft = copy(state);
+      renderPanel();
+      draft = null;
+    }
+  }
+  function syncFullHead() {
+    var head = $('bfFullHead');
+    var grid = $('bfGrid');
+    if (!head || !grid) return;
+    if (grid.hidden) { head.hidden = true; return; }
+    var any = false;
+    each(grid, '.bf-item', function (el) { if (!el.hidden && el.querySelector('.gc2-full')) any = true; });
+    head.hidden = !any;
   }
   function go(next) {
     state = next;
@@ -187,16 +202,22 @@
   });
   form.addEventListener('change', function (e) {
     var row = e.target.closest('.bf-opt');
-    if (!row || !draft) return;
+    if (!row) return;
+    // Phone sheet keeps a draft until "Show N games". The desktop sidebar
+    // applies the tick immediately because the sheet is already open.
+    if (!draft) { go(C.toggle(state, row.getAttribute('data-group'), row.getAttribute('data-value'))); return; }
     draft = C.toggle(draft, row.getAttribute('data-group'), row.getAttribute('data-value'));
     renderPanel();
   });
   form.addEventListener('click', function (e) {
     var clear = e.target.closest('[data-clear]');
-    if (clear && draft) { draft = C.clearGroup(draft, clear.getAttribute('data-clear')); renderPanel(); }
+    if (!clear) return;
+    if (!draft) { go(C.clearGroup(state, clear.getAttribute('data-clear'))); return; }
+    draft = C.clearGroup(draft, clear.getAttribute('data-clear'));
+    renderPanel();
   });
   $('bfClearAll').addEventListener('click', function () {
-    if (!draft) return;
+    if (!draft) { go(C.clearFilters(state)); return; }
     draft = C.clearFilters(draft);
     renderPanel();
   });

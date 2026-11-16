@@ -8,7 +8,7 @@
   }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
-<body>
+<body class="hub flow-page">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: '' }) %>
 
@@ -85,7 +85,24 @@
   const paidWhen = order.paid_at ? new Date(order.paid_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
 %>
 
-<div class="ord-page">
+<div class="ord-page flow">
+  <%
+    const ordPaidStep = !!(typeof isPaidOrder !== 'undefined' && isPaidOrder) || ['active', 'awaiting_qr', 'qr_pending', 'awaiting_return', 'verifying_return', 'closed', 'reserved'].includes(order.state);
+    const ordStep = ordPaidStep ? 4 : 3;
+    const ordNames = ['Review', 'Details', 'Pay', 'Done'];
+  %>
+  <div class="prog" aria-label="Checkout">
+    <div class="prog-top">
+      <div class="prog-kicker">Step <%= ordStep %> of 4</div>
+      <div class="prog-name"><%= ordNames[ordStep - 1] %><% if (ordStep === 3) { %> · ₱<%= (order.amount_due || 0) + (order.deposit_due || 0) %><% } %></div>
+    </div>
+    <div class="prog-track">
+      <% for (var si = 1; si <= 4; si++) { %><div class="prog-dot<%= si < ordStep ? ' done' : (si === ordStep ? ' on' : '') %>"></div><% } %>
+    </div>
+    <div class="prog-labels">
+      <% ordNames.forEach(function (name, i) { var n = i + 1; %><span class="<%= n < ordStep ? 'done' : (n === ordStep ? 'on' : '') %>"><%= name %></span><% }); %>
+    </div>
+  </div>
   <div class="ord-ref-bar">
     <span class="ord-ref-label">Your reference</span>
     <span class="ord-ref-code"><%= order.ref %></span>

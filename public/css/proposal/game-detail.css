@@ -1,0 +1,340 @@
+html, body.gd-compact { overflow-x: hidden; max-width: 100%; }
+/* Compact game description page — 16 Nov 2026 revision */
+
+body.gd-compact { font-size: 15px; }
+
+.gd-compact .proposal-banner { padding: 5px 16px; }
+.gd-compact .promo-bar { padding: 8px 24px; font-size: 12.5px; }
+
+.gd-compact .crumbs { padding: 12px 0 10px; font-size: 12.5px; }
+
+/* Two-column shell: story left, sticky rental right */
+.gd-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-areas:
+    "hero rental"
+    "rest rental"
+    "similar similar";
+  gap: 24px;
+  align-items: start;
+  padding-bottom: 28px;
+}
+.gd-hero-left { grid-area: hero; }
+.gd-shell > .rental { grid-area: rental; }
+.gd-rest { grid-area: rest; min-width: 0; }
+.gd-shell > .similar-block { grid-area: similar; }
+
+.gd-hero-left {
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 4px;
+}
+.gd-compact .gd-cover {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #111;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+}
+.gd-compact .gd-cover img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
+
+.gd-compact .gd-kicker {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.gd-compact .gd-hero-left h1 {
+  font-size: 28px;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 0 0 4px;
+}
+.gd-compact .gd-pub { color: var(--text-secondary); font-size: 13px; margin-bottom: 10px; }
+.gd-compact .gd-pub b { color: #fff; }
+
+/* Compact fact chips */
+.facts-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.facts-inline span {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1.25;
+  color: #eee;
+}
+.facts-inline span b {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.gd-lead {
+  font-size: 14px;
+  color: #ddd;
+  line-height: 1.45;
+  margin: 0;
+}
+.gd-lead strong { color: #fff; }
+
+/* Tabs */
+.gd-tabs-wrap {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.gd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: #101010;
+}
+.gd-tab {
+  background: none;
+  color: #aaa;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 12.5px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.gd-tab.on {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.gd-panel { padding: 14px 16px 16px; }
+.gd-panel[hidden] { display: none !important; }
+.gd-panel h3 { font-size: 14px; margin: 0 0 6px; }
+.gd-panel p { color: var(--text-secondary); font-size: 13.5px; margin: 0 0 8px; }
+.gd-panel p:last-child { margin-bottom: 0; }
+
+.why-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.why-list li {
+  background: #101010;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  color: #ccc;
+}
+.why-list b { display: block; color: #fff; font-size: 13px; margin-bottom: 2px; }
+
+.how-mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.how-mini .how-step { padding: 10px; }
+.how-mini .num { font-size: 10.5px; margin-bottom: 4px; }
+.how-mini h3 { font-size: 13px; margin-bottom: 4px; }
+.how-mini p { font-size: 12px; color: var(--text-secondary); margin: 0; }
+.how-mini .qr-frame { width: 36px; height: 36px; margin: 6px 0; }
+.how-note { font-size: 11px; color: #888; margin-top: 8px !important; }
+
+.faq-mini { display: grid; gap: 8px; }
+.faq-mini .faq { padding: 8px 10px; }
+.faq-mini h3 { font-size: 13px; margin-bottom: 2px; }
+.faq-mini p { font-size: 12.5px; margin: 0; }
+
+.rev-mini { padding: 0; }
+.rev-mini .rev-empty { padding: 12px 0 0; border: 0; background: none; }
+.rev-mini p { font-size: 13.5px; }
+.rev-mini .fb-link { margin-top: 8px; font-size: 13px; }
+
+/* Media strip: trailer + screenshots in one row */
+.media-strip { margin-bottom: 16px; }
+.media-strip .row-head { margin-bottom: 8px; align-items: center; }
+.media-strip h2 { font-size: 15px; margin: 0; }
+.media-row {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(4, 1fr);
+  gap: 6px;
+}
+.media-row .trailer,
+.media-row figure {
+  margin: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #111;
+  aspect-ratio: 16 / 9;
+  position: relative;
+}
+.media-row img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-row .trailer .play { background: linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); }
+.media-row .play-btn { width: 40px; height: 40px; font-size: 16px; padding-left: 2px; }
+.media-row .play span { font-size: 10px; }
+
+/* Similar: one tight row */
+.gd-compact .similar-block { padding: 0 0 8px; }
+.gd-compact .similar-block h2 { font-size: 15px; margin: 0; }
+.gd-compact .similar-block .row-head { margin-bottom: 8px; }
+.gd-compact .similar-block .card-grid {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.gd-compact .similar-block .card-title {
+  font-size: 11.5px;
+  min-height: 0;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.gd-compact .similar-block .card-body { padding: 8px 8px 10px; gap: 4px; }
+.gd-compact .similar-block .ribbon { top: 6px; left: 6px; font-size: 10px; padding: 2px 6px; }
+
+/* Compact rental box */
+.gd-compact .rental {
+  padding: 14px 14px 12px;
+  top: 76px;
+}
+.gd-compact .rental h2 { font-size: 16px; }
+.gd-compact .rental .from { margin-bottom: 6px; }
+.gd-compact .rental .from-price { font-size: 18px; }
+.gd-compact .rental .hint { font-size: 11.5px; margin-bottom: 8px !important; }
+.gd-compact .price-table { font-size: 12px; margin-bottom: 8px; }
+.gd-compact .price-table th { padding: 0 4px 6px; }
+.gd-compact .price-table td { padding: 8px 4px; }
+.gd-compact .no-ps4 { font-size: 11px; margin: 0 0 8px; padding: 6px 8px; }
+.gd-compact .wait { padding: 10px; margin-bottom: 8px; }
+.gd-compact .wait h3 { font-size: 13px; margin-bottom: 4px; }
+.gd-compact .wait p { font-size: 12px; margin-bottom: 8px; }
+.gd-compact .wait-actions .btn-primary,
+.gd-compact .wait-actions .btn-line { padding: 9px 12px; font-size: 13px; }
+.gd-compact .promo-code { font-size: 12px; padding: 8px 10px; margin-bottom: 8px; }
+.gd-compact .fine-notes { font-size: 11px; gap: 3px; }
+.gd-compact .rental .msg { margin-top: 8px; font-size: 12px; }
+
+/* Compact footer */
+.gd-compact footer { padding: 22px 0 16px; margin-top: 8px; }
+.gd-compact .footer-grid { gap: 20px; margin-bottom: 16px; }
+.gd-compact .hours { font-size: 16px; }
+.gd-compact .legal { padding-top: 12px; }
+
+/* Sticky rent bar — mobile only */
+.rent-bar { display: none; }
+
+@media (max-width: 900px) {
+  .gd-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .gd-hero-left, .gd-shell > .rental, .gd-rest { grid-area: auto; }
+  .gd-compact .rental { position: static; top: auto; }
+  .how-mini { grid-template-columns: 1fr 1fr; }
+  .why-list { grid-template-columns: 1fr; }
+  .media-row { grid-template-columns: 1.3fr 1fr 1fr; }
+  .media-row figure:nth-child(n+5) { display: none; } /*  trailer + 2 shots on mid */
+}
+
+@media (max-width: 700px) {
+  .gd-compact .wrap { width: calc(100% - 32px); max-width: 100%; min-width: 0; }
+  .gd-shell, .gd-rest, .gd-tabs-wrap, .media-strip, .similar-block,
+  .gd-shell > .rental { width: 100%; max-width: 100%; min-width: 0; }
+  .gd-compact .price-table { table-layout: fixed; width: 100%; }
+  .gd-hero-left { grid-template-columns: 112px 1fr; gap: 12px; }
+  .gd-compact .gd-hero-left h1 { font-size: 22px; }
+  .facts-inline span { font-size: 11px; padding: 4px 6px; }
+  .gd-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .gd-tab { padding: 10px 12px; white-space: nowrap; flex: 0 0 auto; }
+  .media-row { grid-template-columns: 1.4fr 1fr 1fr; }
+  .media-row figure:nth-child(n+5) { display: none; }
+  /* One horizontal row of similar games */
+  .gd-compact .similar-block .card-grid {
+    display: flex !important;
+    grid-template-columns: none !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+  .gd-compact .similar-block .card-grid { padding-right: 24px; }
+  .gd-compact .similar-block .game-card {
+    flex: 0 0 100px;
+    width: 100px;
+  }
+  .gd-compact .proposal-banner { font-size: 10.5px; padding: 5px 12px; }
+  .gd-compact .promo-bar { font-size: 11.5px; padding: 7px 12px; }
+  .how-mini { grid-template-columns: 1fr 1fr; }
+
+  body.gd-compact { padding-bottom: 64px; }
+  .rent-bar {
+    display: flex;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: rgba(10,10,10,0.96);
+    border-top: 1px solid var(--border);
+    padding: 8px 14px calc(8px + env(safe-area-inset-bottom));
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    backdrop-filter: blur(10px);
+  }
+  .rent-bar .rb-info { font-size: 11.5px; color: var(--text-secondary); line-height: 1.25; }
+  .rent-bar .rb-info b { color: var(--accent); display: block; font-size: 14px; }
+  .rent-bar .btn-primary { padding: 10px 14px; white-space: nowrap; font-size: 13.5px; }
+}
+
+/* ---- Available-slot rental box ---- */
+.rental.available .type-row { margin: 0 0 8px; gap: 6px; }
+.rental.available .type-btn {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px;
+}
+.rental.available .type-btn b { font-size: 13px; }
+.rental.available .type-btn .slots-ok {
+  display: block; color: #3fd68f; font-weight: 800; font-size: 11.5px; margin-top: 2px;
+}
+.rental.available .dur-row { margin: 0 0 8px; }
+.rental.available .dur { padding: 8px 10px; }
+.rental.available .dur .amt { font-size: 18px; margin-top: 2px; }
+.total-box {
+  background: #101010;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px 6px;
+  margin-bottom: 8px;
+}
+.total-box .line { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12.5px; border-bottom: 1px solid #1f1f1f; }
+.total-box .line:last-child { border: 0; }
+.total-box .line.total { font-size: 15px; font-weight: 800; padding-top: 6px; }
+.total-box .line.total b { color: var(--accent); }
+.callout.trial {
+  background: #0f2a1c;
+  border: 1px solid #1d5a3a;
+  color: #baf5d4;
+  padding: 8px 10px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+}
+.rental.available .btn-rent {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.media-row.cols-4 { grid-template-columns: 1.4fr repeat(3, 1fr); }
+@media (max-width: 700px) {
+  .media-row.cols-4 { grid-template-columns: 1.3fr 1fr 1fr 1fr; }
+  .media-row.cols-4 figure:nth-child(n+5) { display: none; }
+}

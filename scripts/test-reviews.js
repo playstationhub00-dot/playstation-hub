@@ -457,6 +457,11 @@ check('the same words from the same name are one review', () => {
     { id: 4, name: 'Ana R.', text: 'Sulit nga pala sir' }
   ]);
   assert.deepStrictEqual(rows.map(r => r.id), [1, 3, 4]);
+  const again = reviews.uniqueReviews([
+    { id: 1, name: 'Gemry T.', text: 'Sulit nga pala sir', order_ref: 'A' },
+    { id: 2, name: 'Gemry T.', text: 'Sulit nga pala sir', order_ref: 'B' }
+  ]);
+  assert.deepStrictEqual(again.map(r => r.id), [1]);
 });
 
 check('percentages are whole numbers', () => {

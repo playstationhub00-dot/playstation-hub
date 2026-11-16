@@ -88,14 +88,18 @@
   // The order in use: the address's choice when the tab offers it, else the tab's default.
   function sortOf(s) { return sortsFor(s.tab).indexOf(s.sort) >= 0 ? s.sort : defaultSort(s.tab); }
 
+  var STOCKS = [['open', 'Available'], ['last', 'Last slot'], ['full', 'Full']];
+  var ACCOUNTS = [['nt', 'Non-Trophy'], ['tr', 'Trophy'], ['ps4', 'PS4 Primary']];
+
   function emptyState() {
-    return { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [] };
+    return { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [] };
   }
 
   function clone(s) {
     return {
       tab: s.tab, sort: s.sort, search: s.search,
-      tiers: s.tiers.slice(), consoles: s.consoles.slice(), genres: s.genres.slice(), prices: s.prices.slice()
+      tiers: s.tiers.slice(), consoles: s.consoles.slice(), genres: s.genres.slice(), prices: s.prices.slice(),
+      stocks: (s.stocks || []).slice(), accounts: (s.accounts || []).slice()
     };
   }
 
@@ -123,6 +127,10 @@
     if ((first(q.ps4) === '1' || first(q.platform) === 'PS4' || unit === 'ps4') && s.consoles.indexOf('ps4') < 0) s.consoles.push('ps4');
     s.genres = list(q.genre);
     s.prices = list(q.price).filter(function (p) { return PRICES.indexOf(p) >= 0; });
+    // `avail=1` is an old link that opens the Available tab. Availability and
+    // account type use their own query names so those links keep working.
+    s.stocks = list(q.stock).filter(function (p) { return p === 'open' || p === 'last' || p === 'full'; });
+    s.accounts = list(q.account).filter(function (p) { return p === 'nt' || p === 'tr' || p === 'ps4'; });
     return s;
   }
 
@@ -184,6 +192,8 @@
     if (s.consoles.length) parts.push('console=' + s.consoles.join(','));
     if (s.genres.length) parts.push('genre=' + s.genres.map(encodeURIComponent).join(','));
     if (s.prices.length) parts.push('price=' + s.prices.join(','));
+    if (s.stocks && s.stocks.length) parts.push('stock=' + s.stocks.join(','));
+    if (s.accounts && s.accounts.length) parts.push('account=' + s.accounts.join(','));
     return parts.join('&');
   }
 
@@ -215,7 +225,7 @@
   // The filter bar's "Clear all": filters off; tab, order and search stay.
   function clearFilters(s) {
     var n = clone(s);
-    n.tiers = []; n.consoles = []; n.genres = []; n.prices = [];
+    n.tiers = []; n.consoles = []; n.genres = []; n.prices = []; n.stocks = []; n.accounts = [];
     return n;
   }
 
@@ -226,7 +236,10 @@
     return n;
   }
 
-  function selectedCount(s) { return s.tiers.length + s.consoles.length + s.genres.length + s.prices.length; }
+  function selectedCount(s) {
+    return s.tiers.length + s.consoles.length + s.genres.length + s.prices.length
+      + (s.stocks || []).length + (s.accounts || []).length;
+  }
 
   function flip(arr, v) {
     var i = arr.indexOf(v);
@@ -240,6 +253,8 @@
     else if (group === 'console') flip(n.consoles, value);
     else if (group === 'genre') flip(n.genres, value);
     else if (group === 'price') flip(n.prices, value);
+    else if (group === 'stock') flip(n.stocks, value);
+    else if (group === 'account') flip(n.accounts, value);
     return n;
   }
 
@@ -250,6 +265,8 @@
     else if (group === 'console') n.consoles = [];
     else if (group === 'genre') n.genres = [];
     else if (group === 'price') n.prices = [];
+    else if (group === 'stock') n.stocks = [];
+    else if (group === 'account') n.accounts = [];
     return n;
   }
 
@@ -259,6 +276,8 @@
     if (group === 'console') return s.consoles.indexOf(value) >= 0;
     if (group === 'genre') return s.genres.indexOf(value) >= 0;
     if (group === 'price') return s.prices.indexOf(value) >= 0;
+    if (group === 'stock') return (s.stocks || []).indexOf(value) >= 0;
+    if (group === 'account') return (s.accounts || []).indexOf(value) >= 0;
     return false;
   }
 
@@ -298,6 +317,8 @@
     CONSOLES.forEach(function (d) { if (s.consoles.indexOf(d[0]) >= 0) add('console', d[0], d[1]); });
     s.genres.forEach(function (g) { add('genre', g, g); });
     PRICES.forEach(function (p) { if (s.prices.indexOf(p) >= 0) add('price', p, bandLabel(p, ctx.bands)); });
+    STOCKS.forEach(function (d) { if ((s.stocks || []).indexOf(d[0]) >= 0) add('stock', d[0], d[1]); });
+    ACCOUNTS.forEach(function (d) { if ((s.accounts || []).indexOf(d[0]) >= 0) add('account', d[0], d[1]); });
     return out;
   }
 
@@ -306,11 +327,21 @@
     return !q || String(text).toLowerCase().indexOf(q) >= 0;
   }
 
+  // open = a slot is free and it is not the last one; last = exactly one slot
+  // left; full = nothing to rent. Missing `last` is treated as not-last.
+  function stockOf(f) {
+    if (!f.avail) return 'full';
+    if (f.last) return 'last';
+    return 'open';
+  }
+
   function filterHit(f, s, bands) {
     if (s.tiers.length && s.tiers.indexOf(f.tier) < 0) return false;
     if (s.consoles.length && !s.consoles.some(function (c) { return f[c]; })) return false;
     if (s.genres.length && !s.genres.some(function (g) { return f.genres.indexOf(g) >= 0; })) return false;
     if (s.prices.length && s.prices.indexOf(bandOf(f.from, bands)) < 0) return false;
+    if ((s.stocks || []).length && s.stocks.indexOf(stockOf(f)) < 0) return false;
+    if ((s.accounts || []).length && !s.accounts.some(function (t) { return (f.types || []).indexOf(t) >= 0; })) return false;
     return true;
   }
 
@@ -369,6 +400,8 @@
         .map(function (d) { return chipFor(data, s, ctx, newIds, key, d[0], d[1]); });
       if (chips.length) groups.push({ key: key, label: label, chips: chips });
     }
+    group('stock', 'Availability', STOCKS);
+    group('account', 'Account type', ACCOUNTS);
     group('tier', 'Tier', (ctx.tiers || []).map(function (t) { return [String(t.id), t.name]; }));
     group('console', 'Console', CONSOLES);
     group('genre', 'Genre', (ctx.genres || []).map(function (g) { return [g, g]; }));

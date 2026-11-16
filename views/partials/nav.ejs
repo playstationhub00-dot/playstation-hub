@@ -118,7 +118,7 @@
         const av = x.s > 0
           ? '<span class="navsearch-avail-yes">' + x.s + ' slot' + (x.s !== 1 ? 's' : '') + ' left</span>'
           : '<span class="navsearch-avail-no">FULLY BOOKED</span>';
-        const thumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🎮';
+        const thumb = x.img ? '<img src="' + x.img + '" alt="' + esc(x.t) + '" loading="lazy">' : '🎮';
         // A bundle that matched on its contents (not its own name) needs to say why
         // it's in the results, otherwise the hit looks unrelated to what was typed.
         const viaContents = x.bn > 0 && !x.t.toLowerCase().includes(t);
@@ -129,15 +129,16 @@
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span>' + bundleNote + av + '</div></div>' +
           '<div class="navsearch-price-col">' +
-          (x.pr ? '<div class="navsearch-price">₱' + x.pr + '</div>' : '') +
-          (x.bpr ? '<div class="navsearch-buy-price">Buy ₱' + x.bpr + '</div>' : '') +
+          (x.pr ? '<span class="navsearch-way">Rent from ₱' + x.pr + '</span>' : '') +
+          (x.bpr ? '<span class="navsearch-way">Buy ₱' + x.bpr + '</span>' : '') +
+          (x.deluxe ? '<span class="navsearch-way navsearch-way-plus">Included in Deluxe</span>' : '') +
           '</div></a>';
       });
     }
     if (psplus.length) {
       h += '<div class="navsearch-head">PS Plus Deluxe</div>';
       psplus.forEach(x => {
-        const psThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '➕';
+        const psThumb = x.img ? '<img src="' + x.img + '" alt="' + esc(x.t) + '" loading="lazy">' : '➕';
         h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + psThumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span></div></div>' +
@@ -147,7 +148,7 @@
     if (soon.length) {
       h += '<div class="navsearch-head">Coming soon</div>';
       soon.forEach(x => {
-        const soonThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🔜';
+        const soonThumb = x.img ? '<img src="' + x.img + '" alt="' + esc(x.t) + '" loading="lazy">' : '🔜';
         h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + soonThumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.p + '</span><span>' + x.d + '</span></div></div>' +
@@ -157,7 +158,7 @@
     if (requested.length) {
       h += '<div class="navsearch-head">Requested by customers</div>';
       requested.forEach(x => {
-        const reqThumb = x.img ? '<img src="' + x.img + '" alt="" loading="lazy">' : '🙋';
+        const reqThumb = x.img ? '<img src="' + x.img + '" alt="' + esc(x.t) + '" loading="lazy">' : '🙋';
         h += '<a class="navsearch-item" href="' + x.u + '"><div class="navsearch-thumb">' + reqThumb + '</div>' +
           '<div class="navsearch-body"><div class="navsearch-title">' + hl(x.t, t) + '</div>' +
           '<div class="navsearch-meta"><span>' + x.v + ' vote' + (x.v !== 1 ? 's' : '') + '</span></div></div>' +
@@ -175,7 +176,7 @@
         '<a href="/browse" class="navsearch-empty-btn2">Browse All Games</a>' +
         '</div></div>';
     } else if (matches.length > now.length + psplus.length + soon.length + requested.length) {
-      h += '<a class="navsearch-all" href="/browse?search=' + encodeURIComponent(term.trim()) + '">See all ' + matches.length + ' results →</a>';
+      h += '<a class="navsearch-all" href="/search?q=' + encodeURIComponent(term.trim()) + '">See all ' + matches.length + ' results →</a>';
     }
     box.innerHTML = h;
     box.classList.add('show');

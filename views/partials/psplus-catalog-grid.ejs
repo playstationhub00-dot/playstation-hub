@@ -13,8 +13,9 @@
 <% if (!catalog.counts.all) { %>
   <div class="ppc-soon">🎮 The full game list is coming soon.<span>Meanwhile, see this month's games in the Monthly tab, or message us to ask about a game.</span></div>
 <% } else { %>
+  <div class="ppc-tools dx-toolbar">
   <div class="ppc-toolbar">
-    <input type="search" id="ppcSearch" class="ppc-search" placeholder="Search <%= catalog.counts.all %> games — e.g. God of War" aria-label="Search PS Plus Deluxe games" autocomplete="off">
+    <input type="search" id="ppcSearch" class="ppc-search dx-search" placeholder="Search <%= catalog.counts.all %> games — e.g. God of War" aria-label="Search PS Plus Deluxe games" autocomplete="off">
     <select id="ppcSort" class="ppc-select" aria-label="Sort games">
       <option value="az">Sort: A–Z</option>
       <option value="new">Newest added</option>
@@ -32,6 +33,7 @@
         .filter(c => c[0] === 'all' || c[2] > 0).forEach(c => { %>
     <button type="button" class="ppc-chip<%= c[0] === 'all' ? ' on' : '' %>" data-f="<%= c[0] %>" aria-pressed="<%= c[0] === 'all' %>"><%= c[1] %> <i><%= c[2] %></i></button>
     <% }) %>
+  </div>
   </div>
   <h2 class="ppc-heading" id="ppcHeading">🎮 All <%= catalog.counts.all %> games <small>· A–Z</small></h2>
   <div class="ppc-grid" id="ppcGrid"></div>
@@ -130,14 +132,14 @@
 
   // ── Grid ────────────────────────────────────────────────────────────
   function card(g) {
-    var b = el('button', 'ppc-card' + (g.tile ? ' ppc-card-tile' : ''));
+    var b = el('button', 'ppc-card dx-card' + (g.tile ? ' ppc-card-tile' : ''));
     b.type = 'button';
     b.dataset.k = g.k;
     b.setAttribute('aria-label', g.n);
     var src = cover(g, 240);
     if (src) {
       var img = el('img', 'ppc-cover');
-      img.src = src; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+      img.src = src; img.alt = g.n || ''; img.loading = 'lazy'; img.decoding = 'async';
       img.addEventListener('error', function () { img.remove(); b.classList.add('ppc-card-noimg'); });
       b.appendChild(img);
       b.appendChild(el('div', 'ppc-scrim'));

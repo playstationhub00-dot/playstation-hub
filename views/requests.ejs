@@ -4,11 +4,11 @@
   <%- include('partials/head', { page: 'requests' }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
 </head>
-<body>
+<body class="hub sec-page">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'requests' }) %>
 
-<div class="req-page">
+<div class="req-page sec-wrap">
   <h1 class="req-h1">Request a game</h1>
   <p class="req-sub">Tell us what you want next. The most requested games get stocked first.</p>
 
@@ -50,6 +50,16 @@
       <div class="req-hint" id="reqHint"></div>
     </div>
     <input type="text" name="fb_name" placeholder="Your Facebook name" required autocomplete="off">
+    <label class="req-field">Platform <span class="prop-tag">optional</span>
+      <select name="platform"><option value="">Any</option><option value="PS5">PS5</option><option value="PS4">PS4</option></select>
+    </label>
+    <label class="req-field">Account type <span class="prop-tag">optional</span>
+      <select name="account_type"><option value="">Any</option><option value="nt">Non-Trophy</option><option value="tr">Trophy</option><option value="ps4">PS4 Primary</option></select>
+    </label>
+    <label class="req-field">Length <span class="prop-tag">optional</span>
+      <select name="days"><option value="">Either</option><option value="7">Weekly</option><option value="30">Monthly</option></select>
+    </label>
+    <label class="req-notify"><input type="checkbox" name="notify" value="1"> Notify me on Messenger when this is stocked</label>
     <button type="submit" class="btn btn-primary">Request</button>
   </form>
 
@@ -82,12 +92,12 @@
     <% reqSoon.forEach(r => { %>
     <a class="req-stocked-card req-stocked-card-soon req-stocked-card-link" id="req-<%= r.slug %>" href="<%= r.linkedUrl %>">
       <% if (r.cover_image) { %>
-        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="">
+        <img class="req-stocked-cover" src="<%= r.cover_image %>" alt="<%= r.title %>">
       <% } else { %>
         <div class="req-stocked-cover req-cover-empty">🎮</div>
       <% } %>
       <div class="req-stocked-body">
-        <div class="req-stocked-title"><%= r.title %></div>
+        <div class="req-stocked-title"><%= r.title %> <span class="req-badge req-badge-soon">Coming soon</span></div>
         <span class="req-btn req-btn-reserve">Coming soon — reserve now</span>
       </div>
     </a>
@@ -106,12 +116,12 @@
     <% const stockedTag = r.linkedUrl ? 'a' : 'div'; %>
     <<%= stockedTag %> class="req-stocked-card<%= r.linkedUrl ? ' req-stocked-card-link' : '' %>" id="req-<%= r.slug %>"<% if (r.linkedUrl) { %> href="<%= r.linkedUrl %>"<% } %>>
       <% if (r.cover_image) { %>
-        <img class="req-stocked-cover" <%- imgCard(r.cover_image) %> alt="">
+        <img class="req-stocked-cover" <%- imgCard(r.cover_image) %> alt="<%= r.title %>">
       <% } else { %>
         <div class="req-stocked-cover req-cover-empty">🎮</div>
       <% } %>
       <div class="req-stocked-body">
-        <div class="req-stocked-title"><%= r.title %></div>
+        <div class="req-stocked-title"><%= r.title %> <span class="req-badge req-badge-in">In stock</span></div>
         <% if (r.linkedUrl) { %>
           <span class="req-btn req-btn-rent">Rent</span>
         <% } %>
@@ -146,12 +156,12 @@
     <div class="req-row" id="req-<%= r.slug %>">
       <span class="req-votes"><%= votes %></span>
       <% if (r.cover_image) { %>
-        <img class="req-cover" <%- imgThumb(r.cover_image) %> alt="">
+        <img class="req-cover" <%- imgThumb(r.cover_image) %> alt="<%= r.title %>">
       <% } else { %>
         <div class="req-cover req-cover-empty">🎮</div>
       <% } %>
       <div class="req-main">
-        <div class="req-title"><%= r.title %></div>
+        <div class="req-title"><%= r.title %> <span class="req-badge">Open for votes</span></div>
         <%# Initials, not names: this list is public, and who asked for a game is
             nobody else's business. The count carries the social proof. %>
         <div class="req-voters">

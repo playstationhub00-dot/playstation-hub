@@ -134,7 +134,7 @@ async function main() {
   const plain = await get('/game/zzyzx-plain');
   await okAsync('renders as before: poster, description under it, Gameplay gallery, no new blocks', async () => {
     assert.ok(plain.body.includes('gdh-poster') && plain.body.includes('Plain description.'));
-    assert.ok(plain.body.includes('>Customer reviews</button>'));
+    assert.ok(plain.body.includes('>Reviews</button>'));
     assert.ok(!plain.body.includes('>Reviews ('));
     assert.ok(plain.body.includes('class="rsv-gallery-section"'));
     assert.ok(!plain.body.includes('id="gpMedia"') && !plain.body.includes('id="gpAbout"') && !plain.body.includes('gpa-headline'));

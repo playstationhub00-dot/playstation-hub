@@ -75,6 +75,34 @@ body.bf-lock { overflow: hidden; }
 .bf-go { width: 100%; background: var(--ps-blue); color: #000; border: none; border-radius: 999px; padding: 0.95rem; font-size: 1rem; font-weight: 800; cursor: pointer; }
 .bf-go:disabled { background: #2a2a2a; color: #777; cursor: default; }
 
+/* Available cards first, then one heading, then full games (dimmed, still links). */
+.bf-split { display: grid; }
+.bf-split .bf-item:not(:has(.gc2-full)) { order: 1; }
+.bf-full-head { order: 2; grid-column: 1 / -1; margin: 1.25rem 0 0.35rem; font-size: 1.05rem; font-weight: 800; color: #ccc; }
+.bf-split .bf-item:has(.gc2-full) { order: 3; }
+.bf-split .bf-item:has(.gc2-full) .game-card { opacity: 0.62; }
+.bf-split .bf-item:has(.gc2-full) .game-card:hover { opacity: 1; }
+.gc-slots { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.gc-slots span { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.02em; border-radius: 999px; padding: 0.12rem 0.4rem; background: #1a1a1a; }
+.gc-slot-on { color: #86efac; }
+.gc-slot-off { color: #fca5a5; }
+.gc-cta { display: inline-block; margin-top: 0.45rem; font-size: 0.78rem; font-weight: 800; color: #111; background: var(--ps-blue, #F0A500); border-radius: 999px; padding: 0.28rem 0.65rem; }
+
+/* Wide screens: the filter form is a sticky sidebar. Phones keep the sheet
+   and a fixed Filters button. */
+@media (min-width: 1100px) {
+  .bf-layout { display: grid; grid-template-columns: 280px minmax(0, 1fr); align-items: start; gap: 0.5rem 1.25rem; max-width: 1440px; margin: 0 auto; padding: 0 1rem 2rem; }
+  .bf-panel { display: block; position: sticky; top: 148px; inset: auto; z-index: 2; height: auto; align-items: stretch; }
+  .bf-backdrop, .bf-x { display: none; }
+  .bf-sheet { width: 100%; max-height: calc(100vh - 168px); box-shadow: none; }
+  .bf-open { display: none !important; }
+  .bf-results { padding-top: 0.75rem; }
+}
+@media (max-width: 1099px) {
+  .bf-open { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 90; box-shadow: 0 10px 28px rgba(0,0,0,0.45); background: var(--ps-blue, #F0A500); color: #111; border-color: transparent; }
+  .bf-open.bf-has { color: #111; }
+}
+
 /* ── The grid ── */
 .bf-results { padding-top: 1.5rem; }
 .bf-results [hidden] { display: none; }

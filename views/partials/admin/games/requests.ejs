@@ -51,6 +51,7 @@
                 <div class="gm-req-name">
                   <input form="reqSave-<%= r.slug %>" type="hidden" name="at" value="<%= v.at %>">
                   <input form="reqSave-<%= r.slug %>" type="text" name="fb_name" value="<%= v.fb_name %>" aria-label="Requester name" maxlength="80">
+                  <% if (v.notify) { %><span class="gm-sub" title="Asked to be messaged when this is stocked">Notify</span><% } %>
                   <form method="POST" action="/admin/requests/<%= r.slug %>/voter/remove" data-undo-label="Requester removed">
                     <input type="hidden" name="at" value="<%= v.at %>">
                     <button type="submit" class="adm-btn adm-btn-ghost adm-btn-sm">Remove</button>

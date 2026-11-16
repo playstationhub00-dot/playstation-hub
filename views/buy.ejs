@@ -5,7 +5,7 @@
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/shop.css?v=<%= assetV %>">
 </head>
-<body class="shop-page">
+<body class="hub sec-page shop-page">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'buy' }) %>
 <%#
@@ -41,7 +41,7 @@
       <% spotlight.forEach(sl => { const it = sl.item; const isBox = sl.kind === 'box';
         const cover = isBox ? ((it.covers.find(c => c.cover) || {}).cover || '') : it.cover; %>
       <a class="shop-slide" href="<%= isBox ? '/bundle/' + it.slug : (seo.isPsplusDeluxeTitle(it.title) ? '/ps-plus' : '/game/' + it.slug + '?mode=buy') %>">
-        <% if (cover) { %><img src="<%= cover %>" alt="" style="object-position: <%= !isBox && it.fx != null ? it.fx : 50 %>% <%= !isBox && it.fy != null ? it.fy : 50 %>%;"><% } %>
+        <% if (cover) { %><img src="<%= cover %>" alt="<%= it.title || it.name || 'Game for sale' %>" style="object-position: <%= !isBox && it.fx != null ? it.fx : 50 %>% <%= !isBox && it.fy != null ? it.fy : 50 %>%;"><% } %>
         <span class="shop-slide-shade"></span>
         <span class="shop-slide-body">
           <span class="shop-kicker">Spotlight · own it forever</span>

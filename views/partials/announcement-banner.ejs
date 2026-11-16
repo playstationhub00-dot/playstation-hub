@@ -29,7 +29,7 @@
     <div class="ann-banner-media">
       <picture>
         <% if (slide.imageMobile) { %><source media="(max-width: 820px)" srcset="<%= slide.imageMobile %>"><% } %>
-        <img <%- imgHero(slide.image || slide.imageMobile) %> alt="" width="1400" height="788" decoding="async"<% if (i === 0) { %> fetchpriority="high"<% } else { %> loading="lazy"<% } %>>
+        <img <%- imgHero(slide.image || slide.imageMobile) %> alt="<%= slideName || 'PlayStation Hub' %>" width="1400" height="788" decoding="async"<% if (i === 0) { %> fetchpriority="high"<% } else { %> loading="lazy"<% } %>>
       </picture>
       <% if (slide.badge) { %>
       <div class="ann-hours-badge" aria-hidden="true"><b>3</b><span>Hours<br>free</span></div>
