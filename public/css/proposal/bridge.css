@@ -105,10 +105,50 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .bf-open { display: inline-flex !important; }
 }
 
-/* Home cards share the rent card look */
-body.home2.hub .hero .search { display: block; max-width: 640px; }
-body.home2.hub .hs-box { display: flex; gap: 10px; }
-body.home2.hub .hs-input { flex: 1; background: #101010; border: 1px solid #262626; border-radius: 12px; padding: 12px 14px; color: #fff; font-size: 15px; }
+/* Home: search is the hero. The h1 stays in the page for SEO and screen readers. */
+body.home2.hub .hero {
+  padding: 16px 0 12px;
+  text-align: center;
+  overflow: visible;
+}
+body.home2.hub .hero::before { display: none; }
+body.home2.hub .hero h1.hm-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+body.home2.hub .hero .search {
+  display: block;
+  width: min(860px, 100%);
+  max-width: 860px;
+  margin: 0 auto 12px;
+}
+body.home2.hub .hero .hs { max-width: none; width: 100%; margin: 0; padding: 0; }
+body.home2.hub .hs-box { display: block; }
+body.home2.hub .hero .hs-input {
+  width: 100%;
+  background: #101010;
+  border: 2px solid #F5B800;
+  border-radius: 14px;
+  padding: 16px 22px;
+  color: #fff;
+  font-size: 18px;
+  min-height: 58px;
+  box-shadow: 0 0 0 4px rgba(245, 184, 0, 0.14);
+}
+body.home2.hub .hero-actions { display: flex; justify-content: center; margin: 0 0 12px; }
+@media (max-width: 700px) {
+  body.home2.hub .hero { padding: 10px 0 8px; }
+  body.home2.hub .hero .search { margin-bottom: 10px; }
+  body.home2.hub .hero .hs-input { font-size: 16px; min-height: 52px; padding: 14px 16px; }
+  body.home2.hub .hero-actions { margin-bottom: 10px; }
+}
 body.home2.hub .card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 body.home2.hub .card-grid .rcard { background: #141414; border: 1px solid #262626; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
 @media (max-width: 900px) { body.home2.hub .card-grid { grid-template-columns: 1fr 1fr; } }

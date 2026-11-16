@@ -27,8 +27,7 @@
 <div class="promo-bar">Monthly rentals are <b><%= hhMonthly %>% off</b> while this promo is on. One use per customer. The code is on the game page.</div>
 <% } %>
 <div class="wrap hero" id="find">
-  <h1 class="hm-tagline">Rent the latest <em>PS5 &amp; PS4</em> games. Sign in by QR — no password.</h1>
-  <p class="sub">Weekly or monthly, prices depend on the game.<% if (hhNt) { %> Starting from ₱<%= hhNt %> a week on Non-Trophy<% if (hhTr) { %>, or ₱<%= hhTr %> a week on Trophy and PS4 Primary<% } %>.<% } %> Ready in minutes, no discs or meetups.</p>
+  <h1 class="hm-tagline hm-sr">Rent the latest PS5 &amp; PS4 games. Sign in by QR — no password.</h1>
   <div class="search">
     <%- include('home-search', { featured: typeof featured !== 'undefined' ? featured : [], compact: true }) %>
   </div>
