@@ -184,7 +184,7 @@ async function main() {
     const released = await get('/game/zzyzx-released');
     assert.strictEqual(released.status, 200, released.body.slice(0, 200));
     const tr = typeCard(released.body, 'label-tr');
-    assert.ok(tr.includes('1 slot left'), tr);
+    assert.ok(tr.includes('>1 left<'), tr);
     assert.ok(tr.includes('Available'), tr);
   });
 
@@ -230,6 +230,46 @@ async function main() {
     assert.strictEqual(placed[1].is_buy, true);
     assert.strictEqual(placed[1].new_slot, true);
     assert.strictEqual(placed[1].account_type, 'tr');
+  });
+
+  await okAsync('a full Trophy type can join the free line, and the plan is stored', async () => {
+    const res = await post({ kind: 'queue', game_id: '1', account_type: 'tr', days: '30', fb_name: 'Zzyzx Waiting' });
+    assert.strictEqual(res.status, 302, res.headers.location || '');
+    assert.ok(res.headers.location.startsWith('/order/ZTEST3'), res.headers.location);
+    const row = placed[2];
+    assert.strictEqual(row.is_waitlist, true);
+    assert.strictEqual(row.is_reservation, false);
+    assert.strictEqual(row.state, 'waitlisted');
+    assert.strictEqual(row.days, 30);
+    assert.strictEqual(row.amount_due, 0);
+    assert.strictEqual(row.deposit_due, 0);
+    assert.strictEqual(row.remaining_due, 1199);
+    assert.strictEqual(row.upcoming_game_id, null);
+    assert.strictEqual(row.account_type, 'tr');
+    const queueRules = require('../lib/queue');
+    const shown = queueRules.forAdminPanel([Object.assign({ ref: 'ZTEST3', created_at: new Date().toISOString() }, row)]);
+    assert.strictEqual(shown.length, 1);
+    assert.strictEqual(shown[0].queuePosition, 1);
+  });
+
+  await okAsync('a full Trophy type can take the ₱100 priority place', async () => {
+    const res = await post({ kind: '', game_id: '1', account_type: 'tr', days: '30', fb_name: 'Zzyzx Priority' });
+    assert.strictEqual(res.status, 302, res.headers.location || '');
+    const row = placed[3];
+    assert.strictEqual(row.is_waitlist, false);
+    assert.strictEqual(row.is_reservation, true);
+    assert.strictEqual(row.amount_due, 100);
+    assert.strictEqual(row.deposit_due, 0);
+    assert.strictEqual(row.remaining_due, 1099);
+    assert.strictEqual(row.upcoming_game_id, null);
+    assert.notStrictEqual(row.state, 'waitlisted');
+  });
+
+  await okAsync('the coming soon page shows the same line card and the plan picker', async () => {
+    assert.ok(page.includes('id="lineCardSoon"'));
+    assert.ok(page.includes('id="durGrid"'));
+    assert.ok(page.includes('Join the line — free'));
+    assert.ok(page.includes('Be first in line'));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-page.css?v=<%= assetV %>">
 </head>
-<body class="gd-page-booking-v2 gp-redesign gp-upcoming">
+<body class="gd-page-booking-v2 gp-redesign hub gp-upcoming">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'browse' }) %>
 
@@ -74,24 +74,30 @@
   const udTrNew = udBuyTr > 0 && showTr && trSlots === 0;
 
   const udGenre = udPsn.genre || game.genre || '';
-  const udChips = [];
-  if (udPsn.hasPsn && udPsn.info && udPsn.info.length) {
-    udPsn.info.forEach(r => {
-      if (r.label === 'Release date' || r.label === 'Genre' || r.label === 'Publisher' || r.label === 'Age rating') {
-        udChips.push({ label: r.label === 'Age rating' ? 'Rating' : r.label, value: r.value });
-      }
-    });
-  } else {
-    const rel = udIsTba ? 'TBA' : udShortDate(game.release_date);
-    if (rel) udChips.push({ label: 'Release date', value: rel });
-    if (game.genre) udChips.push({ label: 'Genre', value: game.genre });
-  }
+  const udInfoValue = (label) => {
+    const row = (udPsn.info || []).find(r => r && r.label === label);
+    return row ? row.value : '';
+  };
+  const udSpecs = [];
+  if (game.platform) udSpecs.push(['Platform', game.platform]);
+  const udReleaseSpec = udInfoValue('Release date') || (udIsTba ? 'TBA' : udShortDate(game.release_date));
+  if (udReleaseSpec) udSpecs.push(['Release date', udReleaseSpec]);
+  if (udGenre) udSpecs.push(['Genre', udGenre]);
+  const udPublisher = udInfoValue('Publisher');
+  if (udPublisher) udSpecs.push(['Publisher', udPublisher]);
+  const udRating = udInfoValue('Age rating');
+  if (udRating) udSpecs.push(['Rating', udRating]);
+  const udVoice = udInfoValue('Voice');
+  if (udVoice) udSpecs.push(['Voice', udVoice]);
+  const udAboutSource = String((udPsn.hasPsn && udPsn.about) ? udPsn.about : (game.description || udPsn.tagline || '')).trim();
+  const udAboutParas = (udPsn.hasPsn && udPsn.about && udPsn.aboutParas && udPsn.aboutParas.length) ? udPsn.aboutParas : (udAboutSource ? [udAboutSource] : []);
+  const udShowPs4 = game.platform === 'PS4' || game.platform === 'PS4/PS5';
 
   const udReviews = (typeof reviews !== 'undefined' && reviews) ? reviews : [];
   const udRec = (typeof recommend !== 'undefined' && recommend) ? recommend : null;
   const udHasReviews = udReviews.length > 0 || !!(udRec && udRec.total > 0);
   const udShowBefore = hasNt || showTr;
-  const udShowDetails = (udPsn.hasPsn && (udPsn.about || (udPsn.info && udPsn.info.length))) || (!udPsn.hasPsn && !!game.description);
+  const udShowDetails = udPsn.hasPsn && udPsn.info && udPsn.info.length;
   const udFirstTab = udShowBefore ? 'before' : (udShowDetails ? 'details' : (udHasReviews ? 'reviews' : ''));
   const udShots = (udPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src);
   const udOwnGallery = (game.gallery || []).filter(Boolean);
@@ -119,16 +125,15 @@
   <div class="gp-grid">
     <div class="gp-hero">
       <div class="gd-cover-col">
-        <% if (udPsn.media.length) { %>
-          <%- include('partials/game-psn-media', { items: udPsn.media, title: game.title }) %>
-        <% } else if (game.cover_image) { %>
+        <% if (game.cover_image) { %>
           <% const udFocal = 'object-position: ' + (game.cover_focal_x != null ? game.cover_focal_x : 50) + '% ' + (game.cover_focal_y != null ? game.cover_focal_y : 50) + '%;'; %>
           <img src="<%= game.cover_image %>" alt="<%= game.title %>" class="gd-cover gdh-poster" width="760" height="1140" style="<%= udFocal %>">
         <% } else { %>
           <div class="gd-cover gd-cover-placeholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:64px;height:64px;opacity:0.3;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
             </svg>
+            <span>No cover</span>
           </div>
         <% } %>
       </div>
@@ -143,16 +148,16 @@
         </div>
         <h1 class="usd-title"><%= game.title %></h1>
         <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-headline', { psnView: udPsn }) %><% } %>
-        <% if (udPsn.hasPsn && udPsn.about) { %>
-          <p class="gp-clamp"><%= udPsn.aboutParas[0] || udPsn.about %></p>
-          <% if (udShowDetails && (udPsn.readMore || (udPsn.aboutParas && udPsn.aboutParas.length > 1))) { %><button type="button" class="gp-more" onclick="gpTab('gpPaneDetails', document.getElementById('gpTabDetails'))">Read more ›</button><% } %>
-        <% } else if (game.description) { %>
-          <p class="gd-desc gdh-poster-desc"><%= game.description %></p>
-        <% } %>
-        <% if (udChips.length) { %>
-        <div class="gp-chips">
-          <% udChips.forEach(chip => { %><span><b><%= chip.label %></b><%= chip.value %></span><% }) %>
+        <% if (udSpecs.length) { %>
+        <div class="gd-specs">
+          <% udSpecs.forEach(pair => { %><span class="gd-spec"><b><%= pair[0] %></b><%= pair[1] %></span><% }) %>
         </div>
+        <% } %>
+        <% if (udAboutParas.length) { %>
+        <div class="gd-about" id="gdAbout">
+          <% udAboutParas.forEach(function (para) { if (String(para).trim()) { %><p><%= para %></p><% } }); %>
+        </div>
+        <button type="button" class="gd-about-more" id="gdAboutMore" hidden aria-expanded="false">Read more</button>
         <% } %>
       </div>
     </div>
@@ -258,14 +263,8 @@
         </div>
 
         <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-             class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-            <div class="gd-reserve-icon">🎮</div>
-            <div class="gd-reserve-name">Fall in Line</div>
-            <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-          </a>
+          <%- include('partials/queue-line', { queues: (typeof queues !== 'undefined' ? queues : { nt: [], tr: [], ps4: [] }), activeType: 'nt', selfRef: null, suffix: 'Soon', hideStrip: true }) %>
+          <%- include('partials/noslot-options', { game_id: game.id, suffix: 'Soon', resValMsgId: 'reserveValidationMsgSoon', variant: 'card' }) %>
         </div>
 
         </div><!-- /udRentPanel -->
@@ -363,41 +362,29 @@
       </div>
     </div>
 
-    <%- include('partials/game-film', { images: udFilm, title: game.title, filmClass: udPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
+    <%- include('partials/game-film', { images: udFilm, title: game.title, filmTitle: 'Screenshots', filmClass: udPsn.hideGallery ? 'gp-gal' : 'rsv-gallery-section' }) %>
 
     <% if (udFirstTab) { %>
     <div class="gp-tabs" id="gpTabs">
-      <div class="gp-tablist" role="tablist">
+      <div class="gp-tablist gd-tabs" role="tablist">
         <% if (udShowBefore) { %>
-        <button type="button" class="gp-tab<%= udFirstTab === 'before' ? ' on' : '' %>" id="gpTabBefore" role="tab" aria-selected="<%= udFirstTab === 'before' ? 'true' : 'false' %>" onclick="gpTab('gpPaneBefore', this)">Before you rent</button>
+        <button type="button" class="gp-tab gd-tab<%= udFirstTab === 'before' ? ' on' : '' %>" id="gpTabBefore" role="tab" aria-selected="<%= udFirstTab === 'before' ? 'true' : 'false' %>" onclick="gpTab('gpPaneBefore', this)">Why rent it</button>
         <% } %>
         <% if (udShowDetails) { %>
-        <button type="button" class="gp-tab<%= udFirstTab === 'details' ? ' on' : '' %>" id="gpTabDetails" role="tab" aria-selected="<%= udFirstTab === 'details' ? 'true' : 'false' %>" onclick="gpTab('gpPaneDetails', this)">Details</button>
+        <button type="button" class="gp-tab gd-tab<%= udFirstTab === 'details' ? ' on' : '' %>" id="gpTabDetails" role="tab" aria-selected="<%= udFirstTab === 'details' ? 'true' : 'false' %>" onclick="gpTab('gpPaneDetails', this)">Details</button>
         <% } %>
         <% if (udHasReviews) { %>
-        <button type="button" class="gp-tab<%= udFirstTab === 'reviews' ? ' on' : '' %>" role="tab" aria-selected="<%= udFirstTab === 'reviews' ? 'true' : 'false' %>" onclick="gpTab('gpPaneReviews', this)">Customer reviews</button>
+        <button type="button" class="gp-tab gd-tab<%= udFirstTab === 'reviews' ? ' on' : '' %>" role="tab" aria-selected="<%= udFirstTab === 'reviews' ? 'true' : 'false' %>" onclick="gpTab('gpPaneReviews', this)">Customer reviews</button>
         <% } %>
       </div>
       <% if (udShowBefore) { %>
-      <div class="gp-pane" id="gpPaneBefore"<%= udFirstTab === 'before' ? '' : ' hidden' %>>
-        <div class="gp-before">
-          <div class="gp-bi"><span>🌐</span><p><b>Online play</b>Needs your own PS Plus.</p></div>
-          <% if (showTr) { %><div class="gp-bi"><span>🏆</span><p><b>Trophy</b>Your account. Turn Console Sharing <b>on</b>.</p></div><% } %>
-          <% if (hasNt) { %><div class="gp-bi"><span>🎮</span><p><b>Non-Trophy</b>Our account. Leave Console Sharing off.</p></div><% } %>
-        </div>
-        <p class="gp-before-ft">
-          <% if (udRec && udRec.total > 0) { %><b><%= udRec.pct %>%</b> would recommend us · <%= udRec.up %> of <%= udRec.total %> renters asked · <% } %>
-          <a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Setup guide ›</a>
-        </p>
+      <div class="gp-pane gd-panel" id="gpPaneBefore"<%= udFirstTab === 'before' ? '' : ' hidden' %>>
+        <%- include('partials/why-rent', { showTrophy: showTr, deposit: udPromo.deposit || 0, showPs4: udShowPs4, recommend: udRec, renterCount: (typeof renterCount !== 'undefined' ? renterCount : null) }) %>
       </div>
       <% } %>
       <% if (udShowDetails) { %>
-      <div class="gp-pane" id="gpPaneDetails"<%= udFirstTab === 'details' ? '' : ' hidden' %>>
-        <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: udPsn }) %><% } %>
-        <% if (!udPsn.hasPsn && game.description) { %><p class="gp-details-copy"><%= game.description %></p><% } %>
-        <% if (!udPsn.hasPsn) { %>
-        <p class="gp-details-copy"><%= game.platform %><% if (game.genre) { %> · <%= game.genre %><% } %></p>
-        <% } %>
+      <div class="gp-pane gd-panel" id="gpPaneDetails"<%= udFirstTab === 'details' ? '' : ' hidden' %>>
+        <% if (udPsn.hasPsn) { %><%- include('partials/game-psn-about', { psnView: Object.assign({}, udPsn, { about: '', aboutParas: [], readMore: false }) }) %><% } %>
       </div>
       <% } %>
       <% if (udHasReviews) { %>
@@ -405,6 +392,13 @@
         <%- include('partials/review-block', { reviews: udReviews, reviewStats: (typeof reviewStats !== 'undefined' ? reviewStats : null), recommend: udRec, reviewBadge: (typeof reviewBadge !== 'undefined' ? reviewBadge : null), reviewDisplayName: (typeof reviewDisplayName !== 'undefined' ? reviewDisplayName : null) }) %>
       </div>
       <% } %>
+    </div>
+    <% } %>
+
+    <% if (udPsn.media.length) { %>
+    <div class="gp-trailer">
+      <h2>Trailer and screenshots</h2>
+      <%- include('partials/game-psn-media', { items: udPsn.media, title: game.title }) %>
     </div>
     <% } %>
   </div>

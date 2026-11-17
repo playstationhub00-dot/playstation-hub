@@ -366,6 +366,33 @@ function isBookedNow() {
   return ALL_UNAVAIL || (!!selectedType && AVAIL[selectedType] === false);
 }
 
+// A full account type still picks Weekly or Monthly — that duration is what
+// the waitlist form already sends as `days`. The total, the website order
+// name field, and the Full Slot button stay hidden in updateCtaState.
+function syncBookedChrome() {
+  updateOwnStripRent();
+}
+
+function updateOwnStripRent() {
+  const strip = document.getElementById('gdOwnStrip');
+  if (!strip || typeof BUY_PRICES === 'undefined') return;
+  const price = selectedType && BUY_PRICES[selectedType] ? BUY_PRICES[selectedType] : 0;
+  const show = !!selectedType && AVAIL[selectedType] === false && price > 0;
+  strip.hidden = !show;
+  if (!show) return;
+  const name = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
+  strip.querySelectorAll('.ud-own-type').forEach(el => { el.textContent = name; });
+  const go = document.getElementById('gdOwnGo');
+  if (go) go.textContent = 'Buy ₱' + price + ' →';
+}
+
+function ownInsteadRent() {
+  setMode('buy');
+  if (selectedType === 'nt' || selectedType === 'tr') selectBuyType(selectedType);
+  const panel = document.getElementById('buyPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // Opens / closes the website-order block (price summary, name field, pay
 // button). Messenger is the main way to rent; this is the second option.
 function toggleOrderBlock(forceOpen) {
@@ -409,6 +436,7 @@ function updateCtaState() {
 
   if (ALL_UNAVAIL) {
     if (totalBox) totalBox.style.display = 'none';
+    syncBookedChrome(true);
     return;
   }
   if (!ctaBtn) return;
@@ -429,6 +457,7 @@ function updateCtaState() {
     if (totalBox) totalBox.style.display = 'none';
     if (orderToggle) orderToggle.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
+    syncBookedChrome();
     return;
   }
   ctaBtn.style.display = '';
@@ -436,6 +465,7 @@ function updateCtaState() {
   if (totalBox) totalBox.style.display = '';
   if (orderToggle) orderToggle.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
+  syncBookedChrome();
 
   if (!selectedType) {
     ctaBtn.textContent = 'Pick an account type';

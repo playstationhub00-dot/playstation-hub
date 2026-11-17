@@ -81,7 +81,7 @@ async function main() {
 
   console.log('\nlayout');
   await okAsync('same two-column page as a released game, with a countdown pill', async () => {
-    assert.ok(page.includes('class="gd-page-booking-v2 gp-redesign gp-upcoming"'));
+    assert.ok(page.includes('class="gd-page-booking-v2 gp-redesign hub gp-upcoming"'));
     assert.ok(page.includes('class="gp-grid"') && page.includes('class="gp-hero"') && page.includes('class="gd-detail-col gp-panel"'));
     assert.ok(page.includes('href="/browse">← Back to Catalog</a>'));
     assert.ok(page.includes('href="/browse?tab=coming-soon">Coming soon</a>'));
@@ -91,9 +91,13 @@ async function main() {
     assert.ok(page.includes('>Coming soon</span>'));
     assert.ok(page.includes('>PS5</span>') && page.includes('>Action</span>'));
     assert.ok(page.includes('<div class="gpa-tagline">Sample tagline.</div>'));
-    assert.ok(page.includes('class="gp-clamp">'));
-    assert.ok(page.includes('Read more ›'));
-    assert.ok(page.includes('class="gp-chips"'));
+    assert.ok(page.includes('class="gd-specs"'));
+    assert.ok(page.includes('id="gdAbout"'));
+    assert.ok(page.includes('<p>First sample paragraph.</p>'));
+    assert.ok(!page.includes('class="gp-clamp"') && !page.includes('gdh-poster-desc'), 'the description is not repeated above the specs');
+    const specsAt = page.indexOf('class="gd-specs"');
+    const aboutAt = page.indexOf('id="gdAbout"');
+    assert.ok(specsAt > 0 && aboutAt > specsAt, 'description sits under the spec boxes');
     assert.ok(page.includes('<b>Release date</b>'));
     assert.ok(page.includes('<b>Publisher</b>Zzyzx Publishing'));
     assert.ok(page.includes('<b>Rating</b>ESRB Mature'));
@@ -101,9 +105,12 @@ async function main() {
     assert.ok(!page.includes('class="seo-intro"'));
   });
   await okAsync('gameplay strip and tabs, and no empty FAQ tab', async () => {
-    assert.ok(page.includes('data-film') && page.includes('id="gpLightbox"') && page.includes('Gameplay'));
-    assert.ok(page.includes('id="gpTabs"') && page.includes('Before you rent') && page.includes('>Details<'));
-    assert.ok(page.includes('About this game') && page.includes('<td>Publisher</td><td>Zzyzx Publishing</td>'));
+    assert.ok(page.includes('data-film') && page.includes('id="gpLightbox"') && page.includes('Screenshots'));
+    assert.ok(page.includes('id="gpTabs"') && page.includes('Why rent it') && page.includes('>Details<'));
+    assert.ok(page.includes('class="gp-why"') && page.includes('Console Sharing and Offline Play') && page.includes('class="is-on">Enable</span>'));
+    assert.ok(!page.includes('Before you rent') && !page.includes('Turn Console Sharing'));
+    assert.ok(page.includes('Game info') && page.includes('<td>Publisher</td><td>Zzyzx Publishing</td>'));
+    assert.ok(!page.includes('About this game'), 'the description is not repeated in Details');
     const tablist = page.slice(page.indexOf('id="gpTabs"'), page.indexOf('id="gpPaneBefore"'));
     assert.ok(!tablist.includes('FAQ') && !page.includes('id="gpPaneFaq"'));
     assert.ok(!tablist.includes('Customer reviews'));

@@ -1,0 +1,42 @@
+<%#
+  "Why rent it": the online-play line, Trophy and Non-Trophy setup cards, and
+  the recommend line. Shared by the rental page and Coming soon.
+  Locals: showTrophy, deposit, showPs4, recommend, renterCount
+%>
+<% const wrDeposit = (typeof deposit !== 'undefined' && deposit != null) ? deposit : 0; %>
+<% const wrTrophy = typeof showTrophy === 'undefined' ? true : !!showTrophy; %>
+<% const wrPs4 = typeof showPs4 !== 'undefined' && !!showPs4; %>
+<% const wrRec = (typeof recommend !== 'undefined') ? recommend : null; %>
+<% const wrRenters = (typeof renterCount !== 'undefined') ? renterCount : null; %>
+<p class="gp-online"><span aria-hidden="true">🌐</span> <b>Online play</b> needs your own PS Plus.</p>
+<div class="gp-why">
+  <% if (wrTrophy) { %>
+  <article class="gp-why-card">
+    <header><span aria-hidden="true">🏆</span> <b>Trophy</b> <em>YOUR ACCOUNT</em></header>
+    <p>Play on your own profile and earn trophies. ₱<%= wrDeposit %> refundable deposit.</p>
+    <ol>
+      <li><span>1</span><div>On your console, open the PSN sign-in screen and send us the QR or code on Messenger. We never ask for a password.</div></li>
+      <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-on">Enable</span></span></div></li>
+      <li><span>3</span><div>Download the game, switch back to your own profile, and play.</div></li>
+    </ol>
+    <p class="gp-why-note">Keep Console Sharing on for the whole rental.</p>
+  </article>
+  <% } %>
+  <article class="gp-why-card">
+    <header><span aria-hidden="true">🎮</span> <b>Non-Trophy</b> <em>OUR ACCOUNT</em></header>
+    <p>Play on our account. Trophies won't show on your profile. No deposit.</p>
+    <ol>
+      <li><span>1</span><div>Open the PSN sign-in screen and send us the QR or code on Messenger.</div></li>
+      <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-off">Leave disabled</span></span></div></li>
+      <li><span>3</span><div>Download the game and play on our account.</div></li>
+    </ol>
+    <p class="gp-why-note">On PS4, choose Do Not Activate if you're asked.</p>
+  </article>
+</div>
+<% if (wrPs4) { %><p class="gp-why-ps4"><span aria-hidden="true">🕹️</span> <b>PS4 Primary</b> Your PS4. Activate as primary.</p><% } %>
+<p class="gp-before-ft">
+  <% const wrHasStats = (wrRec && wrRec.total > 0) || (wrRenters && wrRenters.n > 0); %>
+  <% if (wrRec && wrRec.total > 0) { %><b><%= wrRec.pct %>%</b> would recommend us · <%= wrRec.up %> of <%= wrRec.total %> renters asked<% } %>
+  <% if (wrRenters && wrRenters.n > 0) { %><%= (wrRec && wrRec.total > 0) ? ' · ' : '' %><%= wrRenters.n.toLocaleString() %><%= wrRenters.plus ? '+' : '' %> renters served<% } %>
+  <% if (wrHasStats) { %> · <% } %><a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Full setup guide ›</a>
+</p>
