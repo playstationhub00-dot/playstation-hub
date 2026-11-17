@@ -311,6 +311,172 @@ body.home2.hub .hh-soon-go {
   text-decoration: none;
   border-radius: 8px;
   padding: 8px 10px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+body.home2.hub .hh-soon-arr {
+  display: inline-block;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  vertical-align: middle;
+  transform: translateX(-6px);
+  transition: max-width 0.3s ease, margin 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+body.home2.hub .hh-soon-cover img { transition: transform 0.3s ease, filter 0.3s ease; }
+body.home2.hub .hh-soon-veil,
+.upcoming-card .hh-soon-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 14px 78px;
+  text-align: center;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+body.home2.hub .hh-soon-bell,
+.upcoming-card .hh-soon-bell {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #7c3aed;
+  color: #fff;
+  box-shadow: 0 0 18px rgba(167, 139, 250, 0.85);
+}
+body.home2.hub .hh-soon-bell svg,
+.upcoming-card .hh-soon-bell svg { width: 22px; height: 22px; display: block; }
+body.home2.hub .hh-soon-veil-t,
+.upcoming-card .hh-soon-veil-t {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  max-width: 14em;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+}
+body.home2.hub .hh-soon-veil-more,
+.upcoming-card .hh-soon-veil-more { font-size: 12px; font-weight: 700; color: #e9e4ff; }
+body.home2.hub .hh-count {
+  z-index: 3;
+  border: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+body.home2.hub .hh-soon { position: relative; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+body.home2.hub .card-grid.hh-soon-grid { overflow: visible; }
+@keyframes hh-soon-shimmer { to { background-position: 100% 0; } }
+@media (hover: hover) and (pointer: fine) {
+  body.home2.hub .hh-soon:hover {
+    transform: translateY(-8px);
+    border-color: #a78bfa;
+    box-shadow: 0 14px 34px rgba(124, 58, 237, 0.55);
+    z-index: 3;
+  }
+  body.home2.hub .hh-soon:hover .hh-soon-cover img {
+    transform: scale(1.07);
+    filter: brightness(0.55);
+  }
+  body.home2.hub .hh-soon:hover .hh-soon-veil { opacity: 1; }
+  body.home2.hub .hh-soon:hover .hh-count {
+    background: rgba(124, 58, 237, 0.35);
+    border-color: #c4b5fd;
+  }
+  body.home2.hub .hh-soon:hover .hh-soon-band {
+    background-image: linear-gradient(100deg, #5b21b6 0%, #c4b5fd 42%, #6d28d9 68%, #7c3aed 100%);
+    background-size: 220% 100%;
+    animation: hh-soon-shimmer 1.8s linear infinite;
+  }
+  body.home2.hub .hh-soon:hover .hh-soon-go {
+    background: linear-gradient(90deg, #7c3aed, #c084fc);
+    box-shadow: 0 0 16px rgba(167, 139, 250, 0.75);
+  }
+  body.home2.hub .hh-soon:hover .hh-soon-arr {
+    max-width: 1.2em;
+    margin-left: 0.35em;
+    opacity: 1;
+    transform: none;
+  }
+  .upcoming-card.gc2-split { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }
+  .upcoming-card .cs-cover-img { transition: transform 0.3s ease, filter 0.3s ease; }
+  .upcoming-card.gc2-split:hover {
+    transform: translateY(-8px);
+    border-color: #a78bfa;
+    box-shadow: 0 14px 34px rgba(124, 58, 237, 0.55);
+    z-index: 3;
+  }
+  .upcoming-card.gc2-split:hover .cs-cover-img {
+    transform: scale(1.07);
+    filter: brightness(0.55);
+  }
+  .upcoming-card.gc2-split:hover .hh-soon-veil { opacity: 1; }
+}
+@media (hover: none) {
+  .upcoming-card:hover { box-shadow: none; transform: none; }
+  body.home2.hub .hh-soon:focus-within,
+  body.home2.hub .hh-soon:active,
+  .upcoming-card.gc2-split:focus-within,
+  .upcoming-card.gc2-split:active {
+    border-color: #a78bfa;
+    box-shadow: 0 14px 34px rgba(124, 58, 237, 0.55);
+  }
+  body.home2.hub .hh-soon:focus-within .hh-soon-veil,
+  body.home2.hub .hh-soon:active .hh-soon-veil,
+  .upcoming-card.gc2-split:focus-within .hh-soon-veil,
+  .upcoming-card.gc2-split:active .hh-soon-veil { opacity: 1; }
+  body.home2.hub .hh-soon:focus-within .hh-count,
+  body.home2.hub .hh-soon:active .hh-count {
+    background: rgba(124, 58, 237, 0.35);
+    border-color: #c4b5fd;
+  }
+  body.home2.hub .hh-soon:focus-within .hh-soon-go,
+  body.home2.hub .hh-soon:active .hh-soon-go {
+    background: linear-gradient(90deg, #7c3aed, #c084fc);
+  }
+  body.home2.hub .hh-soon:focus-within .hh-soon-arr,
+  body.home2.hub .hh-soon:active .hh-soon-arr {
+    max-width: 1.2em;
+    margin-left: 0.35em;
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.home2.hub .hh-soon,
+  body.home2.hub .hh-soon-cover img,
+  body.home2.hub .hh-soon-veil,
+  body.home2.hub .hh-soon-arr,
+  body.home2.hub .hh-soon-band,
+  body.home2.hub .hh-soon-go,
+  body.home2.hub .hh-count,
+  .upcoming-card.gc2-split,
+  .upcoming-card .cs-cover-img,
+  .upcoming-card .hh-soon-veil {
+    transition: none;
+    animation: none;
+  }
+  body.home2.hub .hh-soon:hover,
+  body.home2.hub .hh-soon:focus-within,
+  body.home2.hub .hh-soon:active,
+  .upcoming-card.gc2-split:hover,
+  .upcoming-card.gc2-split:focus-within,
+  .upcoming-card.gc2-split:active { transform: none; }
+  body.home2.hub .hh-soon:hover .hh-soon-cover img,
+  body.home2.hub .hh-soon:focus-within .hh-soon-cover img,
+  body.home2.hub .hh-soon:active .hh-soon-cover img,
+  .upcoming-card.gc2-split:hover .cs-cover-img,
+  .upcoming-card.gc2-split:focus-within .cs-cover-img,
+  .upcoming-card.gc2-split:active .cs-cover-img { transform: none; }
+  body.home2.hub .hh-soon:hover .hh-soon-band,
+  body.home2.hub .hh-soon:focus-within .hh-soon-band,
+  body.home2.hub .hh-soon:active .hh-soon-band { animation: none; }
 }
 
 /* Reference game card: cover, category bar, prices, account rows, button. */
