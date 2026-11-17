@@ -65,7 +65,9 @@ function onTypeChange() {
   updateSummary();
   updateCta();
   updateOwnStrip();
+  syncLineFields();
   syncFullPanel();
+  if (typeof qlShow === 'function') qlShow('Soon', selectedType);
 }
 
 function renderDurButtons() {
@@ -98,6 +100,7 @@ function selectDur(days) {
   updateSummary();
   updateCta();
   updateLinks();
+  syncLineFields();
 }
 
 // Mirrors the rent page's updateTotal(): the box never hides, the rows are
@@ -296,22 +299,43 @@ function syncUpcomingSticky() {
 }
 
 function upcomingStickyClick() {
-  const id = upcomingMode === 'buy' ? 'udBuyCtaBtn' : (getSlots() > 0 ? 'ctaReserveBtn' : 'queueLink');
+  const id = upcomingMode === 'buy' ? 'udBuyCtaBtn' : (getSlots() > 0 ? 'ctaReserveBtn' : 'lineCardSoon');
   const el = document.getElementById(id);
   if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// A full account type cannot be reserved. The plan cards, the price lines,
-// the name field and the Full Slot button step aside. The waitlist card is
-// the action, and Own it instead stays when that type can be bought.
+function syncLineFields() {
+  const rt = document.getElementById('resTypeSoon');
+  const rd = document.getElementById('resDaysSoon');
+  if (rt) rt.value = selectedType || '';
+  if (rd) rd.value = selectedDays || '';
+}
+
+function handleReserveFormSubmit(e, valMsgId) {
+  if (!selectedDays) {
+    e.preventDefault();
+    const el = valMsgId ? document.getElementById(valMsgId) : null;
+    if (el) {
+      el.textContent = '⚠️ Please select a rental duration (Weekly or Monthly) before continuing.';
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+    shakeDurGrid();
+    return false;
+  }
+  syncLineFields();
+  return true;
+}
+
+// A full account type cannot be reserved. Weekly and Monthly stay so the
+// customer picks the plan the waitlist message names. The total, the order
+// name field, and the Full Slot button step aside.
 function syncFullPanel() {
   if (upcomingMode === 'buy') return;
   const full = getSlots() <= 0;
-  const dur = document.getElementById('durGrid');
   const sum = document.getElementById('orderSummary');
   const reserve = document.getElementById('ctaReserve');
   const wait = document.getElementById('ctaWaitlist');
-  if (dur) dur.style.display = full ? 'none' : '';
   if (sum) sum.style.display = full ? 'none' : '';
   if (reserve) reserve.style.display = full ? 'none' : '';
   if (wait) wait.style.display = full ? '' : 'none';
@@ -376,6 +400,7 @@ updateSummary();
 updateCta();
 updateOwnStrip();
 syncFullPanel();
+if (typeof qlShow === 'function') qlShow('Soon', selectedType);
 
 // Same four-line clamp as the rental page (public/js/game-detail.js). The
 // description lives under the spec boxes, so this does not open another tab.

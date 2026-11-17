@@ -263,14 +263,8 @@
         </div>
 
         <div id="ctaWaitlist" style="display:<%= allFull ? '' : 'none' %>;margin-top:0.75rem;">
-          <a id="queueLink" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
-             class="gd-reserve-card gd-reserve-queue" onclick="return handleReserveClick(event,'queue')">
-            <div class="gd-reserve-icon">🎮</div>
-            <div class="gd-reserve-name">Fall in Line</div>
-            <div class="gd-reserve-fee" style="color:#22c55e;">FREE</div>
-            <div class="gd-reserve-note">Join the waitlist at no cost. You'll be notified when a slot opens.</div>
-            <div class="gd-reserve-cta">📘 Join Waitlist →</div>
-          </a>
+          <%- include('partials/queue-line', { queues: (typeof queues !== 'undefined' ? queues : { nt: [], tr: [], ps4: [] }), activeType: 'nt', selfRef: null, suffix: 'Soon', hideStrip: true }) %>
+          <%- include('partials/noslot-options', { game_id: game.id, suffix: 'Soon', resValMsgId: 'reserveValidationMsgSoon', variant: 'card' }) %>
         </div>
 
         </div><!-- /udRentPanel -->

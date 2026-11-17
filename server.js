@@ -3460,10 +3460,10 @@ app.post('/order/reserve', async (req, res) => {
   // one — paid in full now — and /order/buy only knows about already-released
   // catalogue rows.
   const isBuyPreorder = kind === 'buy';
-  // Fall in Line: a free, unpaid entry. PS Plus reuses this same route and
-  // the same "This type has no slot right now" UI, so it must be allowed
-  // too — only a Coming Soon pre-order (isUpcoming) is excluded, since that
-  // page keeps its own separate (Messenger-only) waitlist card.
+  // Fall in Line: a free, unpaid entry. PS Plus and a full Coming Soon type
+  // reuse this same route and the same panel. A Coming Soon rental
+  // reservation (no `kind`, or a slot that is still free) is not a queue
+  // entry and is priced further down.
   const isWaitlist = kind === 'queue';
   const upcoming = getUpcomingGame(game_id);
   const isPsplus = !upcoming && game_id === 'psplus';
@@ -3495,6 +3495,9 @@ app.post('/order/reserve', async (req, res) => {
   const promo = getSiteSettings().promo || {};
   let amountDue, depositDue, remainingDue, releaseDate, upcomingGameId;
   let newSlot = false;
+  // A free slot on a Coming Soon game is always a reservation, even if a
+  // queue `kind` was posted. A full type that asked to join the line keeps it.
+  let queueEntry = isWaitlist;
   if (isBuyPreorder) {
     // Permanent price, paid in full now — no deposit (nothing to return) and
     // no split with a release-day balance, unlike a rental reservation. The
@@ -3523,27 +3526,45 @@ app.post('/order/reserve', async (req, res) => {
     // as taken — a rented or bought account slot, or a Bought, Renting or
     // Reservation customer — cannot be reserved. A permanent pre-order is
     // the branch above and stays open when the type is full (new slot).
+    // A full type can still join the line: Free (`kind=queue`) or Priority
+    // (the line form sends `kind` as an empty field). Those entries are
+    // stored like a released game's queue row — no upcoming_game_id — so
+    // the same admin queue and #N count include them. A reserve attempt
+    // that does not send `kind` at all is still refused.
     const left = resolveUpcomingSlots(game);
     const free = type === 'tr' ? left.trophy_slots : left.non_trophy_slots;
-    if (!(free > 0)) {
-      return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=full');
-    }
-    // Priced through lib/reservations so the admin's Quick Add records the
-    // same reservation this route creates. Two copies of a price rule is
-    // exactly how the Coming Soon pre-order came to quote one figure and
-    // charge another.
     const priced = reservations.preorderPricing(game, type, d, promo);
-    if (!priced) return res.redirect(errRedirect);
-    // priced.amountDue is base + deposit (the whole figure a caller with no
-    // separate deposit tracking can charge in one go). This order model
-    // tracks amount_due and deposit_due as two fields that order-status.ejs
-    // adds back together for "To send now" — so amountDue here must be the
-    // base alone, or the deposit gets counted twice.
-    depositDue = priced.deposit;
-    amountDue = priced.base;
-    remainingDue = priced.remainingDue;
-    releaseDate = game.release_date || '';
-    upcomingGameId = game.id;
+    if (!(free > 0)) {
+      if (!Object.prototype.hasOwnProperty.call(req.body, 'kind')) {
+        return res.redirect('/upcoming/' + gameSlug(game.title) + '-' + game.id + '?order_error=full');
+      }
+      if (!priced) return res.redirect(errRedirect);
+      if (isWaitlist) {
+        amountDue = 0;
+        depositDue = 0;
+        remainingDue = priced.base + priced.deposit;
+      } else {
+        const fee = reservations.priorityFeeSplit(priced.base, priced.deposit);
+        amountDue = fee.amountDue;
+        depositDue = fee.depositDue;
+        remainingDue = fee.remainingDue;
+      }
+      releaseDate = '';
+      upcomingGameId = null;
+    } else {
+      queueEntry = false;
+      if (!priced) return res.redirect(errRedirect);
+      // priced.amountDue is base + deposit (the whole figure a caller with no
+      // separate deposit tracking can charge in one go). This order model
+      // tracks amount_due and deposit_due as two fields that order-status.ejs
+      // adds back together for "To send now" — so amountDue here must be the
+      // base alone, or the deposit gets counted twice.
+      depositDue = priced.deposit;
+      amountDue = priced.base;
+      remainingDue = priced.remainingDue;
+      releaseDate = game.release_date || '';
+      upcomingGameId = game.id;
+    }
   } else if (isWaitlist) {
     // Free entry: nothing collected now. remainingDue carries the full price
     // the customer will owe once the owner manually starts a real order for
@@ -3608,13 +3629,13 @@ app.post('/order/reserve', async (req, res) => {
       account_type: type,
       days: isBuyPreorder ? null : d,
       is_buy: isBuyPreorder,
-      is_waitlist: isWaitlist,
+      is_waitlist: queueEntry,
       amount_due: amountDue,
       deposit_due: depositDue,
       fb_name: name,
       session_id: req.sessionId || null,
       client_token: orders.cleanClientToken(req.body.client_token),
-      is_reservation: !isWaitlist,
+      is_reservation: !queueEntry,
       is_psplus: isPsplus,
       upcoming_game_id: upcomingGameId,
       release_date: releaseDate,
@@ -3626,7 +3647,7 @@ app.post('/order/reserve', async (req, res) => {
     // instead of a payment step it will never complete. Object.assign does
     // NOT skip an explicit `undefined` value, so the key is omitted rather
     // than set to `state: undefined` (which would overwrite the default).
-    if (isWaitlist) orderFields.state = 'waitlisted';
+    if (queueEntry) orderFields.state = 'waitlisted';
     const placed = await createOrderNotified(orderFields);
     redirectPlacedOrder(res, placed);
   } catch (e) {
@@ -6734,7 +6755,7 @@ app.get('/admin/api/visitors-by-date', requireAuth, (req, res) => {
 });
 
 // Upcoming CRUD
-app.get('/upcoming/:slug', (req, res) => {
+app.get('/upcoming/:slug', asyncRoute(async (req, res) => {
   const slug = req.params.slug;
   // Same rule as /game/:slug. The card href is the public slug plus '-' + id,
   // so a typo token's card already points at the corrected URL. The old
@@ -6766,15 +6787,21 @@ app.get('/upcoming/:slug', (req, res) => {
   }
 
   const resolvedGame = resolveUpcomingSlots(game);
+  // Same queue the released game page numbers. A full Coming Soon type joins
+  // this list, so "You'd be #N" matches the admin panel for this game id.
+  let queues = { nt: [], tr: [], ps4: [] };
+  try {
+    queues = queueRules.buildQueue(await orders.listQueueCandidates(resolvedGame.id), new Date(), req.sessionId);
+  } catch (e) { console.error('[upcoming queue]', e.message); }
 
   // A Coming Soon title has no reviews of its own — nobody has played it yet —
   // so this shows the same shared pool every released game page shows, sorted
   // by sortForGame() the same way. It never surfaces as "reviews of this game";
   // it's the trust signal for the business, which is exactly what a customer
   // deciding whether to reserve an unreleased game needs to see.
-  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null },
+  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null, queues },
     reviewBlockLocals(resolvedGame.title)));
-});
+}));
 
 // ── Coming soon: "Update from PlayStation" ─────────────────────────────────
 // PlayStation's announced, dated games (lib/upcoming-psn-feed.js) checked

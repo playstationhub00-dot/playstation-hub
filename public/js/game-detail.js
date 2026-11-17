@@ -366,24 +366,10 @@ function isBookedNow() {
   return ALL_UNAVAIL || (!!selectedType && AVAIL[selectedType] === false);
 }
 
-// A full account type is waitlist-only. The weekly and monthly cards, the
-// rental lines, and the website order step aside. Own it instead stays when
-// that type can be bought. An open type puts the order form back.
-function syncBookedChrome(booked) {
-  const dur = document.getElementById('durationGrid');
-  if (dur) dur.style.display = booked ? 'none' : '';
-  const trial = document.getElementById('gdTrial');
-  if (trial) trial.style.display = booked ? 'none' : '';
-  const perks = document.querySelector('#rentPanel .gd-perks');
-  if (perks) perks.style.display = booked ? 'none' : '';
-  const voucher = document.getElementById('voucherBox');
-  if (voucher) voucher.style.display = booked ? 'none' : '';
-  const from = document.querySelector('#rentPanel .gd-rent-from');
-  if (from) from.style.display = booked ? 'none' : '';
-  const feesBtn = document.getElementById('feesToggle');
-  if (feesBtn) feesBtn.style.display = booked ? 'none' : '';
-  const ask = document.getElementById('ctaMsgAsk');
-  if (ask) ask.style.display = booked ? 'none' : '';
+// A full account type still picks Weekly or Monthly — that duration is what
+// the waitlist form already sends as `days`. The total, the website order
+// name field, and the Full Slot button stay hidden in updateCtaState.
+function syncBookedChrome() {
   updateOwnStripRent();
 }
 
@@ -471,7 +457,7 @@ function updateCtaState() {
     if (totalBox) totalBox.style.display = 'none';
     if (orderToggle) orderToggle.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
-    syncBookedChrome(true);
+    syncBookedChrome();
     return;
   }
   ctaBtn.style.display = '';
@@ -479,7 +465,7 @@ function updateCtaState() {
   if (totalBox) totalBox.style.display = '';
   if (orderToggle) orderToggle.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
-  syncBookedChrome(false);
+  syncBookedChrome();
 
   if (!selectedType) {
     ctaBtn.textContent = 'Pick an account type';
