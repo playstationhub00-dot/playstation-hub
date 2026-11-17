@@ -163,7 +163,17 @@
     </div>
 
     <div class="gd-detail-col gp-panel">
-      <div class="gdh-card">
+      <div class="gdh-card bp-card">
+
+        <div class="bp-head">
+          <% if (game.cover_image) { %><img class="bp-thumb" src="<%= game.cover_image %>" alt=""><% } %>
+          <div>
+            <div class="bp-name"><%= game.title %></div>
+            <% const udWeekPrices = [game.nt_price_7d, game.tr_price_7d].map(function (n) { return Number(n) || 0; }).filter(function (n) { return n > 0; }); %>
+            <% if (udWeekPrices.length) { %><div class="bp-from">From <b>₱<%= Math.min.apply(null, udWeekPrices) %></b> / week</div><% } %>
+            <div class="bp-pick" id="bpPick" data-platform="<%= game.platform || 'PS5' %>"><%= game.platform || 'PS5' %> · pick an account</div>
+          </div>
+        </div>
 
         <div class="gp-mode">
           <button type="button" id="udToggleRent" class="on" onclick="setUpcomingMode('rent')">⏱️ Rent</button>
@@ -177,13 +187,23 @@
         <!-- ════════ RENT PANEL ════════ -->
         <div id="udRentPanel">
 
+        <div class="gd-price-header" id="udPriceHero">
+          <div class="gd-ph-amount"><span id="udHeroAmount">—</span></div>
+          <div class="gd-ph-kicker" id="udHeroKicker"></div>
+          <div class="gd-ph-rider" id="udHeroRider"></div>
+        </div>
+
+        <div class="bp-label">Account</div>
         <% if (hasNt || showTr) { %>
         <div class="gd-type-options" id="typeOptions">
           <% if (showTr) { %>
           <label class="gd-type-card gd-type-pill" id="typeCard-tr">
             <input type="radio" name="rental_type" value="tr" class="gd-type-radio" id="type-tr" onchange="onTypeChange()" <%= (!hasNt) ? 'checked' : '' %>>
             <span class="gd-type-icon">🏆</span>
-            <span class="gd-type-name">Trophy</span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Trophy</span>
+              <span class="bp-type-sub">Your profile · ₱<%= udPromo.deposit || 100 %> refundable deposit</span>
+            </span>
             <% if (trSlots > 0) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
             <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full Slot' %></span>
           </label>
@@ -192,7 +212,10 @@
           <label class="gd-type-card gd-type-pill" id="typeCard-nt">
             <input type="radio" name="rental_type" value="nt" class="gd-type-radio" id="type-nt" onchange="onTypeChange()" checked>
             <span class="gd-type-icon">🎮</span>
-            <span class="gd-type-name">Non-Trophy</span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="bp-type-sub">Our account · no deposit</span>
+            </span>
             <% if (ntSlots > 0) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
             <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full Slot' %></span>
           </label>
@@ -230,6 +253,7 @@
         </div>
         <% } %>
 
+        <div class="bp-label">Plan</div>
         <div class="gd-duration-grid" id="durGrid" style="margin-top:0.75rem;"></div>
 
         <div class="gd-total-box" id="orderSummary">
@@ -255,6 +279,7 @@
           </form>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
              onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
+          <%- include('partials/bp-trust') %>
           <% if (order_error === 'full') { %>
           <div class="gd-order-error">That account type has no slots left.</div>
           <% } else if (order_error === '1') { %>

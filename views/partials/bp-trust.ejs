@@ -1,0 +1,12 @@
+<% const bpRec = (typeof recommend !== 'undefined' && recommend) ? recommend : null; %>
+<% const bpRenters = (typeof renterCount !== 'undefined' && renterCount) ? renterCount : null; %>
+<% if ((bpRec && bpRec.total > 0) || (bpRenters && bpRenters.n > 0)) { %>
+<div class="bp-trust">
+  <% if (bpRec && bpRec.total > 0) { %>
+  <div class="bp-trust-top">★ <%= bpRec.pct %>% would recommend us</div>
+  <div class="bp-trust-sub"><%= bpRec.up %> of <%= bpRec.total %> renters asked<% if (bpRenters && bpRenters.n > 0) { %> · <%= bpRenters.n.toLocaleString() %><%= bpRenters.plus ? '+' : '' %> renters served<% } %></div>
+  <% } else { %>
+  <div class="bp-trust-top"><%= bpRenters.n.toLocaleString() %><%= bpRenters.plus ? '+' : '' %> renters served</div>
+  <% } %>
+</div>
+<% } %>

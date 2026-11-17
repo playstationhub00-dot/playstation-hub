@@ -74,8 +74,9 @@ function renderDurButtons() {
   const p = getPrices();
   const grid = document.getElementById('durGrid');
   grid.innerHTML = '';
-  const durLabelMap = { 7: 'Weekly · 7 days', 30: 'Monthly · 30 days' };
+  const durLabelMap = { 7: 'Weekly', 30: 'Monthly' };
   const available = RENTAL_DURATIONS.filter(d => p[d]);
+  const save = p[7] && p[30] ? p[7] * 4 - p[30] : 0;
 
   available.forEach(d => {
     const btn = document.createElement('button');
@@ -83,7 +84,8 @@ function renderDurButtons() {
     btn.className = 'gd-dur-btn';
     btn.dataset.days = d;
     btn.onclick = () => selectDur(d);
-    btn.innerHTML = `<span class="gd-dur-days">${durLabelMap[d] || d}</span><span class="gd-dur-price">₱${p[d]}</span>`;
+    const saveHtml = d === 30 && save > 0 ? `<span class="gd-dur-save">Save ₱${save} vs 4 weeks</span>` : '';
+    btn.innerHTML = `<span class="gd-dur-days">${durLabelMap[d] || d}</span><span class="gd-dur-price">₱${p[d]}</span>${saveHtml}`;
     grid.appendChild(btn);
   });
 
@@ -132,7 +134,15 @@ function updateSummary() {
 
   rowsEl.innerHTML =
     '<div class="gd-total-row"><span>Rental · ' + typeName + ', ' + durName + '</span><span>' + (price ? '₱' + price : '—') + '</span></div>' +
-    '<div class="gd-total-row gd-total-dep"><span>🔒 Refundable deposit</span><span>+₱' + deposit + '</span></div>';
+    '<div class="gd-total-row gd-total-dep"><span>Refundable deposit</span><span>₱' + deposit + '</span></div>';
+  const heroAmt = document.getElementById('udHeroAmount');
+  const heroKick = document.getElementById('udHeroKicker');
+  const heroRide = document.getElementById('udHeroRider');
+  if (heroAmt) heroAmt.textContent = price ? ('₱' + price) : '—';
+  if (heroKick) heroKick.textContent = durName + ' · ' + typeName;
+  if (heroRide) heroRide.textContent = deposit > 0 ? ('₱' + deposit + ' refundable deposit') : 'No deposit due today';
+  const pick = document.getElementById('bpPick');
+  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + typeName + ' selected';
   // Paid in full now — nothing owed when the game releases. The deposit
   // (Trophy only) is still refundable on its own terms, independent of that;
   // the rider only exists to say so, and has nothing to say otherwise.
@@ -177,7 +187,7 @@ function updateCta() {
   const payNote = (typeof PAY_NOTE === 'string' && PAY_NOTE)
     ? PAY_NOTE
     : 'GCash or Maya for local customers · PayPal for international customers';
-  setReady('🎮 Reserve now — ₱' + total,
+  setReady('Reserve now — ₱' + total,
     'Pay in full · ' + payNote + ' · nothing more due on release');
 }
 
@@ -264,6 +274,17 @@ function selectUdBuyType(type) {
   });
   const typeField = document.getElementById('udBuyOrderType');
   if (typeField) typeField.value = type;
+  const buyBtn = document.getElementById('udBuyCtaBtn');
+  const price = (typeof BUY_FINAL !== 'undefined' && BUY_FINAL[type]) || 0;
+  if (buyBtn && price) buyBtn.textContent = 'Buy permanent — ₱' + price;
+  const heroAmt = document.getElementById('udHeroAmount');
+  const heroKick = document.getElementById('udHeroKicker');
+  const heroRide = document.getElementById('udHeroRider');
+  if (heroAmt && price) heroAmt.textContent = '₱' + price;
+  if (heroKick) heroKick.textContent = (type === 'tr' ? 'Trophy' : 'Non-Trophy') + ' · permanent';
+  if (heroRide) heroRide.textContent = 'One-time · yours to keep';
+  const pick = document.getElementById('bpPick');
+  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + (type === 'tr' ? 'Trophy' : 'Non-Trophy') + ' selected';
   syncUpcomingSticky();
 }
 

@@ -137,8 +137,12 @@ function updateBuyPriceHeader() {
     setPriceHeader(kEl.dataset.defaultKicker, buyFrom, null, null, null);
     return;
   }
-  const typeName = selectedBuyType === 'tr' ? 'trophy · permanent' : 'non-trophy · permanent';
-  setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null, null);
+  const typeName = selectedBuyType === 'tr' ? 'Trophy · permanent' : 'Non-Trophy · permanent';
+  setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null, 'One-time · yours to keep');
+  const buyBtn = document.getElementById('buyCtaBtn');
+  if (buyBtn) buyBtn.textContent = 'Buy permanent — ₱' + BUY_PRICES[selectedBuyType];
+  const pick = document.getElementById('bpPick');
+  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + (selectedBuyType === 'tr' ? 'Trophy' : 'Non-Trophy') + ' selected';
 }
 
 function handleBuyClick(e) {
@@ -285,6 +289,14 @@ function updatePrices() {
       }
     }
   });
+  const saveEl = document.getElementById('durSave');
+  if (saveEl && PRICES[selectedType][7] && PRICES[selectedType][30]) {
+    const week = chargedRent(selectedType, 7);
+    const month = chargedRent(selectedType, 30);
+    const save = (week.base - week.discount) * 4 - (month.base - month.discount);
+    if (save > 0) { saveEl.hidden = false; saveEl.textContent = 'Save ₱' + save + ' vs 4 weeks'; }
+    else saveEl.hidden = true;
+  }
 }
 
 // Order summary is always visible now — this fills it with the exact
@@ -320,7 +332,7 @@ function updateTotal() {
     base = cheapest.base; discount = cheapest.discount; deposit = cheapest.deposit; pct = cheapest.pct;
     const typeName = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'Non-Trophy';
     const final = base - discount;
-    const rider = deposit > 0 ? ('+ ₱' + deposit + ' refundable deposit') : null;
+    const rider = deposit > 0 ? ('₱' + deposit + ' refundable deposit') : 'No deposit due today';
     setPriceHeader(typeName + ' · from', final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
   } else {
     const amtEl = document.getElementById('phAmount');
@@ -332,7 +344,7 @@ function updateTotal() {
   let rows = `<div class="gd-total-row"><span>${baseLabel}</span><span>₱${base}</span></div>`;
   if (voucherCode && discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>${voucherCode} (−${pct}%)</span><span>−₱${discount}</span></div>`;
   else if (discount > 0) rows += `<div class="gd-total-row gd-total-disc"><span>🎉 ${pct}% OFF</span><span>-₱${discount}</span></div>`;
-  if (deposit > 0) rows += `<div class="gd-total-row gd-total-dep"><span>Refundable deposit</span><span>₱${deposit}</span></div>`;
+  rows += `<div class="gd-total-row gd-total-dep"><span>Refundable deposit</span><span>₱${deposit}</span></div>`;
   rowsEl.innerHTML = rows;
   finalEl.textContent = '₱' + total;
 
@@ -352,11 +364,16 @@ function updateTotal() {
 // so this task doesn't need to know Task 1's exact signature inline twice.
 function updatePriceHeaderFromSelection(base, discount) {
   const durName = selectedDays === 7 ? 'Weekly' : 'Monthly';
-  const typeName = selectedType === 'tr' ? 'trophy' : selectedType === 'ps4' ? 'PS4 primary' : 'non-trophy';
+  const typeName = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
   const final = base - discount;
   const deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
-  const rider = deposit > 0 ? ('+ ₱' + deposit + ' refundable deposit') : null;
+  const rider = deposit > 0 ? ('₱' + deposit + ' refundable deposit') : 'No deposit due today';
   setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
+  const pick = document.getElementById('bpPick');
+  if (pick) {
+    const nice = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+    pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + nice + ' selected';
+  }
 }
 
 // Booked = nothing can be rented right now for what they are looking at: every
@@ -479,7 +496,7 @@ function updateCtaState() {
     if (ctaSub) ctaSub.style.display = 'none';
   } else {
     const rt = chargedRent(selectedType, selectedDays);
-    ctaBtn.textContent = '🎮 Rent now — ₱' + rt.total;
+    ctaBtn.textContent = 'Reserve now — ₱' + rt.total;
     ctaBtn.classList.remove('gd-cta-wait');
     ctaBtn.disabled = false;
     if (ctaSub) ctaSub.style.display = '';
