@@ -1285,7 +1285,29 @@ body.gp-redesign.hub .gp-sim-name {
 }
 body.gp-redesign.hub .gp-sim-status { font-size: 12px; color: #a3a3a3; }
 body.gp-redesign.hub .gp-sim-status.is-open { color: #4ade80; }
-body.gp-redesign.hub .gp-similar { grid-column: 1 / -1; }
+body.gp-redesign.hub .gp-similar { grid-column: 1 / -1; margin-top: 8px; }
+body.gp-redesign.hub .gp-sim { transition: transform 0.3s ease; }
+body.gp-redesign.hub .gp-sim-cover { transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+body.gp-redesign.hub .gp-sim-cover img { transition: transform 0.3s ease; }
+@media (hover: hover) and (pointer: fine) {
+  body.gp-redesign.hub .gp-sim:hover {
+    transform: translateY(-8px);
+    z-index: 2;
+  }
+  body.gp-redesign.hub .gp-sim:hover .gp-sim-cover {
+    border-color: #F5B800;
+    box-shadow: 0 14px 32px rgba(245, 184, 0, 0.28);
+  }
+  body.gp-redesign.hub .gp-sim:hover .gp-sim-cover img { transform: scale(1.05); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  body.gp-redesign.hub .gp-sim,
+  body.gp-redesign.hub .gp-sim-cover,
+  body.gp-redesign.hub .gp-sim-cover img { transition: none; }
+  body.gp-redesign.hub .gp-sim:hover,
+  body.gp-redesign.hub .gp-sim:hover .gp-sim-cover img { transform: none; }
+  body.gp-redesign.hub .gp-sim:hover .gp-sim-cover { box-shadow: none; }
+}
 body.gp-redesign.hub .gd-cover-placeholder {
   width: 100%;
   height: auto;

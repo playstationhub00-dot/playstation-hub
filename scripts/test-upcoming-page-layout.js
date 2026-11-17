@@ -24,8 +24,16 @@ const psn = {
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: 'throwaway-' + Math.random().toString(36).slice(2),
   site_settings: { promo: { enabled: false, discounts: { 7: 0, 30: 0 }, deposit: 100, buy_promo_enabled: false, buy_promo_pct: 0 } },
-  games: [Object.assign({ id: 2, title: 'Zzyzx Rental', platform: 'PS5', genre: 'Action', release_date: '2026-01-02', cover_image: '/uploads/rent.webp', gallery: ['/uploads/layout-a.webp', '/uploads/layout-b.webp'] }, price)],
-  upcoming: [Object.assign({ id: 1, title: 'Zzyzx Horizon', platform: 'PS5', genre: 'Action', release_date: '2026-12-01', cover_image: '/uploads/soon.webp', buy_nt_price: 2499, buy_tr_price: 3499, gallery: ['/uploads/layout-a.webp', '/uploads/layout-b.webp'], psn }, price)],
+  games: [
+    Object.assign({ id: 2, title: 'Zzyzx Rental', platform: 'PS5', genre: 'Action', release_date: '2026-01-02', cover_image: '/uploads/rent.webp', gallery: ['/uploads/layout-a.webp', '/uploads/layout-b.webp'] }, price),
+    Object.assign({ id: 1, title: 'Zzyzx Shared', platform: 'PS5', genre: 'Action', release_date: '2026-01-03', cover_image: '/uploads/shared.webp' }, price),
+    Object.assign({ id: 9, title: 'Zzyzx Sports', platform: 'PS5', genre: 'Sports', release_date: '2026-02-02', cover_image: '/uploads/sports.webp' }, price, { non_trophy_slots: 0, trophy_slots: 0 }),
+    { id: 8, title: 'PS Plus Deluxe', platform: 'PS5', genre: 'Action', release_date: '2026-01-01', cover_image: '/uploads/plus.webp', nt_price_7d: 100, nt_price_30d: 200, tr_price_7d: 100, tr_price_30d: 200, non_trophy_slots: 1, trophy_slots: 1 }
+  ],
+  upcoming: [
+    Object.assign({ id: 1, title: 'Zzyzx Horizon', platform: 'PS5', genre: 'Action', release_date: '2026-12-01', cover_image: '/uploads/soon.webp', buy_nt_price: 2499, buy_tr_price: 3499, gallery: ['/uploads/layout-a.webp', '/uploads/layout-b.webp'], psn }, price),
+    Object.assign({ id: 4, title: 'Zzyzx Later', platform: 'PS5', genre: 'Action', release_date: '2026-12-20', cover_image: '/uploads/later.webp' }, price)
+  ],
   customers: []
 }));
 process.env.PORT = String(PORT);
@@ -180,6 +188,22 @@ async function main() {
   });
 
   console.log('\nrent page');
+  await okAsync('similar games use the catalogue, same genre first, and the right page', async () => {
+    assert.ok(page.includes('>Similar games</h2>'));
+    const section = page.slice(page.indexOf('gp-similar'), page.indexOf('udStickyBar'));
+    const hrefs = section.match(/href="\/game\/[^"]+"/g) || [];
+    assert.deepStrictEqual(hrefs, ['href="/game/zzyzx-rental"', 'href="/game/zzyzx-shared"', 'href="/game/zzyzx-sports"']);
+    assert.ok(section.includes('>Available</span>') && section.includes('>Full</span>'));
+    assert.ok(section.includes('Full · Join line') && section.includes('class="gp-sim is-full"'));
+    assert.ok(!section.includes('/upcoming/') && !section.includes('Zzyzx Later') && !section.includes('PS Plus Deluxe') && !section.includes('Zzyzx Horizon'));
+    const rent = await get('/game/zzyzx-rental');
+    const rentSection = rent.body.slice(rent.body.indexOf('gp-similar'), rent.body.indexOf('gdStickyBar'));
+    const rentHrefs = rentSection.match(/href="\/game\/[^"]+"/g) || [];
+    assert.deepStrictEqual(rentHrefs, ['href="/game/zzyzx-shared"', 'href="/game/zzyzx-sports"']);
+    const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'proposal', 'bridge.css'), 'utf8');
+    assert.ok(/@media \(hover: hover\) and \(pointer: fine\) \{[\s\S]*\.gp-sim:hover[\s\S]*translateY\(-8px\)[\s\S]*scale\(1\.05\)/.test(css));
+    assert.ok(css.includes('prefers-reduced-motion: reduce') && css.includes('.gp-sim:hover .gp-sim-cover img { transform: none; }'));
+  });
   await okAsync('a released game page still uses its own booking form', async () => {
     const rent = await get('/game/zzyzx-rental');
     assert.strictEqual(rent.status, 200);

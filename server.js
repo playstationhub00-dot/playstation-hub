@@ -5617,10 +5617,33 @@ app.get('/game/:slug', async (req, res) => {
   // aggregate counts the whole pool on purpose — it describes the business, so
   // the same figure is true on every game page.
   const promoNow = promoContext();
+  res.render('game-detail', Object.assign({
+    game: resolved,
+    psnView: gamePsnView.buildGamePsnView(resolved),
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings: gdSettings,
+    promo: gdSettings.promo,
+    accountSummary: gameAccountSummary(game.id),
+    order_error: req.query.order_error || null,
+    voucher_error: req.query.voucher || '',
+    voucherHint: vouchers.hintFor(promoNow.live),
+    related: similarCatalog(resolved, { excludeCatalogId: game.id }),
+    queues
+  }, reviewBlockLocals(game.title)));
+});
+
+// The six Similar games cards. Same list on a released page and a Coming soon
+// page: catalogue games, same genre first, then the newest id. A Coming soon
+// record is not in this list, and its id is not a catalogue id, so it does not
+// remove a released game. Each card links to that released game's page.
+// PS Plus Deluxe is the /ps-plus page, so it is left out here too.
+function similarCatalog(game, opts) {
+  opts = opts || {};
+  const genreKey = String((game && game.genre) || '').split('/')[0].trim().toLowerCase();
   const summaryMap = buildAccountSummaryMap();
-  const genreKey = String(resolved.genre || '').split('/')[0].trim().toLowerCase();
-  const related = (getGames() || [])
-    .filter(g => g && g.id !== game.id && !seo.isPsplusDeluxeTitle(g.title))
+  return (getGames() || [])
+    .filter(g => g && g.id !== opts.excludeCatalogId && !seo.isPsplusDeluxeTitle(g.title))
     .map(g => ({
       g,
       same: genreKey && String(g.genre || '').toLowerCase().includes(genreKey) ? 1 : 0
@@ -5637,21 +5660,7 @@ app.get('/game/:slug', async (req, res) => {
         status: avail && avail.allUnavail ? 'Full · Join line' : 'Available'
       };
     });
-  res.render('game-detail', Object.assign({
-    game: resolved,
-    psnView: gamePsnView.buildGamePsnView(resolved),
-    announcement: getAnnouncement(),
-    announcements: getAnnouncements(),
-    settings: gdSettings,
-    promo: gdSettings.promo,
-    accountSummary: gameAccountSummary(game.id),
-    order_error: req.query.order_error || null,
-    voucher_error: req.query.voucher || '',
-    voucherHint: vouchers.hintFor(promoNow.live),
-    related,
-    queues
-  }, reviewBlockLocals(game.title)));
-});
+}
 
 // ── Admin Promo Settings ──────────────────────────────────────────────────────
 app.post('/admin/promo', requireAuth, uploadPromoMedia.single('promo_media'), async (req, res) => {
@@ -6799,7 +6808,7 @@ app.get('/upcoming/:slug', asyncRoute(async (req, res) => {
   // by sortForGame() the same way. It never surfaces as "reviews of this game";
   // it's the trust signal for the business, which is exactly what a customer
   // deciding whether to reserve an unreleased game needs to see.
-  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null, queues },
+  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null, queues, related: similarCatalog(resolvedGame) },
     reviewBlockLocals(resolvedGame.title)));
 }));
 

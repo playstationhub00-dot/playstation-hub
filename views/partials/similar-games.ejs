@@ -1,0 +1,22 @@
+<% const gpRelated = (typeof related !== 'undefined' && related) ? related : []; %>
+<% if (gpRelated.length) { %>
+<div class="gp-related gp-similar">
+  <div class="gp-related-h">
+    <h2>Similar games</h2>
+    <a href="/browse">See all games ›</a>
+  </div>
+  <div class="gp-sim-grid">
+    <% gpRelated.forEach(item => { %>
+    <% const simFull = /^full/i.test(String(item.status || '')); %>
+    <a class="gp-sim<%= simFull ? ' is-full' : '' %>" href="<%= item.href %>">
+      <span class="gp-sim-cover">
+        <% if (item.cover) { %><img src="<%= item.cover %>" alt="<%= item.title %>" width="300" height="450" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
+        <span class="gp-sim-badge<%= simFull ? ' gp-sim-full' : ' gp-sim-open' %>"><%= simFull ? 'Full' : 'Available' %></span>
+      </span>
+      <span class="gp-sim-name"><%= item.title %></span>
+      <span class="gp-sim-status<%= simFull ? ' is-full' : ' is-open' %>"><%= item.status %></span>
+    </a>
+    <% }) %>
+  </div>
+</div>
+<% } %>
