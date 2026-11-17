@@ -806,8 +806,7 @@ body.gp-redesign.hub .gd-page {
 body.gp-redesign.hub .gp-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
-  /* Explicit rows so the booking column can span every one of them.
-     The span ends with this grid, and Similar games sits after it. */
+  /* Explicit rows so the booking column can sit beside the whole left side. */
   grid-template-rows: auto auto auto auto;
   column-gap: 28px;
   row-gap: 18px;
@@ -833,18 +832,14 @@ body.gp-redesign.hub .gp-title { min-width: 0; color: #fff; }
 body.gp-redesign.hub .gp-title h1 { color: #fff; }
 body.gp-redesign.hub .gp-panel {
   grid-column: 2;
-  /* The grid ends where Similar games begins, so the pin lets go there
-     and the panel scrolls away with the page. */
   grid-row: 1 / -1;
-  position: sticky;
-  top: 80px;
+  position: static;
   align-self: start;
   height: fit-content;
   background: transparent;
   border: 0;
   padding: 0;
   box-shadow: none;
-  z-index: 2;
 }
 body.gp-redesign.hub .gdh-card {
   position: static;
