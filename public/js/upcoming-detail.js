@@ -351,3 +351,27 @@ renderDurButtons();
 updateSummary();
 updateCta();
 updateOwnStrip();
+
+// Same four-line clamp as the rental page (public/js/game-detail.js). The
+// description lives under the spec boxes, so this does not open another tab.
+(function () {
+  const about = document.getElementById('gdAbout');
+  const aboutBtn = document.getElementById('gdAboutMore');
+  if (!about || !aboutBtn) return;
+  const fits = () => {
+    const wasOpen = about.classList.contains('is-open');
+    about.classList.add('is-open');
+    const full = about.scrollHeight;
+    const line = parseFloat(getComputedStyle(about).lineHeight) || 22;
+    about.classList.toggle('is-open', wasOpen);
+    aboutBtn.hidden = full <= line * 4 + 2;
+  };
+  aboutBtn.addEventListener('click', () => {
+    const open = about.classList.toggle('is-open');
+    aboutBtn.textContent = open ? 'Show less' : 'Read more';
+    aboutBtn.setAttribute('aria-expanded', String(open));
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fits);
+  else fits();
+  window.addEventListener('resize', () => { if (!about.classList.contains('is-open')) fits(); });
+})();

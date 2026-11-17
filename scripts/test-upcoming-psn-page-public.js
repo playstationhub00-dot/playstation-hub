@@ -74,12 +74,13 @@ async function main() {
   assert.deepStrictEqual([withInfo.status, own.status, plain.status], [200, 200, 200]);
 
   console.log('\nwith PlayStation info');
-  ok('the trailer and screenshots replace the cover, with their styles and script', () => {
+  ok('the cover stays, and the trailer row sits below it with the rental-page script', () => {
     const b = withInfo.body;
+    assert.ok(/<img src="\/uploads\/cover1\.webp" alt="Zzyzx With Info" class="gd-cover gdh-poster"/.test(b));
     assert.ok(b.includes('id="gpMedia" data-count="3"'));
     assert.ok(b.includes('<source src="https://vulcan.dl.playstation.net/trailer.mp4" type="video/mp4">'));
     assert.ok(b.includes('src="https://image.api.playstation.com/shot1.jpg"') && b.includes('src="https://image.api.playstation.com/shot2.jpg"'));
-    assert.ok(!b.includes('class="gd-cover gdh-poster"'), 'no static cover');
+    assert.ok(b.includes('class="gp-trailer"'));
     assert.ok(b.includes('/css/game-psn.css?v='));
     assert.ok(b.includes('<script src="/js/game-media.js?v='));
   });
@@ -87,15 +88,20 @@ async function main() {
     assert.ok(withInfo.body.includes('<div class="gpa-tagline">Zzyzx tagline</div>'));
     assert.ok(withInfo.body.includes('<b>★ 4.6</b> on PlayStation Store'));
   });
-  ok('About this game in paragraphs, and Game info, instead of the description under the poster', () => {
+  ok('one description under the spec boxes, and Game info without a second copy', () => {
     const b = withInfo.body;
-    assert.ok(b.includes('About this game'));
-    assert.ok(b.includes('<p>First paragraph from PlayStation.</p><p>Second paragraph from PlayStation.</p>'));
+    const specsAt = b.indexOf('class="gd-specs"');
+    const aboutAt = b.indexOf('id="gdAbout"');
+    assert.ok(specsAt > 0 && aboutAt > specsAt);
+    const about = b.slice(b.indexOf('id="gdAbout"'), b.indexOf('id="gdAbout"') + 400);
+    assert.ok(about.includes('<p>First paragraph from PlayStation.</p>') && about.includes('<p>Second paragraph from PlayStation.</p>'));
+    assert.strictEqual((b.match(/First paragraph from PlayStation\./g) || []).length, 1);
     assert.ok(b.includes('Game info'));
+    assert.ok(b.includes('Why rent it') && b.includes('class="gp-why"'));
     for (const cell of ['<td>Release date</td><td>Dec 1, 2026</td>', '<td>Publisher</td><td>Zzyzx Publisher</td>', '<td>Platform</td><td>PS5</td>', '<td>Voice</td><td>English, Japanese</td>', '<td>Age rating</td><td>ESRB Teen</td>']) {
       assert.ok(b.includes(cell), cell);
     }
-    assert.ok(!b.includes('gdh-poster-desc'), 'no second copy under the poster');
+    assert.ok(!b.includes('gdh-poster-desc') && !b.includes('class="gp-clamp"'), 'no second copy above the specs');
   });
 
   console.log("\nthe owner's own words and pictures");
@@ -118,7 +124,8 @@ async function main() {
   ok('cover, the owner description, and the gameplay strip', () => {
     const b = plain.body;
     assert.ok(/<img src="\/uploads\/cover3\.webp" alt="Zzyzx Plain" class="gd-cover gdh-poster"/.test(b));
-    assert.ok(b.includes('<p class="gd-desc gdh-poster-desc">Plain owner text.</p>'));
+    assert.ok(b.includes('id="gdAbout"') && b.slice(b.indexOf('id="gdAbout"'), b.indexOf('id="gdAbout"') + 200).includes('<p>Plain owner text.</p>'));
+    assert.ok(!b.includes('gdh-poster-desc'));
     assert.ok(b.includes('class="rsv-gallery-section"') && b.includes('data-film') && b.includes('const gdSlideCount = 2;'));
     assert.ok(!b.includes('id="gpMedia"') && !b.includes('About this game') && !b.includes('gpa-headline'));
     assert.ok(!b.includes('/js/game-media.js'));

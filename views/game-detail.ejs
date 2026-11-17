@@ -550,38 +550,7 @@
         <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews</button>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneBefore">
-        <p class="gp-online"><span aria-hidden="true">🌐</span> <b>Online play</b> needs your own PS Plus.</p>
-        <div class="gp-why">
-          <% if (hasTrophy) { %>
-          <article class="gp-why-card">
-            <header><span aria-hidden="true">🏆</span> <b>Trophy</b> <em>YOUR ACCOUNT</em></header>
-            <p>Play on your own profile and earn trophies. ₱<%= promo.deposit || 0 %> refundable deposit.</p>
-            <ol>
-              <li><span>1</span><div>On your console, open the PSN sign-in screen and send us the QR or code on Messenger. We never ask for a password.</div></li>
-              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-on">Enable</span></span></div></li>
-              <li><span>3</span><div>Download the game, switch back to your own profile, and play.</div></li>
-            </ol>
-            <p class="gp-why-note">Keep Console Sharing on for the whole rental.</p>
-          </article>
-          <% } %>
-          <article class="gp-why-card">
-            <header><span aria-hidden="true">🎮</span> <b>Non-Trophy</b> <em>OUR ACCOUNT</em></header>
-            <p>Play on our account. Trophies won't show on your profile. No deposit.</p>
-            <ol>
-              <li><span>1</span><div>Open the PSN sign-in screen and send us the QR or code on Messenger.</div></li>
-              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-off">Leave disabled</span></span></div></li>
-              <li><span>3</span><div>Download the game and play on our account.</div></li>
-            </ol>
-            <p class="gp-why-note">On PS4, choose Do Not Activate if you're asked.</p>
-          </article>
-        </div>
-        <% if (showPs4) { %><p class="gp-why-ps4"><span aria-hidden="true">🕹️</span> <b>PS4 Primary</b> Your PS4. Activate as primary.</p><% } %>
-        <p class="gp-before-ft">
-          <% const gdHasStats = (typeof recommend !== 'undefined' && recommend && recommend.total > 0) || (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0); %>
-          <% if (typeof recommend !== 'undefined' && recommend && recommend.total > 0) { %><b><%= recommend.pct %>%</b> would recommend us · <%= recommend.up %> of <%= recommend.total %> renters asked<% } %>
-          <% if (typeof renterCount !== 'undefined' && renterCount && renterCount.n > 0) { %><%= (typeof recommend !== 'undefined' && recommend && recommend.total > 0) ? ' · ' : '' %><%= renterCount.n.toLocaleString() %><%= renterCount.plus ? '+' : '' %> renters served<% } %>
-          <% if (gdHasStats) { %> · <% } %><a href="/guides/trophy-vs-non-trophy-vs-ps4-primary">Full setup guide ›</a>
-        </p>
+        <%- include('partials/why-rent', { showTrophy: hasTrophy, deposit: promo.deposit || 0, showPs4: showPs4, recommend: (typeof recommend !== 'undefined' ? recommend : null), renterCount: (typeof renterCount !== 'undefined' ? renterCount : null) }) %>
       </div>
       <div class="gp-pane gd-panel" id="gpPaneSignin" hidden>
         <div class="how-mini">
