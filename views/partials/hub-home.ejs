@@ -98,11 +98,16 @@
             <span><b>0</b><small>MIN</small></span>
           </span>
           <% } else { %><span class="hh-count hh-count-tba">Date TBA</span><% } %>
+          <span class="hh-soon-veil" aria-hidden="true">
+            <span class="hh-soon-bell"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2a1 1 0 0 1 1 1V5.2a5.2 5.2 0 0 1 4.2 5.1v3.2l1.2 2a1 1 0 0 1-.85 1.5H6.45a1 1 0 0 1-.85-1.5l1.2-2V10.3A5.2 5.2 0 0 1 11 5.2V4.2a1 1 0 0 1 1-1zm0 16.3a2 2 0 0 0 1.9-1.4h-3.8A2 2 0 0 0 12 19.5z"/></svg></span>
+            <span class="hh-soon-veil-t">Reserve now and we'll hold your spot</span>
+            <span class="hh-soon-veil-more">View details ›</span>
+          </span>
         </a>
         <div class="hh-soon-band">Coming soon</div>
         <a class="hh-soon-title gc2-title" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>" title="<%= g.title %>"><span class="gc-title-text"><%= g.title %></span></a>
         <p class="hh-soon-when">Releases <%= hhReleaseLabel(g.release_date) %> · <%= hhPlat %></p>
-        <a class="hh-soon-go" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>">Reserve a slot</a>
+        <a class="hh-soon-go" href="/upcoming/<%= seo.slug(g.title) %>-<%= g.id %>">Reserve a slot<span class="hh-soon-arr" aria-hidden="true">→</span></a>
       </article>
       <% }) %>
     </div>
