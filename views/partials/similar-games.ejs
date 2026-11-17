@@ -8,9 +8,10 @@
   <div class="gp-sim-grid">
     <% gpRelated.forEach(item => { %>
     <% const simFull = /^full/i.test(String(item.status || '')); %>
-    <a class="gp-sim<%= simFull ? ' is-full' : '' %>" href="<%= item.href %>">
+    <a class="gp-sim<%= simFull ? ' is-full rcard full gc2-full' : '' %>" href="<%= item.href %>">
       <span class="gp-sim-cover">
-        <% if (item.cover) { %><img src="<%= item.cover %>" alt="<%= item.title %>" width="300" height="450" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph"></span><% } %>
+        <% if (item.cover) { %><img class="<%= simFull ? 'gc2-cover' : '' %>" src="<%= item.cover %>" alt="<%= item.title %>" width="300" height="450" loading="lazy" decoding="async"><% } else { %><span class="gp-rel-ph<%= simFull ? ' gc2-cover-placeholder' : '' %>"></span><% } %>
+        <% if (simFull) { %><div class="gc-full-mark"><b>FULL</b></div><% } %>
         <span class="gp-sim-badge<%= simFull ? ' gp-sim-full' : ' gp-sim-open' %>"><%= simFull ? 'Full' : 'Available' %></span>
       </span>
       <span class="gp-sim-name"><%= item.title %></span>

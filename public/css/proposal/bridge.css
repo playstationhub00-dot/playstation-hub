@@ -1274,8 +1274,14 @@ body.gp-redesign.hub .gp-sim-cover {
 }
 body.gp-redesign.hub .gp-sim-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
 body.gp-redesign.hub .gp-sim-badge {
-  position: absolute; top: 8px; left: 8px; border-radius: 6px;
+  position: absolute; top: 8px; left: 8px; z-index: 6; border-radius: 6px;
   font-size: 11px; font-weight: 800; padding: 3px 7px;
+}
+body.gp-redesign.hub a.gp-sim.rcard {
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }
 body.gp-redesign.hub .gp-sim-full { background: #1a1a1a; color: #eee; }
 body.gp-redesign.hub .gp-sim-open { background: #14532d; color: #bbf7d0; }
@@ -1299,6 +1305,11 @@ body.gp-redesign.hub .gp-sim-cover img { transition: transform 0.3s ease; }
     box-shadow: 0 14px 32px rgba(245, 184, 0, 0.28);
   }
   body.gp-redesign.hub .gp-sim:hover .gp-sim-cover img { transform: scale(1.05); }
+  body.gp-redesign.hub .gp-sim.is-full:hover .gp-sim-cover {
+    border-color: #6b5a28;
+    box-shadow: 0 12px 24px rgba(245, 184, 0, 0.14);
+  }
+  body.gp-redesign.hub .gp-sim.is-full:hover .gp-sim-cover img { filter: grayscale(1) brightness(0.45); }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
   body.gp-redesign.hub .gp-sim,

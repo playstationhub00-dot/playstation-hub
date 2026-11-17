@@ -194,7 +194,10 @@ async function main() {
     const hrefs = section.match(/href="\/game\/[^"]+"/g) || [];
     assert.deepStrictEqual(hrefs, ['href="/game/zzyzx-rental"', 'href="/game/zzyzx-shared"', 'href="/game/zzyzx-sports"']);
     assert.ok(section.includes('>Available</span>') && section.includes('>Full</span>'));
-    assert.ok(section.includes('Full · Join line') && section.includes('class="gp-sim is-full"'));
+    assert.ok(section.includes('Full · Join line') && section.includes('class="gp-sim is-full rcard full gc2-full"'));
+    assert.ok(section.includes('class="gc-full-mark"><b>FULL</b></div>') && section.includes('class="gc2-cover"'));
+    assert.strictEqual((section.match(/gc-full-mark/g) || []).length, 1, 'only the fully booked card gets the stamp');
+    assert.ok(section.includes('class="gp-sim" href="/game/zzyzx-rental"'));
     assert.ok(!section.includes('/upcoming/') && !section.includes('Zzyzx Later') && !section.includes('PS Plus Deluxe') && !section.includes('Zzyzx Horizon'));
     const rent = await get('/game/zzyzx-rental');
     const rentSection = rent.body.slice(rent.body.indexOf('gp-similar'), rent.body.indexOf('gdStickyBar'));
