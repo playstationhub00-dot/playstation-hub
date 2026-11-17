@@ -1489,11 +1489,7 @@ body.gp-redesign.hub .bp-card {
   border: 1.5px solid #F5B800;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
-body.gp-redesign.hub .bp-head { display: flex; gap: 12px; align-items: center; margin: 0 0 12px; }
-body.gp-redesign.hub .bp-thumb { width: 54px; height: 76px; object-fit: cover; border-radius: 8px; background: #161616; flex: none; }
-body.gp-redesign.hub .bp-name { font-weight: 800; font-size: 15px; line-height: 1.25; color: #fff; }
-body.gp-redesign.hub .bp-from { margin-top: 2px; color: #F5B800; font-size: 13px; font-weight: 800; }
-body.gp-redesign.hub .bp-pick { margin-top: 2px; color: #9a9a9a; font-size: 12px; }
+body.gp-redesign.hub .bp-card .gp-mode { margin: 0 0 12px; }
 body.gp-redesign.hub .bp-label {
   margin: 14px 0 6px;
   font-size: 11px;
@@ -1515,6 +1511,7 @@ body.gp-redesign.hub .bp-card .gd-price-header {
 body.gp-redesign.hub .bp-card .gd-price-header > div:first-child { display: flex; flex-direction: column; }
 body.gp-redesign.hub .bp-card .gd-ph-amount { order: 1; }
 body.gp-redesign.hub .bp-card .gd-ph-kicker { order: 2; }
+body.gp-redesign.hub .bp-card .gd-ph-rider { order: 3; }
 body.gp-redesign.hub .bp-card .gd-ph-amount,
 body.gp-redesign.hub .bp-card .gd-ph-amount span {
   font-size: 40px;

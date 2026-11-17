@@ -165,24 +165,12 @@
     <div class="gd-detail-col gp-panel">
       <div class="gdh-card bp-card">
 
-        <div class="bp-head">
-          <% if (game.cover_image) { %><img class="bp-thumb" src="<%= game.cover_image %>" alt=""><% } %>
-          <div>
-            <div class="bp-name"><%= game.title %></div>
-            <% const udWeekPrices = [game.nt_price_7d, game.tr_price_7d].map(function (n) { return Number(n) || 0; }).filter(function (n) { return n > 0; }); %>
-            <% if (udWeekPrices.length) { %><div class="bp-from">From <b>₱<%= Math.min.apply(null, udWeekPrices) %></b> / week</div><% } %>
-            <div class="bp-pick" id="bpPick" data-platform="<%= game.platform || 'PS5' %>"><%= game.platform || 'PS5' %> · pick an account</div>
-          </div>
-        </div>
-
         <div class="gp-mode">
           <button type="button" id="udToggleRent" class="on" onclick="setUpcomingMode('rent')">⏱️ Rent</button>
           <% if (udHasBuy) { %>
           <button type="button" id="udToggleBuy" onclick="setUpcomingMode('buy')">♾️ Buy permanent</button>
           <% } %>
         </div>
-
-        <%- include('partials/account-guide-link') %>
 
         <!-- ════════ RENT PANEL ════════ -->
         <div id="udRentPanel">
@@ -222,6 +210,7 @@
           <% } %>
         </div>
         <% } %>
+        <%- include('partials/account-guide-link') %>
 
         <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
           <span>How setup works</span>

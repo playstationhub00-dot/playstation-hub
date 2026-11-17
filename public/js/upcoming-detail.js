@@ -141,8 +141,6 @@ function updateSummary() {
   if (heroAmt) heroAmt.textContent = price ? ('₱' + price) : '—';
   if (heroKick) heroKick.textContent = durName + ' · ' + typeName;
   if (heroRide) heroRide.textContent = deposit > 0 ? ('₱' + deposit + ' refundable deposit') : 'No deposit due today';
-  const pick = document.getElementById('bpPick');
-  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + typeName + ' selected';
   // Paid in full now — nothing owed when the game releases. The deposit
   // (Trophy only) is still refundable on its own terms, independent of that;
   // the rider only exists to say so, and has nothing to say otherwise.
@@ -283,8 +281,6 @@ function selectUdBuyType(type) {
   if (heroAmt && price) heroAmt.textContent = '₱' + price;
   if (heroKick) heroKick.textContent = (type === 'tr' ? 'Trophy' : 'Non-Trophy') + ' · permanent';
   if (heroRide) heroRide.textContent = 'One-time · yours to keep';
-  const pick = document.getElementById('bpPick');
-  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + (type === 'tr' ? 'Trophy' : 'Non-Trophy') + ' selected';
   syncUpcomingSticky();
 }
 

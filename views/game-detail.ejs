@@ -196,15 +196,6 @@
            lives in one contained surface, matching the reservation page. -->
       <div class="gdh-card bp-card">
 
-      <div class="bp-head">
-        <% if (game.cover_image) { %><img class="bp-thumb" src="<%= game.cover_image %>" alt=""><% } %>
-        <div>
-          <div class="bp-name"><%= game.title %></div>
-          <% if (gdFromPrice) { %><div class="bp-from">From <b>₱<%= gdFromPrice %></b> / week</div><% } %>
-          <div class="bp-pick" id="bpPick" data-platform="<%= game.platform || 'PS5' %>"><%= game.platform || 'PS5' %> · pick an account</div>
-        </div>
-      </div>
-
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div class="gp-mode">
         <button type="button" id="toggleRent" class="on" onclick="setMode('rent')">Rent</button>

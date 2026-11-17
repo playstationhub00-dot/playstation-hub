@@ -141,8 +141,6 @@ function updateBuyPriceHeader() {
   setPriceHeader(typeName, BUY_PRICES[selectedBuyType], null, null, 'One-time · yours to keep');
   const buyBtn = document.getElementById('buyCtaBtn');
   if (buyBtn) buyBtn.textContent = 'Buy permanent — ₱' + BUY_PRICES[selectedBuyType];
-  const pick = document.getElementById('bpPick');
-  if (pick) pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + (selectedBuyType === 'tr' ? 'Trophy' : 'Non-Trophy') + ' selected';
 }
 
 function handleBuyClick(e) {
@@ -369,11 +367,6 @@ function updatePriceHeaderFromSelection(base, discount) {
   const deposit = (selectedType === 'tr' || selectedType === 'ps4') ? PROMO.deposit : 0;
   const rider = deposit > 0 ? ('₱' + deposit + ' refundable deposit') : 'No deposit due today';
   setPriceHeader(durName + ' · ' + typeName, final, discount > 0 ? base : null, discount > 0 ? discount : null, rider);
-  const pick = document.getElementById('bpPick');
-  if (pick) {
-    const nice = selectedType === 'tr' ? 'Trophy' : selectedType === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
-    pick.textContent = (pick.dataset.platform || 'PS5') + ' · ' + nice + ' selected';
-  }
 }
 
 // Booked = nothing can be rented right now for what they are looking at: every
