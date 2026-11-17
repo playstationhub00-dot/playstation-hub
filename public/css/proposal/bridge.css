@@ -1057,6 +1057,18 @@ body.gp-redesign.hub #durationGrid .gd-dur-btn {
 }
 body.gp-redesign.hub #typeOptions .gd-slots-left,
 body.gp-redesign.hub #typeOptions .gd-type-status { display: none; }
+body.gp-redesign.hub #typeOptions .gd-type-status.gd-status-rented {
+  display: inline-block;
+  margin-left: auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #3f1218;
+  border: 1px solid #7f1d1d;
+  color: #fecaca;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
 body.gp-redesign.hub #typeOptions .gd-wait {
   margin-left: auto;
   flex: 0 0 auto;

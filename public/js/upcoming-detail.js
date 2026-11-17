@@ -16,10 +16,9 @@ function setUpcomingMode(mode) {
   if (rentPanel) rentPanel.style.display = isRent ? '' : 'none';
   const buyPanel = document.getElementById('udBuyPanel');
   if (buyPanel) buyPanel.style.display = isRent ? 'none' : '';
-  // Fall in Line is a rental-slot concept — a permanent pre-order isn't
-  // limited by the same slot pool, so it has nothing to wait in line for.
+  // Fall in Line belongs to the rent panel. Buy permanent does not use it.
   const waitlist = document.getElementById('ctaWaitlist');
-  if (waitlist) waitlist.style.display = (isRent && ALL_FULL) ? '' : 'none';
+  if (!isRent && waitlist) waitlist.style.display = 'none';
 
   const rentBtn = document.getElementById('udToggleRent');
   const buyBtn  = document.getElementById('udToggleBuy');
@@ -27,7 +26,7 @@ function setUpcomingMode(mode) {
   // while the Buy button only exists when a permanent price is set.
   if (rentBtn) rentBtn.classList.toggle('on', isRent);
   if (buyBtn) buyBtn.classList.toggle('on', !isRent);
-  if (isRent) { updateSummary(); updateCta(); updateLinks(); }
+  if (isRent) { updateSummary(); updateCta(); updateLinks(); syncFullPanel(); }
   syncUpcomingSticky();
 }
 
@@ -66,6 +65,7 @@ function onTypeChange() {
   updateSummary();
   updateCta();
   updateOwnStrip();
+  syncFullPanel();
 }
 
 function renderDurButtons() {
@@ -220,7 +220,8 @@ function shakeDurGrid() {
 }
 
 function handleReserveClick(e, mode) {
-  if (!ALL_FULL && !selectedDays) {
+  if (mode === 'queue' || getSlots() <= 0) return true;
+  if (!selectedDays) {
     e.preventDefault();
     shakeDurGrid();
     return false;
@@ -283,14 +284,37 @@ function syncUpcomingSticky() {
   if (kicker) kicker.textContent = ready ? (selectedDays === 7 ? 'Weekly' : 'Monthly') : 'Reserve';
   if (amount) amount.textContent = ready && total ? ('₱' + total) : 'Pick a duration';
   const open = getSlots() > 0;
-  btn.textContent = !ready ? 'Reserve' : (open ? 'Reserve' : 'Full Slot');
-  btn.classList.toggle('gd-cta-wait', !ready || !open);
+  if (!open) {
+    if (kicker) kicker.textContent = 'Waitlist';
+    if (amount) amount.textContent = 'Free';
+    btn.textContent = 'Join the line';
+    btn.classList.remove('gd-cta-wait');
+    return;
+  }
+  btn.textContent = ready ? 'Reserve' : 'Reserve';
+  btn.classList.toggle('gd-cta-wait', !ready);
 }
 
 function upcomingStickyClick() {
-  const id = upcomingMode === 'buy' ? 'udBuyCtaBtn' : 'ctaReserveBtn';
+  const id = upcomingMode === 'buy' ? 'udBuyCtaBtn' : (getSlots() > 0 ? 'ctaReserveBtn' : 'queueLink');
   const el = document.getElementById(id);
   if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// A full account type cannot be reserved. The plan cards, the price lines,
+// the name field and the Full Slot button step aside. The waitlist card is
+// the action, and Own it instead stays when that type can be bought.
+function syncFullPanel() {
+  if (upcomingMode === 'buy') return;
+  const full = getSlots() <= 0;
+  const dur = document.getElementById('durGrid');
+  const sum = document.getElementById('orderSummary');
+  const reserve = document.getElementById('ctaReserve');
+  const wait = document.getElementById('ctaWaitlist');
+  if (dur) dur.style.display = full ? 'none' : '';
+  if (sum) sum.style.display = full ? 'none' : '';
+  if (reserve) reserve.style.display = full ? 'none' : '';
+  if (wait) wait.style.display = full ? '' : 'none';
 }
 
 function handleUdBuyClick(e) {
@@ -351,6 +375,7 @@ renderDurButtons();
 updateSummary();
 updateCta();
 updateOwnStrip();
+syncFullPanel();
 
 // Same four-line clamp as the rental page (public/js/game-detail.js). The
 // description lives under the spec boxes, so this does not open another tab.

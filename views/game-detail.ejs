@@ -115,6 +115,16 @@
   <% if (gdVoice) gdSpecs.push(['Voice', gdVoice]); %>
   <% gdSpecs.push(['Install size', gdSize || 'Not listed']); %>
 
+  <% if (allUnavail) { %>
+  <div class="rsv-full-banner">
+    <span class="rsv-full-icon" aria-hidden="true">🚫</span>
+    <div>
+      <div class="rsv-full-title">All Slots Full</div>
+      <div class="rsv-full-sub">You can still request a slot below, or join the free waitlist.</div>
+    </div>
+  </div>
+  <% } %>
+
   <div class="gd-back gp-crumb">
     <a href="/browse">Browse</a>
     <span> / </span>
@@ -229,7 +239,7 @@
             <span class="gd-type-name">Trophy</span>
             <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> left</span><% } %>
             <% if (trAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 
@@ -239,7 +249,7 @@
             <span class="gd-type-name">Non-Trophy</span>
             <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> left</span><% } %>
             <% if (ntAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
 
           <% if (showPs4) { %>
@@ -249,12 +259,19 @@
             <span class="gd-type-name">PS4 Primary</span>
             <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> left</span><% } %>
             <% if (ps4Avail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 
         </div>
 
+        <% if (hasBuy) { %>
+        <div class="ud-own-strip" id="gdOwnStrip" hidden>
+          <span class="ud-own-icon" aria-hidden="true">🔑</span>
+          <span class="ud-own-text"><b><span class="ud-own-type"></span> is full?</b> Own it instead — we'll add a new <span class="ud-own-type"></span> slot for you.</span>
+          <button type="button" class="ud-own-go" id="gdOwnGo" onclick="ownInsteadRent()"></button>
+        </div>
+        <% } %>
 
         <!-- SELECT DURATION -->
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">

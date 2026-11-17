@@ -366,6 +366,47 @@ function isBookedNow() {
   return ALL_UNAVAIL || (!!selectedType && AVAIL[selectedType] === false);
 }
 
+// A full account type is waitlist-only. The weekly and monthly cards, the
+// rental lines, and the website order step aside. Own it instead stays when
+// that type can be bought. An open type puts the order form back.
+function syncBookedChrome(booked) {
+  const dur = document.getElementById('durationGrid');
+  if (dur) dur.style.display = booked ? 'none' : '';
+  const trial = document.getElementById('gdTrial');
+  if (trial) trial.style.display = booked ? 'none' : '';
+  const perks = document.querySelector('#rentPanel .gd-perks');
+  if (perks) perks.style.display = booked ? 'none' : '';
+  const voucher = document.getElementById('voucherBox');
+  if (voucher) voucher.style.display = booked ? 'none' : '';
+  const from = document.querySelector('#rentPanel .gd-rent-from');
+  if (from) from.style.display = booked ? 'none' : '';
+  const feesBtn = document.getElementById('feesToggle');
+  if (feesBtn) feesBtn.style.display = booked ? 'none' : '';
+  const ask = document.getElementById('ctaMsgAsk');
+  if (ask) ask.style.display = booked ? 'none' : '';
+  updateOwnStripRent();
+}
+
+function updateOwnStripRent() {
+  const strip = document.getElementById('gdOwnStrip');
+  if (!strip || typeof BUY_PRICES === 'undefined') return;
+  const price = selectedType && BUY_PRICES[selectedType] ? BUY_PRICES[selectedType] : 0;
+  const show = !!selectedType && AVAIL[selectedType] === false && price > 0;
+  strip.hidden = !show;
+  if (!show) return;
+  const name = selectedType === 'tr' ? 'Trophy' : 'Non-Trophy';
+  strip.querySelectorAll('.ud-own-type').forEach(el => { el.textContent = name; });
+  const go = document.getElementById('gdOwnGo');
+  if (go) go.textContent = 'Buy ₱' + price + ' →';
+}
+
+function ownInsteadRent() {
+  setMode('buy');
+  if (selectedType === 'nt' || selectedType === 'tr') selectBuyType(selectedType);
+  const panel = document.getElementById('buyPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // Opens / closes the website-order block (price summary, name field, pay
 // button). Messenger is the main way to rent; this is the second option.
 function toggleOrderBlock(forceOpen) {
@@ -409,6 +450,7 @@ function updateCtaState() {
 
   if (ALL_UNAVAIL) {
     if (totalBox) totalBox.style.display = 'none';
+    syncBookedChrome(true);
     return;
   }
   if (!ctaBtn) return;
@@ -429,6 +471,7 @@ function updateCtaState() {
     if (totalBox) totalBox.style.display = 'none';
     if (orderToggle) orderToggle.style.display = 'none';
     if (reserveSection) reserveSection.style.display = '';
+    syncBookedChrome(true);
     return;
   }
   ctaBtn.style.display = '';
@@ -436,6 +479,7 @@ function updateCtaState() {
   if (totalBox) totalBox.style.display = '';
   if (orderToggle) orderToggle.style.display = '';
   if (reserveSection) reserveSection.style.display = 'none';
+  syncBookedChrome(false);
 
   if (!selectedType) {
     ctaBtn.textContent = 'Pick an account type';
