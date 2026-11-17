@@ -806,6 +806,9 @@ body.gp-redesign.hub .gd-page {
 body.gp-redesign.hub .gp-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 400px;
+  /* Explicit rows so the booking column can span every one of them.
+     The span ends with this grid, and Similar games sits after it. */
+  grid-template-rows: auto auto auto auto;
   column-gap: 28px;
   row-gap: 18px;
   align-items: start;
@@ -830,14 +833,18 @@ body.gp-redesign.hub .gp-title { min-width: 0; color: #fff; }
 body.gp-redesign.hub .gp-title h1 { color: #fff; }
 body.gp-redesign.hub .gp-panel {
   grid-column: 2;
-  grid-row: 1 / span 4;
+  /* The grid ends where Similar games begins, so the pin lets go there
+     and the panel scrolls away with the page. */
+  grid-row: 1 / -1;
   position: sticky;
   top: 80px;
   align-self: start;
+  height: fit-content;
   background: transparent;
   border: 0;
   padding: 0;
   box-shadow: none;
+  z-index: 2;
 }
 body.gp-redesign.hub .gdh-card {
   position: static;
@@ -1475,3 +1482,152 @@ body.hub .ord-card, body.hub .ord-step { background: #141414; border: 1px solid 
 .sr-field { display: flex; gap: 8px; }
 .sr-field input { flex: 1; background: #101010; border: 1px solid #262626; color: #fff; border-radius: 12px; padding: 12px 14px; font: inherit; }
 .sr-callout { margin-top: 12px; background: #1f1a08; border: 1px solid #3a2f0a; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: #f3e3a6; }
+
+/* Bold booking panel (Option C). The pin is the grid item above; this is the card. */
+body.gp-redesign.hub .bp-card {
+  background: #101010;
+  border: 1.5px solid #F5B800;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+body.gp-redesign.hub .bp-card .gp-mode { margin: 0 0 12px; }
+body.gp-redesign.hub .bp-label {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+body.gp-redesign.hub .bp-card .gd-rent-head,
+body.gp-redesign.hub .bp-card #ctaMsgWrap { display: none; }
+body.gp-redesign.hub .bp-card .gd-price-header {
+  display: block;
+  margin: 0 0 4px;
+  padding: 14px 16px;
+  background: #16120a;
+  border: 1px solid #F5B800;
+  border-radius: 14px;
+}
+body.gp-redesign.hub .bp-card .gd-price-header > div:first-child { display: flex; flex-direction: column; }
+body.gp-redesign.hub .bp-card .gd-ph-amount { order: 1; }
+body.gp-redesign.hub .bp-card .gd-ph-kicker { order: 2; }
+body.gp-redesign.hub .bp-card .gd-ph-rider { order: 3; }
+body.gp-redesign.hub .bp-card .gd-ph-amount,
+body.gp-redesign.hub .bp-card .gd-ph-amount span {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+  color: #F5B800;
+}
+body.gp-redesign.hub .bp-card .gd-ph-kicker { margin-top: 6px; color: #fff; font-weight: 800; font-size: 14px; }
+body.gp-redesign.hub .bp-card .gd-ph-rider { margin-top: 4px; color: #a3a3a3; font-size: 13px; }
+body.gp-redesign.hub .bp-card .gd-ph-save-wrap { display: none; }
+body.gp-redesign.hub .bp-card #typeOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill {
+  width: 100%;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  background: #141414;
+  padding: 10px 12px;
+  align-items: center;
+  text-align: left;
+}
+body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill.gd-type-selected {
+  background: #1a1408;
+  border: 1.5px solid #F5B800;
+}
+body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill.gd-type-selected .gd-type-name { color: #fff; }
+body.gp-redesign.hub .bp-card .bp-type-copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+body.gp-redesign.hub .bp-card .bp-type-sub { font-size: 11px; font-weight: 600; color: #9a9a9a; }
+body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill:has(.gd-status-rented) { opacity: 0.62; }
+body.gp-redesign.hub .bp-card #typeOptions .gd-wait.is-now { display: none; }
+body.gp-redesign.hub .bp-card #durationGrid,
+body.gp-redesign.hub .bp-card #durGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #141414;
+  text-align: left;
+}
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn.active,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn.active {
+  background: #F5B800;
+  border-color: #F5B800;
+  color: #111;
+}
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-price,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-price { font-size: 22px; }
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn.active .gd-dur-days,
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn.active .gd-dur-label,
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn.active .gd-dur-price,
+body.gp-redesign.hub .bp-card #durationGrid .gd-dur-btn.active .gd-dur-save,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn.active .gd-dur-days,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn.active .gd-dur-label,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn.active .gd-dur-price,
+body.gp-redesign.hub .bp-card #durGrid .gd-dur-btn.active .gd-dur-save {
+  color: #111;
+}
+body.gp-redesign.hub .bp-card .gd-dur-save { display: block; font-size: 11px; font-weight: 800; color: #F5B800; }
+body.gp-redesign.hub .bp-card .gd-order-name {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 10px 0 8px;
+  padding: 12px;
+  background: #0c0c0c;
+  border: 1px solid #333;
+  border-radius: 10px;
+  color: #fff;
+}
+body.gp-redesign.hub .bp-card .gd-order-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 900;
+  color: #1a1400;
+  background: linear-gradient(180deg, #ffe56a 0%, #F5B800 46%, #d9a106 100%);
+  box-shadow: 0 8px 22px rgba(245, 184, 0, 0.28);
+}
+body.gp-redesign.hub .bp-card .gd-ask,
+body.gp-redesign.hub .bp-card .gd-cta-link {
+  display: block;
+  margin-top: 10px;
+  text-align: center;
+  color: #d6d6d6;
+  font-weight: 700;
+}
+body.gp-redesign.hub .bp-trust {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #14120c;
+  border: 1px solid #3a3018;
+  border-radius: 12px;
+}
+body.gp-redesign.hub .bp-trust-top { color: #F5B800; font-weight: 800; font-size: 14px; }
+body.gp-redesign.hub .bp-trust-sub { margin-top: 2px; color: #bdbdbd; font-size: 12px; }
+body.gp-redesign.hub .bp-card .gd-total-final span:last-child { color: #F5B800; font-size: 20px; }

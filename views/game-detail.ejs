@@ -194,7 +194,7 @@
 
       <!-- Booking card: everything a customer interacts with to place an order
            lives in one contained surface, matching the reservation page. -->
-      <div class="gdh-card">
+      <div class="gdh-card bp-card">
 
       <!-- ══ TOP TOGGLE: Rent / Buy Permanent ══ -->
       <div class="gp-mode">
@@ -207,10 +207,10 @@
       <!-- ══ PRICE HEADER: shared by rent and buy modes ══ -->
       <div class="gd-price-header">
         <div>
-          <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
           <div class="gd-ph-amount">
             <span id="phAmount" data-default-amount="<%= gdFromPrice %>" data-default-buy-amount="<%= gdBuyFromPrice %>">₱<%= gdFromPrice %></span>
           </div>
+          <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
           <div class="gd-ph-rider" id="phRider" style="display:none;"></div>
         </div>
         <div class="gd-ph-save-wrap">
@@ -224,11 +224,7 @@
            ════════════════════════════════ -->
       <div id="rentPanel">
 
-        <div class="gd-rent-head">
-          <h2>Rent this game</h2>
-          <% if (gdFromPrice) { %><div class="gd-rent-from"><b>₱<%= gdFromPrice %></b> <small>from / week</small></div><% } %>
-        </div>
-
+        <div class="bp-label">Account</div>
         <!-- SELECT RENTAL TYPE -->
         <div class="gd-type-options" id="typeOptions">
 
@@ -236,34 +232,45 @@
           <label class="gd-type-card gd-type-pill" id="label-tr">
             <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🏆</span>
-            <span class="gd-type-name">Trophy</span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Trophy</span>
+              <span class="bp-type-sub">Your profile · ₱<%= promo.deposit || 0 %> refundable deposit</span>
+            </span>
             <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> left</span><% } %>
             <% if (trAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 
           <label class="gd-type-card gd-type-pill" id="label-nt">
             <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🎮</span>
-            <span class="gd-type-name">Non-Trophy</span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="bp-type-sub">Our account · no deposit</span>
+            </span>
             <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> left</span><% } %>
             <% if (ntAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
 
           <% if (showPs4) { %>
           <label class="gd-type-card gd-type-pill" id="label-ps4">
             <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🕹️</span>
-            <span class="gd-type-name">PS4 Primary</span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">PS4 Primary</span>
+              <span class="bp-type-sub">Your PS4 · ₱<%= promo.deposit || 0 %> refundable deposit</span>
+            </span>
             <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> left</span><% } %>
             <% if (ps4Avail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 
         </div>
+        <%- include('partials/account-guide-link') %>
+        <button type="button" class="gd-fold bp-setup" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">How setup works</button>
 
         <% if (hasBuy) { %>
         <div class="ud-own-strip" id="gdOwnStrip" hidden>
@@ -273,12 +280,14 @@
         </div>
         <% } %>
 
+        <div class="bp-label">Plan</div>
         <!-- SELECT DURATION -->
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
           <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = gameDiscountPct(game, d, promo); %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
             <span class="gd-dur-days"><%= d === 7 ? 'Weekly' : 'Monthly' %></span>
             <span class="gd-dur-price" id="price-<%= d %>"><%- rentPriceHtml(game, 'nt', d, promo) %></span>
+            <% if (d === 30) { %><span class="gd-dur-save" id="durSave" hidden></span><% } %>
             <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
           </button>
           <% }) %>
@@ -344,12 +353,10 @@
         </div><!-- /ctaMsgWrap -->
 
         <div class="gd-folds">
-          <button type="button" class="gd-fold" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">How setup works</button>
           <button type="button" class="gd-fold" id="feesToggle" aria-expanded="<%= order_error ? 'true' : 'false' %>" onclick="toggleFeesPanel()">Fees &amp; payment</button>
         </div>
 
         <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
-          <%- include('partials/account-guide-link') %>
           <% if (hasTrophy) { %>
           <div class="gd-setup-block" id="setup-tr">
             <p>✅ Play our games on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
@@ -393,10 +400,13 @@
           <p class="gd-fine">Trophy<% if (showPs4) { %> and PS4 Primary<% } %>: ₱<%= promo.deposit || 0 %> refundable deposit · ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day, taken from the deposit. Return on time and you get the deposit back.</p>
           <p class="gd-fine gd-payline"><%- include('partials/pay-note').trim() %></p>
           <% if (!allUnavail) { %>
-          <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' || order_error === 'code' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
+          <button type="button" class="gd-alt-order" id="orderToggle" hidden aria-expanded="true" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
             Or order here on the website
           </button>
-          <div id="gdOrderBlock"<%= order_error === '1' || order_error === 'code' ? '' : ' hidden' %>>
+          <% } %>
+        </div>
+        <% if (!allUnavail) { %>
+        <div id="gdOrderBlock">
           <form method="POST" action="/order/create" class="gd-order-form" id="gdOrderForm" data-order-once>
             <input type="hidden" name="game_id" value="<%= game.id %>">
             <%- include('partials/order-token') %>
@@ -411,10 +421,12 @@
             <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
             <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
           </form>
-          </div><!-- /gdOrderBlock -->
-          <% } %>
         </div>
-        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask" id="ctaMsgAsk" data-track-source="game">Questions? Message us on Messenger</a>
+        <% } %>
+        <% if (!allUnavail) { %>
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask" id="ctaMsgAsk" data-track-source="game">or message us on Facebook instead</a>
+        <% } %>
+        <%- include('partials/bp-trust') %>
 
         <% if (!allUnavail) { %>
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>

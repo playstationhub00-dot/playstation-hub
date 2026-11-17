@@ -90,7 +90,7 @@ async function main() {
     assert.ok(/<a href="http:\/\/m\.me\/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">/.test(open.body));
     assert.ok(open.body.includes('>Rent now</span>'));
     assert.ok(open.body.includes('YOUR MESSAGE WILL SAY') && open.body.includes('id="ctaMsgPreview"'));
-    assert.ok(/<div id="gdOrderBlock" hidden>/.test(open.body), 'order block starts collapsed');
+    assert.ok(/<div id="gdOrderBlock">/.test(open.body), 'the website order sits in the panel');
     assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
     assert.ok(open.body.includes('id="gdOrderForm"'), 'the website order form is still there');
     assert.ok(!open.body.includes('id="ctaMsgLink"') && !open.body.includes('id="ctaHint"'));
