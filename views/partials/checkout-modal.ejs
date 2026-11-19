@@ -20,14 +20,35 @@
     </div>
     <div id="ckMethods" hidden></div>
     <div id="ckPayBox" hidden>
+      <p class="ck-pay-sub">Send the exact amount, then upload a screenshot.</p>
+      <button type="button" class="ck-change" id="ckChange" onclick="checkoutChangeMethod()">← Change payment method</button>
+      <p class="ck-hold-note">The 15-minute hold keeps running.</p>
       <div id="ckPayDetail"></div>
-      <label class="ck-file">Upload a screenshot of your payment
+      <label class="ck-drop" id="ckDrop">
         <input id="ckFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+        <span class="ck-drop-empty" id="ckDropEmpty">
+          <span class="ck-drop-ico" aria-hidden="true">▣</span>
+          <b>Upload a screenshot of your payment</b>
+          <span>PNG, JPG, or WebP · Choose a file</span>
+        </span>
+        <span class="ck-preview" id="ckPreview" hidden></span>
       </label>
-      <div id="ckPreview" hidden></div>
       <button type="button" class="ck-go" id="ckSubmit" disabled onclick="checkoutSubmit()">Submit payment</button>
+      <p class="ck-submit-note" id="ckSubmitNote">Submit stays unavailable until a screenshot is attached.</p>
+      <button type="button" class="ck-instead" onclick="checkoutMessenger()">Prefer to chat? <u>Message us on Messenger instead</u></button>
+      <p class="ck-instead-note">Switches to the Message us path · the order ref is kept</p>
     </div>
     <div id="ckDone" hidden></div>
     <p class="ck-err" id="ckErr" hidden></p>
+  </div>
+  <div class="ck-light" id="ckLight" hidden>
+    <button type="button" class="ck-light-x" id="ckLightX" aria-label="Close">×</button>
+    <div class="ck-light-card" id="ckLightCard">
+      <div class="ck-light-name" id="ckLightName"></div>
+      <img id="ckLightImg" alt="">
+      <div class="ck-light-meta" id="ckLightMeta"></div>
+    </div>
+    <button type="button" class="ck-go ck-light-dl" id="ckLightDl">Download QR</button>
+    <p class="ck-light-hint" id="ckLightHint"></p>
   </div>
 </div>
