@@ -114,7 +114,7 @@
     show('ckNameWrap', true);
     show('ckChoices', true);
     var free = kind === 'line';
-    $('ckPay').hidden = free;
+    $('ckPay').hidden = true;
     $('ckMsg').hidden = free;
     $('ckJoin').hidden = !free;
     show('ckHold', !free);
@@ -138,6 +138,8 @@
       .then(function (res) {
         if (!res.ok) { err(res.j.error || 'Could not hold that slot.'); return; }
         session = res.j;
+        session.methods = realMethods();
+        $('ckPay').hidden = session.methods.length === 0;
         if (res.j.summary) {
           var s = res.j.summary;
           var cover = s.cover ? '<img src="' + s.cover + '" alt="">' : '';
@@ -154,12 +156,19 @@
   window.checkoutOpen = openModal;
   window.checkoutClose = function () { root.hidden = true; clearInterval(tick); };
 
+  function realMethods() {
+    return (session && session.methods || []).filter(function (m) {
+      return m && !m.example && (m.account_number || m.qr_image);
+    });
+  }
+
   window.checkoutPay = function () {
     if (!session) { err('Still holding the slot…'); return; }
     var name = $('ckName').value.trim();
     if (name.length < 2) { err('Enter your Facebook name.'); return; }
+    var methods = realMethods();
+    if (!methods.length) return;
     err('');
-    var methods = (session.methods || []);
     $('ckMethods').hidden = false;
     show('ckChoices', false);
     $('ckMethods').innerHTML = '<button type="button" class="ck-back" onclick="checkoutBack()">Back to choices</button>' +
@@ -183,11 +192,8 @@
     show('ckMethods', false);
     show('ckPayBox', true);
     $('ckSummary').hidden = true;
-    var qr = m.qr_image
-      ? '<img class="ck-qr" src="' + m.qr_image + '" alt="">'
-      : '<div class="ck-qr ck-qr-example">EXAMPLE<br>Not a real QR</div>';
+    var qr = m.qr_image ? '<img class="ck-qr" src="' + m.qr_image + '" alt="">' : '';
     $('ckPayDetail').innerHTML = '<b>Pay with ' + m.label + '</b>' +
-      (m.example ? '<p class="ck-example">Example details. Add the real account in Admin → Payment methods, or set PAYMENT_' + key.toUpperCase() + '_NUMBER.</p>' : '') +
       '<div class="ck-amt">₱' + ((session.summary && session.summary.total) || '') + '</div>' +
       '<div>Ref ' + session.ref + '</div>' +
       '<div>' + (m.account_name || '') + '</div>' +
@@ -203,7 +209,7 @@
     if (file.size > 8 * 1024 * 1024) { file = null; $('ckSubmit').disabled = true; err('That image is over 8 MB.'); return; }
     err('');
     box.hidden = false;
-    box.innerHTML = '<img alt="" src="' + URL.createObjectURL(file) + '"><div>' + file.name + ' · EXAMPLE if this is a test</div><button type="button" onclick="document.getElementById(\'ckFile\').click()">Replace file</button>';
+    box.innerHTML = '<img alt="" src="' + URL.createObjectURL(file) + '"><div>' + file.name + '</div><button type="button" onclick="document.getElementById(\'ckFile\').click()">Replace file</button>';
     $('ckSubmit').disabled = false;
   });
 

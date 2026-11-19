@@ -65,23 +65,58 @@ ok('active holds reduce the number the page shows', () => {
 
 console.log('\npayment details');
 
-ok('missing accounts are marked as examples', () => {
-  const prev = process.env.PAYMENT_GCASH_NUMBER;
-  delete process.env.PAYMENT_GCASH_NUMBER;
-  const rows = payments.publicMethods({ payment_methods: [] });
-  const gcash = rows.find(r => r.key === 'gcash');
-  assert.strictEqual(gcash.example, true);
-  assert.ok(gcash.account_number.indexOf('PAYMENT_GCASH_NUMBER') !== -1);
-  if (prev) process.env.PAYMENT_GCASH_NUMBER = prev;
+function withoutPaymentEnv(fn) {
+  const saved = {};
+  ['GCASH', 'MAYA', 'QRPH', 'PAYPAL', 'BANK'].forEach(key => {
+    ['NAME', 'NUMBER', 'QR'].forEach(field => {
+      const name = 'PAYMENT_' + key + '_' + field;
+      saved[name] = process.env[name];
+      delete process.env[name];
+    });
+  });
+  try { fn(); }
+  finally {
+    Object.keys(saved).forEach(name => {
+      if (saved[name] == null) delete process.env[name];
+      else process.env[name] = saved[name];
+    });
+  }
+}
+
+ok('customers get no payment methods when nothing is configured', () => {
+  withoutPaymentEnv(() => {
+    const rows = payments.publicMethods({
+      payment_methods: [{ key: 'gcash', enabled: false, account_number: '09170000000' }]
+    });
+    assert.deepStrictEqual(rows, []);
+  });
 });
 
-ok('an enabled saved method wins over the example', () => {
-  const rows = payments.publicMethods({
-    payment_methods: [{ key: 'maya', enabled: true, account_number: '09170000000', account_name: 'Hub' }]
+ok('an enabled saved method is listed and a disabled one is not', () => {
+  withoutPaymentEnv(() => {
+    const rows = payments.publicMethods({
+      payment_methods: [
+        { key: 'maya', enabled: true, account_number: '09170000000', account_name: 'Hub' },
+        { key: 'gcash', enabled: false, account_number: '0999' }
+      ]
+    });
+    assert.strictEqual(rows.length, 1);
+    assert.strictEqual(rows[0].key, 'maya');
+    assert.strictEqual(rows[0].example, false);
+    assert.strictEqual(rows[0].account_number, '09170000000');
   });
-  const maya = rows.find(r => r.key === 'maya');
-  assert.strictEqual(maya.example, false);
-  assert.strictEqual(maya.account_number, '09170000000');
+});
+
+ok('an env number is a real method', () => {
+  withoutPaymentEnv(() => {
+    process.env.PAYMENT_BANK_NUMBER = '1234567890';
+    process.env.PAYMENT_BANK_NAME = 'Test Bank';
+    const rows = payments.publicMethods({ payment_methods: [] });
+    assert.strictEqual(rows.length, 1);
+    assert.strictEqual(rows[0].key, 'bank');
+    assert.strictEqual(rows[0].account_number, '1234567890');
+    assert.strictEqual(rows[0].example, false);
+  });
 });
 
 console.log('\npanel source');
@@ -91,6 +126,8 @@ ok('the voucher link is hidden when every slot is full, and a picked full type h
   const js = fs.readFileSync(path.join(__dirname, '../public/js/game-detail.js'), 'utf8');
   assert.ok(page.includes("allUnavail ? 'hidden' : ''"));
   assert.ok(js.includes('voucherToggle.hidden = isBookedNow()'));
+  const checkout = fs.readFileSync(path.join(__dirname, '../public/js/checkout-flow.js'), 'utf8');
+  assert.ok(checkout.includes("$('ckPay').hidden = session.methods.length === 0"));
 });
 
 ok('checkout stores the screenshot on the existing payment_proof field', () => {
@@ -236,6 +273,9 @@ async function main() {
   assert.strictEqual(rented.status, 200, JSON.stringify(rented.json));
   assert.strictEqual(rented.json.summary.total, 809);
   assert.ok(rented.json.hold_expires_at);
+  assert.ok(rented.json.methods.some(m => m.key === 'gcash' && m.example === false));
+  assert.ok(!JSON.stringify(rented.json.methods).includes('EXAMPLE'));
+  assert.ok(!JSON.stringify(rented.json.methods).includes('Set PAYMENT_'));
   console.log('  ok - MONTHLY10 takes ₱899 down to ₱809 and starts a hold');
   passed++;
 
