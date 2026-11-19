@@ -237,7 +237,7 @@
         <% if (udHasBuy) { %>
         <div class="ud-own-strip" id="udOwnStrip" hidden>
           <span class="ud-own-icon" aria-hidden="true">🔑</span>
-          <span class="ud-own-text"><b><span class="ud-own-type"></span> is full?</b> Own it instead — we'll add a new <span class="ud-own-type"></span> slot for you.</span>
+          <span class="ud-own-text"><b>Buy permanent access instead</b> — a new <span class="ud-own-type"></span> slot, same panel.</span>
           <button type="button" class="ud-own-go" id="udOwnGo" onclick="ownInstead()"></button>
         </div>
         <% } %>
@@ -263,7 +263,7 @@
             <input type="hidden" name="account_type" id="reserveType" value="">
             <input type="hidden" name="days" id="reserveDays" value="">
             <input type="text" name="fb_name" id="reserveFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-            <button type="submit" id="ctaReserveBtn" class="gd-order-btn">Reserve now</button>
+            <button type="button" id="ctaReserveBtn" class="gd-order-btn" onclick="checkoutOpen('rent')">Reserve now</button>
             <div class="gd-order-sub" id="ctaReserveSub" style="display:none;">Pay in full · <%- include('partials/pay-note').trim() %> · nothing more due on release</div>
           </form>
           <a id="reserveLinkSlot" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener"
@@ -358,8 +358,8 @@
             <input type="hidden" name="account_type" id="udBuyOrderType" value="">
             <input type="hidden" name="kind" value="buy">
             <input type="text" name="fb_name" id="udBuyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-            <button type="submit" class="gd-order-btn" id="udBuyCtaBtn" onclick="return handleUdBuyClick(event)">
-              📘 Pre-order Permanent Access
+            <button type="button" class="gd-order-btn" id="udBuyCtaBtn" onclick="checkoutOpen('buy')">
+              Buy permanent
             </button>
             <div class="gd-order-sub">Pay in full — nothing more due on release</div>
           </form>
@@ -429,6 +429,7 @@
   </div>
 </div>
 
+<%- include('partials/checkout-modal', { upcoming: true, cover: game.cover_image || '', title: game.title, gameId: game.id, buyNt: (typeof udBuyNtFinal !== 'undefined' ? udBuyNtFinal : 0), buyTr: (typeof udBuyTrFinal !== 'undefined' ? udBuyTrFinal : 0) }) %>
 <%- include('partials/footer') %>
 
 <script>
@@ -447,6 +448,7 @@ const ALL_FULL = <%= allFull ? 'true' : 'false' %>;
 const gdSlideCount = <%= udFilm.length %>;
 </script>
 <script src="/js/upcoming-detail.js?v=<%= assetV %>"></script>
+<script src="/js/checkout-flow.js?v=<%= assetV %>"></script>
 <script src="/js/game-film.js?v=<%= assetV %>"></script>
 <% if (udPsn.media.length || udPsn.about) { %><script src="/js/game-media.js?v=<%= assetV %>" defer></script><% } %>
 </body>

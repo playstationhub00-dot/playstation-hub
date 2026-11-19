@@ -146,7 +146,8 @@
                            : o.cancel_reason === 'stale' ? 'Cancelled · ' + (o.stale_days || 30) + '+ days'
                            : 'Cancelled')
                        : o.state === 'payment_rejected' ? 'Payment rejected'
-                       : o.state === 'awaiting_payment' ? 'Awaiting payment'
+                       : o.state === 'awaiting_payment' ? ('Awaiting payment' + (o.slot_hold_expires_at ? (holdsLib.statusOf(o) === 'expired' ? ' · hold expired' : ' · hold until ' + o.slot_hold_expires_at.slice(11, 16)) : ''))
+                       : o.state === 'waitlisted' ? 'In line'
                        : o.state === 'verifying_payment' ? 'Check payment'
                        : o.state === 'awaiting_qr' ? 'Waiting for sign-in'
                        : o.state === 'qr_pending' ? 'Sign-in code in'
@@ -195,6 +196,8 @@
           <%# Only present on orders that can actually be reviewed and haven't
               been yet — server.js attaches review_msg, and its absence is the
               whole condition. %>
+          <% if (o.payment_method) { %><div class="oq-dep"><%= o.payment_method %></div><% } %>
+          <% if (o.payment_proof) { %><a href="<%= o.payment_proof %>" target="_blank" rel="noopener">Screenshot</a><% } %>
           <% if (o.review_msg) { %>
           <button type="button" class="rem-copy" data-msg="<%= o.review_msg %>" title="Copy a review request for this customer">Copy message</button>
           <% } %>

@@ -444,6 +444,10 @@ function updateCtaState() {
     if (rd) rd.value = selectedDays || '';
   });
 
+  const voucherToggle = document.getElementById('voucherToggle');
+  if (voucherToggle) voucherToggle.hidden = isBookedNow();
+  const voucherBox = document.getElementById('voucherBox');
+  if (voucherBox && isBookedNow()) voucherBox.hidden = true;
   if (ALL_UNAVAIL) {
     if (totalBox) totalBox.style.display = 'none';
     syncBookedChrome(true);
@@ -489,7 +493,11 @@ function updateCtaState() {
     if (ctaSub) ctaSub.style.display = 'none';
   } else {
     const rt = chargedRent(selectedType, selectedDays);
-    ctaBtn.textContent = 'Reserve now — ₱' + rt.total;
+    if (rt.voucher && rt.discount > 0) {
+      ctaBtn.innerHTML = 'Reserve now — <s>₱' + (rt.base + rt.deposit) + '</s> ₱' + rt.total;
+    } else {
+      ctaBtn.textContent = 'Reserve now — ₱' + rt.total;
+    }
     ctaBtn.classList.remove('gd-cta-wait');
     ctaBtn.disabled = false;
     if (ctaSub) ctaSub.style.display = '';

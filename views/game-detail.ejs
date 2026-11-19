@@ -29,7 +29,7 @@
 <%
   // ── Availability: from linked accounts (phase 2) or legacy per-game counts, per slot type ──
   const sum = typeof accountSummary !== 'undefined' ? accountSummary : null;
-  const availability = computeAvailability(game, sum);
+  const availability = holdsLib.applyCounts(computeAvailability(game, sum), (typeof slotHolds !== 'undefined' && slotHolds) ? slotHolds : null);
   const gdPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, info: [], genre: game.genre || '' };
   const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc, totalSlots } = availability;
   const isLastSlot = totalSlots === 1;
@@ -275,7 +275,7 @@
         <% if (hasBuy) { %>
         <div class="ud-own-strip" id="gdOwnStrip" hidden>
           <span class="ud-own-icon" aria-hidden="true">🔑</span>
-          <span class="ud-own-text"><b><span class="ud-own-type"></span> is full?</b> Own it instead — we'll add a new <span class="ud-own-type"></span> slot for you.</span>
+          <span class="ud-own-text"><b>Buy permanent access instead</b> — a new <span class="ud-own-type"></span> slot, same panel.</span>
           <button type="button" class="ud-own-go" id="gdOwnGo" onclick="ownInsteadRent()"></button>
         </div>
         <% } %>
@@ -310,7 +310,8 @@
           <% } %>
         </div>
 
-        <div class="vc" id="voucherBox" data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
+        <button type="button" class="bp-voucher-toggle" id="voucherToggle" <%= allUnavail ? 'hidden' : '' %> onclick="var b=document.getElementById('voucherBox'); b.hidden=!b.hidden;">Have a voucher?</button>
+        <div class="vc" id="voucherBox" hidden data-game-id="<%= game.id %>" data-error="<%= typeof voucher_error !== 'undefined' ? voucher_error : '' %>">
           <div class="lb" id="voucherLabel">Promo code</div>
           <button type="button" class="vmore" id="voucherAnother" hidden>Enter another code</button>
           <div class="vrow" id="voucherEntry">
@@ -418,7 +419,7 @@
               <input type="checkbox" name="agree_rules" required>
               <span>I agree to the rental rules. Trophy and PS4 Primary include a ₱<%= promo.deposit || 0 %> refundable deposit and ₱<%= promo.late_fee_per_day != null ? promo.late_fee_per_day : 20 %> per late day. Non-Trophy has no deposit and no late fee.<% if (ntAvail) { %> The Non-Trophy free trial is 3 hours.<% } %></span>
             </label>
-            <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
+            <button type="button" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled onclick="checkoutOpen('rent')">Pick an account type</button>
             <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
           </form>
         </div>
@@ -543,8 +544,8 @@
           <input type="hidden" name="game_id" value="<%= game.id %>">
           <input type="hidden" name="account_type" id="buyOrderType" value="">
           <input type="text" name="fb_name" id="buyFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
-          <button type="submit" class="gd-order-btn" id="buyCtaBtn" onclick="return handleBuyClick(event)">
-            📘 Buy Permanent Access
+          <button type="button" class="gd-order-btn" id="buyCtaBtn" onclick="checkoutOpen('buy')">
+            Buy permanent
           </button>
           <div class="gd-order-sub"><%- include('partials/pay-note').trim() %></div>
         </form>
@@ -630,6 +631,7 @@
   </div>
 </div>
 
+<%- include('partials/checkout-modal', { upcoming: false, cover: game.cover_image || '', title: game.title, gameId: game.id, buyNt: buyNtFinal, buyTr: buyTrFinal }) %>
 <%- include('partials/footer') %>
 
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
@@ -664,5 +666,6 @@ const gdSlideCount = <%= gpFilm.length %>;
 <script src="/js/game-film.js?v=<%= assetV %>"></script>
 <script src="/js/game-detail.js?v=<%= assetV %>"></script>
 <script src="/js/voucher-box.js?v=<%= assetV %>"></script>
+<script src="/js/checkout-flow.js?v=<%= assetV %>"></script>
 </body>
 </html>

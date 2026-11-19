@@ -1,0 +1,33 @@
+<div class="ck-modal" id="checkoutModal" hidden data-upcoming="<%= upcoming ? '1' : '0' %>" data-game-id="<%= gameId %>" data-title="<%= title %>" data-cover="<%= cover %>" data-buy-nt="<%= typeof buyNt !== 'undefined' ? buyNt : 0 %>" data-buy-tr="<%= typeof buyTr !== 'undefined' ? buyTr : 0 %>">
+  <div class="ck-sheet" role="dialog" aria-modal="true" aria-labelledby="ckTitle">
+    <button type="button" class="ck-x" onclick="checkoutClose()" aria-label="Close">×</button>
+    <div class="ck-hold" id="ckHold" hidden>Slot held for you · <b id="ckClock">15:00</b></div>
+    <h2 id="ckTitle">Confirm reservation</h2>
+    <div id="ckSummary"></div>
+    <label class="ck-name" id="ckNameWrap">Facebook name
+      <input id="ckName" autocomplete="off" placeholder="Your Facebook name">
+    </label>
+    <div id="ckChoices">
+      <button type="button" class="ck-choice" id="ckPay" onclick="checkoutPay()">
+        <b>Pay on the website</b>
+        <span>GCash, Maya, QR Ph, PayPal or bank transfer. Then upload a screenshot.</span>
+      </button>
+      <button type="button" class="ck-choice" id="ckMsg" onclick="checkoutMessenger()">
+        <b>Message us on Messenger</b>
+        <span>We save the reservation first, then open Messenger.</span>
+      </button>
+      <button type="button" class="ck-go" id="ckJoin" hidden onclick="checkoutJoin()">Join the line — free</button>
+    </div>
+    <div id="ckMethods" hidden></div>
+    <div id="ckPayBox" hidden>
+      <div id="ckPayDetail"></div>
+      <label class="ck-file">Upload a screenshot of your payment
+        <input id="ckFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">
+      </label>
+      <div id="ckPreview" hidden></div>
+      <button type="button" class="ck-go" id="ckSubmit" disabled onclick="checkoutSubmit()">Submit payment</button>
+    </div>
+    <div id="ckDone" hidden></div>
+    <p class="ck-err" id="ckErr" hidden></p>
+  </div>
+</div>
