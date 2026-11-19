@@ -2,7 +2,14 @@
    the ids the page scripts already use. */
 
 body.hub { background: #0a0a0a; color: #fff; --max: 1440px; }
-body.hub nav { height: 64px; background: rgba(10,10,10,0.94); border-bottom: 1px solid #262626; }
+body.hub nav {
+  height: 64px;
+  background: rgba(10,10,10,0.94);
+  border-bottom: 1px solid #262626;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 body.hub .nav-links a.active { color: #F5B800; }
 body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; font-weight: 700; }
 
@@ -126,11 +133,14 @@ body.home2.hub .ann-banner.ann-banner-fx .ann-banner-slide,
 body.home2.hub .ann-banner-sweep { top: 0; left: 0; right: 0; }
 body.home2.hub .home-search-band {
   background: none;
-  padding: 16px 0 4px;
+  /* Room for the gold glow so the bar sits fully under the sticky header. */
+  padding: 32px 0 8px;
   text-align: center;
   overflow: visible;
   position: relative;
+  z-index: 1;
 }
+body.home2.hub .home-search-band .hs { z-index: 1; }
 body.home2.hub .home-search-band h1.hm-sr {
   position: absolute;
   width: 1px;
@@ -196,7 +206,7 @@ body.home2.hub #how .step:not(:last-child)::after {
   body.home2.hub .ann-banner.ann-banner-fx { height: 680px; }
   body.home2.hub .ann-banner.ann-banner-fx .ann-banner-slide,
   body.home2.hub .ann-banner-sweep { top: 0; left: 0; right: 0; }
-  body.home2.hub .home-search-band { padding: 12px 0 0; }
+  body.home2.hub .home-search-band { padding: 32px 0 8px; }
   body.home2.hub .home-search-band .hs-input { font-size: 16px; min-height: 52px; padding: 14px 16px; }
   body.home2.hub #newReleasesSection { padding-top: 16px; }
 }
