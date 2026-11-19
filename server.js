@@ -88,6 +88,8 @@ const supportMessenger = require('./lib/messenger-webhook');
 const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const vouchers = require('./lib/vouchers');
+const holdsLib = require('./lib/holds');
+const checkoutPayments = require('./lib/checkout-payments');
 const seo = require('./lib/seo');
 const guidePages = require('./lib/guide-pages');
 const { createStateSync } = require('./lib/state-sync');
@@ -468,6 +470,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.locals.gameAccountSummary = (gameId) => gameAccountSummary(gameId);
 // Expose shared per-game availability computation (accounts-vs-legacy fallback, per slot type)
 app.locals.computeAvailability = computeAvailability;
+app.locals.holdsLib = holdsLib;
 // Expose the buy-side availability rule so the detail page's buy panel gates on
 // the same predicate the order route enforces
 app.locals.buyTypeSellable = buyTypeSellable;
@@ -3667,6 +3670,203 @@ const uploadOrderFile = multer({
   limits: { fileSize: 8 * 1024 * 1024 }
 });
 
+function checkoutSummary(game, type, days, kind, money) {
+  const typeName = type === 'tr' ? 'Trophy' : type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+  const plan = kind === 'buy' ? 'Permanent' : (days === 7 ? 'Weekly' : 'Monthly');
+  return {
+    title: game.title,
+    cover: game.cover_image || '',
+    typeName,
+    plan,
+    lines: [
+      { label: kind === 'buy' ? 'Buy permanent · ' + typeName : (kind === 'priority' ? 'Priority fee' : 'Rental · ' + typeName + ', ' + plan), amount: money.rent }
+    ].concat(money.deposit ? [{ label: 'Refundable deposit', amount: money.deposit }] : []),
+    total: money.total,
+    amount_due: money.amountDue,
+    deposit_due: money.deposit
+  };
+}
+
+app.post('/api/checkout/start', asyncRoute(async (req, res) => {
+  const b = req.body || {};
+  const kind = ['rent', 'buy', 'priority', 'line'].includes(b.kind) ? b.kind : 'rent';
+  const type = ['nt', 'tr', 'ps4'].includes(b.account_type) ? b.account_type : null;
+  const days = parseInt(b.days, 10);
+  const upcoming = b.upcoming === true || b.upcoming === '1';
+  const game = upcoming ? getUpcomingGame(b.game_id) : getGame(b.game_id);
+  if (!game || !type) return res.status(400).json({ error: 'Pick an account type.' });
+  const settings = getSiteSettings();
+  const promo = settings.promo || {};
+  const holds = await slotHoldsFor(game.id);
+  let amountDue = 0, depositDue = 0, remainingDue = 0, rentLine = 0;
+  let voucherSettle = null;
+  const hold = holdsLib.plan(new Date());
+  if (kind === 'line') {
+    const base = upcoming
+      ? ((reservations.preorderPricing(game, type, days, promo) || {}).base || 0)
+      : rentPricing.discounted(rentPricing.listPrice(resolveGamePrices(game), type, days) || 0, rentDiscountPct(game, days, promo));
+    const dep = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+    remainingDue = base + dep;
+  } else if (kind === 'priority') {
+    const base = upcoming
+      ? ((reservations.preorderPricing(game, type, days, promo) || {}).base || 0)
+      : rentPricing.discounted(rentPricing.listPrice(resolveGamePrices(game), type, days) || 0, rentDiscountPct(game, days, promo));
+    if (!base) return res.status(400).json({ error: 'That plan is not available.' });
+    const dep = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+    const fee = reservations.priorityFeeSplit(base, dep);
+    amountDue = fee.amountDue;
+    remainingDue = fee.remainingDue;
+    rentLine = fee.amountDue;
+  } else if (kind === 'buy') {
+    const priced = computeBuyPricing(game, type === 'tr' ? 'tr' : 'nt');
+    if (!priced || !priced.amountDue) return res.status(400).json({ error: 'That account is not for sale.' });
+    amountDue = priced.amountDue;
+    rentLine = amountDue;
+  } else if (upcoming) {
+    const priced = reservations.preorderPricing(game, type, days, promo);
+    if (!priced) return res.status(400).json({ error: 'That plan is not available.' });
+    const left = resolveUpcomingSlots(game);
+    const slots = type === 'tr' ? (left.trophy_slots || 0) : (left.non_trophy_slots || 0);
+    if (slots - (holds[type] || 0) <= 0) return res.status(409).json({ error: 'That account type is full.' });
+    // amountDue is the rental alone. depositDue is added back on the
+    // summary, matching POST /order/reserve, so the deposit is not counted twice.
+    amountDue = priced.base;
+    depositDue = priced.deposit;
+    rentLine = priced.base;
+  } else {
+    const resolved = resolveGamePrices(game);
+    const avail = holdsLib.applyCounts(computeAvailability(resolved, gameAccountSummary(game.id)), holds);
+    const open = type === 'tr' ? avail.trAvail : type === 'ps4' ? avail.ps4Avail : avail.ntAvail;
+    if (!open) return res.status(409).json({ error: 'That account type is full.' });
+    const base = rentPricing.listPrice(resolved, type, days);
+    if (!base) return res.status(400).json({ error: 'That plan is not available.' });
+    depositDue = (type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0;
+    if (b.promo_code) {
+      const quoted = await resolveVoucherQuote({ code: b.promo_code, days, base, deposit: depositDue, name: '' });
+      voucherSettle = vouchers.settle(quoted);
+      if (!voucherSettle) return res.status(400).json({ error: (quoted && quoted.message) || 'That code is not valid.' });
+      amountDue = voucherSettle.amount_due;
+      depositDue = voucherSettle.deposit_due;
+      rentLine = base - voucherSettle.promo_discount;
+    } else {
+      amountDue = rentPricing.discounted(base, rentDiscountPct(game, days, promo));
+      rentLine = amountDue;
+    }
+  }
+  const fields = {
+    game_id: game.id,
+    game_title: game.title,
+    account_type: type,
+    days: kind === 'buy' ? null : days,
+    amount_due: amountDue,
+    deposit_due: depositDue,
+    remaining_due: remainingDue,
+    fb_name: String(b.fb_name || '').trim(),
+    is_buy: kind === 'buy',
+    is_reservation: kind === 'priority' || (upcoming && kind !== 'line'),
+    is_waitlist: kind === 'line',
+    hold_for_line: kind === 'line',
+    // A full Coming soon type joins the same queue as a released game, so
+    // Free and Priority rows leave upcoming_game_id empty. A pre-order that
+    // still has a slot keeps it.
+    upcoming_game_id: (upcoming && kind !== 'line' && kind !== 'priority') ? game.id : null,
+    client_token: orders.cleanClientToken(b.client_token),
+    session_id: req.sessionId || null,
+    slot_hold_expires_at: kind === 'line' ? null : hold.expires
+  };
+  if (kind === 'line') fields.state = 'waitlisted';
+  if (voucherSettle) {
+    Object.assign(fields, {
+      promo_code: voucherSettle.promo_code,
+      promo_discount: voucherSettle.promo_discount,
+      promo_id: voucherSettle.promo_id,
+      promo_pct: voucherSettle.promo_pct
+    });
+  }
+  try {
+    const placed = await orders.createOrReuse(fields);
+    const order = placed.order;
+    const summary = checkoutSummary(game, type, days, kind, {
+      rent: rentLine, deposit: depositDue, total: amountDue + depositDue, amountDue
+    });
+    res.json({
+      ref: order.ref,
+      k: order.url_key,
+      hold_expires_at: order.slot_hold_expires_at || null,
+      summary,
+      methods: checkoutPayments.publicMethods(settings),
+      reused: placed.reused
+    });
+  } catch (e) {
+    console.error('[checkout start]', e.message);
+    res.status(503).json({ error: 'Orders need a database. Set ORDERS_MEMORY=1 for a local test.' });
+  }
+}));
+
+app.post('/api/checkout/:ref/name', asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || req.body.k !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
+  const name = String((req.body && req.body.fb_name) || '').trim();
+  if (name.length < 2) return res.status(400).json({ error: 'Enter your Facebook name.' });
+  await orders.patch(order.ref, { fb_name: name });
+  res.json({ ok: true });
+}));
+
+app.post('/api/checkout/:ref/release', asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || req.body.k !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
+  if (order.payment_proof || order.state === 'verifying_payment') return res.json({ ok: true, kept: true });
+  await orders.patch(order.ref, { slot_hold_released: true });
+  res.json({ ok: true, released: true });
+}));
+
+app.post('/api/checkout/:ref/messenger', asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order || req.body.k !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
+  const name = String((req.body && req.body.fb_name) || order.fb_name || '').trim();
+  if (name.length < 2) return res.status(400).json({ error: 'Enter your Facebook name.' });
+  await orders.patch(order.ref, { fb_name: name, checkout_path: 'messenger' });
+  const typeName = order.account_type === 'tr' ? 'Trophy' : order.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+  const plan = order.is_buy ? 'Permanent' : (order.days === 7 ? 'Weekly' : 'Monthly');
+  const text = [
+    'Hi! I would like to reserve.',
+    'Game: ' + order.game_title,
+    typeName + ' · ' + plan,
+    'Total to send: ₱' + ((order.amount_due || 0) + (order.deposit_due || 0)),
+    'Order ref: ' + order.ref,
+    'Facebook name: ' + name
+  ].join('\n');
+  res.json({
+    ref: order.ref,
+    href: 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(text)
+  });
+}));
+
+app.post('/api/checkout/:ref/proof', uploadOrderFile.single('proof'), asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  const key = (req.body && req.body.k) || '';
+  if (!order || key !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
+  if (holdsLib.statusOf(order, new Date()) === 'expired') {
+    return res.status(410).json({ error: 'That hold has expired.' });
+  }
+  if (!req.file) return res.status(400).json({ error: 'Attach a payment screenshot first.' });
+  if (!/^image\//.test(req.file.mimetype || '')) {
+    return res.status(400).json({ error: 'Upload an image (JPG, PNG, or WebP).' });
+  }
+  const name = String((req.body && req.body.fb_name) || order.fb_name || '').trim();
+  if (name.length < 2) return res.status(400).json({ error: 'Enter your Facebook name.' });
+  const proofPath = await processUploadedImage(req.file, 1400);
+  const method = String((req.body && req.body.method) || '').slice(0, 20);
+  await orders.patch(order.ref, { fb_name: name, payment_method: method, checkout_path: 'website' });
+  const moved = await orders.transition(order.ref, 'verifying_payment', {
+    payment_proof: proofPath,
+    payment_channel: 'upload',
+    payment_method: method
+  });
+  if (!moved) return res.status(409).json({ error: 'That order can no longer take a payment.' });
+  res.json({ ok: true, ref: order.ref, proof: proofPath });
+}));
+
 app.get('/order/:ref', asyncRoute(async (req, res) => {
   // Sweep before rendering: lapsed QR windows go back to awaiting_qr so the
   // customer is asked for a fresh code rather than shown a dead countdown, and
@@ -5629,6 +5829,8 @@ app.get('/game/:slug', async (req, res) => {
     voucher_error: req.query.voucher || '',
     voucherHint: vouchers.hintFor(promoNow.live),
     related: similarCatalog(resolved, { excludeCatalogId: game.id }),
+    slotHolds: await slotHoldsFor(game.id),
+    checkoutMethods: checkoutPayments.publicMethods(gdSettings),
     queues
   }, reviewBlockLocals(game.title)));
 });
@@ -5638,6 +5840,14 @@ app.get('/game/:slug', async (req, res) => {
 // record is not in this list, and its id is not a catalogue id, so it does not
 // remove a released game. Each card links to that released game's page.
 // PS Plus Deluxe is the /ps-plus page, so it is left out here too.
+async function slotHoldsFor(gameId) {
+  try {
+    return holdsLib.countForGame(await orders.listForGame(gameId), gameId, new Date());
+  } catch (e) {
+    return { nt: 0, tr: 0, ps4: 0 };
+  }
+}
+
 function similarCatalog(game, opts) {
   opts = opts || {};
   const genreKey = String((game && game.genre) || '').split('/')[0].trim().toLowerCase();
@@ -6796,6 +7006,9 @@ app.get('/upcoming/:slug', asyncRoute(async (req, res) => {
   }
 
   const resolvedGame = resolveUpcomingSlots(game);
+  const soonHolds = await slotHoldsFor(resolvedGame.id);
+  resolvedGame.non_trophy_slots = Math.max(0, (resolvedGame.non_trophy_slots || 0) - soonHolds.nt);
+  resolvedGame.trophy_slots = Math.max(0, (resolvedGame.trophy_slots || 0) - soonHolds.tr);
   // Same queue the released game page numbers. A full Coming Soon type joins
   // this list, so "You'd be #N" matches the admin panel for this game id.
   let queues = { nt: [], tr: [], ps4: [] };
@@ -6808,7 +7021,7 @@ app.get('/upcoming/:slug', asyncRoute(async (req, res) => {
   // by sortForGame() the same way. It never surfaces as "reviews of this game";
   // it's the trust signal for the business, which is exactly what a customer
   // deciding whether to reserve an unreleased game needs to see.
-  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null, queues, related: similarCatalog(resolvedGame) },
+  res.render('upcoming-detail', Object.assign({ game: resolvedGame, psnView: gamePsnView.buildGamePsnView(resolvedGame), announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), order_error: req.query.order_error || null, queues, related: similarCatalog(resolvedGame), checkoutMethods: checkoutPayments.publicMethods(getSiteSettings()) },
     reviewBlockLocals(resolvedGame.title)));
 }));
 
