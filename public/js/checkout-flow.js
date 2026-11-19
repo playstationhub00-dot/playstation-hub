@@ -88,6 +88,7 @@
         body: JSON.stringify({ k: session.k })
       }).catch(function () {});
     }
+    closeLight();
     show('ckChoices', false); show('ckMethods', false); show('ckPayBox', false); show('ckNameWrap', false);
     $('ckDone').hidden = false;
     $('ckDone').innerHTML = '<h3>Hold expired</h3><p>The 15-minute hold ended, so this slot was released. You can start again from the game page if it is still open.</p><button type="button" class="ck-go" onclick="checkoutClose()">Start again</button>';
@@ -105,6 +106,8 @@
     }
     err('');
     file = null;
+    clearFileUi();
+    closeLight();
     session = null;
     $('ckDone').hidden = true;
     $('ckDone').innerHTML = '';
@@ -154,11 +157,39 @@
   }
 
   window.checkoutOpen = openModal;
-  window.checkoutClose = function () { root.hidden = true; clearInterval(tick); };
+  window.checkoutClose = function () { closeLight(); root.hidden = true; clearInterval(tick); };
 
   function realMethods() {
     return (session && session.methods || []).filter(function (m) {
       return m && !m.example && (m.account_number || m.qr_image);
+    });
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function clearFileUi() {
+    file = null;
+    var input = $('ckFile');
+    if (input) input.value = '';
+    if ($('ckDropEmpty')) $('ckDropEmpty').hidden = false;
+    if ($('ckPreview')) { $('ckPreview').hidden = true; $('ckPreview').innerHTML = ''; }
+    if ($('ckSubmit')) $('ckSubmit').disabled = true;
+    if ($('ckSubmitNote')) $('ckSubmitNote').hidden = false;
+  }
+
+  function renderMethods(methods) {
+    $('ckMethods').hidden = false;
+    show('ckChoices', false);
+    $('ckMethods').innerHTML = '<button type="button" class="ck-back" onclick="checkoutBack()">Back to choices</button>' +
+      methods.map(function (m) {
+        return '<button type="button" class="ck-method" data-key="' + esc(m.key) + '"><b>' + esc(m.label) + '</b><span>' + esc(m.hint) + '</span></button>';
+      }).join('');
+    $('ckMethods').querySelectorAll('.ck-method').forEach(function (btn) {
+      btn.addEventListener('click', function () { showMethod(btn.dataset.key); });
     });
   }
 
@@ -169,21 +200,81 @@
     var methods = realMethods();
     if (!methods.length) return;
     err('');
-    $('ckMethods').hidden = false;
-    show('ckChoices', false);
-    $('ckMethods').innerHTML = '<button type="button" class="ck-back" onclick="checkoutBack()">Back to choices</button>' +
-      methods.map(function (m) {
-        return '<button type="button" class="ck-method' + (m.example ? ' is-example' : '') + '" data-key="' + m.key + '"><b>' + m.label + '</b><span>' + m.hint + (m.example ? ' · EXAMPLE' : '') + '</span></button>';
-      }).join('');
-    $('ckMethods').querySelectorAll('.ck-method').forEach(function (btn) {
-      btn.addEventListener('click', function () { showMethod(btn.dataset.key); });
-    });
+    closeLight();
+    renderMethods(methods);
   };
 
   window.checkoutBack = function () {
+    closeLight();
     show('ckMethods', false); show('ckPayBox', false); show('ckChoices', true);
     $('ckSummary').hidden = false;
+    show('ckNameWrap', true);
+    $('ckTitle').textContent = root.dataset.kind === 'line' ? 'Join the line' : 'Confirm reservation';
   };
+
+  window.checkoutChangeMethod = function () {
+    if (!session) return;
+    closeLight();
+    show('ckPayBox', false);
+    show('ckNameWrap', false);
+    $('ckSummary').hidden = true;
+    $('ckTitle').textContent = 'Pay on the website';
+    err('');
+    renderMethods(realMethods());
+  };
+
+  function copyValue(text, btn) {
+    function done() {
+      btn.textContent = 'Copied';
+      btn.classList.add('is-copied');
+      setTimeout(function () {
+        btn.textContent = 'Copy';
+        btn.classList.remove('is-copied');
+      }, 1400);
+    }
+    function fallback() {
+      var area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand('copy'); done(); } catch (e) {}
+      area.remove();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else fallback();
+  }
+
+  function closeLight() {
+    if ($('ckLight')) $('ckLight').hidden = true;
+  }
+
+  function openLight() {
+    var m = (session.methods || []).filter(function (x) { return x.key === session.method; })[0];
+    if (!m || !m.qr_image) return;
+    $('ckLightImg').src = m.qr_image;
+    $('ckLightImg').alt = m.label + ' QR';
+    $('ckLightName').textContent = m.label + ' QR';
+    $('ckLightMeta').textContent = [m.account_name, m.account_number].filter(Boolean).join(' · ');
+    $('ckLightHint').textContent = 'Screenshot or save this QR, then open ' + m.label + ' → Scan.';
+    $('ckLight').hidden = false;
+  }
+
+  function downloadQr() {
+    var m = (session && session.methods || []).filter(function (x) { return x.key === session.method; })[0];
+    if (!m || !m.qr_image) return;
+    var name = m.label.replace(/\s+/g, '-').toLowerCase() + '-qr';
+    fetch(m.qr_image).then(function (r) { return r.blob(); }).then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }).catch(function () { window.open(m.qr_image, '_blank'); });
+  }
 
   function showMethod(key) {
     var m = (session.methods || []).filter(function (x) { return x.key === key; })[0];
@@ -191,26 +282,80 @@
     session.method = key;
     show('ckMethods', false);
     show('ckPayBox', true);
+    show('ckNameWrap', false);
     $('ckSummary').hidden = true;
-    var qr = m.qr_image ? '<img class="ck-qr" src="' + m.qr_image + '" alt="">' : '';
-    $('ckPayDetail').innerHTML = '<b>Pay with ' + m.label + '</b>' +
-      '<div class="ck-amt">₱' + ((session.summary && session.summary.total) || '') + '</div>' +
-      '<div>Ref ' + session.ref + '</div>' +
-      '<div>' + (m.account_name || '') + '</div>' +
-      '<div>' + (m.account_number || '') + '</div>' + qr;
-    $('ckSubmit').textContent = 'Submit payment — ₱' + ((session.summary && session.summary.total) || '');
+    $('ckTitle').textContent = 'Pay with ' + m.label;
+    var total = (session.summary && session.summary.total) || 0;
+    var rows = '<div class="ck-meta-row"><span>Ref</span><b>' + esc(session.ref) + '</b><button type="button" class="ck-copy" data-copy="' + esc(session.ref) + '">Copy</button></div>';
+    if (m.account_name) {
+      rows += '<div class="ck-meta-row"><span>Account</span><b>' + esc(m.account_name) + '</b><span></span></div>';
+    }
+    if (m.account_number) {
+      rows += '<div class="ck-meta-row"><span>Number</span><b>' + esc(m.account_number) + '</b><button type="button" class="ck-copy" data-copy="' + esc(m.account_number) + '">Copy</button></div>';
+    }
+    var qr = '';
+    if (m.qr_image) {
+      qr = '<div class="ck-qr-card"><button type="button" class="ck-qr-hit" id="ckQrOpen"><img src="' + esc(m.qr_image) + '" alt="' + esc(m.label) + ' QR"></button><button type="button" class="ck-enlarge" id="ckEnlarge">Tap to enlarge</button></div>';
+    }
+    $('ckPayDetail').innerHTML = '<div class="ck-pay-amt">₱' + esc(total) + '</div>' +
+      '<div class="ck-meta">' + rows + '</div>' + qr;
+    $('ckSubmit').textContent = 'Submit payment — ₱' + total;
     $('ckSubmit').disabled = !file;
+    if ($('ckSubmitNote')) $('ckSubmitNote').hidden = !!file;
+  }
+
+  function takeFile(next) {
+    var box = $('ckPreview');
+    if (!next || !/^image\//.test(next.type || '')) {
+      file = null;
+      if (box) box.hidden = true;
+      if ($('ckDropEmpty')) $('ckDropEmpty').hidden = false;
+      $('ckSubmit').disabled = true;
+      if ($('ckSubmitNote')) $('ckSubmitNote').hidden = false;
+      err('Upload an image.');
+      return;
+    }
+    if (next.size > 8 * 1024 * 1024) {
+      file = null;
+      $('ckSubmit').disabled = true;
+      if ($('ckSubmitNote')) $('ckSubmitNote').hidden = false;
+      err('That image is over 8 MB.');
+      return;
+    }
+    err('');
+    file = next;
+    $('ckDropEmpty').hidden = true;
+    box.hidden = false;
+    box.innerHTML = '<img alt="" src="' + URL.createObjectURL(next) + '"><b>' + esc(next.name) + '</b><span class="ck-replace">Replace</span>';
+    $('ckSubmit').disabled = false;
+    $('ckSubmitNote').hidden = true;
   }
 
   $('ckFile').addEventListener('change', function () {
-    file = $('ckFile').files && $('ckFile').files[0];
-    var box = $('ckPreview');
-    if (!file || !/^image\//.test(file.type)) { file = null; box.hidden = true; $('ckSubmit').disabled = true; err('Upload an image.'); return; }
-    if (file.size > 8 * 1024 * 1024) { file = null; $('ckSubmit').disabled = true; err('That image is over 8 MB.'); return; }
-    err('');
-    box.hidden = false;
-    box.innerHTML = '<img alt="" src="' + URL.createObjectURL(file) + '"><div>' + file.name + '</div><button type="button" onclick="document.getElementById(\'ckFile\').click()">Replace file</button>';
-    $('ckSubmit').disabled = false;
+    takeFile($('ckFile').files && $('ckFile').files[0]);
+  });
+  var drop = $('ckDrop');
+  drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('is-over'); });
+  drop.addEventListener('dragleave', function () { drop.classList.remove('is-over'); });
+  drop.addEventListener('drop', function (e) {
+    e.preventDefault();
+    drop.classList.remove('is-over');
+    var dropped = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (dropped) takeFile(dropped);
+  });
+  $('ckPayBox').addEventListener('click', function (e) {
+    var copyBtn = e.target.closest && e.target.closest('.ck-copy');
+    if (copyBtn) { e.preventDefault(); e.stopPropagation(); copyValue(copyBtn.getAttribute('data-copy') || '', copyBtn); return; }
+    if (e.target.closest && e.target.closest('#ckQrOpen, #ckEnlarge')) openLight();
+  });
+  $('ckLight').addEventListener('click', function (e) {
+    if (e.target === $('ckLight')) closeLight();
+  });
+  $('ckLightCard').addEventListener('click', function (e) { e.stopPropagation(); });
+  $('ckLightX').addEventListener('click', closeLight);
+  $('ckLightDl').addEventListener('click', downloadQr);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('ckLight') && !$('ckLight').hidden) closeLight();
   });
 
   window.checkoutSubmit = function () {
@@ -226,6 +371,7 @@
       .then(function (res) {
         if (!res.ok) { err(res.j.error || 'Could not submit.'); return; }
         clearInterval(tick);
+        closeLight();
         show('ckPayBox', false); show('ckHold', false); show('ckNameWrap', false);
         $('ckDone').hidden = false;
         $('ckDone').innerHTML = '<h3>Payment submitted</h3><p>We will confirm on Messenger. Your ref is <b>' + session.ref + '</b>.</p><a class="ck-go" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener">Open Messenger</a>';
@@ -241,7 +387,8 @@
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) { err(res.j.error || 'Enter your Facebook name.'); return; }
-        show('ckChoices', false); show('ckNameWrap', false); show('ckHold', false);
+        closeLight();
+        show('ckChoices', false); show('ckMethods', false); show('ckPayBox', false); show('ckNameWrap', false); show('ckHold', false);
         $('ckSummary').hidden = true;
         var prefill = '';
         try { prefill = decodeURIComponent(String(res.j.href).split('text=')[1] || ''); } catch (e) { prefill = ''; }

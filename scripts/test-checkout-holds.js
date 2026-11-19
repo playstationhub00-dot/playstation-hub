@@ -128,6 +128,9 @@ ok('the voucher link is hidden when every slot is full, and a picked full type h
   assert.ok(js.includes('voucherToggle.hidden = isBookedNow()'));
   const checkout = fs.readFileSync(path.join(__dirname, '../public/js/checkout-flow.js'), 'utf8');
   assert.ok(checkout.includes("$('ckPay').hidden = session.methods.length === 0"));
+  assert.ok(checkout.includes('checkoutChangeMethod'));
+  assert.ok(checkout.includes('Tap to enlarge'));
+  assert.ok(checkout.includes("then open ' + m.label + ' → Scan."));
 });
 
 ok('checkout stores the screenshot on the existing payment_proof field', () => {
@@ -252,6 +255,9 @@ async function main() {
   assert.ok(openPage.text.includes('Have a voucher?'));
   assert.ok(openPage.text.includes('id="voucherBox" hidden'));
   assert.ok(openPage.text.includes('checkout-flow.js'));
+  assert.ok(openPage.text.includes('Change payment method'));
+  assert.ok(openPage.text.includes('Download QR'));
+  assert.ok(openPage.text.includes('id="ckDrop"'));
   assert.ok(!/id="voucherToggle"\s+hidden/.test(openPage.text));
   console.log('  ok - available panel offers a collapsed voucher');
   passed++;
