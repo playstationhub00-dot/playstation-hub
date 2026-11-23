@@ -12,6 +12,13 @@ body.hub nav {
 }
 body.hub .nav-links a.active { color: #F5B800; }
 body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; font-weight: 700; }
+/* Nav search hangs out of the sticky bar. It stays inside the nav’s stacking
+   context (z-index 100), above the page, with a solid list. */
+body.hub .navsearch { background: #0a0a0a; z-index: 2; }
+body.hub .navsearch-results { background: #111; z-index: 3; }
+body.hub .navsearch-item { background: #111; }
+body.hub .navsearch-item:hover,
+body.hub .navsearch-item.sel { background: #1a1a1a; }
 
 /* Rent catalog */
 body.browse-page.hub .browse-header { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
@@ -39,6 +46,10 @@ body.browse-page.hub .bf-layout {
   padding: 0 0 40px;
   box-sizing: border-box;
   align-items: start;
+  /* Card badges stay inside the grid, under the sticky search and the nav search. */
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
 }
 body.browse-page.hub .bf-panel {
   display: block;
@@ -148,9 +159,26 @@ body.home2.hub .home-search-band {
   text-align: center;
   overflow: visible;
   position: relative;
-  z-index: 1;
+  /* Above card badges (they paint at z-index 2–6). The sticky nav stays at 100. */
+  z-index: 30;
 }
-body.home2.hub .home-search-band .hs { z-index: 1; }
+body.home2.hub .home-search-band ~ .section,
+body.home2.hub .home-search-band ~ .promo-bar {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+/* The field and the list sit above the dim. The list is opaque so card
+   badges, FULL, and “Next slot” lines cannot show through the rows. */
+body.home2.hub .home-search-band .hs { z-index: 2; }
+body.home2.hub .home-search-band .hs-dim { z-index: 1; }
+body.home2.hub .home-search-band .hs-results {
+  z-index: 3;
+  background: #141414;
+}
+body.home2.hub .home-search-band .hs-row { background: #141414; }
+body.home2.hub .home-search-band .hs-row:hover,
+body.home2.hub .home-search-band .hs-row:focus-visible { background: #1b1b1b; }
 body.home2.hub .home-search-band h1.hm-sr {
   position: absolute;
   width: 1px;
