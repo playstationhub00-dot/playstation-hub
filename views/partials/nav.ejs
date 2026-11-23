@@ -2,18 +2,108 @@
   // Shared nav for every customer-facing page. `active` (optional) marks the current
   // link; pass it as a local when including this partial, e.g. { active: 'browse' }.
   const navActive = typeof active !== 'undefined' ? active : '';
+  const navMenuSafe = (typeof navMenu !== 'undefined' && navMenu && navMenu.browse) ? navMenu : null;
+  const navBrowseOn = ['browse', 'buy', 'psplus', 'trending', 'collections'].indexOf(navActive) >= 0;
+  const navGuidesOn = navActive === 'guides' || navActive === 'how';
+  const navFeat = navMenuSafe ? navMenuSafe.featured : [];
+  const navChips = navMenuSafe ? navMenuSafe.chips : [];
+  const navCat = navMenuSafe ? navMenuSafe.category : null;
 %>
+<link rel="stylesheet" href="/css/nav-mega.css?v=<%= assetV %>">
 <nav>
   <a href="/" class="logo"><%- include('brand-logo') %></a>
 
   <div class="nav-links" id="navLinks">
     <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
-    <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Rent</a>
-    <a href="/buy" class="<%= navActive === 'buy' ? 'active' : '' %>">Buy</a>
-    <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus</a>
-    <a href="/requests" class="<%= navActive === 'requests' ? 'active' : '' %>">Requests</a>
-    <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
-    <a href="/guides" class="<%= navActive === 'guides' ? 'active' : '' %>">Guides</a>
+    <div class="nav-drop" data-navdrop="browse">
+      <button type="button" class="nav-drop-btn<%= navBrowseOn ? ' active' : '' %>" aria-expanded="false" aria-controls="navBrowseMenu" aria-haspopup="true">Browse</button>
+      <div class="nav-mega" id="navBrowseMenu" role="region" aria-label="Browse">
+        <div class="nav-mega-panel">
+          <div class="nm-browse">
+            <div class="nm-col">
+              <div class="nm-kicker">Browse</div>
+              <% (navMenuSafe ? navMenuSafe.browse : [
+                { label: 'All games', detail: 'Every game you can rent', count: null, href: '/browse' },
+                { label: 'Recently added', detail: 'Newest games on the site', count: null, href: '/browse?tab=new' },
+                { label: 'Most popular', detail: 'Most rented by players', count: null, href: '/browse?tab=most-rented' },
+                { label: 'Trending', detail: 'Hot this week', count: null, href: '/trending', fresh: true },
+                { label: 'Collections', detail: 'Bundles, Coming soon, Buy to keep, and PS Plus Deluxe.', count: null, href: '/collections' }
+              ]).forEach(function (item) { %>
+              <a class="nm-row" href="<%= item.href %>">
+                <span class="nm-row-t"><%= item.label %><% if (item.fresh) { %> <span class="nm-new">New</span><% } %></span>
+                <span class="nm-row-d"><%= item.detail %></span>
+                <% if (item.count != null) { %><span class="nm-row-n"><%= item.count %></span><% } %>
+              </a>
+              <% }) %>
+            </div>
+            <div class="nm-feat-col">
+              <div class="nm-feat-head">
+                <span>Featured · New releases</span>
+                <a href="/browse?tab=new">View all ›</a>
+              </div>
+              <div class="nm-feat-row">
+                <% if (!navFeat.length) { %><p class="nm-empty">New releases show here once a game has a release date.</p><% } %>
+                <% navFeat.forEach(function (g) { %>
+                <a class="nm-feat" href="<%= g.href %>">
+                  <span class="nm-badge <%= g.avail ? 'is-open' : 'is-full' %>"><%= g.avail ? 'Available' : 'Full' %></span>
+                  <% if (g.cover) { %><img src="<%= g.cover %>" alt=""><% } else { %><span class="nm-ph"></span><% } %>
+                  <span class="nm-feat-title"><%= g.title %></span>
+                  <% if (g.weekly) { %><span class="nm-feat-price">Weekly from <b>₱<%= g.weekly %></b></span><% } %>
+                </a>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+          <% if (navChips.length) { %>
+          <div class="nm-chips">
+            <span>Also in Collections</span>
+            <% navChips.forEach(function (c) { %>
+            <a href="<%= c.href %>"><%= c.label %> <b><%= c.count %></b></a>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <div class="nav-drop" data-navdrop="category">
+      <button type="button" class="nav-drop-btn" aria-expanded="false" aria-controls="navCategoryMenu" aria-haspopup="true">Category</button>
+      <div class="nav-mega" id="navCategoryMenu" role="region" aria-label="Category">
+        <div class="nav-mega-panel nm-cat">
+          <div>
+            <div class="nm-kicker">Genre</div>
+            <div class="nm-genres">
+              <% if (!navCat || !navCat.genres.length) { %><p class="nm-empty">Genres appear as games are added.</p><% } %>
+              <% (navCat ? navCat.genres : []).forEach(function (g) { %>
+              <a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a>
+              <% }) %>
+            </div>
+          </div>
+          <div>
+            <div class="nm-kicker">Account type</div>
+            <% (navCat ? navCat.accounts : []).forEach(function (g) { %>
+            <a class="nm-line" href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a>
+            <% }) %>
+            <div class="nm-kicker">Availability</div>
+            <% (navCat ? navCat.availability : []).forEach(function (g) { %>
+            <a class="nm-line" href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a>
+            <% }) %>
+          </div>
+          <div>
+            <div class="nm-kicker">Console</div>
+            <% (navCat ? navCat.consoles : []).forEach(function (g) { %>
+            <a class="nm-line" href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a>
+            <% }) %>
+            <div class="nm-kicker">Shortcuts</div>
+            <% (navCat ? navCat.shortcuts : [{ label: 'PS Plus Deluxe', count: 0, href: '/browse?tab=psplus' }]).forEach(function (g) { %>
+            <a class="nm-line" href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <a href="/requests" class="<%= navActive === 'requests' ? 'active' : '' %>">Request</a>
+    <a href="/guides" class="<%= navGuidesOn ? 'active' : '' %>">Guides</a>
+    <a href="/faq" class="<%= navActive === 'faq' ? 'active' : '' %>">FAQ</a>
   </div>
 
   <div class="navicons">
@@ -41,13 +131,36 @@
 </nav>
 <div class="nav-drawer-overlay" id="navDrawerOverlay"></div>
 <div class="nav-drawer" id="navDrawer">
-  <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
-  <a href="/browse" class="<%= navActive === 'browse' ? 'active' : '' %>">Rent</a>
-  <a href="/buy" class="<%= navActive === 'buy' ? 'active' : '' %>">Buy</a>
-  <a href="/ps-plus" class="<%= navActive === 'psplus' ? 'active' : '' %>">PS Plus</a>
-  <a href="/requests" class="<%= navActive === 'requests' ? 'active' : '' %>">Requests</a>
-  <a href="/how-it-works" class="<%= navActive === 'how' ? 'active' : '' %>">How It Works</a>
-  <a href="/guides" class="<%= navActive === 'guides' ? 'active' : '' %>">Guides</a>
+  <div class="nav-drawer-scroll">
+    <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
+    <button type="button" class="nav-acc-btn" aria-expanded="true" aria-controls="navAccBrowse">Browse <span class="nav-acc-chev" aria-hidden="true">⌃</span></button>
+    <div class="nav-acc-panel" id="navAccBrowse">
+      <% (navMenuSafe ? navMenuSafe.browse : [
+        { label: 'All games', count: null, href: '/browse' },
+        { label: 'Recently added', count: null, href: '/browse?tab=new' },
+        { label: 'Most popular', count: null, href: '/browse?tab=most-rented' },
+        { label: 'Trending', count: null, href: '/trending', fresh: true },
+        { label: 'Collections', count: null, href: '/collections' }
+      ]).forEach(function (item) { %>
+      <a href="<%= item.href %>"><span><%= item.label %><% if (item.fresh) { %> <span class="nm-new">New</span><% } %></span><% if (item.count != null) { %><b><%= item.count %></b><% } %></a>
+      <% }) %>
+    </div>
+    <button type="button" class="nav-acc-btn" aria-expanded="false" aria-controls="navAccCategory">Category <span class="nav-acc-chev" aria-hidden="true">⌄</span></button>
+    <div class="nav-acc-panel" id="navAccCategory" hidden>
+      <% if (navCat) { %>
+        <% navCat.genres.forEach(function (g) { %><a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a><% }) %>
+        <% navCat.accounts.forEach(function (g) { %><a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a><% }) %>
+        <% navCat.consoles.forEach(function (g) { %><a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a><% }) %>
+        <% navCat.availability.forEach(function (g) { %><a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a><% }) %>
+        <% navCat.shortcuts.forEach(function (g) { %><a href="<%= g.href %>"><span><%= g.label %></span><b><%= g.count %></b></a><% }) %>
+      <% } else { %>
+        <a href="/browse">All games</a>
+      <% } %>
+    </div>
+    <a href="/requests" class="<%= navActive === 'requests' ? 'active' : '' %>">Request</a>
+    <a href="/guides" class="<%= navGuidesOn ? 'active' : '' %>">Guides</a>
+    <a href="/faq" class="<%= navActive === 'faq' ? 'active' : '' %>">FAQ</a>
+  </div>
   <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="nav-cta" data-track-source="nav">Message Us</a>
 </div>
 
@@ -65,13 +178,25 @@
   function openDrawer() {
     drawer.classList.add('open'); overlay.classList.add('open');
     hamburger.classList.add('open'); hamburger.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('nav-open');
     document.body.style.overflow = 'hidden';
   }
   function closeDrawer() {
     drawer.classList.remove('open'); overlay.classList.remove('open');
     hamburger.classList.remove('open'); hamburger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('nav-open');
     document.body.style.overflow = '';
   }
+  drawer.querySelectorAll('.nav-acc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = document.getElementById(btn.getAttribute('aria-controls'));
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (panel) panel.hidden = !open;
+      const chev = btn.querySelector('.nav-acc-chev');
+      if (chev) chev.textContent = open ? '⌃' : '⌄';
+    });
+  });
   hamburger.addEventListener('click', function() {
     drawer.classList.contains('open') ? closeDrawer() : openDrawer();
   });
@@ -227,6 +352,55 @@
     if (!e.target.closest('.navsearch') && !e.target.closest('.navsearch-toggle')) closeMobileSearch();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMobileSearch(); });
+})();
+</script>
+<script>
+(function () {
+  const drops = [...document.querySelectorAll('[data-navdrop]')];
+  if (!drops.length) return;
+  const desktop = () => window.matchMedia('(min-width: 821px)').matches;
+  function setOpen(drop, on) {
+    drop.classList.toggle('open', !!on);
+    const btn = drop.querySelector('.nav-drop-btn');
+    if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+  }
+  function closeAll(except) {
+    drops.forEach(d => { if (d !== except) setOpen(d, false); });
+  }
+  drops.forEach(drop => {
+    const btn = drop.querySelector('.nav-drop-btn');
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (!desktop()) return;
+      const on = !drop.classList.contains('open');
+      closeAll(drop);
+      setOpen(drop, on);
+    });
+    btn.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') {
+        const first = drop.querySelector('.nav-mega a');
+        if (first) { e.preventDefault(); setOpen(drop, true); first.focus(); }
+      }
+    });
+    drop.addEventListener('mouseenter', () => {
+      if (!desktop()) return;
+      closeAll(drop);
+      setOpen(drop, true);
+    });
+    drop.addEventListener('mouseleave', () => {
+      if (drop.contains(document.activeElement)) return;
+      setOpen(drop, false);
+    });
+    drop.addEventListener('focusout', e => {
+      if (!drop.contains(e.relatedTarget)) setOpen(drop, false);
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-navdrop]')) closeAll(null);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeAll(null);
+  });
 })();
 </script>
 <script src="/js/message-taps.js?v=<%= assetV %>" defer></script>

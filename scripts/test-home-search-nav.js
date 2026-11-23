@@ -1,8 +1,7 @@
 // Run: node scripts/test-home-search-nav.js
 //
-// "One search at a time" on the homepage: public/js/home-search.js hides the
-// menu's 🔍 icon while the big search is on screen, and sends the icon (and the
-// / shortcut) to the big search instead of opening the menu's own search.
+// The header search icon stays visible. On the homepage a tap (and the /
+// shortcut) focuses the big search instead of opening the menu's own search.
 // Runs the real script in a vm with a stub DOM.
 const assert = require('assert');
 const fs = require('fs');
@@ -64,22 +63,10 @@ function clickOn(selectorMatch) {
   return ev;
 }
 
-console.log('\nicon hides while the big search is on screen');
-ok('watches the search box, allowing for the sticky menu bar', () => {
+console.log('\nthe header icon stays visible');
+ok('the icon is not hidden while the big search is on screen', () => {
   const p = load();
-  assert.strictEqual(p.observers.length, 1);
-  assert.strictEqual(p.observers[0].target, p.els.hsInput);
-  assert.strictEqual(p.observers[0].opts.rootMargin, '-64px 0px 0px 0px');
-});
-ok('in view → icon hidden; scrolled past → icon back', () => {
-  const p = load();
-  p.observers[0].cb([{ isIntersecting: true }]);
-  assert.strictEqual(p.els.navSearchToggle.classList.contains('hs-nav-hidden'), true);
-  p.observers[0].cb([{ isIntersecting: false }]);
-  assert.strictEqual(p.els.navSearchToggle.classList.contains('hs-nav-hidden'), false);
-});
-ok('without IntersectionObserver the icon simply stays visible', () => {
-  const p = load({ withObserver: false });
+  assert.strictEqual(p.observers.length, 0);
   assert.strictEqual(p.els.navSearchToggle.classList.contains('hs-nav-hidden'), false);
 });
 
@@ -102,7 +89,7 @@ ok('other clicks are left alone', () => {
 });
 ok('a page without the menu icon still works', () => {
   const p = load({ withToggle: false });
-  assert.strictEqual(p.observers.length, 0);
+  assert.strictEqual(p.els.navSearchToggle, undefined);
 });
 
 console.log('\nthe / shortcut');
@@ -126,11 +113,10 @@ ok('/ typed inside a text box, or other keys, are left alone', () => {
 });
 
 console.log('\nmarkup');
-ok('the menu icon id the script relies on still exists, and the hiding style is in place', () => {
+ok('the header search button is in the nav on every page', () => {
   const nav = fs.readFileSync(path.join(ROOT, 'views', 'partials', 'nav.ejs'), 'utf8');
-  const css = fs.readFileSync(path.join(ROOT, 'public', 'css', 'home-search.css'), 'utf8');
   assert.ok(nav.includes('id="navSearchToggle"'));
-  assert.ok(/#navSearchToggle\.hs-nav-hidden \{ visibility: hidden; opacity: 0; pointer-events: none; \}/.test(css));
+  assert.ok(nav.includes('aria-label="Search"'));
 });
 
 console.log('\n' + passed + ' assertions passed\n');

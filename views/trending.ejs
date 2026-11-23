@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { page: 'browse', title: 'Trending | PlayStation Hub', canonicalPath: '/trending' }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/nav-mega.css?v=<%= assetV %>">
+</head>
+<body class="hub">
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'trending' }) %>
+
+<div class="col-page">
+  <div class="rent-kicker">Browse · Trending</div>
+  <h1>Trending</h1>
+  <p class="col-lede"><%= fallback ? 'These are the most rented games.' : 'Hot this week.' %></p>
+  <% if (!games.length) { %>
+  <p class="col-note">No games to rank yet.</p>
+  <% } else { %>
+  <div class="col-grid">
+    <% games.forEach(function (game) { %><%- include('partials/game-card', { game: game }) %><% }) %>
+  </div>
+  <% } %>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>
