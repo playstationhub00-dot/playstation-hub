@@ -16,6 +16,7 @@
   // One group per order. Waiting for sign-in and verify-return are not
   // "out on rent", and a reservation is not "completed".
   const lgGroup = o => o.state === 'cancelled' ? 'cancelled'
+    : o.state === 'waitlisted' ? 'line'
     : ['awaiting_payment', 'payment_rejected'].includes(o.state) ? 'unpaid'
     : o.state === 'verifying_payment' ? 'review'
     : ['awaiting_qr', 'qr_pending'].includes(o.state) ? 'signin'
@@ -37,6 +38,7 @@
     ['out', 'Out on rent'],
     ['verify', 'Verify return'],
     ['reserved', 'Reserved'],
+    ['line', 'In line'],
     ['paid', 'Completed'],
     ['cancelled', 'Cancelled']
   ];
@@ -50,7 +52,7 @@
   const toneFor = (grp, o) => {
     if (o.state === 'cancelled' && o.slot_given_at) return 'oq-st-done';
     if (grp === 'cancelled') return 'oq-st-dead';
-    if (grp === 'unpaid' || grp === 'review') return 'oq-st-wait';
+    if (grp === 'unpaid' || grp === 'review' || grp === 'line') return 'oq-st-wait';
     if (grp === 'out') return 'oq-st-live';
     return 'oq-st-done';
   };
@@ -132,7 +134,7 @@
         </td>
       </tr>
       <% g.orders.forEach(o => {
-           const paid = !['awaiting_payment','verifying_payment','payment_rejected','cancelled'].includes(o.state);
+           const paid = !['awaiting_payment','verifying_payment','payment_rejected','cancelled','waitlisted'].includes(o.state);
            const grp = lgGroup(o);
            const typeLbl = o.account_type === 'tr' ? 'Trophy' : o.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
            const durLbl = o.is_buy ? 'One-time purchase' : (o.days === 7 ? 'Weekly' : 'Monthly');

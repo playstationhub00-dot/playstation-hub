@@ -115,9 +115,10 @@ async function main() {
     assert.ok(!r.body.includes('id="orderToggle"') && !r.body.includes('id="gdOrderBlock"'));
     assert.ok(r.body.includes('id="reserveSectionAll"') && r.body.includes('id="lineCardAll"'));
     assert.ok(r.body.includes('Fully booked') && r.body.includes('id="lineHeadAll"'));
-    assert.ok(/id="noslotOptQueueAll"[^>]*>/.test(r.body) && /aria-checked="true" class="gd-noslot-opt gd-line-opt gd-type-selected" id="noslotOptQueueAll"/.test(r.body), 'Free is picked first');
+    assert.ok(!r.body.includes('id="noslotOptQueueAll"') && !r.body.includes('id="noslotOptPriorityAll"'), 'the panel has no Free/Priority radios');
+    assert.ok(r.body.includes('id="lineFreePosAll"') && r.body.includes('id="linePriPosAll"'));
     assert.ok(/name="kind" id="resKindAll" value="queue"/.test(r.body));
-    assert.ok(r.body.includes('Join the line — free') && r.body.includes('data-text-priority="Reserve priority — ₱100"'));
+    assert.ok(r.body.includes('>Join the line</button>'));
     assert.ok(/id="lineAskAll"[^>]*data-track-source="game"/.test(r.body) && r.body.includes('Have a question?'));
   });
   await okAsync('the old duplicates are gone: second banner, "Choose your option", Facebook fallback link, "Paying puts you first"', async () => {

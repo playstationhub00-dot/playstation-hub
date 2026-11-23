@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var CHIPS = ['all', 'unpaid', 'review', 'signin', 'out', 'verify', 'reserved', 'paid', 'cancelled'];
+  var CHIPS = ['all', 'unpaid', 'review', 'signin', 'out', 'verify', 'reserved', 'line', 'paid', 'cancelled'];
   var PAGE_SIZE = 50;
   var TYPES = ['all', 'rental', 'purchase', 'reservation'];
   var GROUP_KEYS = ['now', 'released', 'refunds', 'bygame'];

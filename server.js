@@ -3670,6 +3670,28 @@ const uploadOrderFile = multer({
   limits: { fileSize: 8 * 1024 * 1024 }
 });
 
+async function linePlace(game, type) {
+  const built = queueRules.buildQueue(await orders.listQueueCandidates(game.id), new Date());
+  const list = (built && built[type]) || [];
+  let frees = null;
+  try {
+    const avail = computeAvailability(game, gameAccountSummary(game.id), {
+      nt: game.nt_days_left, tr: game.tr_days_left, ps4: game.ps4_days_left
+    });
+    const n = type === 'tr' ? avail.trNext : type === 'ps4' ? avail.ps4Next : avail.ntNext;
+    frees = n > 0 ? Number(n) : null;
+  } catch (e) { frees = null; }
+  return {
+    waiting: list.length,
+    priority: list.filter(r => r.tier === 'priority').length,
+    positionOf: function (ref) {
+      const row = list.find(r => r.ref === ref);
+      return row ? row.position : null;
+    },
+    frees
+  };
+}
+
 function checkoutSummary(game, type, days, kind, money) {
   const typeName = type === 'tr' ? 'Trophy' : type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
   const plan = kind === 'buy' ? 'Permanent' : (days === 7 ? 'Weekly' : 'Monthly');
@@ -3772,7 +3794,11 @@ app.post('/api/checkout/start', asyncRoute(async (req, res) => {
     upcoming_game_id: (upcoming && kind !== 'line' && kind !== 'priority') ? game.id : null,
     client_token: orders.cleanClientToken(b.client_token),
     session_id: req.sessionId || null,
-    slot_hold_expires_at: kind === 'line' ? null : hold.expires
+    // A full game has no slot to hold. Free and priority line entries wait;
+    // only an open rental or pre-order starts the 15-minute hold.
+    slot_hold_expires_at: (kind === 'line' || kind === 'priority') ? null : hold.expires,
+    customer_note: String(b.note || '').trim().slice(0, 240),
+    ...(String(b.note || '').trim() ? { notes: String(b.note || '').trim().slice(0, 240) } : {})
   };
   if (kind === 'line') fields.state = 'waitlisted';
   if (voucherSettle) {
@@ -3789,13 +3815,27 @@ app.post('/api/checkout/start', asyncRoute(async (req, res) => {
     const summary = checkoutSummary(game, type, days, kind, {
       rent: rentLine, deposit: depositDue, total: amountDue + depositDue, amountDue
     });
+    let line = null;
+    if (kind === 'line' || kind === 'priority') {
+      const place = await linePlace(game, type);
+      const queued = place.positionOf(order.ref);
+      line = {
+        position: queued || (kind === 'priority' ? place.priority + 1 : place.waiting + 1),
+        waiting: place.waiting,
+        frees: place.frees,
+        rent_later: kind === 'priority'
+          ? Math.max(0, (remainingDue || 0) - ((type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0) + 100)
+          : Math.max(0, (remainingDue || 0) - ((type === 'tr' || type === 'ps4') ? (promo.deposit || 0) : 0))
+      };
+    }
     res.json({
       ref: order.ref,
       k: order.url_key,
       hold_expires_at: order.slot_hold_expires_at || null,
       summary,
       methods: checkoutPayments.publicMethods(settings),
-      reused: placed.reused
+      reused: placed.reused,
+      line
     });
   } catch (e) {
     console.error('[checkout start]', e.message);
@@ -3825,17 +3865,40 @@ app.post('/api/checkout/:ref/messenger', asyncRoute(async (req, res) => {
   if (!order || req.body.k !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
   const name = String((req.body && req.body.fb_name) || order.fb_name || '').trim();
   if (name.length < 2) return res.status(400).json({ error: 'Enter your Facebook name.' });
-  await orders.patch(order.ref, { fb_name: name, checkout_path: 'messenger' });
+  const postedNote = String((req.body && req.body.note) || '').trim().slice(0, 240);
+  if (postedNote) { order.customer_note = postedNote; order.notes = postedNote; }
+  await orders.patch(order.ref, { fb_name: name, checkout_path: 'messenger', customer_note: order.customer_note || '' });
   const typeName = order.account_type === 'tr' ? 'Trophy' : order.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
   const plan = order.is_buy ? 'Permanent' : (order.days === 7 ? 'Weekly' : 'Monthly');
-  const text = [
-    'Hi! I would like to reserve.',
-    'Game: ' + order.game_title,
-    typeName + ' · ' + plan,
-    'Total to send: ₱' + ((order.amount_due || 0) + (order.deposit_due || 0)),
-    'Order ref: ' + order.ref,
-    'Facebook name: ' + name
-  ].join('\n');
+  const noteText = order.customer_note || order.notes || '';
+  const note = noteText ? 'Note: ' + noteText : '';
+  const text = (order.is_waitlist || order.hold_for_line)
+    ? [
+      'Hi! I joined the line.',
+      'Game: ' + order.game_title,
+      typeName + ' · ' + plan,
+      'Line ref: ' + order.ref,
+      'Facebook name: ' + name,
+      note
+    ].filter(Boolean).join('\n')
+    : (order.is_reservation && !order.slot_hold_expires_at)
+    ? [
+      'Hi! I joined the priority line.',
+      'Game: ' + order.game_title,
+      typeName + ' · ' + plan,
+      'Priority fee: ₱' + (order.amount_due || 100),
+      'Order ref: ' + order.ref,
+      'Facebook name: ' + name,
+      note
+    ].filter(Boolean).join('\n')
+    : [
+      'Hi! I would like to reserve.',
+      'Game: ' + order.game_title,
+      typeName + ' · ' + plan,
+      'Total to send: ₱' + ((order.amount_due || 0) + (order.deposit_due || 0)),
+      'Order ref: ' + order.ref,
+      'Facebook name: ' + name
+    ].join('\n');
   res.json({
     ref: order.ref,
     href: 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(text)
@@ -6271,9 +6334,10 @@ app.get('/admin', requireAuth, async (req, res) => {
   // Fall in Line entries are free and unpaid by design — counting them as
   // "started" orders would inflate the funnel's denominator and misrepresent
   // conversion, and counting them as "abandoned" would flag every free join
-  // as a failed sale. Both the weekly funnel and the ledger below exclude
-  // them at the source so no downstream stat has to know about the carve-out.
+  // as a failed sale. The weekly funnel excludes them. The orders ledger
+  // still lists them, under the In line chip, and never in a paid total.
   const paidPathOrders = allOrders.filter(o => o.state !== 'waitlisted');
+  const lineOrders = allOrders.filter(o => o.state === 'waitlisted');
 
   // Fall in Line entries, listed separately from the action queue: they have
   // no completing action the way a payment or return check does, so they
@@ -6379,17 +6443,22 @@ app.get('/admin', requireAuth, async (req, res) => {
   const rawPeriod = String(req.query.operiod || '').trim();
   const orderPeriod = /^(\d{4}(-\d{2})?|all)$/.test(rawPeriod) ? rawPeriod : '';
   let ledgerOrders;
+  let ledgerLineOrders = lineOrders;
   if (orderPeriod === 'all') {
     ledgerOrders = paidPathOrders;
   } else if (orderPeriod) {
-    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').startsWith(orderPeriod));
+    const inPeriod = o => (o.created_at || '').startsWith(orderPeriod);
+    ledgerOrders = paidPathOrders.filter(inPeriod);
+    ledgerLineOrders = lineOrders.filter(inPeriod);
   } else {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - LEDGER_DEFAULT_MONTHS);
     const cutoffStr = cutoff.toISOString().slice(0, 7);
-    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').slice(0, 7) >= cutoffStr);
+    const inWindow = o => (o.created_at || '').slice(0, 7) >= cutoffStr;
+    ledgerOrders = paidPathOrders.filter(inWindow);
+    ledgerLineOrders = lineOrders.filter(inWindow);
   }
-  ledgerOrders = [...ledgerOrders].sort((a, b) =>
+  ledgerOrders = [...ledgerOrders, ...ledgerLineOrders].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   );
   // A ready-to-paste review ask, attached to the orders that can actually carry
@@ -6433,7 +6502,7 @@ app.get('/admin', requireAuth, async (req, res) => {
       ledgerGroups.push(g);
     }
     g.orders.push(o);
-    if (orders.isPaid(o.state)) {
+    if (o.state !== 'waitlisted' && orders.isPaid(o.state)) {
       g.paidCount++;
       g.paidTotal += (o.amount_due || 0) + (o.deposit_due || 0);
     }
@@ -6444,8 +6513,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     needsYou: orderQueue.length,
     qrLive: orderQueue.filter(o => o.state === 'qr_pending').length,
     out: allOrders.filter(o => orders.OUT_STATES.includes(o.state)).length,
-    paidCount: ledgerOrders.filter(o => orders.isPaid(o.state)).length,
-    paidTotal: ledgerOrders.filter(o => orders.isPaid(o.state))
+    paidCount: ledgerOrders.filter(o => o.state !== 'waitlisted' && orders.isPaid(o.state)).length,
+    paidTotal: ledgerOrders.filter(o => o.state !== 'waitlisted' && orders.isPaid(o.state))
       .reduce((s, o) => s + (o.amount_due || 0) + (o.deposit_due || 0), 0),
     unpaid: ledgerOrders.filter(o => ['awaiting_payment', 'payment_rejected'].includes(o.state)).length,
     cancelled: ledgerOrders.filter(o => o.state === 'cancelled').length,
