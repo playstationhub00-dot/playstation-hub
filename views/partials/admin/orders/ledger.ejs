@@ -148,7 +148,7 @@
                            : o.cancel_reason === 'stale' ? 'Cancelled · ' + (o.stale_days || 30) + '+ days'
                            : 'Cancelled')
                        : o.state === 'payment_rejected' ? 'Payment rejected'
-                       : o.state === 'awaiting_payment' ? ('Awaiting payment' + (o.slot_hold_expires_at ? (holdsLib.statusOf(o) === 'expired' ? ' · hold expired' : ' · hold until ' + o.slot_hold_expires_at.slice(11, 16)) : ''))
+                       : o.state === 'awaiting_payment' ? ('Awaiting payment' + (o.slot_hold_expires_at ? (holdsLib.statusOf(o) === 'expired' ? ' · hold expired' : ' · hold until ' + holdsLib.manilaClock(o.slot_hold_expires_at) + ' Manila') : ''))
                        : o.state === 'waitlisted' ? 'In line'
                        : o.state === 'verifying_payment' ? 'Check payment'
                        : o.state === 'awaiting_qr' ? 'Waiting for sign-in'

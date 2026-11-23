@@ -20,6 +20,13 @@
       const t = dashMetrics.collectedTrend;
       const pace = dashMetrics.collectedPace;
       const bell = dashMetrics.bell || { total: needsNow, queue: needsNow, other: 0 };
+      const lineList = (typeof waitlistOrders !== 'undefined' && waitlistOrders) ? waitlistOrders : [];
+      const lineFree = lineList.filter(o => o && o.state === 'waitlisted').length;
+      const linePriority = lineList.filter(o => o && o.state === 'reserved').length;
+      const lineTotal = lineFree + linePriority;
+      const linePhrase = lineTotal
+        ? (lineTotal + ' in line (' + lineFree + ' free, ' + linePriority + ' priority)')
+        : 'nobody in line';
       const nn = [
         { n: qrPending.length, ic: '🕐', lbl: 'Sign-in' + (qrPending.length !== 1 ? 's' : '') + ' waiting', hot: qrPending.length > 0, dest: { tab: 'orders', chip: 'signin', group: 'now' } },
         { n: paymentsToApprove.length, ic: '💳', lbl: 'Payment' + (paymentsToApprove.length !== 1 ? 's' : '') + ' to approve', hot: paymentsToApprove.length > 0, dest: { tab: 'orders', chip: 'review', group: 'now' } },
@@ -35,11 +42,11 @@
         unlinkedRentals.length ? unlinkedRentals.length + ' with no slot' : ''
       ].filter(Boolean);
       const bellNote = !needsNow && !bell.total
-        ? 'Nothing waiting on you right now. The bell agrees.'
+        ? 'Action queue clear. ' + linePhrase + '. The bell agrees.'
         : bell.other > 0
           ? (needsNow
               ? needsNow + ' in the rental queue' + (queueBits.length ? ' (' + queueBits.join(', ') + ')' : '') + '. The bell shows ' + bell.total + ' because it also lists ' + bell.other + ' other item' + (bell.other === 1 ? '' : 's') + ': deposits to refund, reviews, support chats, and record checks.'
-              : 'Nothing in the rental queue. The bell shows ' + bell.total + ' other item' + (bell.total === 1 ? '' : 's') + ': deposits to refund, reviews, support chats, and record checks.')
+              : 'Action queue clear. ' + linePhrase + '. The bell shows ' + bell.total + ' other item' + (bell.total === 1 ? '' : 's') + ': deposits to refund, reviews, support chats, and record checks.')
           : needsNow + ' in the rental queue' + (queueBits.length ? ' (' + queueBits.join(', ') + ')' : '') + '. The bell shows the same ' + bell.total + '.';
       const peso = n => '₱' + (Number(n) || 0).toLocaleString();
     %>
@@ -52,7 +59,7 @@
       <div class="ov-health <%= needsNow ? 'busy' : 'ok' %>">
         <span class="ov-health-ic"><%= needsNow ? '🔔' : '✅' %></span>
         <div>
-          <div class="ov-health-t"><%= needsNow ? needsNow + (needsNow === 1 ? ' thing needs you' : ' things need you') : 'All clear' %></div>
+          <div class="ov-health-t"><%= needsNow ? needsNow + (needsNow === 1 ? ' thing needs you' : ' things need you') : 'Action queue clear' %></div>
           <div class="ov-health-s"><%= bellNote %></div>
         </div>
       </div>
@@ -62,7 +69,7 @@
       <button type="button" class="ov-kpi <%= needsNow ? 'hot' : '' %>" onclick="document.getElementById('ov-needs').scrollIntoView({behavior:'smooth',block:'start'})">
         <div class="ov-kpi-l">Needs you now</div>
         <div class="ov-kpi-v" style="<%= needsNow ? 'color:#ff8a8a' : '' %>"><%= needsNow %></div>
-        <div class="ov-kpi-d ov-flat"><%= needsNow ? 'Rental queue, not the bell' : 'Nothing waiting' %></div>
+        <div class="ov-kpi-d ov-flat"><%= needsNow ? 'Rental queue, not the bell' : linePhrase %></div>
       </button>
       <button type="button" class="ov-kpi" onclick="dashOpen({tab:'orders', chip:'out'})">
         <div class="ov-kpi-l">Out on rent</div>
@@ -107,7 +114,11 @@
           </span>
         </div>
         <% }) %>
-        <% if (needsNow === 0) { %><div class="dm-note" style="margin-top:0.5rem;">Nothing in the rental queue.</div><% } %>
+        <div class="dm-row">
+          <span class="dm-row-n">🚶 In line</span>
+          <span class="dm-row-v"><%= lineTotal %></span>
+        </div>
+        <div class="dm-note"><%= lineFree %> free · <%= linePriority %> priority. <%= needsNow === 0 ? 'Action queue clear.' : '' %></div>
       </div>
 
       <div class="dash-section">

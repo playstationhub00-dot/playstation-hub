@@ -115,21 +115,27 @@
         <% } %>
         <% lowShown.forEach(r => {
           const lowDest = { tab: 'games', nav: 'games', gamesSub: 'all', gamesChip: r.slots.total === 0 ? 'soldout' : 'all', gamesQ: r.title };
+          const caps = [r.slots.ntCap, r.slots.trCap, r.slots.ps4Cap].filter(n => n != null);
+          const slotNums = caps.length ? ((r.slots.total || 0) + ' / ' + caps.reduce((s, n) => s + Number(n), 0)) : String(r.slots.total || 0);
+          const availWord = r.slots.total === 0 ? 'Full' : 'Available';
         %>
         <button type="button" class="dm-row dash-hit" onclick="dashOpen(<%- JSON.stringify(lowDest).replace(/</g, '\\u003c') %>)">
-          <span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-wa' %>"><%= r.slots.total === 0 ? 'Full' : 'Last slot' %></span> <%= r.title %></span>
-          <span class="dm-row-v"><%= r.rental.waiting ? r.rental.waiting + ' waiting' : (r.slots.total === 0 ? '0 left' : '1 left') %></span>
+          <span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-ok' %>"><%= availWord %></span> <%= r.title %></span>
+          <span class="dm-row-v"><%= slotNums %><% if (r.rental.waiting) { %> · <%= r.rental.waiting %> in line<% } %></span>
         </button>
         <% }) %>
         <% if (lowRest.length) { %>
         <details class="dash-more">
           <summary>Show <%= lowRest.length %> more</summary>
-          <% lowRest.forEach(r => { %>
-          <div class="dm-row"><span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-wa' %>"><%= r.slots.total === 0 ? 'Full' : 'Last slot' %></span> <%= r.title %></span><span class="dm-row-v"><%= r.slots.total === 0 ? '0 left' : '1 left' %></span></div>
+          <% lowRest.forEach(r => {
+            const caps = [r.slots.ntCap, r.slots.trCap, r.slots.ps4Cap].filter(n => n != null);
+            const slotNums = caps.length ? ((r.slots.total || 0) + ' / ' + caps.reduce((s, n) => s + Number(n), 0)) : String(r.slots.total || 0);
+          %>
+          <div class="dm-row"><span class="dm-row-n"><span class="adm-badge <%= r.slots.total === 0 ? 'adm-badge-er' : 'adm-badge-ok' %>"><%= r.slots.total === 0 ? 'Full' : 'Available' %></span> <%= r.title %></span><span class="dm-row-v"><%= slotNums %></span></div>
           <% }) %>
         </details>
         <% } %>
-        <div class="dm-note">Waiting counts come from orders already in the queue. A separate waitlist feature is not stored yet.</div>
+        <div class="dm-note">The number is free slots, or free / total when the account slots are linked. In line is free plus priority on that game.</div>
       </div>
     </div>
 

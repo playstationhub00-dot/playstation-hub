@@ -1,9 +1,8 @@
 // Run: node scripts/test-returns.js
 //
-// Returns & deposits lists every Trophy rental, still running or finished.
-// PS4 Primary is included only when the order recorded a deposit. Non-Trophy
-// is never included. The page posts the existing mark-returned and
-// mark-refunded routes, and the browser filter pages 50 at a time.
+// Returns & deposits lists every Trophy and PS4 Primary rental. A stored
+// deposit_due is recorded. Trophy and PS4 Primary with none show the expected
+// amount and do not count it as held or owed. Non-Trophy is never included.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -63,7 +62,7 @@ ok('same start date breaks the tie with the later created record', () => {
   assert.deepStrictEqual(names(v), ['Second', 'First']);
 });
 
-ok('PS4 Primary is included only when the order recorded a deposit', () => {
+ok('PS4 Primary is listed, and a missing deposit is expected rather than hidden', () => {
   const v = view({
     customers: [
       { id: 8, customer_name: 'PS4 Held', account_type: 'ps4', status: 'renting', start_date: '2026-11-01', end_date: '2026-11-20', order_ref: 'PH-2001', psn_id: 'sample_ps4' },
@@ -75,11 +74,22 @@ ok('PS4 Primary is included only when the order recorded a deposit', () => {
       { ref: 'PH-2003', state: 'active', account_type: 'ps4', fb_name: 'PS4 Order', game_title: 'Drive', deposit_due: 100, deposit_refunded: false, start_date: '2026-11-03', end_date: '2026-12-01', psn: 'order_psn' }
     ]
   });
-  assert.deepStrictEqual(names(v), ['PS4 Order', 'PS4 Held']);
-  assert.strictEqual(v.rows[1].psn, 'sample_ps4');
-  assert.strictEqual(v.rows[0].psn, 'order_psn');
-  assert.strictEqual(v.rows[1].depositLabel, 'Held, still renting');
-  assert.strictEqual(v.rows[1].depositAmount, 100);
+  assert.deepStrictEqual(names(v), ['PS4 Order', 'PS4 Bare', 'PS4 Held', 'PS4 No Deposit']);
+  const byName = {};
+  v.rows.forEach(r => { byName[r.name] = r; });
+  assert.strictEqual(byName['PS4 Held'].psn, 'sample_ps4');
+  assert.strictEqual(byName['PS4 Order'].psn, 'order_psn');
+  assert.strictEqual(byName['PS4 Held'].depositLabel, 'Recorded · held, still renting');
+  assert.strictEqual(byName['PS4 Held'].depositSource, 'recorded');
+  assert.strictEqual(byName['PS4 Held'].depositAmount, 100);
+  assert.strictEqual(byName['PS4 Bare'].depositLabel, 'Expected · not on the order');
+  assert.strictEqual(byName['PS4 Bare'].depositSource, 'expected');
+  assert.strictEqual(byName['PS4 Bare'].depositAmount, 100);
+  assert.strictEqual(byName['PS4 Bare'].canMarkRefunded, false);
+  assert.strictEqual(byName['PS4 No Deposit'].depositSource, 'expected');
+  assert.strictEqual(v.summary.heldAmount, 200);
+  assert.strictEqual(v.summary.heldCount, 2);
+  assert.strictEqual(v.summary.owedCount, 0);
 });
 
 ok('a customer and their order are one row, and a purchase is not a rental', () => {
@@ -125,7 +135,7 @@ ok('rental status follows the end date, and a closed order is Returned', () => {
   assert.strictEqual(byName.Ended.note, 'Waiting for return proof');
   assert.strictEqual(byName.Checking.rentalLabel, 'Ended');
   assert.strictEqual(byName.Back.rentalLabel, 'Returned');
-  assert.strictEqual(byName.Back.depositLabel, 'Refunded · 2 Nov 2026');
+  assert.strictEqual(byName.Back.depositLabel, 'Recorded · refunded 2 Nov 2026');
 });
 
 ok('a day past the three-day window is still Active', () => {
@@ -152,12 +162,15 @@ ok('deposit status is held while renting, owed after it ends, and not invented',
   });
   const byName = {};
   v.rows.forEach(r => { byName[r.name] = r; });
-  assert.strictEqual(byName.Holding.depositLabel, 'Held, still renting');
+  assert.strictEqual(byName.Holding.depositLabel, 'Recorded · held, still renting');
   assert.strictEqual(byName.Holding.depositKey, 'held');
-  assert.strictEqual(byName.Owes.depositLabel, 'Not refunded yet');
+  assert.strictEqual(byName.Holding.depositSource, 'recorded');
+  assert.strictEqual(byName.Owes.depositLabel, 'Recorded · not refunded yet');
   assert.strictEqual(byName.Owes.canMarkRefunded, true);
-  assert.strictEqual(byName['No Order'].depositLabel, 'No deposit recorded');
-  assert.strictEqual(byName['No Order'].depositAmount, 0);
+  assert.strictEqual(byName['No Order'].depositLabel, 'Expected · not on the order');
+  assert.strictEqual(byName['No Order'].depositAmount, 100);
+  assert.strictEqual(byName['No Order'].depositSource, 'expected');
+  assert.strictEqual(byName['No Order'].depositKey, 'expected');
   assert.strictEqual(byName['No Order'].canMarkRefunded, false);
   assert.ok(!byName['Cancelled blank']);
   assert.strictEqual(v.summary.heldAmount, 100);
@@ -175,7 +188,7 @@ ok('a refunded flag with no stored date does not invent one', () => {
       { ref: 'PH-6001', state: 'closed', account_type: 'tr', fb_name: 'Old Refund', game_title: 'G', deposit_due: 100, deposit_refunded: true, start_date: '2026-07-01' }
     ]
   });
-  assert.strictEqual(v.rows[0].depositLabel, 'Refunded');
+  assert.strictEqual(v.rows[0].depositLabel, 'Recorded · refunded');
   assert.strictEqual(v.counts.refunded, 1);
 });
 
@@ -325,6 +338,16 @@ ok('the filter keeps 50 to a page and the owed chip is the deposit to-do', () =>
   assert.strictEqual(page.start, 50);
   assert.strictEqual(page.end, 51);
   assert.strictEqual(page.pages, 2);
+});
+
+ok('the expected amount is the one the route passes, and it is not stored', () => {
+  const customer = { id: 1, customer_name: 'Trophy Blank', account_type: 'tr', status: 'done', start_date: '2026-08-01', end_date: '2026-08-08' };
+  const v = view({ expectedDeposit: 100, customers: [customer] });
+  assert.strictEqual(v.rows[0].depositAmount, 100);
+  assert.strictEqual(v.rows[0].depositSource, 'expected');
+  assert.strictEqual(customer.deposit, undefined);
+  assert.strictEqual(v.summary.heldAmount, 0);
+  assert.strictEqual(v.summary.owedAmount, 0);
 });
 
 ok('tracksDeposit is trophy, or PS4 Primary with a deposit on the order', () => {

@@ -398,6 +398,14 @@ check('recent activity skips the very first awaiting_payment — it is just "ord
   assert.strictEqual(firstSteps.length, 0);
 });
 
+check('a waitlisted step is labelled In line', () => {
+  const a = dash.recentActivity([
+    { ref: 'PH-L', fb_name: 'Line Tester', game_title: 'Linequest', state: 'waitlisted', created_at: '2026-11-04T05:00:00.000Z' }
+  ], 5);
+  assert.strictEqual(a[0].state, 'waitlisted');
+  assert.strictEqual(a[0].label, 'In line');
+});
+
 check('recent activity carries a human label, ref, name and time for each item', () => {
   const a = dash.recentActivity(ACT_ORDERS, 1);
   assert.strictEqual(a[0].ref, 'PH-2');

@@ -10,7 +10,7 @@
   <div class="td-hi">
     <div>
       <h2 style="font-size:22px;">Returns &amp; deposits</h2>
-      <div class="td-kicker">Every Trophy rental, still running or already finished, and whether the security deposit went back. PS4 Primary is listed when that rental’s record has a deposit. Non-Trophy rentals are not listed.</div>
+      <div class="td-kicker">Every Trophy and PS4 Primary rental, still running or already finished. A deposit saved on the order is marked recorded. When none was saved, the row shows the expected deposit and does not write it onto the order. Non-Trophy rentals are not listed.</div>
     </div>
   </div>
   <% if (!rv) { %>
@@ -79,7 +79,13 @@
             <td data-label="Start"><%= row.start || '—' %></td>
             <td data-label="End"><%= row.end || '—' %></td>
             <td data-label="Rental"><span class="adm-badge adm-badge-<%= row.rentalBadge %>"><%= row.rentalLabel %></span></td>
-            <td data-label="Deposit"><%= row.depositAmount ? peso(row.depositAmount) : '—' %></td>
+            <td data-label="Deposit">
+              <% if (!row.depositAmount) { %>—<% } else { %>
+                <%= peso(row.depositAmount) %>
+                <% if (row.depositSource === 'expected') { %><div class="rd-sub">expected</div><% } %>
+                <% if (row.depositSource === 'recorded') { %><div class="rd-sub">recorded</div><% } %>
+              <% } %>
+            </td>
             <td data-label="Deposit status"><span class="rd-dep rd-dep-<%= row.depositKey %>"><%= row.depositLabel %></span></td>
             <td data-label="Actions">
               <div class="rd-actions">

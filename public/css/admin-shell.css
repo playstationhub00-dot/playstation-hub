@@ -388,6 +388,7 @@ body.light-mode .set-dirty p { color: #3d320c; }
 .rd-dep-held { color: #8fc3ff; }
 .rd-dep-refunded { color: #86efac; }
 .rd-dep-none { color: #8a8a8a; }
+.rd-dep-expected { color: #d4d4d4; }
 .rd-row[hidden] { display: none !important; }
 .rd-pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: #aaa; font-size: 13px; }
 .rd-pager[hidden], #rdEmpty[hidden], #rdTableWrap[hidden] { display: none !important; }
