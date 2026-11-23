@@ -392,6 +392,18 @@ ok('header line: total, paid, peso total, period', () => {
   assert.ok(html.includes('4 paid · ₱1,234 · Last 3 months'));
 });
 
+ok('a waitlisted row counts as In line and stays out of the paid total', () => {
+  const row = lo('PH-0301', 'waitlisted', { fb_name: 'Line Tester', game_title: 'Linequest', amount_due: 0, is_waitlist: true });
+  const lined = render({
+    ledgerGroups: [{ key: '2026-11', label: '2026-11', paidCount: 0, paidTotal: 0, orders: [row] }],
+    ledgerStats: { needsYou: 0, qrLive: 0, out: 0, paidCount: 0, paidTotal: 0, unpaid: 0, cancelled: 0, total: 1 }
+  });
+  assert.ok(/data-g="line">In line <span class="oq-chip-n">1<\/span>/.test(lined));
+  assert.ok(!/data-g="paid"/.test(lined));
+  assert.ok(lined.includes('class="oq-lr" data-g="line"'));
+  assert.ok(lined.includes('0 paid · ₱0'));
+});
+
 ok('chip counts are the rows each chip shows, and add up to All', () => {
   const n = g => {
     const m = html.match(new RegExp('data-g="' + g + '">[^<]*<span class="oq-chip-n">(\\d+)</span>'));

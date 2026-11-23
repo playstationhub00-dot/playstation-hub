@@ -6334,9 +6334,10 @@ app.get('/admin', requireAuth, async (req, res) => {
   // Fall in Line entries are free and unpaid by design — counting them as
   // "started" orders would inflate the funnel's denominator and misrepresent
   // conversion, and counting them as "abandoned" would flag every free join
-  // as a failed sale. Both the weekly funnel and the ledger below exclude
-  // them at the source so no downstream stat has to know about the carve-out.
+  // as a failed sale. The weekly funnel excludes them. The orders ledger
+  // still lists them, under the In line chip, and never in a paid total.
   const paidPathOrders = allOrders.filter(o => o.state !== 'waitlisted');
+  const lineOrders = allOrders.filter(o => o.state === 'waitlisted');
 
   // Fall in Line entries, listed separately from the action queue: they have
   // no completing action the way a payment or return check does, so they
@@ -6442,17 +6443,22 @@ app.get('/admin', requireAuth, async (req, res) => {
   const rawPeriod = String(req.query.operiod || '').trim();
   const orderPeriod = /^(\d{4}(-\d{2})?|all)$/.test(rawPeriod) ? rawPeriod : '';
   let ledgerOrders;
+  let ledgerLineOrders = lineOrders;
   if (orderPeriod === 'all') {
     ledgerOrders = paidPathOrders;
   } else if (orderPeriod) {
-    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').startsWith(orderPeriod));
+    const inPeriod = o => (o.created_at || '').startsWith(orderPeriod);
+    ledgerOrders = paidPathOrders.filter(inPeriod);
+    ledgerLineOrders = lineOrders.filter(inPeriod);
   } else {
     const cutoff = new Date();
     cutoff.setMonth(cutoff.getMonth() - LEDGER_DEFAULT_MONTHS);
     const cutoffStr = cutoff.toISOString().slice(0, 7);
-    ledgerOrders = paidPathOrders.filter(o => (o.created_at || '').slice(0, 7) >= cutoffStr);
+    const inWindow = o => (o.created_at || '').slice(0, 7) >= cutoffStr;
+    ledgerOrders = paidPathOrders.filter(inWindow);
+    ledgerLineOrders = lineOrders.filter(inWindow);
   }
-  ledgerOrders = [...ledgerOrders].sort((a, b) =>
+  ledgerOrders = [...ledgerOrders, ...ledgerLineOrders].sort((a, b) =>
     String(b.created_at || '').localeCompare(String(a.created_at || ''))
   );
   // A ready-to-paste review ask, attached to the orders that can actually carry
@@ -6496,7 +6502,7 @@ app.get('/admin', requireAuth, async (req, res) => {
       ledgerGroups.push(g);
     }
     g.orders.push(o);
-    if (orders.isPaid(o.state)) {
+    if (o.state !== 'waitlisted' && orders.isPaid(o.state)) {
       g.paidCount++;
       g.paidTotal += (o.amount_due || 0) + (o.deposit_due || 0);
     }
@@ -6507,8 +6513,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     needsYou: orderQueue.length,
     qrLive: orderQueue.filter(o => o.state === 'qr_pending').length,
     out: allOrders.filter(o => orders.OUT_STATES.includes(o.state)).length,
-    paidCount: ledgerOrders.filter(o => orders.isPaid(o.state)).length,
-    paidTotal: ledgerOrders.filter(o => orders.isPaid(o.state))
+    paidCount: ledgerOrders.filter(o => o.state !== 'waitlisted' && orders.isPaid(o.state)).length,
+    paidTotal: ledgerOrders.filter(o => o.state !== 'waitlisted' && orders.isPaid(o.state))
       .reduce((s, o) => s + (o.amount_due || 0) + (o.deposit_due || 0), 0),
     unpaid: ledgerOrders.filter(o => ['awaiting_payment', 'payment_rejected'].includes(o.state)).length,
     cancelled: ledgerOrders.filter(o => o.state === 'cancelled').length,
