@@ -89,6 +89,7 @@ const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const vouchers = require('./lib/vouchers');
 const holdsLib = require('./lib/holds');
+const orderStatusLabel = require('./lib/order-status-label');
 const checkoutPayments = require('./lib/checkout-payments');
 const seo = require('./lib/seo');
 const guidePages = require('./lib/guide-pages');
@@ -6914,7 +6915,8 @@ app.get('/admin', requireAuth, async (req, res) => {
     orders: allOrders,
     customers,
     accounts: getAccounts(),
-    slotHistory: db.get('slot_history').value() || []
+    slotHistory: db.get('slot_history').value() || [],
+    expectedDeposit: Number((getSiteSettings().promo || {}).deposit) || 100
   });
   res.render('admin', { todayView, returnsView, dashSub, qaUpcoming, qaResDeposit: Number((getSiteSettings().promo || {}).deposit) || 0, rentIgnored, unpaidQuickAdds, unpaidCustomerIds, notifs, negativeReviews, boughtWithDuration, staleEndDates, rentMismatches, extendTiers, todayManila, reviewSentiment: reviewRules.sentimentOf, qaGames, games, upcoming, psplus, psplusPopular, psplusPrices: getPsplusPrices(), psplusSlots: getPsplusSlots(), psplusCatalog: psplusCatalogAdmin, announcement: getAnnouncement(), announcements: getAnnouncements(), settings: getSiteSettings(), priceCategories: getPriceCategories(), customers, unlinkedRentals, needsReminder, moneyThisMonth, dashboardData, monthLogs, gameCostByMonth, dashMetrics, dashPeriod, activeCustomers, boughtCustomersNow, reservationCustomersNow, dashNow: dashNowDate, visitors, msg: req.query.msg || null, reviews, reviewQueue, reviewQueueSummary, accounts: getAccounts(), accountsView, postersView, showHistory, messageTemplates: getSiteSettings().message_templates, templateTokens: templates.TOKENS, gamesView, orderQueue, gameRequestRows, refundsOwed, releasedOrders, upcomingReservedCount, abandonedOrders, paymongoMode, paymongoHealth, alertKinds: telegram.ALERT_KINDS, reminderBadge: paymentReminders.reminderBadge, waitlistOrders, orderBoard, startedCount, completedCount, abandonedCount, orderStartRate, VIS_WINDOWS, ledgerGroups, ledgerStats, orderPeriods, orderYears, orderPeriod, signinSteps: getSigninSteps(), supportHandoffs, supportInboxNotes });
   } catch (err) {
@@ -9143,7 +9145,11 @@ app.get('/admin/api/orders-export', requireAuth, async (req, res) => {
   try {
     const all = await orders.listByStates([...orders.STATES, ...orders.TERMINAL]);
     res.setHeader('Content-Disposition', 'attachment; filename="orders-export.json"');
-    res.json({ exported_at: new Date().toISOString(), count: all.length, orders: all });
+    res.json({
+      exported_at: new Date().toISOString(),
+      count: all.length,
+      orders: all.map(o => Object.assign({}, o, { status_label: orderStatusLabel.statusLabel(o) }))
+    });
   } catch (e) {
     console.error('[orders-export]', e.message);
     res.status(500).json({ error: 'export failed' });

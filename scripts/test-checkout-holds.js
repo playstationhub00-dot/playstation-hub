@@ -21,6 +21,13 @@ function ok(desc, fn) {
 
 console.log('\nhold rules');
 
+ok('a hold clock is shown in Manila time and the 15 minute length is unchanged', () => {
+  assert.strictEqual(holds.HOLD_MS, 15 * 60 * 1000);
+  assert.strictEqual(holds.manilaClock('2026-11-04T15:12:00.000Z'), '11:12 PM');
+  assert.strictEqual(holds.manilaClock('2026-12-01T07:12:00.000Z'), '3:12 PM');
+  assert.strictEqual(holds.manilaClock(''), '');
+});
+
 ok('a fresh awaiting_payment order holds its slot', () => {
   const exp = holds.plan(new Date('2026-11-19T00:00:00.000Z')).expires;
   const order = { state: 'awaiting_payment', account_type: 'nt', game_id: 1, slot_hold_expires_at: exp };

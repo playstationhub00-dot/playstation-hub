@@ -1,8 +1,8 @@
 // Run: node scripts/test-today.js
 //
-// Today is built from records the admin already has. Counts the page cannot
-// know (waitlist size, a Reserved slot, GA4) are left out. PS Plus expiry
-// uses the date saved on the account, and a blank date stays blank.
+// Today is built from records the admin already has. In line is a count of
+// free and priority entries. GA4 is left out. PS Plus expiry uses the date
+// saved on the account, and a blank date stays blank.
 const assert = require('assert');
 const today = require('../lib/today');
 
@@ -121,11 +121,39 @@ ok('a Quick Add the owner recorded is not an unpaid checkout', () => {
   assert.ok(refs.includes('PH-0313'));
 });
 
-ok('the waitlist is not a Today queue', () => {
+ok('in line is a count, not a needs-you queue', () => {
   const t = build();
   assert.ok(!t.queues.waitlist);
-  assert.ok(t.omitted.includes('waitlist'));
+  assert.ok(!t.omitted.includes('waitlist'));
+  assert.strictEqual(t.line.free, 1);
+  assert.strictEqual(t.line.priority, 0);
+  assert.strictEqual(t.line.total, 1);
   assert.strictEqual(t.needsYouCount, 3);
+});
+
+ok('priority counts, and a Coming Soon or purchase reserved row does not', () => {
+  const t = today.buildToday({
+    now: NOW,
+    orders: [
+      { ref: 'PH-L1', state: 'waitlisted', created_at: '2026-11-04T01:00:00.000Z' },
+      { ref: 'PH-L2', state: 'reserved', created_at: '2026-11-04T01:00:00.000Z' },
+      { ref: 'PH-L3', state: 'reserved', upcoming_game_id: 9, created_at: '2026-11-04T01:00:00.000Z' },
+      { ref: 'PH-L4', state: 'reserved', is_buy: true, created_at: '2026-11-04T01:00:00.000Z' }
+    ]
+  });
+  assert.deepStrictEqual(t.line, { free: 1, priority: 1, total: 2 });
+});
+
+ok('a waitlisted step reads In line', () => {
+  const t = today.buildToday({
+    now: NOW,
+    orders: [{
+      ref: 'PH-L9', state: 'waitlisted', fb_name: 'Line Tester', game_title: 'Linequest',
+      created_at: '2026-11-04T05:00:00.000Z',
+      state_history: [{ state: 'waitlisted', at: '2026-11-04T05:00:00.000Z' }]
+    }]
+  });
+  assert.strictEqual(t.activity[0].badge.label, 'In line');
 });
 
 ok('loyalty, messages and open requests are to review', () => {
@@ -177,7 +205,6 @@ ok('slots in use skip a Reserved state and disabled slots', () => {
   assert.strictEqual(s.total, 5);
   assert.strictEqual(s.open, 2);
   assert.strictEqual(s.reserved, undefined);
-  assert.ok(build().omitted.includes('reserved-slot'));
 });
 
 ok('deposits held follow the dashboard rule, and the refund queue is the closed ones', () => {
@@ -214,8 +241,8 @@ ok('shop visit numbers are passed through, and GA4 is marked as not available', 
   assert.strictEqual(t.traffic.source, 'shop');
   assert.ok(t.omitted.includes('ga4'));
   assert.ok(!t.omitted.includes('psplus-expiry'));
-  assert.ok(t.omitted.includes('waitlist'));
-  assert.ok(t.omitted.includes('reserved-slot'));
+  assert.ok(!t.omitted.includes('waitlist'));
+  assert.ok(!t.omitted.includes('reserved-slot'));
   assert.strictEqual(t.psplusExpiring.count, 0);
 });
 

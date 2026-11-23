@@ -53,6 +53,7 @@
   function compareRows(a, b, sort) {
     if (sort === 'az') return String(a.title).localeCompare(String(b.title)) || (b.id - a.id);
     if (sort === 'earned') return (b.earned - a.earned) || (b.id - a.id);
+    // Free-slot count, lowest first, so a full game (0) leads the list.
     if (sort === 'slots') return (a.slots - b.slots) || String(a.title).localeCompare(String(b.title));
     return b.id - a.id;
   }

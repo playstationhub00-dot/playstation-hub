@@ -90,6 +90,14 @@ ok('a live rental and a waiting line show on the row', () => {
 
 console.log('\nslots and sold out');
 
+ok('one free slot reads Available, and none reads Full', () => {
+  const open = one(GAME({ non_trophy_slots: 1, trophy_slots: 0, ps4_primary_slots: 0, renters: 2 }));
+  const full = one(GAME({ non_trophy_slots: 0, trophy_slots: 0, ps4_primary_slots: 0, renters: 2 }));
+  assert.strictEqual(open.rental.label, 'Available');
+  assert.strictEqual(full.rental.label, 'Full');
+  assert.ok(!open.rental.label.includes('slot left'));
+});
+
 ok('slot counts come from the hand-typed fields when there are no linked accounts', () => {
   const r = one(GAME());
   assert.deepStrictEqual([r.slots.nt, r.slots.tr, r.slots.total], [2, 1, 3]);
