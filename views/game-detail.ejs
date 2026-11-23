@@ -32,9 +32,7 @@
   const availability = holdsLib.applyCounts(computeAvailability(game, sum), (typeof slotHolds !== 'undefined' && slotHolds) ? slotHolds : null);
   const gdPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, info: [], genre: game.genre || '' };
   const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc, totalSlots } = availability;
-  const isLastSlot = totalSlots === 1;
   const noSlot = totalSlots === 0;
-  const trLeft = trSlots, ntLeft = ntSlots, ps4Left = ps4Slots;
   const trNext = availability.trNext, ntNext = availability.ntNext, ps4Next = availability.ps4Next;
   // Not-yet-stocked: this game has never been rented AND no real account is linked
   // for this specific type — the account only gets created after the first booking.
@@ -106,7 +104,7 @@
   <% const gdEyebrow = []; %>
   <% if (game.platform && !/ps4/i.test(String(game.platform))) { gdEyebrow.push(String(game.platform).toUpperCase() + ' ONLY'); } else if (game.platform) { gdEyebrow.push(String(game.platform).toUpperCase()); } %>
   <% if (gdFromPrice) { gdEyebrow.push('FROM ₱' + gdFromPrice + ' A WEEK'); } %>
-  <% if (allUnavail) { gdEyebrow.push('SOLD OUT'); } else if (isLastSlot) { gdEyebrow.push('LAST SLOT'); } else if (totalSlots > 0) { gdEyebrow.push('SLOTS OPEN'); } %>
+  <% if (allUnavail) { gdEyebrow.push('Full'); } else if (totalSlots > 0) { gdEyebrow.push('Available'); } %>
   <% const gdSpecs = []; %>
   <% if (game.platform) gdSpecs.push(['Platform', game.platform]); %>
   <% if (gdGenre) gdSpecs.push(['Genre', gdGenre]); %>
@@ -236,9 +234,8 @@
               <span class="gd-type-name">Trophy</span>
               <span class="bp-type-sub">Your profile · ₱<%= promo.deposit || 0 %> refundable deposit</span>
             </span>
-            <% if (hasTrophyAcc && trAvail) { %><span class="gd-slots-left"><%= trLeft %> left</span><% } %>
-            <% if (trAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% if (trAvail) { %><span class="gd-wait is-now">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!trNotStocked && trNext != null && trNext > 0) { %><span class="gd-wait">Available in <%= trNext %> day<%= trNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 
@@ -249,9 +246,8 @@
               <span class="gd-type-name">Non-Trophy</span>
               <span class="bp-type-sub">Our account · no deposit</span>
             </span>
-            <% if (hasNtAcc && ntAvail) { %><span class="gd-slots-left"><%= ntLeft %> left</span><% } %>
-            <% if (ntAvail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% if (ntAvail) { %><span class="gd-wait is-now">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ntNotStocked && ntNext != null && ntNext > 0) { %><span class="gd-wait">Available in <%= ntNext %> day<%= ntNext !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
 
           <% if (showPs4) { %>
@@ -262,9 +258,8 @@
               <span class="gd-type-name">PS4 Primary</span>
               <span class="bp-type-sub">Your PS4 · ₱<%= promo.deposit || 0 %> refundable deposit</span>
             </span>
-            <% if (hasPs4Acc && ps4Avail) { %><span class="gd-slots-left"><%= ps4Left %> left</span><% } %>
-            <% if (ps4Avail) { %><span class="gd-wait is-now">Available now</span>
-            <% } else { %><span class="gd-type-status gd-status-rented">FULL SLOT</span><% if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %><% } %>
+            <% if (ps4Avail) { %><span class="gd-wait is-now">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% if (!ps4NotStocked && ps4Next != null && ps4Next > 0) { %><span class="gd-wait">Available in <%= ps4Next %> day<%= ps4Next !== 1 ? 's' : '' %></span><% } %><% } %>
           </label>
           <% } %>
 

@@ -42,7 +42,7 @@
     box.innerHTML = rows.map(function (e) {
       var badges = '';
       if (e.plus || e.deluxe) badges += '<span class="sr-badge plus">Included in PS Plus Deluxe</span>';
-      if (e.rent) badges += '<span class="sr-badge rent">Rent' + (e.slots > 0 ? ' · ' + e.slots + ' slot' + (e.slots === 1 ? '' : 's') + ' free' : ' · join the line') + '</span>';
+      if (e.rent) badges += '<span class="sr-badge rent">Rent · ' + (e.slots > 0 ? 'Available' : 'Full') + '</span>';
       if (e.buy) badges += '<span class="sr-badge buy">Buy</span>';
       var prices = '';
       if (e.rent) prices += '<div>Rent this game from <b>₱' + e.rent + '</b> / week</div>';

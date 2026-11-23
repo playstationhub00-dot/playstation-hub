@@ -13,18 +13,9 @@
   const noSlot = totalSlots === 0;
   const gcWaits = [ntDaysLeft, trDaysLeft, showPs4 ? ps4DaysLeft : null].filter(d => d != null && Number(d) > 0).map(Number);
   const gcSoonest = gcWaits.length ? Math.min.apply(null, gcWaits) : null;
-  const gcOneTypes = (ntSlots === 1 ? 1 : 0) + (trSlots === 1 ? 1 : 0) + (showPs4 && ps4Slots === 1 ? 1 : 0);
-  const gcManyTypes = (ntSlots > 1 ? 1 : 0) + (trSlots > 1 ? 1 : 0) + (showPs4 && ps4Slots > 1 ? 1 : 0);
   let gcPill = 'Available', gcPillClass = 'st-avail';
   if (!totalSlots) { gcPill = 'Full'; gcPillClass = 'st-full'; }
-  else if (totalSlots === 1) { gcPill = 'Last slot'; gcPillClass = 'st-last'; }
-  else if (gcOneTypes >= 2 && !gcManyTypes) { gcPill = 'Last slots'; gcPillClass = 'st-last'; }
-  const gcSlotText = (n, days) => {
-    if (n > 1) return n + ' slots left';
-    if (n === 1) return '1 slot left';
-    if (days != null && Number(days) > 0) return 'Full · back in ' + days + (Number(days) === 1 ? ' day' : ' days');
-    return 'Full';
-  };
+  const gcSlotText = n => n > 0 ? 'Available' : 'Full';
   const gcSlotClass = n => n > 0 ? 'ok' : 'full';
   // Gated on slot state for the same reason as the detail page: a card must never
   // advertise "Buy ₱X" for an account that has already been sold, since the detail
@@ -96,10 +87,9 @@
           site now reads identically. %>
       <div class="card-ribbon">Full</div>
     <% } %>
-    <% if (isLastSlot || gcIsNew || gcPromoBadge) { %>
+    <% if (gcIsNew || gcPromoBadge) { %>
     <div class="gc2-badges">
       <% if (gcPromoBadge) { %><div class="gc2-badge gc2-badge-promo"><%= gcPromoBadge.text %></div><% } %>
-      <% if (isLastSlot) { %><div class="gc2-badge gc2-badge-last">Last slot</div><% } %>
       <% if (gcIsNew) { %><div class="gc2-badge gc2-badge-new">Just added</div><% } %>
     </div>
     <% } %>
@@ -129,9 +119,9 @@
       <div class="gc2-deal">🔥 <%= gcDeal.pct %>% OFF · <%= gcDeal.days === 30 ? 'Monthly' : 'Weekly' %></div>
       <% } %>
       <div class="slots gc-slots">
-        <% if (hasTrophy) { %><div class="slot slot-tr"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span><span>Trophy</span><span class="<%= gcSlotClass(trSlots) %>"><%= gcSlotText(trSlots, trDaysLeft) %></span></div><% } %>
-        <div class="slot slot-nt"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots, ntDaysLeft) %></span></div>
-        <% if (showPs4) { %><div class="slot slot-ps4"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/><path d="M7 7l2-3h6l2 3"/></svg></span><span>PS4 Primary</span><span class="<%= gcSlotClass(ps4Slots) %>"><%= gcSlotText(ps4Slots, ps4DaysLeft) %></span></div><% } %>
+        <% if (hasTrophy) { %><div class="slot slot-tr"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg></span><span>Trophy</span><span class="<%= gcSlotClass(trSlots) %>"><%= gcSlotText(trSlots) %></span></div><% } %>
+        <div class="slot slot-nt"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots) %></span></div>
+        <% if (showPs4) { %><div class="slot slot-ps4"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/><path d="M7 7l2-3h6l2 3"/></svg></span><span>PS4 Primary</span><span class="<%= gcSlotClass(ps4Slots) %>"><%= gcSlotText(ps4Slots) %></span></div><% } %>
       </div>
       <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
     </div>

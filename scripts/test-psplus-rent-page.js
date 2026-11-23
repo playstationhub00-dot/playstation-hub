@@ -167,13 +167,13 @@ async function main() {
   console.log('\nrendered page, slots open');
   await okAsync('the game page hero: status badge, chips, title and slot bar', async () => {
     assert.strictEqual(open.status, 200);
-    assert.ok(open.body.includes('<body class="gd-page-booking-v2">'));
+    assert.ok(open.body.includes('<body class="gd-page-booking-v2 hub gd-compact">'));
     assert.ok(open.body.includes('/css/game-psn.css?v='));
     assert.ok(open.body.includes('<div class="usd-hero gdh-hero">'));
     assert.ok(open.body.includes('<span class="usd-badge usd-badge-ok">Available</span>'));
     ['SUBSCRIPTION', 'DELUXE', 'PS4/PS5'].forEach(c => assert.ok(open.body.includes('<span class="usd-plat-chip">' + c + '</span>'), c));
     assert.ok(open.body.includes('<h1 class="usd-title">PS Plus Deluxe</h1>'));
-    assert.ok(open.body.includes('<div class="gdh-bar-text">2 slots available</div>'));
+    assert.ok(open.body.includes('<div class="gdh-bar-text">Available</div>'));
   });
   await okAsync('the left column: About this subscription and an Info table that links to the catalogue', async () => {
     assert.ok(open.body.includes('<section class="gpa" id="gpAbout">'));
@@ -197,8 +197,8 @@ async function main() {
     assert.ok(open.body.includes('<span class="gd-type-name">Non-Trophy</span>'));
     assert.ok(open.body.includes('<span class="gd-type-name">PS4 Primary</span>'));
     assert.ok(!open.body.includes('Trophy / PS4 Primary'), 'PS4 Primary is no longer folded into Trophy');
-    assert.strictEqual((open.body.match(/<span class="gd-slots-left">1 slot left<\/span>/g) || []).length, 2);
-    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-type-status gd-status-rented">Full Slot<\/span>/.test(open.body), 'no PS4 Primary slot on this row');
+    assert.ok(!open.body.includes('slot left') && !open.body.includes('slots left'));
+    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(open.body), 'no PS4 Primary slot on this row');
     assert.ok(!open.body.includes('psr-types'));
   });
   await okAsync('How setup works, then the duration cards with PS Plus prices and the promo badge', async () => {
@@ -241,13 +241,13 @@ async function main() {
   console.log('\nrendered page, one slot left (Trophy full until ' + trEnd + ')');
   await okAsync('Last Slot badge, bar and banner', async () => {
     assert.strictEqual(last.status, 200);
-    assert.ok(last.body.includes('<span class="usd-badge usd-badge-warn">Last Slot</span>'));
-    assert.ok(last.body.includes('<div class="gdh-bar-text gdh-bar-urgent">Only 1 slot left</div>'));
-    assert.ok(last.body.includes('🔥 Last Slot</div>'));
+    assert.ok(last.body.includes('<span class="usd-badge usd-badge-ok">Available</span>'));
+    assert.ok(last.body.includes('<div class="gdh-bar-text">Available</div>'));
+    assert.ok(!last.body.includes('Last Slot') && !last.body.includes('slot left'));
   });
   await okAsync('the full Trophy pill says Full Slot and when it frees up', async () => {
     const n = daysUntil(trEnd);
-    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full Slot<\/span>/.test(last.body));
+    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(last.body));
     assert.ok(last.body.includes('<span class="gd-avail-soon">🏆 Available in <strong>' + n + ' days</strong></span>'));
     assert.ok(last.body.includes('const NEXT_DAYS = {"tr":' + n + ',"nt":null,"ps4":null};'));
     assert.ok(last.body.includes('const AVAIL = { nt: true, tr: false, ps4: false };'));
@@ -256,9 +256,9 @@ async function main() {
   console.log('\nrendered page, sold out');
   await okAsync('Sold Out badge and bar; one get-in-line card for PS Plus is the main action', async () => {
     assert.strictEqual(sold.status, 200);
-    assert.ok(sold.body.includes('<span class="usd-badge usd-badge-off">Sold Out</span>'));
-    assert.ok(sold.body.includes('<div class="gdh-bar-text gdh-bar-urgent">Sold out — all slots rented</div>'));
-    assert.strictEqual((sold.body.match(/<span class="gd-type-status gd-status-rented">Full Slot<\/span>/g) || []).length, 3);
+    assert.ok(sold.body.includes('<span class="usd-badge usd-badge-off">Full</span>'));
+    assert.ok(sold.body.includes('<div class="gdh-bar-text gdh-bar-urgent">Full</div>'));
+    assert.strictEqual((sold.body.match(/<span class="gd-type-status gd-status-rented">Full<\/span>/g) || []).length, 3);
     assert.ok(/<div id="ctaMsgWrap" hidden>/.test(sold.body));
     assert.ok(!sold.body.includes('id="orderToggle"') && !sold.body.includes('id="gdOrderForm"'));
     assert.ok(sold.body.includes('<div id="reserveSectionAll">') && sold.body.includes('id="lineCardAll"'));
@@ -270,12 +270,11 @@ async function main() {
   console.log('\nrendered page, five linked accounts (old hand-entered counts: 6 Non-Trophy, 3 Trophy)');
   await okAsync('counts the accounts\' open slots, not the old counts: only PS4 Primary has any', async () => {
     assert.strictEqual(accts.status, 200);
-    assert.ok(accts.body.includes('<div class="gdh-bar-text">2 slots available</div>'), 'two PS4 Primary slots are open');
-    assert.ok(!accts.body.includes('9 slots available'));
-    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full Slot<\/span>/.test(accts.body));
-    assert.ok(/id="label-nt">[\s\S]*?<span class="gd-type-status gd-status-rented">Full Slot<\/span>/.test(accts.body));
-    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-slots-left">2 slots left<\/span>/.test(accts.body));
-    assert.ok(!/<span class="gd-slots-left">(3|6) slots left<\/span>/.test(accts.body));
+    assert.ok(accts.body.includes('<div class="gdh-bar-text">Available</div>'), 'a PS4 Primary slot is open');
+    assert.ok(!accts.body.includes('slots left') && !accts.body.includes('slots available'));
+    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
+    assert.ok(/id="label-nt">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
+    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-type-status gd-status-avail">Available<\/span>/.test(accts.body));
     assert.ok(accts.body.includes('const AVAIL = { nt: false, tr: false, ps4: true };'));
   });
   await okAsync('each full type says when its soonest slot frees up; a slot in maintenance never counts', async () => {

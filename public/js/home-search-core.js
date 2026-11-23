@@ -35,8 +35,8 @@
   function statusOf(e) {
     if (e.y === 'now') {
       var price = e.pr ? 'from ₱' + e.pr : '';
-      if (e.s > 0) return { kind: 'free', text: '● ' + e.s + ' slot' + (e.s === 1 ? '' : 's') + ' free', price: price };
-      return { kind: 'booked', text: '● Fully booked · Fall in line free', price: price };
+      if (e.s > 0) return { kind: 'free', text: 'Available', price: price };
+      return { kind: 'booked', text: 'Full', price: price };
     }
     if (e.y === 'soon') return { kind: 'soon', text: 'Coming soon · ' + (e.d || 'TBA'), price: '' };
     if (e.y === 'psplus') return { kind: 'psplus', text: '★ Included in PS Plus Deluxe', price: 'Play via PS Plus' };

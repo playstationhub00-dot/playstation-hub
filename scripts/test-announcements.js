@@ -120,7 +120,7 @@ ok('GTA stays first, and the other slides take slots, price, and covers from the
   assert.deepStrictEqual(feed.banner.map(s => s.sourceKey), ['home-hero-gta6', 'home-hero-cod-mw4', 'home-hero-psplus', 'home-hero-try3h']);
   assert.ok(feed.banner[0].countdown, 'GTA countdown still comes from countdown_at');
   assert.strictEqual(feed.banner[0].title, 'GTA VI is coming.');
-  assert.strictEqual(feed.banner[1].label, 'New · Last slot');
+  assert.strictEqual(feed.banner[1].label, 'New');
   assert.strictEqual(feed.banner[1].buttonLabel, 'Rent now');
   assert.strictEqual(feed.banner[1].buttonUrl, '/game/call-of-duty-modern-warfare-4');
   assert.strictEqual(feed.banner[1].footer, 'Weekly from ₱349');
@@ -158,7 +158,7 @@ ok('GTA stays first, and the other slides take slots, price, and covers from the
       psplusPrices: catalog.psplusPrices
     }
   });
-  assert.strictEqual(fromAccounts.banner[1].label, 'New · Last slot');
+  assert.strictEqual(fromAccounts.banner[1].label, 'New');
   const priced = announcements.present({
     entries: heroRows(), now: NOW,
     catalog: {

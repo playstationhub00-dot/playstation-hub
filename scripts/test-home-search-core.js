@@ -52,11 +52,11 @@ ok('empty query, no match and the limit', () => {
 
 console.log('\nstatusOf');
 ok('rentable with slots, singular and plural', () => {
-  assert.deepStrictEqual(c.statusOf(INDEX[0]), { kind: 'free', text: '● 2 slots free', price: 'from ₱249' });
-  assert.strictEqual(c.statusOf(INDEX[3]).text, '● 1 slot free');
+  assert.deepStrictEqual(c.statusOf(INDEX[0]), { kind: 'free', text: 'Available', price: 'from ₱249' });
+  assert.strictEqual(c.statusOf(INDEX[3]).text, 'Available');
 });
 ok('fully booked', () => {
-  assert.deepStrictEqual(c.statusOf(INDEX[1]), { kind: 'booked', text: '● Fully booked · Fall in line free', price: 'from ₱199' });
+  assert.deepStrictEqual(c.statusOf(INDEX[1]), { kind: 'booked', text: 'Full', price: 'from ₱199' });
 });
 ok('coming soon, PS Plus and requested', () => {
   assert.deepStrictEqual(c.statusOf(INDEX[4]), { kind: 'soon', text: 'Coming soon · 2026-11-01', price: '' });

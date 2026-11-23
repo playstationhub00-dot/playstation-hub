@@ -132,12 +132,12 @@ async function main() {
     const open = facts.publicGame(elden, { ntSlots: 2, trSlots: 0 }, {}, promo);
     const filGame = await facts.fallbackReply('meron ba Elden Ring', shopFacts(), () => [open]);
     assert.ok(filGame.text.includes('Yes po'), filGame.text);
-    assert.ok(filGame.text.includes('Wala pong available slot'), filGame.text);
+    assert.ok(filGame.text.includes('- Trophy Account: Full'), filGame.text);
     assert.ok(!/\bOo\b/.test(filGame.text));
     assert.ok(filGame.text.includes('\n\n'));
     const enGame = await facts.fallbackReply('is Elden Ring available', shopFacts(), () => [open]);
-    assert.ok(enGame.text.includes('2 slots available'), enGame.text);
-    assert.ok(enGame.text.includes('No slots available'), enGame.text);
+    assert.ok(enGame.text.includes('- Non-Trophy: Available'), enGame.text);
+    assert.ok(enGame.text.includes('- Trophy Account: Full'), enGame.text);
     assert.ok(!enGame.text.includes(' po'), enGame.text);
     assert.ok(!/late return/i.test(enGame.text), enGame.text);
     assert.ok(en.text.includes('Want to chat with an admin? Reply ADMIN.'), en.text);
@@ -244,7 +244,7 @@ async function main() {
     assert.strictEqual(full.prices.ps4PrimaryWeekly, 299);
     assert.strictEqual(full.prices.ps4PrimaryMonthly, 599);
     const quoted = facts.slotReply(full, facts.faqBundle({ promo: off, siteUrl: 'https://www.playstation-hub.com' }), 'en');
-    assert.ok(quoted.includes('- PS4 Primary: 1 slot available\n  ₱299/week | ₱599/month'), quoted);
+    assert.ok(quoted.includes('- PS4 Primary: Available\n  ₱299/week | ₱599/month'), quoted);
     assert.ok(quoted.includes('+ ₱100 security deposit'), quoted);
     assert.ok(!quoted.includes('₱249/week'), quoted);
   });
@@ -606,8 +606,8 @@ async function main() {
     });
     assert.ok(!result.reply.includes('9 slots'), result.reply);
     assert.ok(result.reply.includes('Hello! Yes, we have slots available.'), result.reply);
-    assert.ok(result.reply.includes('- Non-Trophy: 2 slots available'), result.reply);
-    assert.ok(result.reply.includes('- Trophy Account: No slots available'), result.reply);
+    assert.ok(result.reply.includes('- Non-Trophy: Available'), result.reply);
+    assert.ok(result.reply.includes('- Trophy Account: Full'), result.reply);
     assert.ok(!/on the waitlist/i.test(result.reply), result.reply);
     assert.ok(!/late return/i.test(result.reply), result.reply);
     assert.ok(result.reply.includes('Reply ADMIN'), result.reply);
@@ -661,10 +661,10 @@ async function main() {
       '',
       "Marvel's Wolverine (PS5)",
       '',
-      '- Non-Trophy: 1 slot available',
+      '- Non-Trophy: Available',
       '  ₱349/week | ₱629/month',
       '',
-      '- Trophy Account: 1 slot available',
+      '- Trophy Account: Available',
       '  ₱399/week | ₱719/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
@@ -706,14 +706,14 @@ async function main() {
       '',
       'Hogwarts Legacy (PS4/PS5)',
       '',
-      '- Non-Trophy: No slots available',
+      '- Non-Trophy: Full',
       '  Free waitlist, or an optional ₱100 priority fee.',
       '',
-      '- Trophy Account: 1 slot available',
+      '- Trophy Account: Available',
       '  ₱299/week | ₱539/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
-      '- PS4 Primary: 2 slots available',
+      '- PS4 Primary: Available',
       '  ₱299/week | ₱539/month',
       '  + ₱100 security deposit (refundable upon returning the account)',
       '',
@@ -1305,7 +1305,7 @@ async function main() {
     const promoAt = fil.text.indexOf('Promos po ngayon:');
     const orderAt = fil.text.indexOf('Mag-order po dito:');
     const adminAt = fil.text.lastIndexOf('Gusto mo po bang makausap ang admin? Reply ADMIN.');
-    assert.ok(promoAt > fil.text.indexOf('- Non-Trophy: 1 slot available'), fil.text);
+    assert.ok(promoAt > fil.text.indexOf('- Non-Trophy: Available'), fil.text);
     assert.ok(orderAt > promoAt, fil.text);
     assert.ok(adminAt > orderAt, fil.text);
     assert.ok(fil.text.endsWith('Gusto mo po bang makausap ang admin? Reply ADMIN.'), fil.text);

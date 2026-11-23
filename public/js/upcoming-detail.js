@@ -181,7 +181,7 @@ function updateCta() {
   const total   = price + deposit;
   // A full type is not reservable. The pill already says Full Slot; the
   // button must not take payment for a slot Admin shows as taken.
-  if (getSlots() <= 0) return setWait('Full Slot');
+  if (getSlots() <= 0) return setWait('Full');
   const payNote = (typeof PAY_NOTE === 'string' && PAY_NOTE)
     ? PAY_NOTE
     : 'GCash or Maya for local customers · PayPal for international customers';
