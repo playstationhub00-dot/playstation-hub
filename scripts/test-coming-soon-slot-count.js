@@ -172,9 +172,10 @@ async function main() {
   await okAsync('every Trophy slot taken shows Full Slot, and Non-Trophy shows the two still open', async () => {
     const tr = typeCard(page, 'typeCard-tr');
     const nt = typeCard(page, 'typeCard-nt');
-    assert.ok(tr.includes('>Full Slot<'), tr);
+    assert.ok(tr.includes('>Full<'), tr);
     assert.ok(!/slot left/.test(tr), tr);
-    assert.ok(nt.includes('>2 slots left<'), nt);
+    assert.ok(nt.includes('>Available<'), nt);
+    assert.ok(!nt.includes('slots left'), nt);
     assert.ok(page.includes('const TR_SLOTS   = 0;'));
     assert.ok(page.includes('const NT_SLOTS   = 2;'));
     assert.ok(!page.includes('const TR_SLOTS   = 1;'), 'the overlapping released game\'s open Trophy slot was counted');
@@ -184,7 +185,8 @@ async function main() {
     const released = await get('/game/zzyzx-released');
     assert.strictEqual(released.status, 200, released.body.slice(0, 200));
     const tr = typeCard(released.body, 'label-tr');
-    assert.ok(tr.includes('>1 left<'), tr);
+    assert.ok(tr.includes('>Available<'), tr);
+    assert.ok(!tr.includes('left<'), tr);
     assert.ok(tr.includes('Available'), tr);
   });
 
@@ -192,7 +194,7 @@ async function main() {
     const only = await get('/upcoming/zzyzx-slot-only-2');
     assert.strictEqual(only.status, 200, only.body.slice(0, 200));
     const tr = typeCard(only.body, 'typeCard-tr');
-    assert.ok(tr.includes('>Full Slot<'), tr);
+    assert.ok(tr.includes('>Full<'), tr);
     assert.ok(!/slot left/.test(tr), tr);
   });
 
@@ -200,8 +202,9 @@ async function main() {
     const held = await get('/upcoming/zzyzx-held-open-3');
     assert.strictEqual(held.status, 200, held.body.slice(0, 200));
     const tr = typeCard(held.body, 'typeCard-tr');
-    assert.ok(tr.includes('>1 slot left<'), tr);
-    assert.ok(!tr.includes('2 slots left'), tr);
+    assert.ok(tr.includes('>Available<'), tr);
+    assert.ok(!/slots? left/.test(tr), tr);
+    assert.ok(held.body.includes('const TR_SLOTS   = 1;'));
   });
 
   console.log('\nreserve');
@@ -211,7 +214,7 @@ async function main() {
     assert.strictEqual(res.status, 302, res.headers.location || res.body.slice(0, 200));
     assert.strictEqual(res.headers.location, '/upcoming/zzyzx-auto-vi-1?order_error=full');
     assert.strictEqual(placed.length, before, 'a full Trophy type still created an order');
-    assert.ok((await get('/upcoming/zzyzx-auto-vi-1?order_error=full')).body.includes('no slots left'));
+    assert.ok((await get('/upcoming/zzyzx-auto-vi-1?order_error=full')).body.includes('That account type is full.'));
   });
 
   await okAsync('Non-Trophy, which still has slots, can be reserved', async () => {

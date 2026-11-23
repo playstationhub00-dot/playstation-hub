@@ -88,7 +88,7 @@
   // The order in use: the address's choice when the tab offers it, else the tab's default.
   function sortOf(s) { return sortsFor(s.tab).indexOf(s.sort) >= 0 ? s.sort : defaultSort(s.tab); }
 
-  var STOCKS = [['open', 'Available'], ['last', 'Last slot'], ['full', 'Full']];
+  var STOCKS = [['open', 'Available'], ['full', 'Full']];
   var ACCOUNTS = [['nt', 'Non-Trophy'], ['tr', 'Trophy'], ['ps4', 'PS4 Primary']];
 
   function emptyState() {

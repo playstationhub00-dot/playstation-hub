@@ -55,7 +55,6 @@
   const trSlots = game.trophy_slots || 0;
   const totalSlots = ntSlots + trSlots;
   const allFull = totalSlots === 0;
-  const udIsLastSlot = totalSlots === 1;
 
   // Permanent pre-order. Paid in full now (no rental deposit to hold back
   // against, so nothing to split) — still rides /order/reserve rather than
@@ -117,7 +116,7 @@
     <span class="rsv-full-icon">🚫</span>
     <div>
       <div class="rsv-full-title">All Slots Full</div>
-      <div class="rsv-full-sub">You can still request a slot below, or join the free waitlist.</div>
+      <div class="rsv-full-sub">You can still request a slot below, or fall in line for free.</div>
     </div>
   </div>
   <% } %>
@@ -140,8 +139,7 @@
       <div class="gp-title">
         <div class="gp-tags">
           <span class="gp-tag gp-tag-y"><%= udCountLabel %></span>
-          <% if (udIsLastSlot) { %><span class="gp-tag gp-tag-y">Last slot</span><% } %>
-          <% if (allFull) { %><span class="gp-tag">Sold out</span><% } %>
+          <% if (allFull) { %><span class="gp-tag">Full</span><% } %>
           <% if (game.platform) { %><span class="gp-tag"><%= game.platform %></span><% } %>
           <span class="gp-tag">Coming soon</span>
           <% if (udGenre) { udGenre.split('/').forEach(g => { if (g.trim()) { %><span class="gp-tag"><%= g.trim() %></span><% } }) } %>
@@ -192,8 +190,7 @@
               <span class="gd-type-name">Trophy</span>
               <span class="bp-type-sub">Your profile · ₱<%= udPromo.deposit || 100 %> refundable deposit</span>
             </span>
-            <% if (trSlots > 0) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
-            <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full Slot' %></span>
+            <span class="gd-type-status <%= trSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trSlots > 0 ? 'Available' : 'Full' %></span>
           </label>
           <% } %>
           <% if (hasNt) { %>
@@ -204,8 +201,7 @@
               <span class="gd-type-name">Non-Trophy</span>
               <span class="bp-type-sub">Our account · no deposit</span>
             </span>
-            <% if (ntSlots > 0) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
-            <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full Slot' %></span>
+            <span class="gd-type-status <%= ntSlots > 0 ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntSlots > 0 ? 'Available' : 'Full' %></span>
           </label>
           <% } %>
         </div>
@@ -270,7 +266,7 @@
              onclick="return handleReserveClick(event,'reserve')" class="gd-cta-link">or message us on Facebook instead</a>
           <%- include('partials/bp-trust') %>
           <% if (order_error === 'full') { %>
-          <div class="gd-order-error">That account type has no slots left.</div>
+          <div class="gd-order-error">That account type is full.</div>
           <% } else if (order_error === '1') { %>
           <div class="gd-order-error">⚠️ Please pick a type and duration, and enter your Facebook name, before continuing.</div>
           <% } %>

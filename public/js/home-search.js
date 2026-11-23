@@ -39,8 +39,7 @@
 
   function face(e) {
     if (e.y === 'soon') return { cls: 'hs-soon', text: 'Coming soon · Reserve' };
-    if (e.y === 'now' && e.s === 1 && e.pr) return { cls: 'hs-last', text: 'Last slot · ₱' + e.pr + '/wk' };
-    if (e.y === 'now' && e.s > 1) return { cls: 'hs-free', text: 'Available' };
+    if (e.y === 'now' && e.s > 0) return { cls: 'hs-free', text: 'Available' };
     if (e.y === 'now' && e.s === 0) return { cls: 'hs-booked', text: 'Full' };
     var st = core.statusOf(e);
     return { cls: 'hs-' + st.kind, text: st.text };

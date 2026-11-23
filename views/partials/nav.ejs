@@ -116,8 +116,8 @@
       h += '<div class="navsearch-head">Available now</div>';
       now.forEach(x => {
         const av = x.s > 0
-          ? '<span class="navsearch-avail-yes">' + x.s + ' slot' + (x.s !== 1 ? 's' : '') + ' left</span>'
-          : '<span class="navsearch-avail-no">FULLY BOOKED</span>';
+          ? '<span class="navsearch-avail-yes">Available</span>'
+          : '<span class="navsearch-avail-no">Full</span>';
         const thumb = x.img ? '<img src="' + x.img + '" alt="' + esc(x.t) + '" loading="lazy">' : '🎮';
         // A bundle that matched on its contents (not its own name) needs to say why
         // it's in the results, otherwise the hit looks unrelated to what was typed.

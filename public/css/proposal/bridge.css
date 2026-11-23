@@ -16,8 +16,18 @@ body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; fo
 /* Rent catalog */
 body.browse-page.hub .browse-header { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
 body.browse-page.hub .browse-header h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0; }
-body.browse-page.hub .bf-top { position: static; background: transparent; border: 0; backdrop-filter: none; }
-body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 8px 0 0; box-sizing: border-box; }
+/* Search stays fully under the 64px sticky nav, on load and while scrolling.
+   z-index stays below the nav (100). Phone browse-filters.css sets top: 0,
+   which would slide the input under the menu — this rule wins. */
+body.browse-page.hub .bf-top {
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: #0a0a0a;
+  border: 0;
+  backdrop-filter: none;
+}
+body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;
@@ -1069,6 +1079,18 @@ body.gp-redesign.hub #durationGrid .gd-dur-btn {
 }
 body.gp-redesign.hub #typeOptions .gd-slots-left,
 body.gp-redesign.hub #typeOptions .gd-type-status { display: none; }
+body.gp-redesign.hub #typeOptions .gd-type-status.gd-status-avail {
+  display: inline-block;
+  margin-left: auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #14532d;
+  border: 1px solid #166534;
+  color: #bbf7d0;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
 body.gp-redesign.hub #typeOptions .gd-type-status.gd-status-rented {
   display: inline-block;
   margin-left: auto;
@@ -1554,7 +1576,16 @@ body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill.gd-type-selected .gd-ty
 body.gp-redesign.hub .bp-card .bp-type-copy { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 body.gp-redesign.hub .bp-card .bp-type-sub { font-size: 11px; font-weight: 600; color: #9a9a9a; }
 body.gp-redesign.hub .bp-card #typeOptions .gd-type-pill:has(.gd-status-rented) { opacity: 0.62; }
-body.gp-redesign.hub .bp-card #typeOptions .gd-wait.is-now { display: none; }
+body.gp-redesign.hub .bp-card #typeOptions .gd-wait.is-now {
+  display: inline-block;
+  margin-left: auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #14532d;
+  color: #bbf7d0;
+  font-size: 10px;
+  font-weight: 800;
+}
 body.gp-redesign.hub .bp-card #durationGrid,
 body.gp-redesign.hub .bp-card #durGrid {
   display: grid;

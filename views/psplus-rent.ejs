@@ -29,18 +29,15 @@
   const ps4Avail = ps4Slots > 0;
   const allUnavail = !trAvail && !ntAvail && !ps4Avail;
   const totalSlots = trSlots + ntSlots + ps4Slots;
-  const isLastSlot = totalSlots === 1;
   const psNext = (typeof nextDays !== 'undefined' && nextDays) ? nextDays : {};
   const trNext = psNext.tr != null ? psNext.tr : null;
   const ntNext = psNext.nt != null ? psNext.nt : null;
   const ps4Next = psNext.ps4 != null ? psNext.ps4 : null;
   const psStatus = allUnavail
-    ? { label: 'Sold Out', cls: 'usd-badge-off' }
-    : (isLastSlot ? { label: 'Last Slot', cls: 'usd-badge-warn' } : { label: 'Available', cls: 'usd-badge-ok' });
-  let psBarText, psBarUrgent = false;
-  if (allUnavail) { psBarText = 'Sold out — all slots rented'; psBarUrgent = true; }
-  else if (isLastSlot) { psBarText = 'Only 1 slot left'; psBarUrgent = true; }
-  else { psBarText = totalSlots + ' slots available'; }
+    ? { label: 'Full', cls: 'usd-badge-off' }
+    : { label: 'Available', cls: 'usd-badge-ok' };
+  let psBarText = allUnavail ? 'Full' : 'Available';
+  const psBarUrgent = allUnavail;
   // Cheapest live rent across both types and durations — the "From ₱X" the
   // price header and the sticky bar show before anything is picked.
   const psPairs = [
@@ -90,10 +87,8 @@
         </div>
       </div>
       <div class="gd-platform-badge">PS4/PS5</div>
-      <% if (isLastSlot) { %>
-        <div class="gc-slot-banner gc-slot-banner-last" style="z-index:3;">🔥 Last Slot</div>
-      <% } else if (allUnavail) { %>
-        <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Sold Out</div>
+      <% if (allUnavail) { %>
+        <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Full</div>
       <% } %>
       <section class="gpa" id="gpAbout">
         <h2 class="gpa-h">About this subscription</h2>
@@ -139,22 +134,19 @@
             <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🏆</span>
             <span class="gd-type-name">Trophy</span>
-            <% if (trAvail) { %><span class="gd-slots-left"><%= trSlots %> slot<%= trSlots !== 1 ? 's' : '' %> left</span><% } %>
-            <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full Slot' %></span>
+            <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full' %></span>
           </label>
           <label class="gd-type-card gd-type-pill" id="label-nt">
             <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🎮</span>
             <span class="gd-type-name">Non-Trophy</span>
-            <% if (ntAvail) { %><span class="gd-slots-left"><%= ntSlots %> slot<%= ntSlots !== 1 ? 's' : '' %> left</span><% } %>
-            <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full Slot' %></span>
+            <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full' %></span>
           </label>
           <label class="gd-type-card gd-type-pill" id="label-ps4">
             <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🕹️</span>
             <span class="gd-type-name">PS4 Primary</span>
-            <% if (ps4Avail) { %><span class="gd-slots-left"><%= ps4Slots %> slot<%= ps4Slots !== 1 ? 's' : '' %> left</span><% } %>
-            <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full Slot' %></span>
+            <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full' %></span>
           </label>
         </div>
 

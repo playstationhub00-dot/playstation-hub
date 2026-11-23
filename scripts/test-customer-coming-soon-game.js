@@ -259,9 +259,11 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
 
   try {
     const before = availability();
-    const soonBefore = trophyCard(await upcomingHtml());
-    assert.ok(soonBefore.includes('2 slots left'), soonBefore);
+    const soonPageBefore = await upcomingHtml();
+    const soonBefore = trophyCard(soonPageBefore);
     assert.ok(soonBefore.includes('Available'), soonBefore);
+    assert.ok(!/slots? left/.test(soonBefore), soonBefore);
+    assert.ok(soonPageBefore.includes('const TR_SLOTS   = 2;'));
     const releasedBeforeRes = await call('GET', '/game/zzyzx-released');
     assert.strictEqual(releasedBeforeRes.status, 200, releasedBeforeRes.body.slice(0, 200));
     const releasedCard = html => {
@@ -391,10 +393,11 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
 
     await ok('the Coming soon page counts the Trophy slots that are taken, and the released game with the same id was not attached', async () => {
       assert.deepStrictEqual(availability(), before);
-      const soonAfter = trophyCard(await upcomingHtml());
-      assert.ok(soonAfter.includes('1 slot left'), soonAfter);
-      assert.ok(!soonAfter.includes('2 slots left'), soonAfter);
-      assert.notStrictEqual(soonAfter, soonBefore);
+      const soonPageAfter = await upcomingHtml();
+      const soonAfter = trophyCard(soonPageAfter);
+      assert.ok(soonAfter.includes('Available'), soonAfter);
+      assert.ok(!/slots? left/.test(soonAfter), soonAfter);
+      assert.ok(soonPageAfter.includes('const TR_SLOTS   = 1;'));
       const releasedPage = await call('GET', '/game/zzyzx-released');
       assert.strictEqual(releasedPage.status, 200, releasedPage.body.slice(0, 200));
       assert.strictEqual(releasedCard(releasedPage.body), releasedBefore);
@@ -479,7 +482,7 @@ async function ok(desc, fn) { await fn(); passed++; console.log('  ok - ' + desc
       assert.strictEqual(saved.status, 'reservation');
       assert.deepStrictEqual(availability(), before, 'stored slot totals stay what the owner configured');
       const soon = trophyCard(await upcomingHtml());
-      assert.ok(soon.includes('Full Slot'), soon);
+      assert.ok(soon.includes('>Full<'), soon);
       assert.ok(!/slot left/.test(soon), soon);
       assert.strictEqual(slotOf(2).renter_id, 40, 'the Bought slot was not freed');
     });
