@@ -210,9 +210,6 @@
 }
 
 /* Homepage redesign. Colours come from the active theme's variables. */
-@media (max-width: 820px) {
-  body.home2 #navSearchToggle { display: none; }
-}
 body.home2 .gc2-card:hover { transform: none; box-shadow: none; }
 body.home2 .game-card:hover .game-desc-inline { display: none; }
 body.home2 .ann-banner { padding-top: 16px; }

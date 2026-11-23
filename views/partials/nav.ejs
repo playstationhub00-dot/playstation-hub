@@ -23,10 +23,10 @@
             <div class="nm-col">
               <div class="nm-kicker">Browse</div>
               <% (navMenuSafe ? navMenuSafe.browse : [
-                { label: 'All games', detail: 'Every rental on the site — the current Rent catalogue.', count: null, href: '/browse' },
-                { label: 'Recently added', detail: 'Same as the live New releases tab.', count: null, href: '/browse?tab=new' },
-                { label: 'Most popular', detail: 'Same as the live Most rented tab.', count: null, href: '/browse?tab=most-rented' },
-                { label: 'Trending', detail: 'Rentals, orders, views, and requests from the last 7 days.', count: null, href: '/trending', fresh: true },
+                { label: 'All games', detail: 'Every game you can rent', count: null, href: '/browse' },
+                { label: 'Recently added', detail: 'Newest games on the site', count: null, href: '/browse?tab=new' },
+                { label: 'Most popular', detail: 'Most rented by players', count: null, href: '/browse?tab=most-rented' },
+                { label: 'Trending', detail: 'Hot this week', count: null, href: '/trending', fresh: true },
                 { label: 'Collections', detail: 'Bundles, Coming soon, Buy to keep, and PS Plus Deluxe.', count: null, href: '/collections' }
               ]).forEach(function (item) { %>
               <a class="nm-row" href="<%= item.href %>">

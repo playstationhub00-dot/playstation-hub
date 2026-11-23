@@ -162,12 +162,9 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
   document.addEventListener('click', function (e) { if (!e.target.closest('.hs-box')) close(); });
 
-  // ── One search at a time ───────────────────────────────────────────────
-  // On the homepage the menu's 🔍 icon would open a second, separate search.
-  // While this big search is on screen the icon is hidden; once the visitor
-  // has scrolled past it the icon comes back, and tapping it (or pressing /)
-  // brings them back here with the keyboard open instead. Other pages don't
-  // load this script, so their menu search is unchanged.
+  // ── Header search icon ─────────────────────────────────────────────────
+  // The icon stays in the bar on every page. On the homepage it focuses this
+  // search. Other pages don't load this script, so the icon opens the menu search.
   var strip = document.getElementById('homeSearch');
   var navToggle = document.getElementById('navSearchToggle');
 
@@ -177,12 +174,6 @@
   }
 
   if (navToggle) {
-    if (strip && 'IntersectionObserver' in window) {
-      // The top 64px sit under the sticky menu bar, so they don't count as visible.
-      new IntersectionObserver(function (entries) {
-        navToggle.classList.toggle('hs-nav-hidden', entries[0].isIntersecting);
-      }, { rootMargin: '-64px 0px 0px 0px' }).observe(input);
-    }
     // Capture phase on document runs before the menu's own handler on the button.
     document.addEventListener('click', function (e) {
       if (!e.target || !e.target.closest || !e.target.closest('#navSearchToggle')) return;
