@@ -78,9 +78,11 @@ async function main() {
     assert.ok(/data-panel="games" id="ppc-panel-games" role="tabpanel">/.test((await get('/ps-plus?tab=nonsense')).body));
   });
 
-  await okAsync('the nav shows PS Plus, marked as the current page', async () => {
+  await okAsync('the nav marks Browse while PS Plus Deluxe stays linked from the menu', async () => {
     const r = await get('/ps-plus');
-    assert.strictEqual((r.body.match(/<a href="\/ps-plus" class="active">PS Plus<\/a>/g) || []).length, 2, 'desktop menu and phone drawer');
+    assert.ok(r.body.includes('class="nav-drop-btn active"'), 'Browse is the current menu');
+    assert.ok(r.body.includes('href="/browse?tab=psplus"'), 'PS Plus Deluxe stays in the menu');
+    assert.ok(r.body.includes('href="/ps-plus"'), 'the PS Plus page itself stays linked');
   });
 
   console.log('\nGET /api/search-index');
@@ -99,9 +101,16 @@ async function main() {
 
   console.log('\nnav source');
 
-  await okAsync('both menus link PS Plus between Buy and Requests', async () => {
+  await okAsync('the top bar is Home, Browse, Category, Request, Guides, and FAQ', async () => {
     const nav = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'nav.ejs'), 'utf8');
-    assert.strictEqual((nav.match(/>Buy<\/a>\r?\n\s*<a href="\/ps-plus" class="<%= navActive === 'psplus' \? 'active' : '' %>">PS Plus<\/a>\r?\n\s*<a href="\/requests"/g) || []).length, 2);
+    assert.ok(nav.includes('>Browse</button>'));
+    assert.ok(nav.includes('>Category</button>'));
+    assert.ok(nav.includes('>Request</a>'));
+    assert.ok(nav.includes('>Guides</a>'));
+    assert.ok(nav.includes('>FAQ</a>'));
+    assert.ok(nav.includes('/trending'));
+    assert.ok(nav.includes('/collections'));
+    assert.ok(!nav.includes('>How It Works</a>'));
   });
 
   console.log('\n' + passed + ' assertions passed\n');

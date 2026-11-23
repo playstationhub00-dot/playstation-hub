@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { page: 'browse', title: 'Collections | PlayStation Hub', canonicalPath: '/collections' }) %>
+  <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/nav-mega.css?v=<%= assetV %>">
+</head>
+<body class="hub">
+<%- include('partials/announcement') %>
+<%- include('partials/nav', { active: 'collections' }) %>
+
+<div class="col-page">
+  <h1>Collections</h1>
+  <p class="col-lede">Bundles, games that are not out yet, games you can buy to keep, and PS Plus Deluxe. Each one still has its own page.</p>
+
+  <section class="col-sec">
+    <div class="col-sec-h">
+      <h2>Bundles</h2>
+      <a href="/browse?tab=bundles">Browse bundles · <%= bundleCount %></a>
+    </div>
+    <% if (!bundles.length) { %><p class="col-note">No bundles in the catalogue yet. Account bundles stay on <a href="/buy">Buy</a>.</p>
+    <% } else { %>
+    <div class="col-grid">
+      <% bundles.forEach(function (game) { %><%- include('partials/game-card', { game: game }) %><% }) %>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="col-sec">
+    <div class="col-sec-h">
+      <h2>Coming soon</h2>
+      <a href="/browse?tab=coming-soon">See coming soon · <%= soonCount %></a>
+    </div>
+    <% if (!upcoming.length) { %><p class="col-note">Nothing is listed as coming soon.</p>
+    <% } else { %>
+    <div class="col-grid">
+      <% upcoming.forEach(function (game) { %><%- include('partials/upcoming-card', { game: game }) %><% }) %>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="col-sec">
+    <div class="col-sec-h">
+      <h2>Buy to keep</h2>
+      <span><a href="/browse?tab=buy"><%= buyCount %> in the catalogue</a> · <a href="/buy">Buy page</a></span>
+    </div>
+    <% if (!buyGames.length) { %><p class="col-note">No game has a buy-to-keep price yet. Permanent accounts are on <a href="/buy">Buy</a>.</p>
+    <% } else { %>
+    <div class="col-grid">
+      <% buyGames.forEach(function (game) { %><%- include('partials/game-card', { game: game }) %><% }) %>
+    </div>
+    <% } %>
+  </section>
+
+  <section class="col-sec">
+    <div class="col-sec-h">
+      <h2>PS Plus Deluxe</h2>
+      <a href="/ps-plus">Open PS Plus Deluxe<% if (psplusCount) { %> · <%= psplusCount %><% } %></a>
+    </div>
+    <p class="col-note">One account, the deluxe catalogue. The filtered list is on <a href="/browse?tab=psplus">Browse</a>. The full page stays at <a href="/ps-plus">/ps-plus</a>.</p>
+  </section>
+</div>
+
+<%- include('partials/footer') %>
+</body>
+</html>

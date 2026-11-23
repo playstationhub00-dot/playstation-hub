@@ -59,6 +59,8 @@ const gameDiscount = require('./lib/game-discount');
 const tierStyle = require('./lib/tier-style');
 const browseCore = require('./public/js/browse-filter-core');
 const homeView = require('./lib/home-view');
+const trendingLib = require('./lib/trending');
+const navMenuLib = require('./lib/nav-menu');
 const psnGame = require('./lib/psn-game');
 const notifications = require('./lib/notifications');
 const rentPricing = require('./lib/rent-pricing');
@@ -1859,6 +1861,21 @@ function renderGuide(res, key) {
   });
 }
 
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  const p = req.path || '';
+  if (p.startsWith('/admin') || p.startsWith('/api') || p.startsWith('/css') || p.startsWith('/js')
+    || p.startsWith('/uploads') || p.startsWith('/webhooks') || p.startsWith('/webhook')) return next();
+  storefrontSnapshot().then(snap => {
+    res.locals.navMenu = snap.menu;
+    next();
+  }).catch(err => {
+    console.error('[nav]', err && err.message ? err.message : err);
+    res.locals.navMenu = null;
+    next();
+  });
+});
+
 app.get('/how-it-works', (req, res) => renderGuide(res, 'how'));
 
 app.get('/guides', (req, res) => {
@@ -2999,6 +3016,128 @@ function browsePsplusData(accountSummaryMap) {
   }
   return { items, from: psplusFromWeekly(), avail, availPs4, rent: '/ps-plus/rent' };
 }
+
+let _navSnap = { at: 0, stamp: '', value: null };
+function catalogStamp() {
+  const games = getGames() || [];
+  const customers = getCustomers() || [];
+  const upcoming = getUpcoming() || [];
+  const last = games.length ? games[games.length - 1] : null;
+  return [games.length, customers.length, upcoming.length, last && last.id, last && last.title].join(':');
+}
+async function computeStorefront() {
+  const now = new Date();
+  const settings = getSiteSettings();
+  const promo = settings.promo;
+  const accountSummaryMap = buildAccountSummaryMap();
+  const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays);
+  const customers = getCustomers();
+  const priceCategories = getPriceCategories();
+  const ranks = new Map(homeView.rentalRanking(allGames, customers, now).map((g, i) => [Number(g.id), i + 1]));
+  const todayIso = now.toISOString().slice(0, 10);
+  const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo, ranks.get(Number(g.id)), todayIso));
+  const byId = {};
+  allGames.forEach(g => { byId[g.id] = g; });
+  let orderRows = [];
+  try { orderRows = await orders.listByStates([].concat(orders.STATES, orders.TERMINAL)); }
+  catch (e) { orderRows = []; }
+  let requestRows = [];
+  try { requestRows = await gameRequests.listPublic(); }
+  catch (e) { requestRows = []; }
+  const weekFrom = new Date(now.getTime() - trendingLib.WINDOW_MS).toISOString().slice(0, 10);
+  const slugId = new Map(allGames.map(g => [gameSlug(g.title), g.id]));
+  const views = [];
+  (db.get('visitors').value() || []).forEach(v => {
+    if (!v || !v.date || v.date < weekFrom) return;
+    const pathName = String(v.path || '');
+    if (pathName.indexOf('/game/') !== 0) return;
+    const id = slugId.get(pathName.slice('/game/'.length).split('/')[0]);
+    if (id) views.push({ game_id: id, at: v.date });
+  });
+  const requestHits = [];
+  requestRows.forEach(r => {
+    const id = slugId.get(gameSlug((r && r.title) || ''));
+    if (id) requestHits.push({ game_id: id, at: r.created_at });
+  });
+  const trend = trendingLib.rank(allGames, { customers, orders: orderRows, views, requests: requestHits, now });
+  const dated = facts.filter(f => f.released).sort((a, b) => String(b.released).localeCompare(String(a.released)) || String(a.title).localeCompare(String(b.title)));
+  const covered = dated.filter(f => byId[f.id] && byId[f.id].cover_image);
+  const featured = (covered.length >= 3 ? covered : dated).slice(0, 3).map(f => {
+    const g = byId[f.id] || {};
+    return {
+      title: f.title,
+      href: seo.rentPath(f.title),
+      cover: g.cover_image || '',
+      avail: !!f.avail,
+      weekly: homeView.weeklyFrom(g, promo)
+    };
+  });
+  let psplusCount = 0;
+  try { psplusCount = browsePsplusData(accountSummaryMap).items.length; }
+  catch (e) { psplusCount = 0; }
+  const menu = navMenuLib.build({
+    games: facts,
+    tiers: priceCategories,
+    featured,
+    soonCount: (getUpcoming() || []).length,
+    psplusCount,
+    trendingCount: trend.games.length
+  });
+  return { menu, trend };
+}
+async function storefrontSnapshot() {
+  const stamp = catalogStamp();
+  if (_navSnap.value && _navSnap.stamp === stamp && Date.now() - _navSnap.at < 15000) return _navSnap.value;
+  const value = await computeStorefront();
+  _navSnap = { at: Date.now(), stamp, value };
+  return value;
+}
+
+app.get('/rent', (req, res) => {
+  const q = req.originalUrl.indexOf('?');
+  res.redirect(301, '/browse' + (q === -1 ? '' : req.originalUrl.slice(q)));
+});
+
+app.get('/trending', asyncRoute(async (req, res) => {
+  const snap = await storefrontSnapshot();
+  const settings = getSiteSettings();
+  res.render('trending', {
+    games: snap.trend.games,
+    fallback: snap.trend.fallback,
+    accountSummaryMap: buildAccountSummaryMap(),
+    promo: settings.promo,
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings
+  });
+}));
+
+app.get('/collections', (req, res) => {
+  const settings = getSiteSettings();
+  const promo = settings.promo;
+  const accountSummaryMap = buildAccountSummaryMap();
+  const allGames = getGames().map(resolveGamePrices).map(resolveSlotDays);
+  const bundles = allGames.filter(g => g.is_bundle);
+  const buyGames = allGames.filter(g => (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0);
+  const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
+  let psplusCount = 0;
+  try { psplusCount = browsePsplusData(accountSummaryMap).items.length; }
+  catch (e) { psplusCount = 0; }
+  res.render('collections', {
+    bundles: bundles.slice(0, 4),
+    bundleCount: bundles.length,
+    buyGames: buyGames.slice(0, 4),
+    buyCount: buyGames.length,
+    upcoming: upcoming.slice(0, 4),
+    soonCount: upcoming.length,
+    psplusCount,
+    accountSummaryMap,
+    promo,
+    announcement: getAnnouncement(),
+    announcements: getAnnouncements(),
+    settings
+  });
+});
 
 app.get('/browse', (req, res) => {
   const browseSettings = getSiteSettings();
