@@ -4,6 +4,24 @@
     <div class="ck-hold" id="ckHold" hidden>Slot held for you · <b id="ckClock">15:00</b></div>
     <h2 id="ckTitle">Confirm reservation</h2>
     <div id="ckSummary"></div>
+    <div id="ckLine" hidden>
+      <p class="ck-line-sub" id="ckLineSub"></p>
+      <p class="ck-line-pill" id="ckLinePill"></p>
+      <div class="ck-line-game" id="ckLineGame"></div>
+      <div class="ck-seg" id="ckLineTypes" role="group" aria-label="Account"></div>
+      <div class="ck-seg" id="ckLinePlans" role="group" aria-label="Plan"></div>
+      <div class="ck-line-place" id="ckLinePlace"></div>
+      <div class="ck-line-fees" id="ckLineFees" hidden></div>
+      <label class="ck-name">Facebook name <span class="ck-req">required</span>
+        <input id="ckLineName" autocomplete="off" placeholder="Your Facebook name">
+      </label>
+      <label class="ck-name" id="ckLineNoteWrap">Messenger note <span class="ck-opt">optional</span>
+        <input id="ckLineNote" autocomplete="off" placeholder="Anything we should know — e.g. a Messenger nickname">
+      </label>
+      <button type="button" class="ck-go ck-line-go" id="ckLineGo">Join the line</button>
+      <div id="ckLineChoices" hidden></div>
+      <p class="ck-line-foot" id="ckLineFoot"></p>
+    </div>
     <label class="ck-name" id="ckNameWrap">Facebook name
       <input id="ckName" autocomplete="off" placeholder="Your Facebook name">
     </label>
@@ -22,7 +40,7 @@
     <div id="ckPayBox" hidden>
       <p class="ck-pay-sub">Send the exact amount, then upload a screenshot.</p>
       <button type="button" class="ck-change" id="ckChange" onclick="checkoutChangeMethod()">← Change payment method</button>
-      <p class="ck-hold-note">The 15-minute hold keeps running.</p>
+      <p class="ck-hold-note" id="ckHoldNote">The 15-minute hold keeps running.</p>
       <div id="ckPayDetail"></div>
       <label class="ck-drop" id="ckDrop">
         <input id="ckFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif">

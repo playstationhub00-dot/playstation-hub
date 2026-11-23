@@ -3,7 +3,7 @@
     game: game,
     promo: (typeof promo !== 'undefined' ? promo : null),
     availability: (typeof computeAvailability === 'function')
-      ? computeAvailability(game, typeof accountSummary !== 'undefined' ? accountSummary : null)
+      ? computeAvailability(game, typeof accountSummary !== 'undefined' ? accountSummary : null, { nt: game.nt_days_left, tr: game.tr_days_left, ps4: game.ps4_days_left })
       : null
   });
 %>
@@ -29,7 +29,7 @@
 <%
   // ── Availability: from linked accounts (phase 2) or legacy per-game counts, per slot type ──
   const sum = typeof accountSummary !== 'undefined' ? accountSummary : null;
-  const availability = holdsLib.applyCounts(computeAvailability(game, sum), (typeof slotHolds !== 'undefined' && slotHolds) ? slotHolds : null);
+  const availability = holdsLib.applyCounts(computeAvailability(game, sum, { nt: game.nt_days_left, tr: game.tr_days_left, ps4: game.ps4_days_left }), (typeof slotHolds !== 'undefined' && slotHolds) ? slotHolds : null);
   const gdPsn = typeof psnView !== 'undefined' && psnView ? psnView : { hasPsn: false, media: [], hideGallery: false, info: [], genre: game.genre || '' };
   const { ntSlots, trSlots, ps4Slots, ntAvail, trAvail, ps4Avail, hasTrophy, showPs4, allUnavail, hasTrophyAcc, hasNtAcc, hasPs4Acc, totalSlots } = availability;
   const noSlot = totalSlots === 0;

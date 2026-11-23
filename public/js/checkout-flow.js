@@ -95,6 +95,197 @@
     $('ckTitle').textContent = 'Hold expired';
   }
 
+  function customerName() {
+    var line = $('ckLineName');
+    if (line && $('ckLine') && !$('ckLine').hidden && line.value.trim()) return line.value.trim();
+    return ($('ckName') && $('ckName').value.trim()) || '';
+  }
+
+  function typeNameOf(type) {
+    return type === 'tr' ? 'Trophy' : type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+  }
+
+  function rentLater(type, days) {
+    if (typeof PRICES === 'undefined' || !PRICES[type] || !PRICES[type][days]) return 0;
+    var base = PRICES[type][days];
+    var pct = typeof promoPctFor === 'function' ? promoPctFor(days) : 0;
+    return pct > 0 ? base - Math.round(base * pct / 100) : base;
+  }
+
+  function freesText(type) {
+    var n = (typeof NEXT_DAYS !== 'undefined' && NEXT_DAYS) ? NEXT_DAYS[type] : null;
+    if (!(n > 0)) return '';
+    return typeNameOf(type) + ' frees up in about ' + n + ' day' + (n === 1 ? '' : 's');
+  }
+
+  function lineCounts() {
+    var sfx = typeof visibleLineSuffix === 'function' ? visibleLineSuffix() : '';
+    var free = document.getElementById('lineFreePos' + sfx);
+    var pri = document.getElementById('linePriPos' + sfx);
+    var head = document.getElementById('lineHead' + sfx);
+    function num(el) {
+      var m = el && String(el.textContent).match(/\d+/);
+      return m ? parseInt(m[0], 10) : 1;
+    }
+    var waiting = 0;
+    if (head) {
+      var w = String(head.textContent).match(/(\d+)\s+(?:person|people)/);
+      if (w) waiting = parseInt(w[1], 10);
+    }
+    return { free: num(free), priority: num(pri), waiting: waiting };
+  }
+
+  function syncPageType(type) {
+    var radio = document.querySelector('input[name="rentalType"][value="' + type + '"], input[name="rental_type"][value="' + type + '"]');
+    if (radio) { radio.checked = true; if (typeof onTypeChange === 'function') onTypeChange(radio); }
+  }
+
+  function syncPageDays(days) {
+    var btn = document.querySelector('.gd-dur-btn[data-days="' + days + '"]');
+    if (btn && typeof onDurChange === 'function') onDurChange(btn);
+  }
+
+  function paintLine(kind) {
+    var s = selection();
+    var counts = lineCounts();
+    var pos = kind === 'priority' ? counts.priority : counts.free;
+    var later = rentLater(s.type, s.days);
+    var soon = freesText(s.type);
+    $('ckTitle').textContent = kind === 'priority' ? 'Join the line — Priority' : 'Join the line';
+    $('ckLineSub').textContent = kind === 'priority'
+      ? '₱100 is taken off your rent later'
+      : 'Free · wait your turn · nothing due today';
+    $('ckLinePill').textContent = kind === 'priority'
+      ? '₱100 is taken off your next rent'
+      : 'No slot held · free line takes no slot';
+    var cover = root.dataset.cover ? '<img src="' + esc(root.dataset.cover) + '" alt="">' : '';
+    $('ckLineGame').innerHTML = cover + '<div><b>' + esc(root.dataset.title) + '</b><span>' +
+      esc(typeNameOf(s.type)) + ' · ' + (Number(s.days) === 7 ? 'Weekly' : 'Monthly') + '</span></div>';
+    var types = [{ v: 'tr', l: 'Trophy' }, { v: 'nt', l: 'Non-Trophy' }, { v: 'ps4', l: 'PS4 Primary' }]
+      .filter(function (t) { return document.querySelector('input[name="rentalType"][value="' + t.v + '"], input[name="rental_type"][value="' + t.v + '"]'); });
+    $('ckLineTypes').innerHTML = types.map(function (t) {
+      return '<button type="button" class="ck-seg-btn' + (t.v === s.type ? ' on' : '') + '" data-type="' + t.v + '">' + t.l + '</button>';
+    }).join('');
+    $('ckLinePlans').innerHTML = [7, 30].map(function (d) {
+      return '<button type="button" class="ck-seg-btn' + (Number(s.days) === d ? ' on' : '') + '" data-days="' + d + '">' + (d === 7 ? 'Weekly' : 'Monthly') + '</button>';
+    }).join('');
+    var wait = counts.waiting === 0 ? 'You would be first' : counts.waiting === 1 ? '1 person is waiting' : counts.waiting + ' people are waiting';
+    $('ckLinePlace').innerHTML = '<b>' + (kind === 'priority' ? "You'll go first (#" + pos + ')' : "You'll be #" + pos + ' in line') + '</b>' +
+      '<span>' + esc([soon, kind === 'priority' ? 'Priority is taken off your rent' : wait].filter(Boolean).join(' · ')) + '</span>';
+    if (kind === 'priority') {
+      $('ckLineFees').hidden = false;
+      $('ckLineFees').innerHTML =
+        '<div class="ck-lines"><span>Priority fee · go first in line</span><span>₱100</span></div>' +
+        '<div class="ck-lines"><span>Rent when your slot opens</span><span>₱' + later + ' later</span></div>' +
+        '<div class="ck-lines ck-total"><span>Total to send</span><span>₱100</span></div>' +
+        '<p class="ck-line-off">Taken off your rent when you start playing.</p>';
+      $('ckLineNoteWrap').hidden = true;
+      $('ckLineGo').hidden = true;
+      $('ckLineChoices').hidden = false;
+      $('ckLineChoices').innerHTML =
+        '<button type="button" class="ck-choice" id="ckLinePay"><b>Pay on the website</b><span>GCash, Maya, QR Ph, PayPal or bank transfer. Then upload a screenshot.</span></button>' +
+        '<button type="button" class="ck-choice" id="ckLineMsg"><b>Message us on Messenger</b><span>We save the reservation first, then open Messenger.</span></button>';
+      $('ckLineFoot').textContent = '';
+    } else {
+      $('ckLineFees').hidden = true;
+      $('ckLineNoteWrap').hidden = false;
+      $('ckLineGo').hidden = false;
+      $('ckLineGo').textContent = 'Join the line';
+      $('ckLineChoices').hidden = false;
+      $('ckLineChoices').innerHTML = '<button type="button" class="ck-instead" id="ckLineInstead">Message us on Messenger instead</button>';
+      $('ckLineFoot').textContent = 'We message you on Messenger when your slot opens. Free, no deposit until then.';
+    }
+    $('ckLineTypes').querySelectorAll('[data-type]').forEach(function (btn) {
+      btn.addEventListener('click', function () { syncPageType(btn.dataset.type); paintLine(kind); });
+    });
+    $('ckLinePlans').querySelectorAll('[data-days]').forEach(function (btn) {
+      btn.addEventListener('click', function () { syncPageDays(btn.dataset.days); paintLine(kind); });
+    });
+    var pay = $('ckLinePay');
+    if (pay) pay.addEventListener('click', function () { beginPriority('pay'); });
+    var msg = $('ckLineMsg');
+    if (msg) msg.addEventListener('click', function () { beginPriority('msg'); });
+    var instead = document.getElementById('ckLineInstead');
+    if (instead) instead.addEventListener('click', lineMessengerInstead);
+    show('ckLine', true);
+    show('ckSummary', false);
+    show('ckNameWrap', false);
+    show('ckChoices', false);
+    show('ckHold', false);
+  }
+
+  function lineSuccess(info, href) {
+    var pos = (info && info.position) || lineCounts().free;
+    var s = selection();
+    var n = (typeof NEXT_DAYS !== 'undefined' && NEXT_DAYS) ? NEXT_DAYS[s.type] : null;
+    var when = n > 0 ? ' (about ' + n + ' day' + (n === 1 ? '' : 's') + ')' : '';
+    var free = root.dataset.kind !== 'priority';
+    var steps = free
+      ? [
+        "We keep your place — you're #" + pos + ' in line.',
+        'When the ' + typeNameOf(s.type) + ' slot frees up' + when + ', we message you on Messenger.',
+        'You pay the rent then. Free to wait — no deposit until your slot opens.'
+      ]
+      : [
+        "We keep your place — you'd go first (#" + pos + ') once the ₱100 is saved.',
+        'The ₱100 comes off the rent when your slot opens.',
+        'No slot is held, and there is no deposit until then.'
+      ];
+    show('ckLine', false);
+    show('ckChoices', false);
+    show('ckMethods', false);
+    show('ckPayBox', false);
+    show('ckNameWrap', false);
+    show('ckHold', false);
+    show('ckSummary', false);
+    $('ckTitle').textContent = "You're in line";
+    $('ckDone').hidden = false;
+    var msg = href
+      ? '<a class="ck-go ck-line-msg" href="' + esc(href) + '" target="_blank" rel="noopener">Message us on Messenger</a>'
+      : '<a class="ck-go ck-line-msg" href="http://m.me/PlaystationHub00?text=' + encodeURIComponent('Hi! I joined the line. Ref ' + ((info && info.ref) || '')) + '" target="_blank" rel="noopener">Message us on Messenger</a>';
+    $('ckDone').innerHTML = '<div class="ck-line-ok">✓</div><h3>You\'re in line! #' + pos + '</h3>' +
+      '<div class="ck-line-ref">' + esc((info && info.ref) || '') + '</div>' +
+      '<p class="ck-line-next">What happens next</p><ul class="ck-line-steps">' +
+      steps.map(function (step) { return '<li>' + esc(step) + '</li>'; }).join('') +
+      '</ul>' + msg +
+      '<button type="button" class="ck-line-done" onclick="checkoutClose()">Done</button>';
+  }
+
+  function lineMessengerInstead() {
+    var s = selection();
+    var text = 'Hi! I want to join the line for ' + (root.dataset.title || 'a game') + ' (' + typeNameOf(s.type) + ', ' + (Number(s.days) === 7 ? 'Weekly' : 'Monthly') + ').';
+    window.open('http://m.me/PlaystationHub00?text=' + encodeURIComponent(text), '_blank', 'noopener');
+  }
+
+  function beginPriority(next) {
+    var name = customerName();
+    if (name.length < 2) { err('Enter your Facebook name.'); return; }
+    err('');
+    if ($('ckName')) $('ckName').value = name;
+    var s = selection();
+    fetch('/api/checkout/start', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        game_id: root.dataset.gameId, account_type: s.type, days: s.days,
+        kind: 'priority', upcoming: upcoming, fb_name: name,
+        note: ($('ckLineNote') && $('ckLineNote').value) || '',
+        client_token: (document.querySelector('[name=client_token]') || {}).value || ''
+      })
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { err(res.j.error || 'Could not save your place.'); return; }
+        session = res.j;
+        session.methods = realMethods();
+        session.line = res.j.line;
+        show('ckLine', false);
+        if (next === 'msg') window.checkoutMessenger();
+        else if (!session.methods.length) {
+          err('Pay on the website is not available right now. Message us on Messenger instead.');
+          show('ckLine', true);
+        } else window.checkoutPay();
+      }).catch(function () { err('Could not save your place.'); });
+  }
+
   function openModal(kind) {
     if (kind === 'buy') {
       var buyField = document.getElementById('buyOrderType') || document.getElementById('udBuyOrderType');
@@ -112,6 +303,7 @@
     $('ckDone').hidden = true;
     $('ckDone').innerHTML = '';
     $('ckSummary').hidden = false;
+    show('ckLine', false);
     show('ckMethods', false);
     show('ckPayBox', false);
     show('ckNameWrap', true);
@@ -122,8 +314,12 @@
     $('ckJoin').hidden = !free;
     show('ckHold', !free);
     root.dataset.kind = kind;
-    paintSummary(kind);
     root.hidden = false;
+    if (kind === 'line' || kind === 'priority') {
+      paintLine(kind);
+      return;
+    }
+    paintSummary(kind);
     if (free) return;
     var s = selection();
     fetch('/api/checkout/start', {
@@ -194,8 +390,9 @@
   }
 
   window.checkoutPay = function () {
-    if (!session) { err('Still holding the slot…'); return; }
-    var name = $('ckName').value.trim();
+    if (!session) { err('Still saving your place…'); return; }
+    var name = customerName();
+    if ($('ckName') && name) $('ckName').value = name;
     if (name.length < 2) { err('Enter your Facebook name.'); return; }
     var methods = realMethods();
     if (!methods.length) return;
@@ -206,10 +403,15 @@
 
   window.checkoutBack = function () {
     closeLight();
-    show('ckMethods', false); show('ckPayBox', false); show('ckChoices', true);
+    show('ckMethods', false); show('ckPayBox', false);
+    if (root.dataset.kind === 'line' || root.dataset.kind === 'priority') {
+      paintLine(root.dataset.kind);
+      return;
+    }
+    show('ckChoices', true);
     $('ckSummary').hidden = false;
     show('ckNameWrap', true);
-    $('ckTitle').textContent = root.dataset.kind === 'line' ? 'Join the line' : 'Confirm reservation';
+    $('ckTitle').textContent = 'Confirm reservation';
   };
 
   window.checkoutChangeMethod = function () {
@@ -299,6 +501,7 @@
     }
     $('ckPayDetail').innerHTML = '<div class="ck-pay-amt">₱' + esc(total) + '</div>' +
       '<div class="ck-meta">' + rows + '</div>' + qr;
+    if ($('ckHoldNote')) $('ckHoldNote').hidden = !(session && session.hold_expires_at);
     $('ckSubmit').textContent = 'Submit payment — ₱' + total;
     $('ckSubmit').disabled = !file;
     if ($('ckSubmitNote')) $('ckSubmitNote').hidden = !!file;
@@ -372,6 +575,10 @@
         if (!res.ok) { err(res.j.error || 'Could not submit.'); return; }
         clearInterval(tick);
         closeLight();
+        if (session.line) {
+          lineSuccess({ position: session.line.position, ref: session.ref }, 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('Hi! I sent the priority fee. Ref ' + session.ref));
+          return;
+        }
         show('ckPayBox', false); show('ckHold', false); show('ckNameWrap', false);
         $('ckDone').hidden = false;
         $('ckDone').innerHTML = '<h3>Payment submitted</h3><p>We will confirm on Messenger. Your ref is <b>' + session.ref + '</b>.</p><a class="ck-go" href="http://m.me/PlaystationHub00" target="_blank" rel="noopener">Open Messenger</a>';
@@ -380,14 +587,18 @@
 
   window.checkoutMessenger = function () {
     if (!session) return;
-    var name = $('ckName').value.trim();
+    var name = customerName();
     fetch('/api/checkout/' + session.ref + '/messenger', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ k: session.k, fb_name: name })
+      body: JSON.stringify({ k: session.k, fb_name: name, note: ($('ckLineNote') && $('ckLineNote').value) || '' })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) { err(res.j.error || 'Enter your Facebook name.'); return; }
         closeLight();
+        if (session.line) {
+          lineSuccess({ position: session.line.position, ref: res.j.ref }, res.j.href);
+          return;
+        }
         show('ckChoices', false); show('ckMethods', false); show('ckPayBox', false); show('ckNameWrap', false); show('ckHold', false);
         $('ckSummary').hidden = true;
         var prefill = '';
@@ -398,23 +609,26 @@
   };
 
   window.checkoutJoin = function () {
-    var name = $('ckName').value.trim();
+    var name = customerName();
     if (name.length < 2) { err('Enter your Facebook name.'); return; }
     var s = selection();
     fetch('/api/checkout/start', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         game_id: root.dataset.gameId, account_type: s.type, days: s.days,
-        kind: 'line', upcoming: upcoming, fb_name: name
+        kind: 'line', upcoming: upcoming, fb_name: name,
+        note: ($('ckLineNote') && $('ckLineNote').value) || ''
       })
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
         if (!res.ok) { err(res.j.error || 'Could not join the line.'); return; }
-        show('ckChoices', false); show('ckNameWrap', false);
-        $('ckDone').hidden = false;
-        $('ckDone').innerHTML = '<h3>You are in line</h3><p>Free · ₱0 due today. Ref <b>' + res.j.ref + '</b>. We will message you when a Non-Trophy or Trophy slot opens.</p>';
+        var href = 'http://m.me/PlaystationHub00?text=' + encodeURIComponent('Hi! I joined the line.\nLine ref: ' + res.j.ref + '\nFacebook name: ' + name);
+        lineSuccess({ position: res.j.line && res.j.line.position, ref: res.j.ref }, href);
       }).catch(function () { err('Could not join the line.'); });
   };
+
+  var lineGo = $('ckLineGo');
+  if (lineGo) lineGo.addEventListener('click', function () { window.checkoutJoin(); });
 
   document.querySelectorAll('.bp-card .gd-line-card form').forEach(function (form) {
     form.addEventListener('submit', function (e) {

@@ -1723,6 +1723,29 @@ body.gp-redesign.hub .bp-voucher-toggle {
 .ck-choice span, .ck-method span { color: #aaa; font-size: 12px; }
 .ck-method.is-example { border-style: dashed; }
 .ck-go { display: block; width: 100%; margin-top: 12px; text-align: center; text-decoration: none; background: #F5B800; color: #111; font-weight: 900; border: 0; border-radius: 12px; padding: 14px; cursor: pointer; }
+#ckLine[hidden] { display: none !important; }
+.ck-line-sub { margin: 0 32px 8px 0; color: #cfcfcf; font-size: 13px; }
+.ck-line-pill { display: inline-block; margin: 0 0 12px; background: #2a2150; color: #e4dcff; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 800; }
+.ck-line-game { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.ck-line-game img { width: 48px; height: 64px; object-fit: cover; border-radius: 8px; background: #111; }
+.ck-line-game b { display: block; }
+.ck-line-game span { color: #bbb; font-size: 13px; }
+.ck-seg { display: flex; gap: 8px; margin: 8px 0; }
+.ck-seg-btn { flex: 1; background: #101010; color: #eee; border: 1px solid #333; border-radius: 10px; padding: 10px 6px; font-weight: 800; cursor: pointer; }
+.ck-seg-btn.on { background: #F5B800; color: #111; border-color: #F5B800; }
+.ck-line-place { background: #1a1430; border: 1px solid #6d28d9; border-radius: 12px; padding: 10px 12px; margin: 10px 0; }
+.ck-line-place b { display: block; }
+.ck-line-place span { color: #ddd6ff; font-size: 13px; }
+.ck-go.ck-line-go, .ck-go.ck-line-msg { background: #7c3aed; color: #fff; }
+.ck-line-foot, .ck-line-off { color: #aaa; font-size: 12px; margin: 8px 0 0; }
+.ck-req { color: #F5B800; font-weight: 700; }
+.ck-opt { color: #888; }
+#ckDone { text-align: center; }
+.ck-line-ok { width: 64px; height: 64px; border-radius: 50%; margin: 6px auto 10px; background: #14532d; color: #4ade80; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; }
+.ck-line-ref { display: inline-block; margin-bottom: 12px; background: #2a2150; color: #eee; border-radius: 999px; padding: 4px 10px; font-weight: 800; }
+.ck-line-next { margin: 8px 0 4px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #aaa; }
+.ck-line-steps { text-align: left; color: #ddd; margin: 0 0 8px; padding-left: 18px; }
+.ck-line-done { display: block; width: 100%; margin-top: 8px; background: #2a2a2a; color: #fff; border: 0; border-radius: 12px; padding: 14px; font-weight: 800; cursor: pointer; }
 .ck-go[disabled], #ckSubmit[disabled] { background: #2a2a2a; color: #777; opacity: 1; cursor: not-allowed; }
 .ck-example { color: #F5B800; font-size: 12px; }
 .ck-err { color: #fecaca; }
