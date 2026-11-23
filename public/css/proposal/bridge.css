@@ -16,8 +16,18 @@ body.hub .nav-cta { background: #F5B800; color: #0a0a0a; border-radius: 20px; fo
 /* Rent catalog */
 body.browse-page.hub .browse-header { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
 body.browse-page.hub .browse-header h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0; }
-body.browse-page.hub .bf-top { position: static; background: transparent; border: 0; backdrop-filter: none; }
-body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 8px 0 0; box-sizing: border-box; }
+/* Search stays fully under the 64px sticky nav, on load and while scrolling.
+   z-index stays below the nav (100). Phone browse-filters.css sets top: 0,
+   which would slide the input under the menu — this rule wins. */
+body.browse-page.hub .bf-top {
+  position: sticky;
+  top: 64px;
+  z-index: 40;
+  background: #0a0a0a;
+  border: 0;
+  backdrop-filter: none;
+}
+body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;

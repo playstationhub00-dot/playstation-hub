@@ -21,10 +21,10 @@
 <div class="browse-header rent-head">
   <div class="rent-kicker">Rent · All games</div>
   <h1>Browse PS5 &amp; PS4 games</h1>
-  <p class="rent-lede">Available titles first, then full games you can still join the waitlist for. Weekly prices and slot counts come from each game.</p>
+  <p class="rent-lede">Available titles first, then full games you can still fall in line for. Weekly prices come from each game.</p>
 </div>
 
-<!-- SEARCH, TABS AND RESULTS BAR — pinned under the menu (on phones the search box scrolls away) -->
+<!-- SEARCH, TABS AND RESULTS BAR — pinned fully below the sticky menu, including phones -->
 <div class="bf-top" id="bfTop">
   <div class="bf-top-in">
     <form class="bf-search" id="bfSearchForm" method="get" action="/browse" role="search">
@@ -106,7 +106,7 @@
   </div>
 
   <div class="games-grid rentals-grid bf-split" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
-    <h2 class="bf-full-head" id="bfFullHead"<%= view.kind === 'games' && gridFacts.some(f => leadGames.includes(f.id) && !f.avail) ? '' : ' hidden' %>>Full, join the waitlist</h2>
+    <h2 class="bf-full-head" id="bfFullHead"<%= view.kind === 'games' && gridFacts.some(f => leadGames.includes(f.id) && !f.avail) ? '' : ' hidden' %>>Full — fall in line</h2>
     <% gridFacts.forEach(f => { %><div class="bf-item" data-id="<%= f.id %>"<%= leadGames.includes(f.id) ? '' : ' hidden' %>><% if (f.rank && f.rank <= 10) { %><span class="bf-rank bf-rk-<%= f.rank %>"<%= view.ranked ? '' : ' hidden' %>>#<%= f.rank %></span><% } %><%- include('partials/game-card', { game: gamesById[f.id] }) %></div><% }) %>
   </div>
 
