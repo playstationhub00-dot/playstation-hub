@@ -271,7 +271,7 @@ async function main() {
   await okAsync('the coming soon page shows the same line card and the plan picker', async () => {
     assert.ok(page.includes('id="lineCardSoon"'));
     assert.ok(page.includes('id="durGrid"'));
-    assert.ok(page.includes('Join the line — free'));
+    assert.ok(page.includes('>Join the line</button>'));
     assert.ok(page.includes('Be first in line'));
   });
 

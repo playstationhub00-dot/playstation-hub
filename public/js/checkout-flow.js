@@ -151,7 +151,20 @@
     var pos = kind === 'priority' ? counts.priority : counts.free;
     var later = rentLater(s.type, s.days);
     var soon = freesText(s.type);
-    $('ckTitle').textContent = kind === 'priority' ? 'Join the line — Priority' : 'Join the line';
+    $('ckTitle').textContent = 'Join the line';
+    if ($('ckLinePicks')) {
+      $('ckLinePicks').innerHTML =
+        '<button type="button" class="ck-line-pick' + (kind !== 'priority' ? ' on' : '') + '" data-kind="line" role="radio" aria-checked="' + (kind !== 'priority' ? 'true' : 'false') + '">' +
+          '<b>Free · wait your turn</b><span>You\'d be #' + counts.free + '. We message you when it\'s yours.</span></button>' +
+        '<button type="button" class="ck-line-pick' + (kind === 'priority' ? ' on' : '') + '" data-kind="priority" role="radio" aria-checked="' + (kind === 'priority' ? 'true' : 'false') + '">' +
+          '<b>Priority · ₱100</b><span>Go first (#' + counts.priority + '). Taken off your rent.</span></button>';
+      $('ckLinePicks').querySelectorAll('.ck-line-pick').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          root.dataset.kind = btn.dataset.kind;
+          paintLine(btn.dataset.kind);
+        });
+      });
+    }
     $('ckLineSub').textContent = kind === 'priority'
       ? '₱100 is taken off your rent later'
       : 'Free · wait your turn · nothing due today';

@@ -1724,6 +1724,11 @@ body.gp-redesign.hub .bp-voucher-toggle {
 .ck-method.is-example { border-style: dashed; }
 .ck-go { display: block; width: 100%; margin-top: 12px; text-align: center; text-decoration: none; background: #F5B800; color: #111; font-weight: 900; border: 0; border-radius: 12px; padding: 14px; cursor: pointer; }
 #ckLine[hidden] { display: none !important; }
+.ck-line-picks { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
+.ck-line-pick { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; width: 100%; background: #111; color: #ddd; border: 1px solid #2a2a2a; border-radius: 12px; padding: 10px 12px; cursor: pointer; font: inherit; }
+.ck-line-pick.on { border-color: #a855f7; background: rgba(168, 85, 247, 0.14); }
+.ck-line-pick b { color: #fff; }
+.ck-line-pick span { color: #aaa; font-size: 12px; font-weight: 600; }
 .ck-line-sub { margin: 0 32px 8px 0; color: #cfcfcf; font-size: 13px; }
 .ck-line-pill { display: inline-block; margin: 0 0 12px; background: #2a2150; color: #e4dcff; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 800; }
 .ck-line-game { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
