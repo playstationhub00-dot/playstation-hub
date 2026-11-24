@@ -1,6 +1,15 @@
 /* Main nav: Browse and Category menus, and the phone drawer accordions. */
 
 .nav-drop { position: static; }
+@media (min-width: 821px) {
+  .nav-links { height: 100%; align-items: stretch; }
+  .nav-drop {
+    position: static;
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+  }
+}
 .nav-drop-btn {
   background: none;
   border: 0;
@@ -29,13 +38,23 @@ body.hub .nav-drop-btn.active::after {
 .nav-mega {
   display: none;
   position: absolute;
-  top: 64px;
+  top: 100%;
   left: 0;
   right: 0;
-  z-index: 30;
-  padding: 10px 16px 18px;
+  z-index: 80;
+  padding: 8px 16px 18px;
+  pointer-events: none;
 }
-.nav-drop.open .nav-mega { display: block; }
+/* Overlaps the bottom of the bar so the pointer never crosses a dead gap. */
+.nav-mega::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  height: 12px;
+}
+.nav-drop.open .nav-mega { display: block; pointer-events: auto; }
 .nav-mega-panel {
   width: min(1180px, calc(100vw - 32px));
   margin: 0 auto;
