@@ -359,19 +359,31 @@
   const drops = [...document.querySelectorAll('[data-navdrop]')];
   if (!drops.length) return;
   const desktop = () => window.matchMedia('(min-width: 821px)').matches;
+  const fineHover = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const OPEN_MS = 80;
+  const CLOSE_MS = 250;
   function setOpen(drop, on) {
     drop.classList.toggle('open', !!on);
     const btn = drop.querySelector('.nav-drop-btn');
     if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false');
   }
+  function clearTimers(drop) {
+    clearTimeout(drop._openTimer);
+    clearTimeout(drop._closeTimer);
+  }
   function closeAll(except) {
-    drops.forEach(d => { if (d !== except) setOpen(d, false); });
+    drops.forEach(d => {
+      if (d === except) return;
+      clearTimers(d);
+      setOpen(d, false);
+    });
   }
   drops.forEach(drop => {
     const btn = drop.querySelector('.nav-drop-btn');
     btn.addEventListener('click', e => {
       e.stopPropagation();
       if (!desktop()) return;
+      clearTimers(drop);
       const on = !drop.classList.contains('open');
       closeAll(drop);
       setOpen(drop, on);
@@ -379,20 +391,27 @@
     btn.addEventListener('keydown', e => {
       if (e.key === 'ArrowDown') {
         const first = drop.querySelector('.nav-mega a');
-        if (first) { e.preventDefault(); setOpen(drop, true); first.focus(); }
+        if (first) { e.preventDefault(); clearTimers(drop); closeAll(drop); setOpen(drop, true); first.focus(); }
       }
     });
     drop.addEventListener('mouseenter', () => {
-      if (!desktop()) return;
+      if (!fineHover()) return;
+      clearTimers(drop);
       closeAll(drop);
-      setOpen(drop, true);
+      drop._openTimer = setTimeout(() => setOpen(drop, true), OPEN_MS);
     });
     drop.addEventListener('mouseleave', () => {
-      if (drop.contains(document.activeElement)) return;
-      setOpen(drop, false);
+      if (!fineHover()) return;
+      clearTimeout(drop._openTimer);
+      const focus = document.activeElement;
+      if (focus && drop.contains(focus) && focus !== btn) return;
+      drop._closeTimer = setTimeout(() => setOpen(drop, false), CLOSE_MS);
     });
     drop.addEventListener('focusout', e => {
-      if (!drop.contains(e.relatedTarget)) setOpen(drop, false);
+      if (!drop.contains(e.relatedTarget)) {
+        clearTimers(drop);
+        setOpen(drop, false);
+      }
     });
   });
   document.addEventListener('click', e => {
