@@ -19,9 +19,8 @@
   showing, hiding and ordering these same cards — no reload.
 %>
 <div class="browse-header rent-head">
-  <div class="rent-kicker">Rent · All games</div>
-  <h1>Browse PS5 &amp; PS4 games</h1>
-  <p class="rent-lede">Available titles first, then full games you can still fall in line for. Weekly prices come from each game.</p>
+  <h1>Browse games</h1>
+  <p class="rent-lede">PS5 and PS4 rentals. Fall in line when a title is Full.</p>
 </div>
 
 <!-- SEARCH, TABS AND RESULTS BAR — pinned fully below the sticky menu, including phones -->
@@ -29,25 +28,11 @@
   <div class="bf-top-in">
     <form class="bf-search" id="bfSearchForm" method="get" action="/browse" role="search">
       <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
-      <input type="search" id="bfSearch" name="search" value="<%= state.search %>" placeholder="Search <%= facts.length %> games…" aria-label="Search games" autocomplete="off" enterkeyhint="search">
+      <input type="search" id="bfSearch" name="search" value="<%= state.search %>" placeholder="Search games" aria-label="Search games" autocomplete="off" enterkeyhint="search">
     </form>
     <nav class="bf-tabs" id="bfTabs" aria-label="Collections">
       <% view.tabs.forEach(t => { %><a class="bf-tab<%= t.on ? ' on' : '' %>" data-tab="<%= t.key %>" href="<%= t.href %>"<%- t.on ? ' aria-current="page"' : '' %>><%= t.label %> <span class="bf-tab-n"><%= t.count %></span></a><% }) %>
     </nav>
-    <div class="bf-bar" id="bfBar">
-      <span class="bf-count" id="bfCount"><%= countText %></span>
-      <label class="bf-sort" id="bfSortWrap"<%= view.sorts.length > 1 ? '' : ' hidden' %>>
-        <span class="bf-sort-l">Sort</span>
-        <select id="bfSort" aria-label="Sort games">
-          <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
-        </select>
-      </label>
-      <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="bfOpenN"><%= view.selected ? ' · ' + view.selected : '' %></span></a>
-      <div class="bf-chips" id="bfChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
-        <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
-        <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -58,6 +43,7 @@
   <a href="#" class="bf-backdrop" id="bfBackdrop" tabindex="-1" aria-hidden="true"></a>
   <form class="bf-sheet" id="bfForm" method="get" action="/browse">
     <div class="bf-head">
+      <span class="bf-handle" aria-hidden="true"></span>
       <a href="#" class="bf-x" id="bfClose" aria-label="Close filters">✕</a>
       <h2 id="bfPanelTitle">Filters</h2>
       <button type="button" class="bf-clear-all" id="bfClearAll">Clear all</button>
@@ -66,21 +52,26 @@
       <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
       <% if (view.sort !== view.sorts[0].key) { %><input type="hidden" name="sort" value="<%= view.sort %>"><% } %>
       <% if (state.search) { %><input type="hidden" name="search" value="<%= state.search %>"><% } %>
-      <% view.groups.forEach(gr => { const extra = gr.chips.slice(6); %>
+      <% view.groups.forEach(gr => { if (gr.key === 'price') return; %>
       <section class="bf-sec" data-group="<%= gr.key %>">
         <div class="bf-sec-head">
           <h3><%= gr.label %></h3>
           <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
         </div>
-        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
-        <% if (extra.length) { %>
-        <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
-          <summary>Show all <%= gr.chips.length %></summary>
-          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
-        </details>
-        <% } %>
+        <% gr.chips.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
       </section>
       <% }) %>
+      <% if (browseData.ctx.week) { %>
+      <section class="bf-sec bf-range" data-group="range">
+        <div class="bf-sec-head"><h3>Price range</h3></div>
+        <p class="bf-range-label">Weekly from <b id="bfRangeText">₱<%= browseData.ctx.week.min %>–₱<%= browseData.ctx.week.max %></b></p>
+        <div class="bf-range-row">
+          <input type="range" id="bfWmin" min="<%= browseData.ctx.week.min %>" max="<%= browseData.ctx.week.max %>" value="<%= state.wmin != null ? state.wmin : browseData.ctx.week.min %>" aria-label="Minimum weekly price">
+          <input type="range" id="bfWmax" min="<%= browseData.ctx.week.min %>" max="<%= browseData.ctx.week.max %>" value="<%= state.wmax != null ? state.wmax : browseData.ctx.week.max %>" aria-label="Maximum weekly price">
+        </div>
+        <p class="bf-range-note">Non-Trophy weekly prices.</p>
+      </section>
+      <% } %>
     </div>
     <div class="bf-foot">
       <button type="submit" class="bf-go" id="bfGo"<%= applyLabel.disabled ? ' disabled' : '' %>><%= applyLabel.text %></button>
@@ -88,6 +79,20 @@
   </form>
 </div>
 <div class="bf-main">
+<div class="bf-bar" id="bfBar">
+  <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="bfOpenN"><%= view.selected ? ' (' + view.selected + ')' : '' %></span></a>
+  <label class="bf-sort" id="bfSortWrap"<%= view.sorts.length > 1 ? '' : ' hidden' %>>
+    <span class="bf-sort-l">Sort</span>
+    <select id="bfSort" aria-label="Sort games">
+      <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
+    </select>
+  </label>
+  <span class="bf-count" id="bfCount"><%= view.count %> game<%= view.count === 1 ? '' : 's' %></span>
+  <div class="bf-chips" id="bfChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
+    <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+    <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
+  </div>
+</div>
 
 <%
   // Every card is on the page once; the active tab's matches come first, in
@@ -105,9 +110,14 @@
     <a class="btn btn-outline" id="bfReset" href="<%= resetHref %>">Clear filters</a>
   </div>
 
-  <div class="games-grid rentals-grid bf-split" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
-    <h2 class="bf-full-head" id="bfFullHead"<%= view.kind === 'games' && gridFacts.some(f => leadGames.includes(f.id) && !f.avail) ? '' : ' hidden' %>>Full — fall in line</h2>
+  <div class="games-grid rentals-grid" id="bfGrid"<%= view.kind === 'games' ? '' : ' hidden' %>>
     <% gridFacts.forEach(f => { %><div class="bf-item" data-id="<%= f.id %>"<%= leadGames.includes(f.id) ? '' : ' hidden' %>><% if (f.rank && f.rank <= 10) { %><span class="bf-rank bf-rk-<%= f.rank %>"<%= view.ranked ? '' : ' hidden' %>>#<%= f.rank %></span><% } %><%- include('partials/game-card', { game: gamesById[f.id] }) %></div><% }) %>
+    <a class="bf-ask" id="bfAsk" href="/requests">
+      <span class="bf-ask-plus" aria-hidden="true">+</span>
+      <span class="bf-ask-title">Can’t find your game?</span>
+      <span class="bf-ask-sub">Request it and we’ll stock the most-wanted titles first.</span>
+      <span class="bf-ask-go">Request it</span>
+    </a>
   </div>
 
   <div class="games-grid rentals-grid" id="bfSoonGrid"<%= view.kind === 'soon' ? '' : ' hidden' %>>
@@ -151,6 +161,22 @@
 </div>
 
 <%- include('partials/footer') %>
+
+<div class="qv" id="qv" hidden>
+  <button type="button" class="qv-backdrop" id="qvBackdrop" aria-label="Close"></button>
+  <div class="qv-panel" role="dialog" aria-modal="true" aria-labelledby="qvTitle">
+    <button type="button" class="qv-x" id="qvClose" aria-label="Close">✕</button>
+    <div class="qv-cover" id="qvCover"></div>
+    <div class="qv-body">
+      <div class="qv-band" id="qvBand"></div>
+      <h2 id="qvTitle"></h2>
+      <p class="qv-meta" id="qvMeta"></p>
+      <div class="qv-rows" id="qvRows"></div>
+      <div class="qv-actions" id="qvActions"></div>
+      <a class="qv-full" id="qvFull" href="/browse">View full page</a>
+    </div>
+  </div>
+</div>
 
 <%- include('partials/rent-modal') %>
 

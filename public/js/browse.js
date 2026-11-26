@@ -72,7 +72,7 @@
     });
   }
   function renderBar(v) {
-    $('bfCount').textContent = C.countText(v);
+    $('bfCount').textContent = v.count + ' game' + (v.count === 1 ? '' : 's');
     $('bfSort').innerHTML = v.sorts.map(function (o) {
       return '<option value="' + o.key + '"' + (o.on ? ' selected' : '') + '>' + esc(o.label) + '</option>';
     }).join('');
@@ -84,7 +84,7 @@
     }).join('') + (chips.length >= 2 ? '<a class="bf-clear" href="' + esc(C.href(C.clearFilters(state))) + '" data-clear-all="1">Clear all</a>' : '');
     $('bfChips').hidden = !chips.length;
     $('bfOpen').hidden = !v.filters;
-    $('bfOpenN').textContent = v.selected ? ' · ' + v.selected : '';
+    $('bfOpenN').textContent = v.selected ? ' (' + v.selected + ')' : '';
     $('bfOpen').classList.toggle('bf-has', v.selected > 0);
   }
   function render() {
@@ -93,6 +93,8 @@
     renderBar(v);
     place(gameCards, $('bfGrid'), v.kind === 'games' ? v.ids : []);
     place(soonCards, $('bfSoonGrid'), v.kind === 'soon' ? v.ids : []);
+    var ask = $('bfAsk');
+    if (ask) { ask.hidden = v.kind !== 'games'; if (v.kind === 'games') $('bfGrid').appendChild(ask); }
     $('bfGrid').hidden = v.kind !== 'games';
     $('bfSoonGrid').hidden = v.kind !== 'soon';
     each($('bfGrid'), '.bf-rank', function (el) { el.hidden = !v.ranked; });
@@ -102,21 +104,12 @@
     $('bfEmpty').hidden = v.count > 0;
     $('bfReset').href = C.href(C.resetState(state));
     renderPsplus(v);
-    syncFullHead();
+    syncRange();
     if (!draft) {
       draft = copy(state);
       renderPanel();
       draft = null;
     }
-  }
-  function syncFullHead() {
-    var head = $('bfFullHead');
-    var grid = $('bfGrid');
-    if (!head || !grid) return;
-    if (grid.hidden) { head.hidden = true; return; }
-    var any = false;
-    each(grid, '.bf-item', function (el) { if (!el.hidden && el.querySelector('.gc2-full')) any = true; });
-    head.hidden = !any;
   }
   function go(next) {
     state = next;
@@ -168,7 +161,8 @@
     });
     each(panel, '.bf-sec', function (sec) {
       var g = sec.getAttribute('data-group');
-      sec.querySelector('.bf-sec-clear').hidden = !v.groups.some(function (x) { return x.key === g && x.chips.some(function (c) { return c.on; }); });
+      var clearBtn = sec.querySelector('.bf-sec-clear');
+      if (clearBtn) clearBtn.hidden = !v.groups.some(function (x) { return x.key === g && x.chips.some(function (c) { return c.on; }); });
       var more = sec.querySelector('.bf-more');
       if (more && more.querySelector('input:checked')) more.open = true;
     });
@@ -232,10 +226,127 @@
   // ── The filter bar's chips ────────────────────────────────────────────────
   $('bfChips').addEventListener('click', function (e) {
     var chip = e.target.closest('.bf-chip-x');
-    if (chip) { e.preventDefault(); go(C.toggle(state, chip.getAttribute('data-group'), chip.getAttribute('data-value'))); return; }
+    if (chip) {
+      e.preventDefault();
+      if (chip.getAttribute('data-group') === 'range') go(C.clearGroup(state, 'range'));
+      else go(C.toggle(state, chip.getAttribute('data-group'), chip.getAttribute('data-value')));
+      return;
+    }
     if (e.target.closest('[data-clear-all]')) { e.preventDefault(); go(C.clearFilters(state)); }
   });
   $('bfPsAll').addEventListener('click', function () { showAllPs = true; render(); });
+
+  function syncRange() {
+    var week = ctx.week;
+    var lo = $('bfWmin');
+    var hi = $('bfWmax');
+    if (!week || !lo || !hi) return;
+    lo.value = state.wmin == null ? week.min : state.wmin;
+    hi.value = state.wmax == null ? week.max : state.wmax;
+    var label = $('bfRangeText');
+    if (label) label.textContent = '₱' + lo.value + '–₱' + hi.value;
+  }
+  function applyRange() {
+    var week = ctx.week || { min: 0, max: 0 };
+    var lo = Number($('bfWmin').value);
+    var hi = Number($('bfWmax').value);
+    if (lo > hi) { var swap = lo; lo = hi; hi = swap; }
+    var base = draft ? copy(draft) : copy(state);
+    base.wmin = lo <= week.min ? null : lo;
+    base.wmax = hi >= week.max ? null : hi;
+    if (draft) { draft = base; renderPanel(); syncRange(); return; }
+    go(base);
+  }
+  ['bfWmin', 'bfWmax'].forEach(function (id) {
+    var el = $(id);
+    if (!el) return;
+    el.addEventListener('input', function () {
+      var label = $('bfRangeText');
+      if (label) label.textContent = '₱' + $('bfWmin').value + '–₱' + $('bfWmax').value;
+    });
+    el.addEventListener('change', applyRange);
+  });
+
+  var lastFocus = null;
+  function qvFocusable() {
+    return Array.prototype.filter.call($('qv').querySelectorAll('button, a, input, select, textarea'), function (el) {
+      return !el.disabled && el.offsetParent !== null;
+    });
+  }
+  function closeQuick() {
+    if ($('qv').hidden) return;
+    $('qv').hidden = true;
+    document.body.classList.remove('qv-lock');
+    document.removeEventListener('keydown', onQvKey);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function onQvKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeQuick(); return; }
+    if (e.key !== 'Tab') return;
+    var nodes = qvFocusable();
+    if (!nodes.length) return;
+    var first = nodes[0];
+    var last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function peso(n) { return n == null ? '—' : '₱' + n; }
+  function openQuick(id) {
+    var fact = (data.games || []).filter(function (g) { return String(g.id) === String(id); })[0];
+    var card = gameCards[id];
+    if (!fact || !card) return;
+    var img = card.querySelector('img');
+    $('qvCover').innerHTML = img ? '<img src="' + esc(img.getAttribute('src')) + '" alt="">' : '<div class="qv-cover-empty">No cover</div>';
+    var band = card.querySelector('.gc-band');
+    var bandEl = $('qvBand');
+    bandEl.className = 'qv-band' + (band ? ' ' + band.className : '');
+    bandEl.textContent = band ? band.textContent.replace(/\s+/g, ' ').trim() : '';
+    bandEl.hidden = !band;
+    $('qvTitle').textContent = fact.title;
+    $('qvMeta').textContent = [fact.platform, fact.genreLabel].filter(Boolean).join(' · ');
+    $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
+      var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
+      var st = r.status === 'Last slot' ? 'last' : r.status === 'Full' ? 'full' : 'ok';
+      var icon = kind === 'tr'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg>'
+        : kind === 'ps4'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg>';
+      return '<div class="qv-row">' +
+        '<span class="qv-name qv-' + kind + '">' + icon + esc(r.label) + '</span>' +
+        '<span class="qv-st qv-st-' + st + '"><i></i>' + esc(r.status) + '</span>' +
+        '<div class="qv-prices"><span>Weekly<b>' + peso(r.week) + '</b></span><span>Monthly<b>' + peso(r.month) + '</b></span></div>' +
+        '</div>';
+    }).join('');
+    var add = card.querySelector('.basket-add');
+    var cta = card.querySelector('.rcta');
+    var actions = '';
+    if (add) {
+      actions += '<button type="button" class="basket-add" data-basket-id="' + esc(add.getAttribute('data-basket-id')) +
+        '" data-basket-days="' + esc(add.getAttribute('data-basket-days')) +
+        '" data-basket-type="' + esc(add.getAttribute('data-basket-type')) + '">Add to basket</button>';
+    }
+    if (cta) {
+      actions += '<a class="rcta ' + (cta.classList.contains('line') ? 'line' : 'rent') + '" href="' + esc(fact.href) + '">' +
+        esc(cta.textContent.replace(/\s+/g, ' ').trim()) + '</a>';
+    }
+    $('qvActions').innerHTML = actions;
+    $('qvFull').href = fact.href;
+    lastFocus = document.activeElement;
+    $('qv').hidden = false;
+    document.body.classList.add('qv-lock');
+    document.addEventListener('keydown', onQvKey);
+    $('qvClose').focus();
+  }
+  $('bfGrid').addEventListener('click', function (e) {
+    if (e.target.closest('.basket-add, .rcta, .bf-ask, button')) return;
+    var item = e.target.closest('.bf-item');
+    if (!item) return;
+    e.preventDefault();
+    openQuick(item.getAttribute('data-id'));
+  });
+  $('qvClose').addEventListener('click', closeQuick);
+  $('qvBackdrop').addEventListener('click', closeQuick);
 
   // Old links to the Coming soon slider (/browse#comingSoon) open its tab.
   if (location.hash === '#comingSoon') {

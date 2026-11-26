@@ -22,11 +22,11 @@
     ['deals', 'Deals'], ['available', 'Available now'], ['buy', 'Buy to keep'], ['bundles', 'Bundles'], ['psplus', 'PS Plus Deluxe']
   ];
   var SORTS = {
-    discount: 'Biggest discount', 'most-rented': 'Most rented', newest: 'Newest', 'price-asc': 'Price: low to high',
-    'price-desc': 'Price: high to low', az: 'A–Z', release: 'Release date'
+    discount: 'Biggest discount', 'most-rented': 'Most rented', newest: 'Newest first', 'price-asc': 'Lowest price',
+    'price-desc': 'Price: high to low', az: 'A–Z', release: 'Release date', avail: 'Available first'
   };
-  var GAME_SORTS = ['most-rented', 'newest', 'price-asc', 'price-desc', 'az'];
-  var DEFAULT_SORT = { 'new': 'newest', 'coming-soon': 'release', deals: 'discount', psplus: 'az' };
+  var GAME_SORTS = ['newest', 'price-asc', 'most-rented', 'avail'];
+  var DEFAULT_SORT = { 'most-rented': 'most-rented', 'new': 'newest', 'coming-soon': 'release', deals: 'discount', psplus: 'az' };
   var CONSOLES = [['ps4', 'PS4'], ['ps5', 'PS5']];
   var PRICES = ['low', 'mid', 'high'];
   var DEFAULT_BANDS = { low: 200, high: 300 };
@@ -84,22 +84,27 @@
     if (tab === 'new') return ['newest'].concat(GAME_SORTS.filter(function (k) { return k !== 'newest'; }));
     return GAME_SORTS;
   }
-  function defaultSort(tab) { return DEFAULT_SORT[tab] || 'most-rented'; }
+  function defaultSort(tab) { return DEFAULT_SORT[tab] || 'newest'; }
   // The order in use: the address's choice when the tab offers it, else the tab's default.
   function sortOf(s) { return sortsFor(s.tab).indexOf(s.sort) >= 0 ? s.sort : defaultSort(s.tab); }
 
-  var STOCKS = [['open', 'Available'], ['full', 'Full']];
+  var STOCKS = [['open', 'Available'], ['last', 'Last slot'], ['full', 'Full']];
+  var BANDS = [
+    ['regular', 'Regular'], ['special', 'Special'], ['deluxe', 'Deluxe'],
+    ['new', 'New Games'], ['ultimate', 'Ultimate'], ['psplus', 'PS Plus Deluxe']
+  ];
   var ACCOUNTS = [['nt', 'Non-Trophy'], ['tr', 'Trophy'], ['ps4', 'PS4 Primary']];
 
   function emptyState() {
-    return { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [] };
+    return { tab: 'all', sort: '', search: '', tiers: [], bands: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [], wmin: null, wmax: null };
   }
 
   function clone(s) {
     return {
       tab: s.tab, sort: s.sort, search: s.search,
-      tiers: s.tiers.slice(), consoles: s.consoles.slice(), genres: s.genres.slice(), prices: s.prices.slice(),
-      stocks: (s.stocks || []).slice(), accounts: (s.accounts || []).slice()
+      tiers: s.tiers.slice(), bands: (s.bands || []).slice(), consoles: s.consoles.slice(), genres: s.genres.slice(), prices: s.prices.slice(),
+      stocks: (s.stocks || []).slice(), accounts: (s.accounts || []).slice(),
+      wmin: s.wmin == null ? null : s.wmin, wmax: s.wmax == null ? null : s.wmax
     };
   }
 
@@ -131,6 +136,11 @@
     // account type use their own query names so those links keep working.
     s.stocks = list(q.stock).filter(function (p) { return p === 'open' || p === 'last' || p === 'full'; });
     s.accounts = list(q.account).filter(function (p) { return p === 'nt' || p === 'tr' || p === 'ps4'; });
+    s.bands = list(q.band).filter(function (b) { return BANDS.some(function (d) { return d[0] === b; }); });
+    var wmin = Number(first(q.wmin));
+    var wmax = Number(first(q.wmax));
+    s.wmin = Number.isFinite(wmin) && wmin >= 0 ? wmin : null;
+    s.wmax = Number.isFinite(wmax) && wmax >= 0 ? wmax : null;
     return s;
   }
 
@@ -194,6 +204,9 @@
     if (s.prices.length) parts.push('price=' + s.prices.join(','));
     if (s.stocks && s.stocks.length) parts.push('stock=' + s.stocks.join(','));
     if (s.accounts && s.accounts.length) parts.push('account=' + s.accounts.join(','));
+    if (s.bands && s.bands.length) parts.push('band=' + s.bands.join(','));
+    if (s.wmin != null) parts.push('wmin=' + s.wmin);
+    if (s.wmax != null) parts.push('wmax=' + s.wmax);
     return parts.join('&');
   }
 
@@ -225,7 +238,8 @@
   // The filter bar's "Clear all": filters off; tab, order and search stay.
   function clearFilters(s) {
     var n = clone(s);
-    n.tiers = []; n.consoles = []; n.genres = []; n.prices = []; n.stocks = []; n.accounts = [];
+    n.tiers = []; n.bands = []; n.consoles = []; n.genres = []; n.prices = []; n.stocks = []; n.accounts = [];
+    n.wmin = null; n.wmax = null;
     return n;
   }
 
@@ -237,8 +251,8 @@
   }
 
   function selectedCount(s) {
-    return s.tiers.length + s.consoles.length + s.genres.length + s.prices.length
-      + (s.stocks || []).length + (s.accounts || []).length;
+    return s.tiers.length + (s.bands || []).length + s.consoles.length + s.genres.length + s.prices.length
+      + (s.stocks || []).length + (s.accounts || []).length + ((s.wmin != null || s.wmax != null) ? 1 : 0);
   }
 
   function flip(arr, v) {
@@ -250,6 +264,7 @@
     var n = clone(s);
     value = String(value);
     if (group === 'tier') flip(n.tiers, value);
+    else if (group === 'band') flip(n.bands, value);
     else if (group === 'console') flip(n.consoles, value);
     else if (group === 'genre') flip(n.genres, value);
     else if (group === 'price') flip(n.prices, value);
@@ -262,9 +277,11 @@
   function clearGroup(s, group) {
     var n = clone(s);
     if (group === 'tier') n.tiers = [];
+    else if (group === 'band') n.bands = [];
     else if (group === 'console') n.consoles = [];
     else if (group === 'genre') n.genres = [];
     else if (group === 'price') n.prices = [];
+    else if (group === 'range') { n.wmin = null; n.wmax = null; }
     else if (group === 'stock') n.stocks = [];
     else if (group === 'account') n.accounts = [];
     return n;
@@ -273,6 +290,7 @@
   function isOn(s, group, value) {
     value = String(value);
     if (group === 'tier') return s.tiers.indexOf(value) >= 0;
+    if (group === 'band') return (s.bands || []).indexOf(value) >= 0;
     if (group === 'console') return s.consoles.indexOf(value) >= 0;
     if (group === 'genre') return s.genres.indexOf(value) >= 0;
     if (group === 'price') return s.prices.indexOf(value) >= 0;
@@ -314,6 +332,13 @@
       var t = (ctx.tiers || []).filter(function (x) { return String(x.id) === id; })[0];
       add('tier', id, t ? t.name : id);
     });
+    BANDS.forEach(function (d) { if ((s.bands || []).indexOf(d[0]) >= 0) add('band', d[0], d[1]); });
+    if (s.wmin != null || s.wmax != null) {
+      var lo = s.wmin == null ? '0' : s.wmin;
+      var hi = s.wmax == null ? '' : s.wmax;
+      var cleared = clearGroup(s, 'range');
+      out.push({ group: 'range', value: 'week', label: '₱' + lo + '–₱' + hi, href: href(cleared) });
+    }
     CONSOLES.forEach(function (d) { if (s.consoles.indexOf(d[0]) >= 0) add('console', d[0], d[1]); });
     s.genres.forEach(function (g) { add('genre', g, g); });
     PRICES.forEach(function (p) { if (s.prices.indexOf(p) >= 0) add('price', p, bandLabel(p, ctx.bands)); });
@@ -337,9 +362,12 @@
 
   function filterHit(f, s, bands) {
     if (s.tiers.length && s.tiers.indexOf(f.tier) < 0) return false;
+    if ((s.bands || []).length && (s.bands || []).indexOf(f.band) < 0) return false;
     if (s.consoles.length && !s.consoles.some(function (c) { return f[c]; })) return false;
     if (s.genres.length && !s.genres.some(function (g) { return f.genres.indexOf(g) >= 0; })) return false;
     if (s.prices.length && s.prices.indexOf(bandOf(f.from, bands)) < 0) return false;
+    if (s.wmin != null && !(f.weekly >= s.wmin)) return false;
+    if (s.wmax != null && !(f.weekly <= s.wmax)) return false;
     if ((s.stocks || []).length && s.stocks.indexOf(stockOf(f)) < 0) return false;
     if ((s.accounts || []).length && !s.accounts.some(function (t) { return (f.types || []).indexOf(t) >= 0; })) return false;
     return true;
@@ -366,6 +394,7 @@
     newest: function (a, b) { return cmp(a.released, b.released, -1); },
     'price-asc': function (a, b) { return cmp(a.from, b.from, 1); },
     'price-desc': function (a, b) { return cmp(a.from, b.from, -1); },
+    avail: function (a, b) { return cmp(a.avail ? 0 : 1, b.avail ? 0 : 1, 1); },
     discount: function (a, b) { return (b.deal || 0) - (a.deal || 0); },
     release: function (a, b) { return a.order - b.order; },
     az: function () { return 0; }
@@ -401,9 +430,13 @@
       if (chips.length) groups.push({ key: key, label: label, chips: chips });
     }
     group('stock', 'Availability', STOCKS);
+    if ((data.games || []).some(function (f) { return f.band; })) {
+      groups.push({ key: 'band', label: 'Price category', chips: BANDS.map(function (d) { return chipFor(data, s, ctx, newIds, 'band', d[0], d[1]); }) });
+    } else {
+      group('tier', 'Price category', (ctx.tiers || []).map(function (t) { return [String(t.id), t.name]; }));
+    }
+    group('console', 'Platform', CONSOLES);
     group('account', 'Account type', ACCOUNTS);
-    group('tier', 'Tier', (ctx.tiers || []).map(function (t) { return [String(t.id), t.name]; }));
-    group('console', 'Console', CONSOLES);
     group('genre', 'Genre', (ctx.genres || []).map(function (g) { return [g, g]; }));
     group('price', 'Price', PRICES.map(function (p) { return [p, bandLabel(p, ctx.bands)]; }));
     return groups;
@@ -449,7 +482,7 @@
 
   // The filter panel's big button for a draft's view.
   function applyLabel(v) {
-    return v.count ? { text: 'Show ' + plural(v.count, 'game'), disabled: false } : { text: 'No games match', disabled: true };
+    return v.count ? { text: 'Show ' + v.count + (v.count === 1 ? ' result' : ' results'), disabled: false } : { text: 'No games match', disabled: true };
   }
 
   var api = {

@@ -3005,6 +3005,26 @@ function browseGameFacts(g, accountSummaryMap, promo, rank, todayIso) {
     ps5: g.platform === 'PS5' || g.platform === 'PS4/PS5',
     genres: browseCore.genreParts(g.genre),
     from: finals.length ? Math.min(...finals) : null,
+    weekly: (g.nt_price_7d || 0) > 0 ? Number(g.nt_price_7d) : null,
+    band: (tierStyle.storefrontBand(g, cat ? { name: cat.name } : null) || {}).key || null,
+    platform: g.platform || '',
+    genreLabel: browseCore.genreParts(g.genre).join(' · '),
+    cover: g.cover_image || '',
+    href: seo.rentPath(g.title),
+    rows: (function () {
+      const pay = (base, days) => (base > 0 ? gameDiscount.applyPct(base, gameDiscount.discountPct(g, days, promo)) : null);
+      const word = n => n > 1 ? 'Available' : n === 1 ? 'Last slot' : 'Full';
+      const rows = [];
+      if (a.hasTrophy) rows.push({ label: 'Trophy', week: pay(g.tr_price_7d, 7), month: pay(g.tr_price_30d, 30), status: word(a.trSlots) });
+      rows.push({ label: 'Non-Trophy', week: pay(g.nt_price_7d, 7), month: pay(g.nt_price_30d, 30), status: word(a.ntSlots) });
+      if (a.showPs4) rows.push({
+        label: 'PS4 Primary',
+        week: pay(g.tr_price_7d || g.nt_price_7d, 7),
+        month: pay(g.tr_price_30d || g.nt_price_30d, 30),
+        status: word(a.ps4Slots)
+      });
+      return rows;
+    })(),
     avail: !!(a.trAvail || a.ntAvail || (a.showPs4 && a.ps4Avail)),
     availPs4: !!(a.showPs4 && a.ps4Avail),
     // Account-type filter: Non-Trophy and Trophy are offered on every game;
@@ -3191,10 +3211,16 @@ app.get('/browse', (req, res) => {
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
   const soon = upcoming.map((u, i) => ({ id: u.id, title: u.title, text: u.title.toLowerCase(), order: i }));
   const ps = browsePsplusData(accountSummaryMap);
+  const weeks = facts.map(f => f.weekly).filter(n => n > 0);
+  const week = weeks.length
+    ? { min: Math.min.apply(null, weeks), max: Math.max.apply(null, weeks) }
+    : { min: 199, max: 499 };
+  if (week.max <= week.min) week.max = week.min + 1;
   const ctx = {
     bands: getBrowseBands(),
     tiers: priceCategories.map(c => ({ id: String(c.id), name: c.name, desc: c.description || '' })),
-    genres: browseCore.genreList(facts)
+    genres: browseCore.genreList(facts),
+    week
   };
   const data = { games: facts, soon, psplus: ps.items };
   const state = browseCore.cleanState(browseCore.parseState(req.query), ctx, data);
