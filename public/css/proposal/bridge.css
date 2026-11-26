@@ -850,7 +850,7 @@ body.hub .rcard .gc2-title,
 body.hub .rcard .gc2-title-muted { color: #fff; }
 body.hub .rcard .gc2-title {
   margin: 0;
-  padding: 10px 10px 0;
+  padding: 10px 10px 12px;
   font-size: 15px;
   font-weight: 800;
   line-height: 1.25;
