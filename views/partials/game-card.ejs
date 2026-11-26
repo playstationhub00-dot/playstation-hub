@@ -62,6 +62,14 @@
   const gcBundleParent = findBundleContaining(game);
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
   const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
+  const basketTypes = [];
+  if ((ntSlots > 0) && ((game.nt_price_7d || 0) > 0 || (game.nt_price_30d || 0) > 0)) basketTypes.push('nt');
+  if (hasTrophy && trSlots > 0 && ((game.tr_price_7d || 0) > 0 || (game.tr_price_30d || 0) > 0)) basketTypes.push('tr');
+  if (showPs4 && ps4Slots > 0 && ((game.tr_price_7d || 0) > 0 || (game.nt_price_7d || 0) > 0 || (game.tr_price_30d || 0) > 0 || (game.nt_price_30d || 0) > 0)) basketTypes.push('ps4');
+  const basketId = game.id != null && game.id !== '' ? game.id : ((typeof seo !== 'undefined' && seo.isPsplusDeluxeTitle(game.title)) ? 'psplus' : '');
+  const basketLead = basketTypes[0] || 'nt';
+  const basketWeek = basketLead === 'nt' ? (game.nt_price_7d || 0) : ((game.tr_price_7d || 0) || (game.nt_price_7d || 0));
+  const basketDays = basketWeek > 0 ? 7 : 30;
 %>
 <a href="<%= seo.rentPath(game.title) %>" class="game-card gc2-card rcard<%= allUnavail ? ' full gc2-full' : '' %>">
   <div class="art gc2-art">
@@ -123,7 +131,12 @@
         <div class="slot slot-nt"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg></span><span>Non-Trophy</span><span class="<%= gcSlotClass(ntSlots) %>"><%= gcSlotText(ntSlots) %></span></div>
         <% if (showPs4) { %><div class="slot slot-ps4"><span class="gc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/><path d="M7 7l2-3h6l2 3"/></svg></span><span>PS4 Primary</span><span class="<%= gcSlotClass(ps4Slots) %>"><%= gcSlotText(ps4Slots) %></span></div><% } %>
       </div>
-      <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
+      <div class="gc-actions">
+        <% if (!allUnavail && basketTypes.length && basketId !== '') { %>
+        <button type="button" class="basket-add" data-basket-id="<%= basketId %>" data-basket-days="<%= basketDays %>" data-basket-type="<%= basketTypes[0] %>" aria-label="Add <%= game.title %> to basket">Add to basket</button>
+        <% } %>
+        <span class="rcta <%= allUnavail ? 'line' : 'rent' %> gc-cta"><%= allUnavail ? 'Join the line' : 'Rent now' %></span>
+      </div>
     </div>
   </div>
 </a>

@@ -50,14 +50,28 @@
   const durLabel = order.days === 7 ? 'Weekly' : 'Monthly';
   const totalDue = (order.amount_due || 0) + (order.deposit_due || 0);
   const rentLabel = order.is_buy ? 'Purchase price' : (order.is_reservation ? (order.upcoming_game_id ? 'Reservation price' : 'Priority reservation fee') : 'Rent');
+  const pesoText = n => {
+    const v = Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
+    const body = Number.isInteger(v) ? String(v) : v.toFixed(2);
+    const parts = body.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
+  };
+  const basketItems = Array.isArray(order.items) ? order.items.filter(Boolean) : [];
+  const basketMsgLines = basketItems.map(it => {
+    const itemType = it.account_type === 'tr' ? 'Trophy' : it.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+    const itemPlan = it.days === 7 ? 'Weekly' : 'Monthly';
+    return it.game_title + ' — ' + itemType + ', ' + itemPlan;
+  });
 
   // The message the customer copies and pastes into Messenger. Messenger has no
   // ?text= URL parameter — unlike WhatsApp, the composer cannot be pre-filled —
   // so this is shown on the page with a copy button instead.
   const premadeMsg =
     'Hi! I paid for order ' + order.ref + '.\n' +
-    order.game_title + ' — ' + typeLabel + ', ' + (order.is_buy ? 'One-time purchase' : durLabel) + '\n' +
-    'Amount: PHP ' + totalDue + '\n' +
+    (basketMsgLines.length ? basketMsgLines.join('\n') : (order.game_title + ' — ' + typeLabel + ', ' + (order.is_buy ? 'One-time purchase' : durLabel))) + '\n' +
+    (order.promo_code ? (order.promo_code + ': -PHP ' + pesoText(order.promo_discount) + '\n') : '') +
+    'Amount: PHP ' + pesoText(totalDue) + '\n' +
     'Here\'s my proof of payment:';
 
   // For someone whose sign-in code ran out. They have already paid and already
@@ -94,7 +108,7 @@
   <div class="prog" aria-label="Checkout">
     <div class="prog-top">
       <div class="prog-kicker">Step <%= ordStep %> of 4</div>
-      <div class="prog-name"><%= ordNames[ordStep - 1] %><% if (ordStep === 3) { %> · ₱<%= (order.amount_due || 0) + (order.deposit_due || 0) %><% } %></div>
+      <div class="prog-name"><%= ordNames[ordStep - 1] %><% if (ordStep === 3) { %> · ₱<%= pesoText(totalDue) %><% } %></div>
     </div>
     <div class="prog-track">
       <% for (var si = 1; si <= 4; si++) { %><div class="prog-dot<%= si < ordStep ? ' done' : (si === ordStep ? ' on' : '') %>"></div><% } %>
@@ -145,27 +159,35 @@
   <% } %>
 
   <div class="ord-card">
+    <% if (basketItems.length) { %>
+      <% basketItems.forEach(function (it) { %>
+      <% const itemType = it.account_type === 'tr' ? 'Trophy' : it.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy'; %>
+      <% const itemPlan = it.days === 7 ? 'Weekly' : 'Monthly'; %>
+      <div class="ord-row"><span><%= it.game_title %></span><span><%= itemType %> · <%= itemPlan %> · ₱<%= pesoText(it.price) %></span></div>
+      <% }) %>
+    <% } else { %>
     <div class="ord-row"><span>Game</span><span><%= order.game_title %></span></div>
     <div class="ord-row"><span>Account type</span><span><%= typeLabel %></span></div>
     <% if (!order.is_buy) { %>
     <div class="ord-row"><span>Duration</span><span><%= durLabel %></span></div>
     <% } %>
-    <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= (order.amount_due || 0) + (order.promo_discount || 0) %></span></div>
+    <% } %>
+    <div class="ord-row"><span><%= rentLabel %></span><span>₱<%= pesoText((order.amount_due || 0) + (order.promo_discount || 0)) %></span></div>
     <% if (order.promo_code && order.promo_discount) { %>
-    <div class="ord-row"><span><%= order.promo_code %> (−<%= order.promo_pct || 10 %>%)</span><span>−₱<%= order.promo_discount %></span></div>
+    <div class="ord-row"><span><%= order.promo_code %> (−<%= order.promo_pct || 10 %>%)</span><span>−₱<%= pesoText(order.promo_discount) %></span></div>
     <% } %>
     <% if (order.deposit_due > 0) { %>
-    <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= order.deposit_due %></span></div>
+    <div class="ord-row ord-row-dep"><span>Refundable deposit</span><span>+₱<%= pesoText(order.deposit_due) %></span></div>
     <% } %>
     <% if (isPaidOrder) { %>
     <div class="ord-total ord-total-paid">
-      <span>✓ Paid</span><span>₱<%= totalDue %></span>
+      <span>✓ Paid</span><span>₱<%= pesoText(totalDue) %></span>
     </div>
     <% if (paidMethodLabel || paidWhen) { %>
     <div class="ord-paid-meta"><%= [paidMethodLabel, paidWhen].filter(Boolean).join(' · ') %></div>
     <% } %>
     <% } else if (!order.is_waitlist && !order.slot_given_at) { %>
-    <div class="ord-total"><span>To send now</span><span>₱<%= totalDue %></span></div>
+    <div class="ord-total"><span>To send now</span><span>₱<%= pesoText(totalDue) %></span></div>
     <% } %>
     <% if (order.deposit_due > 0) { %>
     <div class="ord-refund-note">↩ You get ₱<%= order.deposit_due %> back once you return the account.</div>
@@ -276,7 +298,7 @@
     <div class="ord-offline">We check payments regularly even when offline — sending yours now doesn't need us to be online.</div>
     <% } %>
     <div class="ord-conf-steps">
-      <div class="ord-conf-step"><span class="ord-conf-n">1</span><span>You send ₱<%= totalDue %></span></div>
+      <div class="ord-conf-step"><span class="ord-conf-n">1</span><span>You send ₱<%= pesoText(totalDue) %></span></div>
       <div class="ord-conf-step ord-conf-step-us"><span class="ord-conf-n">2</span><span>We confirm it<% if (approvalEtaMinutes != null) { %> — usually within <%= approvalEtaMinutes %> min<% } %></span></div>
       <div class="ord-conf-step"><span class="ord-conf-n">3</span><span>You send your PS sign-in code</span></div>
       <div class="ord-conf-step ord-conf-step-us"><span class="ord-conf-n">4</span><span>We sign you in — you play</span></div>
@@ -309,7 +331,7 @@
   <div class="ord-step">
     <%# The amount differs per method — PayPal adds fees on top — so this
         figure is driven by the tab script below rather than hard-coded. %>
-    <div class="ord-step-label">Step 1 — Send ₱<span id="ordStepAmt"><%= totalDue %></span></div>
+    <div class="ord-step-label">Step 1 — Send ₱<span id="ordStepAmt"><%= pesoText(totalDue) %></span></div>
 
     <% if (!payMethods.length) { %>
       <div class="ord-offline">Our payment details aren't set up on the site yet — please message us on Facebook and we'll sort it out with you directly.</div>
@@ -321,7 +343,7 @@
       </div>
       <% payMethods.forEach((m, i) => { %>
       <div class="ord-pay-panel<%= i === 0 ? '' : ' ord-hidden' %>" data-m="<%= m.key %>"
-           data-amt="<%= (m.key === 'paypal' && paypalQuote) ? paypalQuote.total : totalDue %>">
+           data-amt="<%= pesoText((m.key === 'paypal' && paypalQuote) ? paypalQuote.total : totalDue) %>">
         <% if (m.key === 'paypal' && paypalQuote) { %>
           <div class="ord-pay-row"><span>Rental</span><strong>₱<%= paypalQuote.base %></strong></div>
           <%# One combined line on purpose. Itemising the PayPal cut and the
@@ -346,7 +368,7 @@
           <% } %>
           <% if (m.account_name) { %><div class="ord-pay-row"><span>Name</span><strong><%= m.account_name %></strong></div><% } %>
           <% if (m.account_number) { %><div class="ord-pay-row"><span>Number</span><strong><%= m.account_number %></strong></div><% } %>
-          <div class="ord-pay-row"><span>Amount</span><strong>₱<%= totalDue %></strong></div>
+          <div class="ord-pay-row"><span>Amount</span><strong>₱<%= pesoText(totalDue) %></strong></div>
         <% } %>
       </div>
       <% }) %>

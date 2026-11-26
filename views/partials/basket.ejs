@@ -1,0 +1,45 @@
+<link rel="stylesheet" href="/css/basket.css?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>">
+<div class="basket-scrim" id="basketScrim" hidden></div>
+<aside class="basket-panel" id="basketPanel" hidden aria-hidden="true" aria-labelledby="basketTitle">
+  <header class="basket-h">
+    <div>
+      <h2 id="basketTitle">Your basket</h2>
+      <p id="basketCountLine">0 games</p>
+    </div>
+    <button type="button" class="basket-x" id="basketClose" aria-label="Close basket">×</button>
+  </header>
+  <div class="basket-lines" id="basketLines"></div>
+  <footer class="basket-f" id="basketFoot" hidden>
+    <div class="basket-row"><span>Rental subtotal</span><b id="basketSubtotal">₱0</b></div>
+    <div class="basket-row"><span>Deposits</span><b id="basketDeposit">₱0</b></div>
+    <p class="basket-note" id="basketDepositNote"></p>
+    <div class="basket-row basket-total"><span>Total so far</span><b id="basketTotal">₱0</b></div>
+    <button type="button" class="basket-checkout" id="basketCheckout">Checkout</button>
+  </footer>
+</aside>
+
+<div class="voucher-modal" id="voucherModal" hidden>
+  <div class="voucher-sheet" role="dialog" aria-modal="true" aria-labelledby="voucherTitle">
+    <header class="voucher-h">
+      <h2 id="voucherTitle">Have a voucher?</h2>
+      <button type="button" class="basket-x" id="voucherClose" aria-label="Close">×</button>
+    </header>
+    <p class="voucher-lead">Apply a code before you pay. One code per order.</p>
+    <form class="voucher-form" id="voucherForm">
+      <div class="voucher-row">
+        <input id="voucherCode" name="code" autocomplete="off" maxlength="24" placeholder="MONTHLY10" aria-label="One code per order">
+        <button type="submit" class="voucher-apply">Apply</button>
+      </div>
+    </form>
+    <div class="voucher-msg voucher-ok" id="voucherOk" hidden></div>
+    <div class="voucher-msg voucher-err" id="voucherErr" hidden>
+      <b>Code not valid</b>
+      <span>Check the code and try again, or skip to payment.</span>
+    </div>
+    <div class="voucher-summary" id="voucherSummary"></div>
+    <button type="button" class="basket-checkout" id="voucherContinue">Continue to payment</button>
+    <button type="button" class="voucher-skip" id="voucherSkip">Skip</button>
+    <p class="voucher-pay">You'll pay with GCash, Maya, QR Ph, PayPal or bank transfer. Card payment is not available.</p>
+  </div>
+</div>
+<script src="/js/basket.js?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>" defer></script>
