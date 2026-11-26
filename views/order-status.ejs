@@ -108,7 +108,7 @@
   <div class="prog" aria-label="Checkout">
     <div class="prog-top">
       <div class="prog-kicker">Step <%= ordStep %> of 4</div>
-      <div class="prog-name"><%= ordNames[ordStep - 1] %><% if (ordStep === 3) { %> · ₱<%= (order.amount_due || 0) + (order.deposit_due || 0) %><% } %></div>
+      <div class="prog-name"><%= ordNames[ordStep - 1] %><% if (ordStep === 3) { %> · ₱<%= pesoText(totalDue) %><% } %></div>
     </div>
     <div class="prog-track">
       <% for (var si = 1; si <= 4; si++) { %><div class="prog-dot<%= si < ordStep ? ' done' : (si === ordStep ? ' on' : '') %>"></div><% } %>
@@ -343,7 +343,7 @@
       </div>
       <% payMethods.forEach((m, i) => { %>
       <div class="ord-pay-panel<%= i === 0 ? '' : ' ord-hidden' %>" data-m="<%= m.key %>"
-           data-amt="<%= (m.key === 'paypal' && paypalQuote) ? paypalQuote.total : totalDue %>">
+           data-amt="<%= pesoText((m.key === 'paypal' && paypalQuote) ? paypalQuote.total : totalDue) %>">
         <% if (m.key === 'paypal' && paypalQuote) { %>
           <div class="ord-pay-row"><span>Rental</span><strong>₱<%= paypalQuote.base %></strong></div>
           <%# One combined line on purpose. Itemising the PayPal cut and the

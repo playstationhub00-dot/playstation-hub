@@ -43,6 +43,9 @@ ok('MONTHLY10 on a mixed basket matches the owner example', () => {
   assert.strictEqual(quoted.amount_due, 1377.1);
   assert.strictEqual(quoted.total, 1477.1);
   assert.strictEqual(quoted.labels.total, '1,477.10');
+  assert.strictEqual(quoted.labels.subtotal, '1,447');
+  assert.strictEqual(basket.formatPeso(1547), '1,547');
+  assert.strictEqual(basket.formatPeso(69.9), '69.90');
   assert.strictEqual(quoted.lines[1].price, 399);
   assert.ok(quoted.note.includes('₱69.90 from PS Plus Deluxe (₱699)'));
   assert.ok(quoted.note.includes('Weekly lines are unchanged'));
@@ -197,7 +200,9 @@ async function main() {
   assert.ok(page.body.includes('Silent Hill f'));
   assert.ok(page.body.includes('Phantom Blade Zero'));
   assert.ok(page.body.includes('MONTHLY10'));
-  assert.ok(page.body.includes('1,477.10'));
+    assert.ok(page.body.includes('1,477.10'));
+    assert.ok(page.body.includes('Pay · ₱1,477.10'));
+    assert.ok(page.body.includes('Amount: PHP 1,477.10'));
   ['GCash', 'Maya', 'QR Ph', 'PayPal', 'Bank transfer'].forEach(label => assert.ok(page.body.includes(label), label));
   assert.ok(!page.body.includes('Pay now —'));
   const single = await call('POST', '/api/checkout/start', {

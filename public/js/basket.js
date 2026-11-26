@@ -20,6 +20,13 @@
     paintAdded();
     paintCount();
   }
+  function money(n) {
+    var cents = Math.round((Number(n) || 0) * 100);
+    var whole = Math.trunc(cents / 100);
+    var frac = Math.abs(cents % 100);
+    var body = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return frac ? body + '.' + String(frac).padStart(2, '0') : body;
+  }
   function peso(label) { return '₱' + (label == null ? '0' : label); }
 
   function paintCount() {
@@ -93,14 +100,17 @@
       var cover = line.cover
         ? '<img class="basket-cover" src="' + String(line.cover).replace(/"/g, '') + '" alt="">'
         : '<div class="basket-cover ph">No cover</div>';
-      var price = line.price == null ? '…' : ('₱' + (data.labels && line.price % 1 ? Number(line.price).toFixed(2) : line.price));
+      var price = line.price == null ? '…' : ('₱' + money(line.price));
       return '<article class="basket-line" data-i="' + index + '">' +
         cover +
         '<div><h3>' + escapeHtml(line.game_title || 'Game') + '</h3>' +
         '<p>' + escapeHtml(line.type_name || '') + (line.plan ? ' · ' + escapeHtml(line.plan) : '') + '</p>' +
-        '<div class="basket-segs">' + typeButtons(line) +
-          '<button type="button" class="basket-seg' + (Number(line.days) === 7 ? ' on' : '') + '" data-act="days" data-days="7">Weekly</button>' +
-          '<button type="button" class="basket-seg' + (Number(line.days) === 30 ? ' on' : '') + '" data-act="days" data-days="30">Monthly</button>' +
+        '<div class="basket-controls">' +
+          '<div class="basket-segs">' + typeButtons(line) + '</div>' +
+          '<div class="basket-plan" role="group" aria-label="Weekly or Monthly">' +
+            '<button type="button" class="basket-plan-btn' + (Number(line.days) === 7 ? ' on' : '') + '" data-act="days" data-days="7">Weekly</button>' +
+            '<button type="button" class="basket-plan-btn' + (Number(line.days) === 30 ? ' on' : '') + '" data-act="days" data-days="30">Monthly</button>' +
+          '</div>' +
         '</div>' +
         '<div class="basket-price">' + price + '</div></div>' +
         '<button type="button" class="basket-remove" data-act="remove" aria-label="Remove">×</button></article>';
@@ -232,7 +242,7 @@
     var labels = (data && data.labels) || {};
     var rows = (data && data.lines) || [];
     sum.innerHTML = rows.map(function (line) {
-      return '<div class="voucher-sum-row"><span>' + escapeHtml(line.game_title) + ' · ' + escapeHtml(line.type_name || '') + ' · ' + escapeHtml(line.plan || '') + '</span><span>₱' + line.price + '</span></div>';
+      return '<div class="voucher-sum-row"><span>' + escapeHtml(line.game_title) + ' · ' + escapeHtml(line.type_name || '') + ' · ' + escapeHtml(line.plan || '') + '</span><span>₱' + money(line.price) + '</span></div>';
     }).join('') +
       (data && data.discount ? '<div class="voucher-sum-row voucher-off"><span>' + escapeHtml(data.code || 'Code') + '</span><span>−₱' + labels.discount + '</span></div>' : '') +
       '<div class="voucher-sum-row"><span>Refundable deposit</span><span>₱' + (labels.deposit || '0') + '</span></div>' +

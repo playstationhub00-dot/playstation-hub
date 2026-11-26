@@ -108,7 +108,8 @@ body.hub .rcard .basket-add.is-in {
 }
 .basket-line h3 { margin: 0 0 6px; font-size: 0.95rem; }
 .basket-line p { margin: 0 0 8px; color: #9a9a9a; font-size: 0.75rem; }
-.basket-segs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.basket-controls { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+.basket-segs { display: flex; flex-wrap: wrap; gap: 6px; }
 .basket-seg {
   border: 1px solid #3a3a3a;
   background: #1a1a1a;
@@ -120,6 +121,26 @@ body.hub .rcard .basket-add.is-in {
   cursor: pointer;
 }
 .basket-seg.on { background: #F5B800; color: #111; border-color: #F5B800; }
+.basket-plan {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  border: 1px solid #3a3a3a;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.basket-plan-btn {
+  border: 0;
+  background: #1a1a1a;
+  color: #ddd;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.basket-plan-btn + .basket-plan-btn { box-shadow: inset 1px 0 0 #3a3a3a; }
+.basket-plan-btn.on { background: #F5B800; color: #111; }
 .basket-price { font-size: 1.15rem; font-weight: 800; }
 .basket-remove {
   border: 0;
