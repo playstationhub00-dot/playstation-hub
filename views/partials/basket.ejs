@@ -20,26 +20,33 @@
 
 <div class="voucher-modal" id="voucherModal" hidden>
   <div class="voucher-sheet" role="dialog" aria-modal="true" aria-labelledby="voucherTitle">
+    <div class="voucher-grab" aria-hidden="true"></div>
     <header class="voucher-h">
-      <h2 id="voucherTitle">Have a voucher?</h2>
+      <div>
+        <h2 id="voucherTitle">Review your order</h2>
+        <p class="voucher-sub" id="voucherSub">A voucher is optional</p>
+      </div>
       <button type="button" class="basket-x" id="voucherClose" aria-label="Close">×</button>
     </header>
-    <p class="voucher-lead">Apply a code before you pay. One code per order.</p>
+    <div class="voucher-kicker">Your games</div>
+    <div class="voucher-games" id="voucherGames"></div>
+    <div class="voucher-kicker voucher-kicker-code">Have a voucher? <span class="voucher-opt">Optional</span></div>
     <form class="voucher-form" id="voucherForm">
       <div class="voucher-row">
-        <input id="voucherCode" name="code" autocomplete="off" maxlength="24" placeholder="MONTHLY10" aria-label="One code per order">
-        <button type="submit" class="voucher-apply">Apply</button>
+        <input id="voucherCode" name="code" autocomplete="off" maxlength="24" placeholder="Enter voucher code" aria-label="Voucher code">
+        <button type="submit" class="voucher-apply" id="voucherApply">Apply</button>
       </div>
     </form>
+    <p class="voucher-hint" id="voucherHint">One code per order. No code? Continue to payment — a voucher is optional.</p>
     <div class="voucher-msg voucher-ok" id="voucherOk" hidden></div>
     <div class="voucher-msg voucher-err" id="voucherErr" hidden>
       <b>Code not valid</b>
-      <span>Check the code and try again, or skip to payment.</span>
+      <span>Check the code and try again. You can still continue to payment without a voucher.</span>
     </div>
     <div class="voucher-summary" id="voucherSummary"></div>
     <button type="button" class="basket-checkout" id="voucherContinue">Continue to payment</button>
-    <button type="button" class="voucher-skip" id="voucherSkip">Skip</button>
-    <p class="voucher-pay">You'll pay with GCash, Maya, QR Ph, PayPal or bank transfer. Card payment is not available.</p>
+    <p class="voucher-pay">You'll pay with GCash, Maya, QR Ph, PayPal or bank transfer.</p>
+    <div class="voucher-chips" aria-hidden="true"><span>GCash</span><span>Maya</span><span>QR Ph</span><span>PayPal</span><span>Bank transfer</span></div>
   </div>
 </div>
 <script src="/js/basket.js?v=<%= typeof assetV !== 'undefined' ? assetV : '' %>" defer></script>

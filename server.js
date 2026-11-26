@@ -4079,7 +4079,12 @@ async function basketPrepare(body) {
   }
   const depositEach = Number((getSiteSettings().promo || {}).deposit) || 0;
   const priced = basketLib.priceLines(games, selections, depositEach);
-  priced.lines.forEach(line => { line.offered = offered[String(line.game_id)] || [line.account_type]; });
+  priced.lines.forEach(line => {
+    line.offered = offered[String(line.game_id)] || [line.account_type];
+    const game = games.find(g => String(g.id) === String(line.game_id));
+    const tier = tierStyle.tierOf(game, getPriceCategories());
+    line.tier_name = tier ? tier.name : '';
+  });
   if (blocked.length) {
     return { ok: false, error: 'full', message: blocked[0], priced };
   }

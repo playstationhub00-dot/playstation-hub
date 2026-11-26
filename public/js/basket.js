@@ -231,21 +231,62 @@
     var ok = document.getElementById('voucherOk');
     var err = document.getElementById('voucherErr');
     var sum = document.getElementById('voucherSummary');
-    if (ok) { ok.hidden = state !== 'ok'; ok.textContent = (data && data.note) || ''; }
+    var games = document.getElementById('voucherGames');
+    var sub = document.getElementById('voucherSub');
+    var applyBtn = document.getElementById('voucherApply');
+    var input = document.getElementById('voucherCode');
+    var lines = (data && data.lines) || [];
+    var n = lines.length;
+    if (sub) sub.textContent = n + (n === 1 ? ' game' : ' games') + ' · a voucher is optional';
+    if (applyBtn) {
+      var on = state === 'ok' && !!(data && data.code);
+      applyBtn.textContent = on ? 'Remove' : 'Apply';
+      applyBtn.classList.toggle('is-remove', on);
+    }
+    if (input && state === 'ok' && data && data.code) input.value = data.code;
+    if (ok) {
+      ok.hidden = state !== 'ok';
+      if (state === 'ok' && data) {
+        var note = data.note || 'The deposit is not discounted.';
+        var prefix = (data.code || '') + ' applied.';
+        if (note.indexOf(prefix) === 0) note = note.slice(prefix.length).trim();
+        ok.innerHTML = '<b>' + escapeHtml(data.code || 'Code') + ' applied</b><span>' + escapeHtml(note) + '</span>';
+      }
+    }
     if (err) {
       err.hidden = state !== 'err';
-      if (state === 'err' && data && data.message && data.message !== 'Code not valid') {
-        err.querySelector('b').textContent = data.message;
-      } else if (err.querySelector('b')) err.querySelector('b').textContent = 'Code not valid';
+      var title = err.querySelector('b');
+      var detail = err.querySelector('span');
+      if (title) title.textContent = (data && data.message && data.message !== 'Code not valid') ? data.message : 'Code not valid';
+      if (detail) detail.textContent = 'Check the code and try again. You can still continue to payment without a voucher.';
+    }
+    if (games) {
+      games.innerHTML = lines.map(function (line) {
+        var chip = line.account_type === 'tr' ? 'is-tr' : line.account_type === 'ps4' ? 'is-ps4' : 'is-nt';
+        var cover = line.cover
+          ? '<img class="vg-cover" src="' + String(line.cover).replace(/"/g, '') + '" alt="">'
+          : '<span class="vg-ph" aria-hidden="true"></span>';
+        var dep = line.deposit > 0 ? '<div class="vg-dep">+ ₱' + money(line.deposit) + ' deposit</div>' : '';
+        var tier = line.tier_name ? '<div class="vg-tier">' + escapeHtml(line.tier_name) + ' tier</div>' : '';
+        return '<article class="vg-line">' + cover + '<div><div class="vg-top"><b>' + escapeHtml(line.game_title || 'Game') + '</b><span>₱' + money(line.price) + '</span></div>' +
+          tier +
+          '<div class="vg-chips"><span class="vg-chip ' + chip + '">' + escapeHtml(line.type_name || '') + '</span><span class="vg-chip">' + escapeHtml(line.plan || '') + '</span></div>' +
+          dep + '</div></article>';
+      }).join('');
     }
     if (!sum) return;
     var labels = (data && data.labels) || {};
-    var rows = (data && data.lines) || [];
-    sum.innerHTML = rows.map(function (line) {
-      return '<div class="voucher-sum-row"><span>' + escapeHtml(line.game_title) + ' · ' + escapeHtml(line.type_name || '') + ' · ' + escapeHtml(line.plan || '') + '</span><span>₱' + money(line.price) + '</span></div>';
-    }).join('') +
-      (data && data.discount ? '<div class="voucher-sum-row voucher-off"><span>' + escapeHtml(data.code || 'Code') + '</span><span>−₱' + labels.discount + '</span></div>' : '') +
+    var deps = lines.filter(function (line) { return line.deposit > 0; });
+    var each = deps.length ? money(deps[0].deposit) : (labels.deposit || '0');
+    var note = '₱' + each + ' each on Trophy and PS4 Primary lines. Non-Trophy is ₱0.';
+    if (deps.length) {
+      note += ' This order has ' + deps.length + ' deposit' + (deps.length === 1 ? '' : 's') + ' (' + deps.map(function (line) { return line.game_title; }).join(', ') + ').';
+    }
+    sum.innerHTML =
+      '<div class="voucher-sum-row"><span>Rental subtotal</span><span>₱' + (labels.subtotal || '0') + '</span></div>' +
+      (data && data.discount ? '<div class="voucher-sum-row voucher-off"><span><span class="voucher-code-chip">' + escapeHtml(data.code || '') + '</span></span><span>−₱' + labels.discount + '</span></div>' : '') +
       '<div class="voucher-sum-row"><span>Refundable deposit</span><span>₱' + (labels.deposit || '0') + '</span></div>' +
+      '<p class="voucher-note">' + escapeHtml(note) + '</p>' +
       '<div class="voucher-sum-row voucher-sum-total"><span>Total to send</span><b>₱' + (labels.total || '0') + '</b></div>';
   }
 
@@ -256,7 +297,16 @@
   var voucherForm = document.getElementById('voucherForm');
   if (voucherForm) voucherForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    var code = (document.getElementById('voucherCode').value || '').trim();
+    var input = document.getElementById('voucherCode');
+    var applyBtn = document.getElementById('voucherApply');
+    if (applyBtn && applyBtn.classList.contains('is-remove')) {
+      applied = '';
+      if (input) input.value = '';
+      refresh().then(function () { paintVoucher(quote, ''); });
+      return;
+    }
+    var code = (input && input.value || '').trim();
+    if (!code) return;
     fetch('/api/basket/quote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -290,9 +340,7 @@
     }).catch(function () { paintVoucher(quote, 'err'); });
   }
   var go = document.getElementById('voucherContinue');
-  if (go) go.addEventListener('click', function () { pay(true); });
-  var skip = document.getElementById('voucherSkip');
-  if (skip) skip.addEventListener('click', function () { applied = ''; pay(false); });
+  if (go) go.addEventListener('click', function () { pay(!!applied); });
   var vx = document.getElementById('voucherClose');
   if (vx) vx.addEventListener('click', closeVoucher);
 
