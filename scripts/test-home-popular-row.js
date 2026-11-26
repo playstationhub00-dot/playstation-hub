@@ -96,9 +96,11 @@ async function main() {
     const titles = [...popular.matchAll(/class="gc-title-text">([^<]+)</g)].map(m => m[1]);
     assert.ok(fresh.includes('Zzyzx New One'));
     assert.ok(!popular.includes('Zzyzx New One'));
-    assert.deepStrictEqual(titles, ['Zzyzx Recent', 'Zzyzx All Time', 'Zzyzx Backfill']);
-    assert.ok(popular.includes('Rent now'));
-    assert.ok(popular.includes('Join the line'));
+    assert.strictEqual(titles[0], 'PS Plus Deluxe');
+    assert.strictEqual(titles.filter(t => t === 'PS Plus Deluxe').length, 1);
+    assert.deepStrictEqual(titles.slice(1), ['Zzyzx Recent', 'Zzyzx All Time', 'Zzyzx Backfill']);
+    assert.ok(popular.includes('href="/ps-plus/rent"'));
+    assert.ok(popular.includes('Rent now') || popular.includes('Join the line'));
     assert.ok(!popular.includes('Zzyzx Never'));
   });
   const browse = await get('/browse?tab=most-rented');

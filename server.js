@@ -2672,6 +2672,35 @@ app.get('/', (req, res) => {
   const withWeekly = g => ({ game: g, weekly: homeView.weeklyFrom(g, s.promo) });
   const shownNew = (newReleasesRaw.length ? newReleasesRaw : all).slice(0, 6);
   const shownNewIds = new Set(shownNew.map(g => Number(g.id)));
+  // PS Plus Deluxe is always the first Popular card. Use the catalogue row
+  // when there is one (its prices and cover stay whatever they already are).
+  // Otherwise build the same card from the PS Plus price list and slot counts
+  // and the existing rent page.
+  const deluxeRow = all.find(g => seo.isPsplusDeluxeTitle(g.title));
+  let deluxeCard = deluxeRow;
+  if (!deluxeCard) {
+    const prices = getPsplusPrices() || {};
+    const slots = getPsplusSlots() || {};
+    const newGamesCat = getPriceCategories().find(c => /new games/i.test(String(c && c.name || '')));
+    deluxeCard = {
+      id: null,
+      title: 'PS Plus Deluxe',
+      platform: (Number(slots.ps4_slots) || 0) > 0 ? 'PS4/PS5' : 'PS5',
+      cover_image: '',
+      is_bundle: false,
+      price_category_id: newGamesCat ? newGamesCat.id : null,
+      nt_price_7d: prices.nt_price_7d,
+      nt_price_30d: prices.nt_price_30d,
+      tr_price_7d: prices.tr_price_7d,
+      tr_price_30d: prices.tr_price_30d,
+      non_trophy_slots: Number(slots.nt_slots) || 0,
+      trophy_slots: Number(slots.tr_slots) || 0,
+      ps4_primary_slots: Number(slots.ps4_slots) || 0
+    };
+  }
+  const popularRanked = homeView.rentalRanking(all, homeCustomers, new Date())
+    .filter(g => !shownNewIds.has(Number(g.id)) && !seo.isPsplusDeluxeTitle(g.title))
+    .slice(0, 5);
   const home = {
     banner: homeView.bannerGames(all, s.home_banner_ids, newReleasesRaw).map(withWeekly),
     topRented: homeView.topRented(all, homeCustomers, new Date()).map(withWeekly),
@@ -2686,11 +2715,9 @@ app.get('/', (req, res) => {
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,
-    // Skip the games New releases actually draws and fill with the next
-    // most-rented titles. Browse → Most popular is not filtered this way.
-    popularGames: homeView.rentalRanking(all, homeCustomers, new Date())
-      .filter(g => !shownNewIds.has(Number(g.id)))
-      .slice(0, 6),
+    // Deluxe is pinned first even when it is in New releases or has no rental
+    // count. The five after it are the usual ranking. Browse is not pinned.
+    popularGames: [deluxeCard, ...popularRanked].slice(0, 6),
     bands: getBrowseBands(),
     hasPs4: all.some(g => g.platform === 'PS4' || g.platform === 'PS4/PS5')
   };
