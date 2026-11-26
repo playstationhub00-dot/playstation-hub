@@ -23,18 +23,22 @@ const game = (id, title, extra) => Object.assign({
 fs.writeFileSync(path.join(DATA_DIR, 'games.json'), JSON.stringify({
   admin_password: 'throwaway-popular',
   games: [
-    game(1, 'Zzyzx New One', { release_date: daysAgo(2), renters: 0 }),
-    game(2, 'Zzyzx Recent', { renters: 1, non_trophy_slots: 2, trophy_slots: 1 }),
-    game(3, 'Zzyzx All Time', { renters: 40, non_trophy_slots: 0, trophy_slots: 0 }),
-    game(4, 'Zzyzx Never', { renters: 0 })
+    game(1, 'Zzyzx New One', { release_date: daysAgo(2), renters: 1 }),
+    game(2, 'Zzyzx Recent', { release_date: '', renters: 1, non_trophy_slots: 2, trophy_slots: 1 }),
+    game(3, 'Zzyzx All Time', { release_date: '', renters: 40, non_trophy_slots: 0, trophy_slots: 0 }),
+    game(5, 'Zzyzx Backfill', { release_date: '', renters: 2 }),
+    game(4, 'Zzyzx Never', { release_date: '', renters: 0 })
   ],
   upcoming: [{
     id: 9, title: 'Zzyzx Soon', platform: 'PS5', release_date: '2027-06-01',
     cover_image: '', non_trophy_slots: 1, trophy_slots: 1
   }],
   customers: [
-    { id: 1, customer_name: 'A', game_id: 2, game_title: 'Zzyzx Recent', status: 'renting', start_date: daysAgo(3) },
-    { id: 2, customer_name: 'B', game_id: 2, game_title: 'Zzyzx Recent', status: 'done', start_date: daysAgo(4) }
+    { id: 1, customer_name: 'A', game_id: 1, game_title: 'Zzyzx New One', status: 'renting', start_date: daysAgo(1) },
+    { id: 2, customer_name: 'B', game_id: 1, game_title: 'Zzyzx New One', status: 'done', start_date: daysAgo(2) },
+    { id: 3, customer_name: 'C', game_id: 1, game_title: 'Zzyzx New One', status: 'done', start_date: daysAgo(2) },
+    { id: 4, customer_name: 'D', game_id: 2, game_title: 'Zzyzx Recent', status: 'renting', start_date: daysAgo(3) },
+    { id: 5, customer_name: 'E', game_id: 2, game_title: 'Zzyzx Recent', status: 'done', start_date: daysAgo(4) }
   ]
 }));
 process.env.PORT = String(PORT);
@@ -87,13 +91,20 @@ async function main() {
     assert.ok(popular.includes('Most rented by players'));
     assert.ok(popular.includes('href="/browse?tab=most-rented"'));
   });
-  ok('recent customer rentals outrank the all-time figure, and never-rented games stay out', () => {
+  ok('a new release that is also heavily rented stays in New releases and Popular backfills', () => {
+    const fresh = slice(home, 'id="newReleasesSection"', 'id="popularGamesSection"');
     const titles = [...popular.matchAll(/class="gc-title-text">([^<]+)</g)].map(m => m[1]);
-    assert.deepStrictEqual(titles, ['Zzyzx Recent', 'Zzyzx All Time']);
+    assert.ok(fresh.includes('Zzyzx New One'));
+    assert.ok(!popular.includes('Zzyzx New One'));
+    assert.deepStrictEqual(titles, ['Zzyzx Recent', 'Zzyzx All Time', 'Zzyzx Backfill']);
     assert.ok(popular.includes('Rent now'));
     assert.ok(popular.includes('Join the line'));
     assert.ok(!popular.includes('Zzyzx Never'));
-    assert.ok(!popular.includes('Zzyzx New One'));
+  });
+  const browse = await get('/browse?tab=most-rented');
+  ok('Browse most rented still lists the new release', () => {
+    assert.strictEqual(browse.status, 200);
+    assert.ok(browse.body.includes('Zzyzx New One'));
   });
   console.log('\n' + passed + ' assertions passed\n');
   process.exit(0);
