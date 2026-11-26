@@ -496,6 +496,10 @@ app.locals.rentPriceHtml = (game, type, days, promo) => {
 };
 // A game's tier (price category) for its pill: { id, name, color, description } or null.
 app.locals.gameTier = (game) => tierStyle.tierOf(game, getPriceCategories());
+app.locals.storefrontBand = (game) => tierStyle.storefrontBand(
+  game && game.price_category_id ? resolveGamePrices(game) : game,
+  tierStyle.tierOf(game, getPriceCategories())
+);
 app.locals.tierPillColor = (cat) => tierStyle.pillColor(cat);
 app.locals.TIER_PILL_COLORS = tierStyle.PILL_COLORS;
 // The Price chip cut-offs on Browse ({ low, high }; defaults 200 / 300).

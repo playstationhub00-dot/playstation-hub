@@ -35,4 +35,35 @@ ok('a game\'s tier comes from its price category', () => {
   assert.strictEqual(T.tierOf(null, cats), null);
 });
 
+ok('GTA VI shows ULTIMATE even when the category is named New Games', () => {
+  const namedNew = { name: 'New Games' };
+  const prices = { nt_price_7d: 449, nt_price_30d: 899, tr_price_7d: 499, tr_price_30d: 999 };
+  assert.deepStrictEqual(
+    T.storefrontBand(Object.assign({ title: 'Grand Theft Auto VI Ultimate Edition' }, prices), namedNew),
+    { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'GTA VI', nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799 }, namedNew),
+    { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Another release', nt_price_7d: 349, nt_price_30d: 699, tr_price_7d: 399, tr_price_30d: 799 }, namedNew),
+    { key: 'new', label: 'NEW GAMES' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand(Object.assign({ title: 'Misnamed release' }, prices), namedNew),
+    { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Anything' }, { name: 'GTA VI Ultimate' }),
+    { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'GTA V' }, { name: 'New Games' }),
+    { key: 'new', label: 'NEW GAMES' }
+  );
+  assert.strictEqual(T.isGtaViTitle('Grand Theft Auto V'), false);
+  assert.strictEqual(T.isUltimatePriceTier(prices), true);
+});
+
 console.log('\n' + passed + ' assertions passed\n');
