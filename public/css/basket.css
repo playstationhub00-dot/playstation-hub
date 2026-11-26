@@ -18,6 +18,11 @@ body.hub .rcard .gc-actions .rcta.line {
   flex: 1 1 auto;
   width: 100%;
 }
+@container gamecard (max-width: 210px) {
+  body.hub .rcard .gc-actions { margin-left: 6px; margin-right: 6px; gap: 3px; }
+  body.hub .rcard .gc-actions .basket-add,
+  body.hub .rcard .gc-actions .rcta { font-size: 9px; padding: 7px 2px; }
+}
 body.hub .rcard .gc-actions .basket-add,
 body.hub .rcard .gc-actions .rcta {
   cursor: pointer;

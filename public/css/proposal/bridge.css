@@ -21,7 +21,7 @@ body.hub .navsearch-item:hover,
 body.hub .navsearch-item.sel { background: #1a1a1a; }
 
 /* Rent catalog */
-body.browse-page.hub .browse-header { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
+body.browse-page.hub .browse-header { width: min(1880px, calc(100% - 40px)); max-width: none; margin: 0 auto; padding: 18px 0 0; box-sizing: border-box; }
 body.browse-page.hub .browse-header h1 { font-size: 28px; letter-spacing: -0.03em; margin: 0; }
 /* Search stays fully under the 64px sticky nav, on load and while scrolling.
    z-index stays below the nav (100). Phone browse-filters.css sets top: 0,
@@ -34,15 +34,15 @@ body.browse-page.hub .bf-top {
   border: 0;
   backdrop-filter: none;
 }
-body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
+body.browse-page.hub .bf-top-in { width: min(1880px, calc(100% - 40px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
 body.browse-page.hub .bf-search { width: 100%; height: auto; }
 body.browse-page.hub .bf-search input { max-width: none; width: 100%; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 22px;
-  width: min(1440px, calc(100% - 48px));
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 18px;
+  width: min(1880px, calc(100% - 40px));
   max-width: none;
   margin: 14px auto 0;
   padding: 0 0 40px;
@@ -70,13 +70,21 @@ body.browse-page.hub .bf-x,
 body.browse-page.hub .bf-foot { display: none; }
 body.browse-page.hub .bf-sheet {
   width: 100%;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 96px);
   background: transparent;
   border: 0;
   box-shadow: none;
   border-radius: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a4a transparent;
 }
+body.browse-page.hub .bf-sheet::-webkit-scrollbar { width: 6px; }
+body.browse-page.hub .bf-sheet::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 99px; }
+body.browse-page.hub .bf-sheet::-webkit-scrollbar-track { background: transparent; }
 body.browse-page.hub .bf-head { padding: 0 0 8px; border: 0; }
 body.browse-page.hub .bf-head h2 { font-size: 13px; }
 body.browse-page.hub .bf-body { padding: 0; overflow: visible; }
@@ -100,14 +108,14 @@ body.browse-page.hub .bf-opt {
   color: #eee;
 }
 body.browse-page.hub .bf-opt input { order: -1; width: 16px; height: 16px; margin: 0; flex: none; }
-body.browse-page.hub .bf-opt-name { flex: 1; min-width: 0; }
-body.browse-page.hub .bf-opt .bf-n { margin-left: auto; color: #8a8a8a; font-size: 13px; font-weight: 600; }
+body.browse-page.hub .bf-opt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.browse-page.hub .bf-opt .bf-n { margin-left: auto; flex: none; color: #8a8a8a; font-size: 13px; font-weight: 600; padding-right: 2px; }
 body.browse-page.hub .bf-opt-zero { opacity: 0.45; }
 body.browse-page.hub .bf-results { padding-top: 0; }
 body.browse-page.hub .games-grid,
 body.browse-page.hub .rentals-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
 }
 body.browse-page.hub .rcard {
@@ -135,7 +143,15 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .bf-chips { order: 2; flex: 1 1 auto; flex-basis: auto; }
   body.browse-page.hub .bf-sort { order: 3; margin-left: auto; }
 }
-@media (max-width: 1100px) {
+@media (min-width: 1680px) {
+  body.browse-page.hub .games-grid,
+  body.browse-page.hub .rentals-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 1279px) {
+  body.browse-page.hub .games-grid,
+  body.browse-page.hub .rentals-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 1023px) {
   body.browse-page.hub .games-grid,
   body.browse-page.hub .rentals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
@@ -914,6 +930,14 @@ body.hub .rcard .gc-week b { color: #fff; }
 body.hub .rcard .gc-month { background: #2c2412; }
 body.hub .rcard .gc-month span,
 body.hub .rcard .gc-month b { color: #F5B800; }
+@container gamecard (max-width: 210px) {
+  body.hub .rcard .gc-split-price { margin: 0 6px; gap: 4px; }
+  body.hub .rcard .gc-split-price > div { padding: 5px 6px; }
+  body.hub .rcard .gc-split-price span { font-size: 7px; }
+  body.hub .rcard .gc-split-price b { font-size: 14px; }
+  body.hub .rcard .slot { margin: 0 6px; font-size: 11px; padding: 3px 4px; gap: 4px; max-width: calc(100% - 12px); }
+  body.hub .rcard .slot > span.gc-st { font-size: 10px; }
+}
 body.hub .rcard .gc2-price { margin: 0; padding: 0 10px; font-size: 13px; color: #d0d0d0; text-shadow: none; }
 body.hub .rcard .gc-price-bit { white-space: nowrap; }
 body.hub .rcard .gc2-price b { color: #F5B800; font-weight: 800; }
