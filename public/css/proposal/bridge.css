@@ -591,8 +591,12 @@ body.hub .rcard .st-badge {
   text-transform: none;
 }
 body.hub .rcard .st-avail { background: #178a45; color: #fff; }
-body.hub .rcard .st-last { background: #e23d2b; color: #fff; }
-body.hub .rcard .st-full { background: #2c2c2c; color: #e6e6e6; }
+body.hub .rcard .st-last {
+  background: #8a5a12;
+  color: #ffe7b0;
+  box-shadow: 0 0 12px rgba(245, 184, 0, 0.45);
+}
+body.hub .rcard .st-full { background: #3a3032; color: #d7c4c8; }
 body.hub a.rcard.gc2-full .gc2-cover,
 body.hub a.rcard.gc2-full .gc2-cover-placeholder { filter: grayscale(1) brightness(0.45); }
 body.hub a.rcard.gc2-full .gc2-title,
@@ -659,6 +663,42 @@ body.hub .rcard .tier-pill {
   color: #eee;
 }
 body.hub .rcard .tier-pill.tier-blue { background: #F5B800; color: #111; }
+body.hub .rcard .gc-band {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #111;
+}
+body.hub .rcard .gc-band-ico { display: inline-flex; width: 14px; height: 14px; }
+body.hub .rcard .gc-band-ico svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; }
+body.hub .rcard .gc-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255,255,255,0.38) 50%, transparent 80%);
+  transform: translateX(-120%);
+  animation: gc-band-shimmer 3.8s ease-in-out infinite;
+  pointer-events: none;
+}
+body.hub .rcard .gc-band-regular { background: linear-gradient(90deg, #6e747c, #c5cad1); }
+body.hub .rcard .gc-band-special { background: linear-gradient(90deg, #8a4e28, #e0a36a); }
+body.hub .rcard .gc-band-deluxe { background: linear-gradient(90deg, #5a2d86, #c9a6ff); color: #fff; }
+body.hub .rcard .gc-band-new { background: linear-gradient(90deg, #b8860b, #F5B800); }
+body.hub .rcard .gc-band-ultimate { background: linear-gradient(90deg, #6b1d3a, #e0b15a); color: #fff; }
+body.hub .rcard .gc-band-psplus { background: linear-gradient(90deg, #1d4f9c, #5aa2ff); color: #fff; }
+body.hub .rcard .gc-band-other { background: linear-gradient(90deg, #3a3a3a, #6a6a6a); color: #fff; }
+@keyframes gc-band-shimmer {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
 body.hub .rcard .gc2-title,
 body.hub .rcard .gc2-title-muted { color: #fff; }
 body.hub .rcard .gc2-title {
@@ -700,6 +740,34 @@ body.hub .rcard .gc2-title.is-marquee .gc-title-text {
   }
 }
 body.hub .rcard .gc2-tags { display: flex; flex-direction: column; flex: 1; gap: 6px; min-height: 0; }
+body.hub .rcard .gc-split-price {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0 10px;
+}
+body.hub .rcard .gc-split-price > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+body.hub .rcard .gc-split-price span {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+body.hub .rcard .gc-split-price b { font-size: 16px; font-weight: 800; line-height: 1.1; }
+body.hub .rcard .gc-week { background: #2b2b2b; }
+body.hub .rcard .gc-week span,
+body.hub .rcard .gc-week b { color: #fff; }
+body.hub .rcard .gc-month { background: #2c2412; }
+body.hub .rcard .gc-month span,
+body.hub .rcard .gc-month b { color: #F5B800; }
 body.hub .rcard .gc2-price { margin: 0; padding: 0 10px; font-size: 13px; color: #d0d0d0; text-shadow: none; }
 body.hub .rcard .gc-price-bit { white-space: nowrap; }
 body.hub .rcard .gc2-price b { color: #F5B800; font-weight: 800; }
@@ -715,7 +783,8 @@ body.hub .rcard .slot {
   margin: 0 10px;
   padding: 4px 6px;
   border-radius: 6px;
-  background: #161616;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
 }
 body.hub .rcard .slot-tr { border-left: 3px solid #F5B800; }
 body.hub .rcard .slot-tr > span:nth-child(2),
@@ -726,8 +795,26 @@ body.hub .rcard .slot-nt .gc-ico { color: #60a5fa; }
 body.hub .rcard .slot-ps4 { border-left: 3px solid #2bb5c8; }
 body.hub .rcard .slot-ps4 > span:nth-child(2),
 body.hub .rcard .slot-ps4 .gc-ico { color: #2bb5c8; }
-body.hub .rcard .slot > span:nth-child(2) { flex: none; }
-body.hub .rcard .slot > span:last-child { white-space: normal; text-align: right; line-height: 1.15; max-width: 62%; }
+body.hub .rcard .slot > span:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.hub .rcard .slot > span.gc-st {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: none;
+  margin-left: auto;
+  max-width: none;
+  white-space: nowrap;
+  text-align: right;
+  line-height: 1;
+  font-size: 11px;
+  font-weight: 700;
+}
 body.hub .rcard .slot span {
   background: none;
   border-radius: 0;
@@ -738,8 +825,32 @@ body.hub .rcard .slot .gc-ico { display: inline-flex; width: 16px; height: 16px;
 body.hub .rcard .slot .gc-ico svg { width: 16px; height: 16px; display: block; }
 body.hub .rcard .slot span:last-child { margin-left: auto; font-weight: 700; }
 body.hub .rcard .slot .ok { color: #3dce7a; }
-body.hub .rcard .slot .low { color: #F5B800; }
-body.hub .rcard .slot .full { color: #8d8d8d; font-weight: 600; }
+body.hub .rcard .slot .last { color: #e7b15a; }
+body.hub .rcard .slot .full { color: #c4b0b4; font-weight: 600; }
+body.hub .rcard .gc-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+body.hub .rcard .st-badge .gc-dot { margin-right: 5px; }
+body.hub .rcard .st-avail .gc-dot,
+body.hub .rcard .slot .ok .gc-dot { animation: gc-status-pulse 1.8s ease-in-out infinite; }
+body.hub .rcard .slot .last .gc-dot { box-shadow: 0 0 6px rgba(231, 177, 90, 0.85); }
+@keyframes gc-status-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(61, 206, 122, 0.55); }
+  50% { opacity: 0.55; box-shadow: 0 0 0 4px rgba(61, 206, 122, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.hub .rcard .gc-band::after,
+  body.hub .rcard .st-avail .gc-dot,
+  body.hub .rcard .slot .ok .gc-dot { animation: none; }
+  body.hub .rcard .st-last,
+  body.hub .rcard .slot .last .gc-dot { box-shadow: none; }
+}
 body.hub .rcard .rcta {
   display: block;
   margin: auto 10px 0;
