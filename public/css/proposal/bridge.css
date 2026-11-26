@@ -35,6 +35,8 @@ body.browse-page.hub .bf-top {
   backdrop-filter: none;
 }
 body.browse-page.hub .bf-top-in { width: min(1440px, calc(100% - 48px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
+body.browse-page.hub .bf-search { width: 100%; height: auto; }
+body.browse-page.hub .bf-search input { max-width: none; width: 100%; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;
@@ -82,28 +84,25 @@ body.browse-page.hub .bf-sec-head h3 {
   font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #888;
 }
 body.browse-page.hub .bf-sec { display: block; }
+body.browse-page.hub .bf-sec-head { width: 100%; margin: 14px 0 2px; display: flex; align-items: baseline; justify-content: space-between; }
+body.browse-page.hub .bf-sec-clear { color: #9a9a9a; font-size: 12px; text-decoration: underline; background: none; border: 0; cursor: pointer; padding: 0; }
 body.browse-page.hub .bf-opt {
   display: flex;
+  align-items: center;
   width: 100%;
   border: 0;
   border-radius: 0;
-  padding: 7px 0;
-  gap: 8px;
-  font-size: 13px;
+  background: none;
+  padding: 6px 0;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eee;
 }
-body.browse-page.hub .bf-sec-head { width: 100%; margin: 10px 0 4px; }
-body.browse-page.hub .bf-opt {
-  display: inline-flex;
-  width: auto;
-  border: 1px solid #262626;
-  border-radius: 99px;
-  padding: 4px 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  background: #101010;
-  gap: 5px;
-}
-body.browse-page.hub .bf-opt input { width: 14px; height: 14px; }
+body.browse-page.hub .bf-opt input { order: -1; width: 16px; height: 16px; margin: 0; flex: none; }
+body.browse-page.hub .bf-opt-name { flex: 1; min-width: 0; }
+body.browse-page.hub .bf-opt .bf-n { margin-left: auto; color: #8a8a8a; font-size: 13px; font-weight: 600; }
+body.browse-page.hub .bf-opt-zero { opacity: 0.45; }
 body.browse-page.hub .bf-results { padding-top: 0; }
 body.browse-page.hub .games-grid,
 body.browse-page.hub .rentals-grid {
@@ -130,7 +129,11 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
 
 @media (min-width: 701px) {
   body.browse-page.hub .bf-open { display: none; }
-  body.browse-page.hub .bf-sort { margin-left: auto; }
+  body.browse-page.hub .bf-head { display: none; }
+  body.browse-page.hub .bf-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+  body.browse-page.hub .bf-count { order: 1; flex: 0 0 auto; }
+  body.browse-page.hub .bf-chips { order: 2; flex: 1 1 auto; flex-basis: auto; }
+  body.browse-page.hub .bf-sort { order: 3; margin-left: auto; }
 }
 @media (max-width: 1100px) {
   body.browse-page.hub .games-grid,
@@ -140,36 +143,98 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .browse-header,
   body.browse-page.hub .bf-top-in,
   body.browse-page.hub .bf-layout { width: calc(100% - 32px); }
-  body.browse-page.hub .bf-layout { grid-template-columns: 1fr; padding: 0 0 80px; }
-  body.browse-page.hub .bf-panel { display: none; position: fixed; inset: 0; z-index: 4000; border-radius: 0; top: auto; }
+  body.browse-page.hub .bf-layout {
+    grid-template-columns: 1fr;
+    padding: 0 0 24px;
+    isolation: auto;
+    z-index: auto;
+  }
+  body.browse-page.hub .bf-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+    align-items: center;
+  }
+  body.browse-page.hub .bf-open {
+    display: flex !important;
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    z-index: auto;
+    grid-column: 1;
+    width: 100%;
+    box-shadow: none;
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+    background: #F5B800;
+    color: #111;
+    border: 0;
+    border-radius: 10px;
+    font-weight: 800;
+  }
+  body.browse-page.hub .bf-sort { grid-column: 2; width: 100%; margin: 0; }
+  body.browse-page.hub .bf-sort select { width: 100%; min-height: 44px; border-radius: 10px; }
+  body.browse-page.hub .bf-count { grid-column: 1 / -1; }
+  body.browse-page.hub .bf-chips { grid-column: 1 / -1; flex-basis: auto; }
+  body.browse-page.hub .bf-panel {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+  }
   body.browse-page.hub .bf-panel.bf-show {
     display: flex !important;
     align-items: flex-end;
-    background: rgba(0,0,0,0.72);
   }
-  body.browse-page.hub .bf-panel.bf-show .bf-backdrop { display: block; }
+  body.browse-page.hub .bf-panel.bf-show .bf-backdrop { display: block; background: rgba(0,0,0,0.72); }
   body.browse-page.hub .bf-panel.bf-show .bf-sheet {
     position: relative;
-    background: #161616 !important;
+    left: auto;
+    right: auto;
+    bottom: auto;
     width: 100%;
     max-height: 88vh;
+    background: #161616 !important;
     border-radius: 18px 18px 0 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-shadow: none;
   }
-  body.browse-page.hub .bf-backdrop { display: block; }
-  body.browse-page.hub .bf-foot, body.browse-page.hub .bf-x { display: flex; }
-  body.browse-page.hub .bf-sheet {
-    background: #121212; border-radius: 18px 18px 0 0; position: fixed; left: 0; right: 0; bottom: 0;
-    max-height: 86vh; width: 100%; display: flex; flex-direction: column; overflow: hidden;
+  body.browse-page.hub .bf-head {
+    display: grid;
+    grid-template-columns: 32px 1fr 32px;
+    align-items: center;
+    padding: 8px 16px 10px;
+    border: 0;
   }
-  body.browse-page.hub .bf-body { overflow: auto; flex: 1; }
-  body.browse-page.hub .bf-foot { position: sticky; bottom: 0; background: #121212; padding: 12px 14px 16px; }
+  body.browse-page.hub .bf-handle {
+    grid-column: 1 / -1;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto 8px;
+    border-radius: 4px;
+    background: #3a3a3a;
+  }
+  body.browse-page.hub .bf-x { display: flex; grid-column: 2; grid-row: 2; justify-content: center; color: #fff; font-size: 18px; text-decoration: none; }
+  body.browse-page.hub .bf-head h2 { grid-column: 1; grid-row: 2; margin: 0; text-align: left; font-size: 16px; font-weight: 800; color: #fff; }
+  body.browse-page.hub .bf-clear-all { display: none; }
+  body.browse-page.hub .bf-body { overflow: auto; flex: 1; padding: 0 16px 12px; }
+  body.browse-page.hub .bf-foot {
+    display: block;
+    position: sticky;
+    bottom: 0;
+    background: #161616;
+    padding: 12px 16px 16px;
+  }
   body.browse-page.hub .games-grid,
   body.browse-page.hub .rentals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  body.browse-page.hub .bf-open { display: inline-flex !important; }
-  body.browse-page.hub.bf-lock #bfOpen { display: none !important; }
 }
 
 /* One container. Sections must not add a second max-width inside .wrap. */

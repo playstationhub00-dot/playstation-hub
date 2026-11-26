@@ -84,7 +84,7 @@
     }).join('') + (chips.length >= 2 ? '<a class="bf-clear" href="' + esc(C.href(C.clearFilters(state))) + '" data-clear-all="1">Clear all</a>' : '');
     $('bfChips').hidden = !chips.length;
     $('bfOpen').hidden = !v.filters;
-    $('bfOpenN').textContent = v.selected ? String(v.selected) : '';
+    $('bfOpenN').textContent = v.selected ? ' (' + v.selected + ')' : '';
     $('bfOpen').classList.toggle('bf-has', v.selected > 0);
   }
   function render() {
@@ -305,9 +305,18 @@
     $('qvTitle').textContent = fact.title;
     $('qvMeta').textContent = [fact.platform, fact.genreLabel].filter(Boolean).join(' · ');
     $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
-      return '<div class="qv-row"><div class="qv-row-name">' + esc(r.label) + '</div>' +
+      var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
+      var st = r.status === 'Last slot' ? 'last' : r.status === 'Full' ? 'full' : 'ok';
+      var icon = kind === 'tr'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg>'
+        : kind === 'ps4'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg>';
+      return '<div class="qv-row">' +
+        '<span class="qv-name qv-' + kind + '">' + icon + esc(r.label) + '</span>' +
+        '<span class="qv-st qv-st-' + st + '"><i></i>' + esc(r.status) + '</span>' +
         '<div class="qv-prices"><span>Weekly<b>' + peso(r.week) + '</b></span><span>Monthly<b>' + peso(r.month) + '</b></span></div>' +
-        '<div class="qv-st">' + esc(r.status) + '</div></div>';
+        '</div>';
     }).join('');
     var add = card.querySelector('.basket-add');
     var cta = card.querySelector('.rcta');

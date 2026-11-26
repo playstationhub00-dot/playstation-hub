@@ -33,20 +33,6 @@
     <nav class="bf-tabs" id="bfTabs" aria-label="Collections">
       <% view.tabs.forEach(t => { %><a class="bf-tab<%= t.on ? ' on' : '' %>" data-tab="<%= t.key %>" href="<%= t.href %>"<%- t.on ? ' aria-current="page"' : '' %>><%= t.label %> <span class="bf-tab-n"><%= t.count %></span></a><% }) %>
     </nav>
-    <div class="bf-bar" id="bfBar">
-      <span class="bf-count" id="bfCount"><%= view.count %> game<%= view.count === 1 ? '' : 's' %></span>
-      <label class="bf-sort" id="bfSortWrap"<%= view.sorts.length > 1 ? '' : ' hidden' %>>
-        <span class="bf-sort-l">Sort</span>
-        <select id="bfSort" aria-label="Sort games">
-          <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
-        </select>
-      </label>
-      <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="bfOpenN"><%= view.selected ? view.selected : '' %></span></a>
-      <div class="bf-chips" id="bfChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
-        <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
-        <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -57,6 +43,7 @@
   <a href="#" class="bf-backdrop" id="bfBackdrop" tabindex="-1" aria-hidden="true"></a>
   <form class="bf-sheet" id="bfForm" method="get" action="/browse">
     <div class="bf-head">
+      <span class="bf-handle" aria-hidden="true"></span>
       <a href="#" class="bf-x" id="bfClose" aria-label="Close filters">✕</a>
       <h2 id="bfPanelTitle">Filters</h2>
       <button type="button" class="bf-clear-all" id="bfClearAll">Clear all</button>
@@ -65,19 +52,13 @@
       <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
       <% if (view.sort !== view.sorts[0].key) { %><input type="hidden" name="sort" value="<%= view.sort %>"><% } %>
       <% if (state.search) { %><input type="hidden" name="search" value="<%= state.search %>"><% } %>
-      <% view.groups.forEach(gr => { if (gr.key === 'price') return; const extra = gr.chips.slice(6); %>
+      <% view.groups.forEach(gr => { if (gr.key === 'price') return; %>
       <section class="bf-sec" data-group="<%= gr.key %>">
         <div class="bf-sec-head">
           <h3><%= gr.label %></h3>
           <button type="button" class="bf-sec-clear" data-clear="<%= gr.key %>"<%= gr.chips.some(c => c.on) ? '' : ' hidden' %>>Clear</button>
         </div>
-        <% gr.chips.slice(0, 6).forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
-        <% if (extra.length) { %>
-        <details class="bf-more"<%= extra.some(c => c.on) ? ' open' : '' %>>
-          <summary>Show all <%= gr.chips.length %></summary>
-          <% extra.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
-        </details>
-        <% } %>
+        <% gr.chips.forEach(c => { %><%- include('partials/browse-filter-option', { c, ff: { name: c.group, value: c.value }, tr: gr.key === 'tier' ? tierRows[c.value] : null }) %><% }) %>
       </section>
       <% }) %>
       <% if (browseData.ctx.week) { %>
@@ -98,6 +79,20 @@
   </form>
 </div>
 <div class="bf-main">
+<div class="bf-bar" id="bfBar">
+  <a href="#bfPanel" class="bf-open<%= view.selected ? ' bf-has' : '' %>" id="bfOpen" aria-haspopup="dialog" aria-controls="bfPanel"<%= view.filters ? '' : ' hidden' %>>Filters<span id="bfOpenN"><%= view.selected ? ' (' + view.selected + ')' : '' %></span></a>
+  <label class="bf-sort" id="bfSortWrap"<%= view.sorts.length > 1 ? '' : ' hidden' %>>
+    <span class="bf-sort-l">Sort</span>
+    <select id="bfSort" aria-label="Sort games">
+      <% view.sorts.forEach(o => { %><option value="<%= o.key %>"<%= o.on ? ' selected' : '' %>><%= o.label %></option><% }) %>
+    </select>
+  </label>
+  <span class="bf-count" id="bfCount"><%= view.count %> game<%= view.count === 1 ? '' : 's' %></span>
+  <div class="bf-chips" id="bfChips"<%= view.filters && applied.length ? '' : ' hidden' %>>
+    <% applied.forEach(c => { %><a class="bf-chip-x" data-group="<%= c.group %>" data-value="<%= c.value %>" href="<%= c.href %>" aria-label="Remove <%= c.label %>"><%= c.label %> ✕</a><% }) %>
+    <% if (applied.length >= 2) { %><a class="bf-clear" href="<%= clearHref %>" data-clear-all="1">Clear all</a><% } %>
+  </div>
+</div>
 
 <%
   // Every card is on the page once; the active tab's matches come first, in

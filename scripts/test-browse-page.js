@@ -87,8 +87,12 @@ const soonShown = html => [...between(html, 'bfSoonGrid', 'bfPsplus').matchAll(/
 const tabs = html => [...between(html, 'bfTabs', 'bfBar').matchAll(/<a class="bf-tab( on)?" data-tab="([\w-]+)" href="([^"]*)"[^>]*>([^<]*?) <span class="bf-tab-n">(\d+)<\/span><\/a>/g)]
   .map(m => ({ key: m[2], on: !!m[1], href: unamp(m[3]), label: m[4], count: Number(m[5]) }));
 const countOf = html => /<span class="bf-count" id="bfCount">([^<]*)<\/span>/.exec(html)[1];
-const sorts = html => [...between(html, 'bfSort', 'bfOpen').matchAll(/<option value="([\w-]+)"( selected)?>/g)].map(m => (m[2] ? '*' : '') + m[1]);
-const barChips = html => [...between(html, 'bfChips', 'bfPanel').matchAll(/<a class="bf-chip-x" data-group="(\w+)" data-value="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(m => ({ group: m[1], value: m[2], href: unamp(m[3]), label: m[4] }));
+const sorts = html => {
+  const i = html.indexOf('id="bfSort"');
+  const j = html.indexOf('</select>', i);
+  return [...html.slice(i, j).matchAll(/<option value="([\w-]+)"( selected)?>/g)].map(m => (m[2] ? '*' : '') + m[1]);
+};
+const barChips = html => [...between(html, 'bfChips', 'bfNotes').matchAll(/<a class="bf-chip-x" data-group="(\w+)" data-value="([^"]*)" href="([^"]*)"[^>]*>([^<]*)<\/a>/g)].map(m => ({ group: m[1], value: m[2], href: unamp(m[3]), label: m[4] }));
 const ranks = html => [...between(html, 'bfGrid', 'bfSoonGrid').matchAll(/<span class="bf-rank bf-rk-(\d+)"( hidden)?>#\d+<\/span>/g)].map(m => (m[2] ? 'hidden ' : '') + '#' + m[1]);
 function browseData(html) {
   const m = /<script type="application\/json" id="browseData">([\s\S]*?)<\/script>/.exec(html);
@@ -212,9 +216,9 @@ async function main() {
     const h = await page('/browse?tab=most-rented&console=ps4&price=low');
     assert.deepStrictEqual(shown(h), [3, 5]);
     assert.deepStrictEqual(barChips(h).map(c => c.label + ' ' + c.href), ['PS4 ✕ /browse?tab=most-rented&price=low', 'Under ₱180 ✕ /browse?tab=most-rented&console=ps4']);
-    assert.ok(between(h, 'bfChips', 'bfPanel').includes('<a class="bf-clear" href="/browse?tab=most-rented" data-clear-all="1">Clear all</a>'));
+    assert.ok(between(h, 'bfChips', 'bfNotes').includes('<a class="bf-clear" href="/browse?tab=most-rented" data-clear-all="1">Clear all</a>'));
     assert.ok(opening(h, 'bfOpen').includes('bf-open bf-has'));
-    assert.ok(h.includes('<span id="bfOpenN">2</span>'));
+    assert.ok(h.includes('<span id="bfOpenN"> (2)</span>'));
   });
   await okAsync('old links: Show ticks open their tab, PS4 links still pick PS4, quick picks open All games', async () => {
     assert.deepStrictEqual(tabs(await page('/browse?avail=1')).filter(t => t.on).map(t => t.key), ['available']);
