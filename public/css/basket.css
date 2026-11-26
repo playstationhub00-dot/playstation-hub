@@ -186,13 +186,59 @@ body.hub .rcard .basket-add.is-in {
 }
 .voucher-sheet {
   width: min(440px, 100%);
-  max-height: min(92vh, 760px);
+  max-height: min(92vh, 820px);
   overflow: auto;
-  background: #141414;
+  background: #161616;
   color: #f3f3f3;
   border: 1px solid #2c2c2c;
-  border-radius: 16px;
+  border-radius: 18px;
+  padding: 8px 18px 18px;
 }
+.voucher-grab { display: none; }
+.voucher-h { align-items: flex-start; padding: 8px 0 12px; }
+.voucher-h h2 { font-size: 1.25rem; }
+.voucher-sub { margin: 4px 0 0; color: #9a9a9a; font-size: 0.86rem; }
+.voucher-kicker {
+  margin: 8px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8d8d8d;
+  font-weight: 800;
+}
+.voucher-kicker-code { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: #fff; font-weight: 800; margin-top: 16px; }
+.voucher-opt {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  font-weight: 800;
+  color: #111;
+  background: #F5B800;
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+.vg-line { display: grid; grid-template-columns: 46px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #262626; }
+.vg-cover, .vg-ph { width: 46px; height: 62px; border-radius: 6px; background: #222; object-fit: cover; }
+.vg-ph { display: block; }
+.vg-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.vg-top b { font-size: 0.95rem; }
+.vg-top span { font-weight: 800; white-space: nowrap; }
+.vg-tier { color: #9a9a9a; font-size: 0.75rem; margin: 2px 0 6px; }
+.vg-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vg-chip { border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 800; background: #1c1c1c; color: #ddd; border: 1px solid #333; }
+.vg-chip.is-nt { color: #8eb6ff; border-color: #2a3d66; background: #121a2a; }
+.vg-chip.is-tr, .vg-chip.is-ps4 { color: #111; background: #F5B800; border-color: #F5B800; }
+.vg-dep { margin-top: 6px; color: #F5B800; font-size: 0.75rem; font-weight: 700; }
+.voucher-hint { color: #8d8d8d; font-size: 0.78rem; margin: 8px 0 0; }
+.voucher-summary { margin-top: 14px; }
+.voucher-sum-row { margin: 6px 0; }
+.voucher-note { color: #8d8d8d; font-size: 0.75rem; margin: -2px 0 8px; }
+.voucher-sum-total { margin-top: 10px; padding-top: 8px; }
+.voucher-sum-total b { color: #F5B800; font-size: 1.45rem; }
+.voucher-code-chip { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: #14301c; color: #b6f0c6; font-size: 11px; font-weight: 800; }
+.voucher-apply.is-remove { background: #2a2a2a; color: #eee; }
+.voucher-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; }
+.voucher-chips span { border: 1px solid #333; border-radius: 999px; padding: 3px 8px; font-size: 11px; color: #cfcfcf; }
 .voucher-label { display: block; font-size: 0.8rem; color: #9a9a9a; margin-bottom: 6px; }
 .voucher-row { display: flex; gap: 8px; }
 .voucher-row input {
@@ -206,24 +252,17 @@ body.hub .rcard .basket-add.is-in {
 }
 .voucher-msg { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 0.88rem; }
 .voucher-ok { background: #102616; color: #b6f0c6; }
+.voucher-ok b, .voucher-ok span { display: block; }
 .voucher-err { background: #2a1214; color: #ffb4b4; }
 .voucher-err b, .voucher-err span { display: block; }
 .voucher-summary { margin-top: 12px; }
 .voucher-off { color: #7dffa6; }
-.voucher-skip {
-  width: 100%;
-  margin-top: 8px;
-  background: transparent;
-  color: #ddd;
-  border: 0;
-  padding: 8px;
-  cursor: pointer;
-  font: inherit;
-}
-.voucher-pay { color: #8d8d8d; font-size: 0.75rem; text-align: center; }
+.voucher-skip { display: none; }
+.voucher-pay { color: #8d8d8d; font-size: 0.75rem; text-align: center; margin: 10px 0 0; }
 .basket-err { color: #ffb4b4; font-size: 0.85rem; margin: 8px 0; }
 @media (max-width: 700px) {
   .basket-panel { width: calc(100% - 12px); }
   .voucher-modal { align-items: flex-end; padding: 0; }
-  .voucher-sheet { width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; }
+  .voucher-sheet { width: 100%; border-radius: 18px 18px 0 0; max-height: 92vh; padding-top: 6px; }
+  .voucher-grab { display: block; width: 48px; height: 5px; border-radius: 99px; background: #6a6a6a; margin: 8px auto 4px; }
 }

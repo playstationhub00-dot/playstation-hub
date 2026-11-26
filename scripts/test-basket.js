@@ -156,6 +156,11 @@ async function main() {
     assert.ok(home.body.includes('id="navBasketToggle"'));
     assert.ok(home.body.includes('Add to basket'));
     assert.ok(home.body.includes('>Rent now</span>'));
+    assert.ok(home.body.includes('Review your order'));
+    assert.ok(home.body.includes('placeholder="Enter voucher code"'));
+    assert.ok(!home.body.includes('placeholder="MONTHLY10"'));
+    assert.ok(!home.body.includes('id="voucherSkip"'));
+    assert.ok(!home.body.includes('Card payment'));
     assert.ok(!home.body.includes('TEST Full Game') || !sliceAdd(home.body, 'TEST Full Game').includes('Add to basket'));
   });
 
@@ -174,6 +179,7 @@ async function main() {
     assert.ok(quote.lines[0].offered.includes('nt'));
     assert.ok(quote.lines[0].offered.includes('tr'));
     assert.ok(quote.lines[0].offered.includes('ps4'));
+    assert.strictEqual(quote.lines[0].tier_name, 'New Games');
   });
 
   const bad = await call('POST', '/api/basket/quote', { lines: picks, code: 'NOTACODE' });
