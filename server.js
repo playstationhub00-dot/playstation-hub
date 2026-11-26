@@ -2684,6 +2684,10 @@ app.get('/', (req, res) => {
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,
+    // Same order as Browse → Most popular: rentals started in the last 30 days
+    // from customer records, then the all-time renters figure. Empty when
+    // nobody has rented, so the row stays off the page.
+    popularGames: homeView.rentalRanking(all, homeCustomers, new Date()).slice(0, 6),
     bands: getBrowseBands(),
     hasPs4: all.some(g => g.platform === 'PS4' || g.platform === 'PS4/PS5')
   };
