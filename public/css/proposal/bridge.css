@@ -35,8 +35,16 @@ body.browse-page.hub .bf-top {
   backdrop-filter: none;
 }
 body.browse-page.hub .bf-top-in { width: min(1880px, calc(100% - 40px)); max-width: none; margin: 0 auto; padding: 12px 0 8px; box-sizing: border-box; }
-body.browse-page.hub .bf-search { width: 100%; height: auto; }
-body.browse-page.hub .bf-search input { max-width: none; width: 100%; }
+body.browse-page.hub .bf-search { width: 100%; height: auto; position: relative; }
+body.browse-page.hub .bf-search input { max-width: none; width: 100%; padding-right: 2.6rem; }
+body.browse-page.hub .bf-search input::-webkit-search-cancel-button,
+body.browse-page.hub .bf-search input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+body.browse-page.hub .bf-search-x {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: transparent; color: #aaa; font-size: 16px; cursor: pointer;
+}
+body.browse-page.hub .bf-search-x[hidden] { display: none !important; }
 body.browse-page.hub .bf-tabs { display: none; }
 body.browse-page.hub .bf-layout {
   display: grid;
@@ -643,7 +651,8 @@ body.home2.hub .card-grid.hh-soon-grid { overflow: visible; }
 }
 
 /* Reference game card: cover, category bar, prices, account rows, button. */
-body.hub a.rcard.gc2-card {
+body.hub a.rcard.gc2-card,
+body.browse-page.hub .bf-soon-card {
   aspect-ratio: auto;
   height: 100%;
   display: flex;
@@ -670,8 +679,12 @@ body.browse-page.hub .bf-item {
   height: auto;
   min-height: 100%;
 }
+/* Author display:flex beats the browser's [hidden], so a search hid the count
+   and left every card on screen. */
+body.browse-page.hub .bf-item[hidden] { display: none !important; }
 body.home2.hub .card-grid > a.rcard.gc2-card,
-body.browse-page.hub .bf-item > a.rcard.gc2-card {
+body.browse-page.hub .bf-item > a.rcard.gc2-card,
+body.browse-page.hub .bf-item > .bf-soon-card {
   flex: 1 1 auto;
   align-self: stretch;
   height: auto !important;
@@ -728,11 +741,12 @@ body.hub .rcard { container-type: inline-size; container-name: gamecard; }
 }
 body.hub .rcard .st-avail { background: #178a45; color: #fff; }
 body.hub .rcard .st-last {
-  background: #8a5a12;
-  color: #ffe7b0;
-  box-shadow: 0 0 12px rgba(245, 184, 0, 0.45);
+  background: #dc2626;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.65);
 }
 body.hub .rcard .st-full { background: #3a3032; color: #d7c4c8; }
+body.hub .rcard .st-soon { background: #F5B800; color: #111; }
 body.hub a.rcard.gc2-full .gc2-cover,
 body.hub a.rcard.gc2-full .gc2-cover-placeholder { filter: grayscale(1) brightness(0.45); }
 body.hub a.rcard.gc2-full .gc2-title,
@@ -1005,7 +1019,7 @@ body.hub .rcard .slot .gc-ico { display: inline-flex; width: 16px; height: 16px;
 body.hub .rcard .slot .gc-ico svg { width: 16px; height: 16px; display: block; }
 body.hub .rcard .slot span:last-child { margin-left: auto; font-weight: 700; }
 body.hub .rcard .slot .ok { color: #3dce7a; }
-body.hub .rcard .slot .last { color: #e7b15a; }
+body.hub .rcard .slot .last { color: #ef4444; }
 body.hub .rcard .slot .full { color: #c4b0b4; font-weight: 600; }
 body.hub .rcard .gc-dot {
   display: inline-block;
@@ -1019,7 +1033,7 @@ body.hub .rcard .gc-dot {
 body.hub .rcard .st-badge .gc-dot { margin-right: 5px; }
 body.hub .rcard .st-avail .gc-dot,
 body.hub .rcard .slot .ok .gc-dot { animation: gc-status-pulse 1.8s ease-in-out infinite; }
-body.hub .rcard .slot .last .gc-dot { box-shadow: 0 0 6px rgba(231, 177, 90, 0.85); }
+body.hub .rcard .slot .last .gc-dot { box-shadow: 0 0 6px rgba(239, 68, 68, 0.9); }
 @keyframes gc-status-pulse {
   0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(61, 206, 122, 0.55); }
   50% { opacity: 0.55; box-shadow: 0 0 0 4px rgba(61, 206, 122, 0); }

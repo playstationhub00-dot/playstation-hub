@@ -270,7 +270,8 @@ async function main() {
     assert.ok(bridge.includes('grid-template-columns: repeat(5, minmax(0, 1fr));'), 'five cards a row from a desktop width');
     assert.ok(bridge.includes('grid-template-columns: repeat(4, minmax(0, 1fr));'), 'four cards on a narrower desktop');
     assert.ok(/\.bf-top \{ position: sticky; top: 64px;/.test(css), 'search, tabs and bar pinned under the menu');
-    assert.ok(/\.bf-results \[hidden\] \{ display: none; \}/.test(css), 'hidden cards stay hidden');
+    assert.ok(/\.bf-results \[hidden\] \{ display: none !important; \}/.test(css), 'hidden cards stay hidden');
+    assert.ok(bridge.includes('.bf-item[hidden]'), 'a flex card cannot ignore the hidden attribute');
   });
   await okAsync('the PS Plus page still shows its weekly price', async () => {
     const r = await call('/ps-plus');

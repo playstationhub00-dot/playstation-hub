@@ -133,6 +133,19 @@ ok('#1–#10 badges only on Most rented in Most rented order', () => {
 });
 
 console.log('\nSearch and filters');
+ok('search ignores case, punctuation and accents, and cod means Call of Duty', () => {
+  const games = [
+    g(1, "Marvel's Wolverine", { text: "Marvel's Wolverine" }),
+    g(2, 'MARVEL Tōkon™', { text: 'MARVEL Tōkon™' }),
+    g(3, 'Call of Duty®', { text: 'Call of Duty®' })
+  ];
+  const local = { games: games, soon: [], psplus: [] };
+  const ids = function (q) { return C.view(local, C.cleanState(st({ search: q }), ctx, local), ctx).ids; };
+  assert.deepStrictEqual(ids('wolverine'), [1]);
+  assert.deepStrictEqual(ids('marvels wolverine'), [1]);
+  assert.deepStrictEqual(ids('tokon'), [2]);
+  assert.deepStrictEqual(ids('cod'), [3]);
+});
 ok('search matches the game\'s text on game tabs, the title on Coming soon, the name on PS Plus', () => {
   assert.deepStrictEqual(v({ search: 'ELDEN' }).ids, [1, 5], 'a bundle matches by the games inside it');
   assert.deepStrictEqual(v({ tab: 'coming-soon', search: 'strand' }).ids, [12]);
