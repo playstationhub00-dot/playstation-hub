@@ -87,8 +87,8 @@
   <% const gdhGallery = (game.gallery || []).filter(Boolean); %>
   <% const gpShots = (gdPsn.media || []).filter(m => m && m.type === 'image').map(m => m.src); %>
   <% const gpFilm = gdPsn.hideGallery ? gpShots : gdhGallery; %>
-  <% const gdTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null; %>
-  <% const gdBand = (!game.is_bundle && typeof storefrontBand === 'function') ? storefrontBand(game) : null; %>
+  <% const gdTier = (typeof gameTier === 'function') ? gameTier(game) : null; %>
+  <% const gdBand = (typeof storefrontBand === 'function') ? storefrontBand(game) : null; %>
   <% const gdPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null; %>
   <% const gpInfo = (gdPsn.info || []); %>
   <% const gpInfoValue = (label) => { const row = gpInfo.find(r => r.label === label); return row ? row.value : ''; }; %>
@@ -150,7 +150,7 @@
     <div class="gp-title">
       <% if (gdEyebrow.length) { %><div class="gd-kicker"><%= gdEyebrow.join(' · ') %></div><% } %>
       <% const gdUltimate = gdBand && gdBand.key === 'ultimate'; %>
-      <% if (gdUltimate || gdTier) { %><span class="tier-pill <%= gdUltimate ? 'tier-ultimate' : ('tier-' + gdTier.color) %> usd-tier-pill"><%= gdUltimate ? gdBand.label : gdTier.name %></span><% } %>
+      <% if (gdBand) { %><span class="tier-pill <%= gdUltimate ? 'tier-ultimate' : ('tier-' + (gdTier ? gdTier.color : 'grey')) %> usd-tier-pill"><%= gdUltimate || !gdTier ? gdBand.label : gdTier.name %></span><% } %>
       <% if (gdPromoBadge) { %><span class="usd-badge usd-badge-promo"><%= gdPromoBadge.text %></span><% } %>
       <%# One h1. "Rent … in the Philippines" stays in the title tag, meta description, and JSON-LD. %>
       <h1 class="usd-title gd-title"><%= game.title %></h1>

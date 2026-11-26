@@ -45,8 +45,8 @@
           <% } %>
           <% home.banner.forEach(b => {
             const g = b.game;
-            const tier = (!g.is_bundle && typeof gameTier === 'function') ? gameTier(g) : null;
-            const band = (!g.is_bundle && typeof storefrontBand === 'function') ? storefrontBand(g) : null;
+            const tier = (typeof gameTier === 'function') ? gameTier(g) : null;
+            const band = (typeof storefrontBand === 'function') ? storefrontBand(g) : null;
             const ultimate = band && band.key === 'ultimate'; %>
           <a class="hm-slide" href="<%= seo.rentPath(g.title) %>">
             <img src="<%= g.cover_image %>" alt="" style="object-position: <%= g.cover_focal_x != null ? g.cover_focal_x : 50 %>% <%= g.cover_focal_y != null ? g.cover_focal_y : 50 %>%;">
@@ -55,7 +55,7 @@
               <span class="hm-kicker">▶ Now playing</span>
               <span class="hm-slide-title"><%= g.title %></span>
               <span class="hm-slide-meta">
-                <% if (ultimate || tier) { %><span class="tier-pill <%= ultimate ? 'tier-ultimate' : ('tier-' + tier.color) %>"><%= ultimate ? band.label : tier.name %></span><% } %>
+                <% if (band) { %><span class="tier-pill <%= ultimate ? 'tier-ultimate' : ('tier-' + (tier ? tier.color : 'grey')) %>"><%= ultimate || !tier ? band.label : tier.name %></span><% } %>
                 <% if (b.weekly) { %><span>Weekly from <b>₱<%= b.weekly %></b></span><% } %>
               </span>
               <span class="hm-btn">Rent now</span>
