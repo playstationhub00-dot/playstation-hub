@@ -91,6 +91,7 @@ const loyalty = require('./lib/loyalty');
 const promos = require('./lib/promos');
 const vouchers = require('./lib/vouchers');
 const holdsLib = require('./lib/holds');
+const basketLib = require('./lib/basket');
 const orderStatusLabel = require('./lib/order-status-label');
 const checkoutPayments = require('./lib/checkout-payments');
 const seo = require('./lib/seo');
@@ -4017,6 +4018,166 @@ app.post('/api/checkout/start', asyncRoute(async (req, res) => {
   }
 }));
 
+function basketSelections(body) {
+  const raw = body && Array.isArray(body.lines) ? body.lines : [];
+  return raw.slice(0, 8).map(line => ({
+    game_id: line && line.game_id,
+    account_type: line && line.account_type,
+    days: line && line.days
+  }));
+}
+
+function basketCatalogGame(id) {
+  if (String(id) === 'psplus') {
+    const row = (getGames() || []).find(g => g && seo.isPsplusDeluxeTitle(g.title));
+    if (row) return resolveGamePrices(row);
+    const prices = getPsplusPrices() || {};
+    const slots = getPsplusSlots() || {};
+    return {
+      id: 'psplus',
+      title: 'PS Plus Deluxe',
+      platform: (Number(slots.ps4_slots) || 0) > 0 ? 'PS4/PS5' : 'PS5',
+      cover_image: '',
+      nt_price_7d: prices.nt_price_7d,
+      nt_price_30d: prices.nt_price_30d,
+      tr_price_7d: prices.tr_price_7d,
+      tr_price_30d: prices.tr_price_30d,
+      non_trophy_slots: Number(slots.nt_slots) || 0,
+      trophy_slots: Number(slots.tr_slots) || 0,
+      ps4_primary_slots: Number(slots.ps4_slots) || 0
+    };
+  }
+  const game = getGame(id);
+  return game ? resolveGamePrices(game) : null;
+}
+
+async function basketPrepare(body) {
+  const selections = basketSelections(body);
+  const games = [];
+  const blocked = [];
+  const offered = {};
+  for (const sel of selections) {
+    const game = basketCatalogGame(sel.game_id);
+    if (!game) {
+      blocked.push('That game is no longer listed.');
+      continue;
+    }
+    const holds = await slotHoldsFor(game.id);
+    const avail = holdsLib.applyCounts(
+      computeAvailability(game, gameAccountSummary(game.id)),
+      holds
+    );
+    const types = [];
+    if (avail.ntAvail) types.push('nt');
+    if (avail.hasTrophy && avail.trAvail) types.push('tr');
+    if (avail.showPs4 && avail.ps4Avail) types.push('ps4');
+    offered[String(game.id)] = types;
+    const type = sel.account_type;
+    const open = types.includes(type);
+    if (!open) blocked.push((game.title || 'That game') + ' has no free slot for that account type.');
+    games.push(game);
+  }
+  const depositEach = Number((getSiteSettings().promo || {}).deposit) || 0;
+  const priced = basketLib.priceLines(games, selections, depositEach);
+  priced.lines.forEach(line => { line.offered = offered[String(line.game_id)] || [line.account_type]; });
+  if (blocked.length) {
+    return { ok: false, error: 'full', message: blocked[0], priced };
+  }
+  return { ok: priced.ok, priced, message: priced.ok ? '' : (priced.errors[0] || 'Your basket is empty.') };
+}
+
+async function basketQuote(body) {
+  const prepared = await basketPrepare(body);
+  if (!prepared.priced || !prepared.priced.ok) {
+    return {
+      ok: false,
+      error: prepared.error || 'lines',
+      message: prepared.message || 'Your basket is empty.'
+    };
+  }
+  if (!prepared.ok) {
+    const shown = basketLib.present(prepared.priced, {});
+    shown.ok = false;
+    shown.error = prepared.error || 'full';
+    shown.message = prepared.message;
+    return shown;
+  }
+  const code = String((body && body.code) || '').trim();
+  const name = String((body && body.fb_name) || '').trim();
+  if (!code) return basketLib.fromValidated(prepared.priced, {});
+  const monthly = prepared.priced.lines.filter(line => line.days === 30).reduce((sum, line) => sum + line.price, 0);
+  const quoted = await resolveVoucherQuote({
+    code,
+    days: monthly > 0 ? 30 : 7,
+    base: monthly > 0 ? monthly : prepared.priced.subtotal,
+    deposit: prepared.priced.deposit,
+    name
+  });
+  if (!quoted.ok) return basketLib.rejected(prepared.priced, quoted);
+  return basketLib.fromValidated(prepared.priced, quoted);
+}
+
+app.post('/api/basket/quote', asyncRoute(async (req, res) => {
+  if (rateLimited('basket_quote', clientIp(req), 40, 10 * 60 * 1000)) {
+    return res.status(429).json({ error: 'rate', message: 'Too many tries. Wait a moment and try again.' });
+  }
+  const quote = await basketQuote(req.body || {});
+  res.status(quote.ok ? 200 : 400).json(quote);
+}));
+
+app.post('/api/basket/checkout', asyncRoute(async (req, res) => {
+  if (rateLimited('order_create', clientIp(req), 10, 10 * 60 * 1000)) {
+    return res.status(429).json({ error: 'rate', message: 'Too many orders. Wait a few minutes and try again.' });
+  }
+  const quote = await basketQuote(req.body || {});
+  if (!quote.ok) return res.status(400).json(quote);
+  const hold = holdsLib.plan(new Date());
+  const first = quote.lines[0];
+  const name = String((req.body && req.body.fb_name) || '').trim().slice(0, 80);
+  const fields = {
+    basket: true,
+    items: quote.lines.map(line => ({
+      game_id: line.game_id,
+      game_title: line.game_title,
+      account_type: line.account_type,
+      days: line.days,
+      price: line.price,
+      deposit: line.deposit
+    })),
+    game_id: first.game_id,
+    game_title: quote.lines.map(line => line.game_title).join(' · '),
+    account_type: first.account_type,
+    days: quote.lines.every(line => line.days === first.days) ? first.days : null,
+    amount_due: quote.amount_due,
+    deposit_due: quote.deposit,
+    fb_name: name,
+    session_id: req.sessionId || null,
+    client_token: orders.cleanClientToken(req.body && req.body.client_token),
+    slot_hold_expires_at: hold.expires,
+    ...(quote.code ? {
+      promo_code: quote.code,
+      promo_discount: quote.discount,
+      promo_id: quote.promo_id,
+      promo_pct: quote.pct
+    } : {})
+  };
+  try {
+    const placed = await createOrderNotified(fields);
+    const order = placed.order;
+    res.json({
+      ok: true,
+      ref: order.ref,
+      k: order.url_key,
+      href: '/order/' + order.ref + '?k=' + order.url_key,
+      total: quote.total,
+      reused: placed.reused
+    });
+  } catch (e) {
+    console.error('[basket checkout]', e.message);
+    res.status(503).json({ error: 'Orders need a database. Set ORDERS_MEMORY=1 for a local test.' });
+  }
+}));
+
 app.post('/api/checkout/:ref/name', asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
   if (!order || req.body.k !== order.url_key) return res.status(404).json({ error: 'Order not found.' });
@@ -4046,11 +4207,20 @@ app.post('/api/checkout/:ref/messenger', asyncRoute(async (req, res) => {
   const plan = order.is_buy ? 'Permanent' : (order.days === 7 ? 'Weekly' : 'Monthly');
   const noteText = order.customer_note || order.notes || '';
   const note = noteText ? 'Note: ' + noteText : '';
+  const itemLines = Array.isArray(order.items) && order.items.length
+    ? order.items.map(item => {
+      const itemType = item.account_type === 'tr' ? 'Trophy' : item.account_type === 'ps4' ? 'PS4 Primary' : 'Non-Trophy';
+      const itemPlan = item.days === 7 ? 'Weekly' : 'Monthly';
+      return item.game_title + ' · ' + itemType + ' · ' + itemPlan + ' · ₱' + item.price;
+    })
+    : null;
+  const gameLine = itemLines ? itemLines.join('\n') : ('Game: ' + order.game_title);
+  const voucherLine = order.promo_code ? (order.promo_code + ': −₱' + (order.promo_discount || 0)) : '';
   const text = (order.is_waitlist || order.hold_for_line)
     ? [
       'Hi! I joined the line.',
-      'Game: ' + order.game_title,
-      typeName + ' · ' + plan,
+      gameLine,
+      itemLines ? '' : (typeName + ' · ' + plan),
       'Line ref: ' + order.ref,
       'Facebook name: ' + name,
       note
@@ -4058,8 +4228,8 @@ app.post('/api/checkout/:ref/messenger', asyncRoute(async (req, res) => {
     : (order.is_reservation && !order.slot_hold_expires_at)
     ? [
       'Hi! I joined the priority line.',
-      'Game: ' + order.game_title,
-      typeName + ' · ' + plan,
+      gameLine,
+      itemLines ? '' : (typeName + ' · ' + plan),
       'Priority fee: ₱' + (order.amount_due || 100),
       'Order ref: ' + order.ref,
       'Facebook name: ' + name,
@@ -4067,12 +4237,13 @@ app.post('/api/checkout/:ref/messenger', asyncRoute(async (req, res) => {
     ].filter(Boolean).join('\n')
     : [
       'Hi! I would like to reserve.',
-      'Game: ' + order.game_title,
-      typeName + ' · ' + plan,
+      gameLine,
+      itemLines ? '' : (typeName + ' · ' + plan),
+      voucherLine,
       'Total to send: ₱' + ((order.amount_due || 0) + (order.deposit_due || 0)),
       'Order ref: ' + order.ref,
       'Facebook name: ' + name
-    ].join('\n');
+    ].filter(Boolean).join('\n');
   res.json({
     ref: order.ref,
     href: 'http://m.me/PlaystationHub00?text=' + encodeURIComponent(text)

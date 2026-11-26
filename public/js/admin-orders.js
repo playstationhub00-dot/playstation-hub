@@ -388,6 +388,11 @@
       fillText(drawer, '[data-od-psn]', detail.psn);
       fillText(drawer, '[data-od-phone]', detail.phone);
       fillText(drawer, '[data-od-game]', detail.game);
+      var voucherRow = drawer.querySelector('[data-od-voucher-row]');
+      if (voucherRow) {
+        voucherRow.hidden = !detail.voucher;
+        fillText(drawer, '[data-od-voucher]', detail.voucher || '');
+      }
       fillText(drawer, '[data-od-rental]', detail.rental);
       fillText(drawer, '[data-od-dates]', detail.dates);
       fillText(drawer, '[data-od-total]', detail.total);
