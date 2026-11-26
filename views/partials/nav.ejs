@@ -16,7 +16,10 @@
   <div class="nav-links" id="navLinks">
     <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
     <div class="nav-drop" data-navdrop="browse">
-      <button type="button" class="nav-drop-btn<%= navBrowseOn ? ' active' : '' %>" aria-expanded="false" aria-controls="navBrowseMenu" aria-haspopup="true">Browse</button>
+      <div class="nav-drop-head">
+        <a href="/browse" class="nav-drop-link<%= navBrowseOn ? ' active' : '' %>">Browse</a>
+        <button type="button" class="nav-drop-caret" aria-expanded="false" aria-controls="navBrowseMenu" aria-haspopup="true" aria-label="Open Browse menu"><span aria-hidden="true">▾</span></button>
+      </div>
       <div class="nav-mega" id="navBrowseMenu" role="region" aria-label="Browse">
         <div class="nav-mega-panel">
           <div class="nm-browse">
@@ -137,7 +140,10 @@
 <div class="nav-drawer" id="navDrawer">
   <div class="nav-drawer-scroll">
     <a href="/" class="<%= navActive === 'home' ? 'active' : '' %>">Home</a>
-    <button type="button" class="nav-acc-btn" aria-expanded="true" aria-controls="navAccBrowse">Browse <span class="nav-acc-chev" aria-hidden="true">⌃</span></button>
+    <div class="nav-acc-row">
+      <a href="/browse" class="nav-acc-link<%= navBrowseOn ? ' active' : '' %>">Browse</a>
+      <button type="button" class="nav-acc-caret" aria-expanded="true" aria-controls="navAccBrowse" aria-label="Show Browse menu"><span class="nav-acc-chev" aria-hidden="true">⌃</span></button>
+    </div>
     <div class="nav-acc-panel" id="navAccBrowse">
       <% (navMenuSafe ? navMenuSafe.browse : [
         { label: 'All games', count: null, href: '/browse' },
@@ -191,8 +197,10 @@
     document.body.classList.remove('nav-open');
     document.body.style.overflow = '';
   }
-  drawer.querySelectorAll('.nav-acc-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
+  drawer.querySelectorAll('.nav-acc-btn, .nav-acc-caret').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const panel = document.getElementById(btn.getAttribute('aria-controls'));
       const open = btn.getAttribute('aria-expanded') !== 'true';
       btn.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -368,8 +376,16 @@
   const CLOSE_MS = 250;
   function setOpen(drop, on) {
     drop.classList.toggle('open', !!on);
-    const btn = drop.querySelector('.nav-drop-btn');
-    if (btn) btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+    drop.querySelectorAll('.nav-drop-caret, .nav-drop-btn').forEach(el => {
+      el.setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+  }
+  function openMenu(drop) {
+    clearTimers(drop);
+    closeAll(drop);
+    setOpen(drop, true);
+    const first = drop.querySelector('.nav-mega a');
+    if (first) first.focus();
   }
   function clearTimers(drop) {
     clearTimeout(drop._openTimer);
@@ -383,21 +399,26 @@
     });
   }
   drops.forEach(drop => {
-    const btn = drop.querySelector('.nav-drop-btn');
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (!desktop()) return;
-      clearTimers(drop);
-      const on = !drop.classList.contains('open');
-      closeAll(drop);
-      setOpen(drop, on);
+    drop.querySelectorAll('.nav-drop-caret, .nav-drop-btn').forEach(toggle => {
+      toggle.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!desktop()) return;
+        clearTimers(drop);
+        const on = !drop.classList.contains('open');
+        closeAll(drop);
+        setOpen(drop, on);
+      });
+      toggle.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); openMenu(drop); }
+      });
     });
-    btn.addEventListener('keydown', e => {
-      if (e.key === 'ArrowDown') {
-        const first = drop.querySelector('.nav-mega a');
-        if (first) { e.preventDefault(); clearTimers(drop); closeAll(drop); setOpen(drop, true); first.focus(); }
-      }
-    });
+    const link = drop.querySelector('.nav-drop-link');
+    if (link) {
+      link.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); openMenu(drop); }
+      });
+    }
     drop.addEventListener('mouseenter', () => {
       if (!fineHover()) return;
       clearTimers(drop);
@@ -408,7 +429,8 @@
       if (!fineHover()) return;
       clearTimeout(drop._openTimer);
       const focus = document.activeElement;
-      if (focus && drop.contains(focus) && focus !== btn) return;
+      const mega = drop.querySelector('.nav-mega');
+      if (focus && mega && mega.contains(focus)) return;
       drop._closeTimer = setTimeout(() => setOpen(drop, false), CLOSE_MS);
     });
     drop.addEventListener('focusout', e => {

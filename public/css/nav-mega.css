@@ -22,6 +22,25 @@
   cursor: pointer;
   position: relative;
 }
+.nav-drop-head { display: inline-flex; align-items: center; gap: 0; }
+.nav-drop-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 1px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary, #b5b5b5);
+  cursor: pointer;
+}
+.nav-drop-caret span { display: block; font-size: 11px; line-height: 1; transition: transform 160ms ease; }
+.nav-drop-caret[aria-expanded="true"] span { transform: rotate(180deg); }
+.nav-drop-caret:hover,
+.nav-drop.open .nav-drop-caret { color: #fff; }
 .nav-drop-btn:hover,
 .nav-drop.open .nav-drop-btn,
 .nav-drop-btn.active { color: #fff; }
@@ -200,6 +219,27 @@ body.hub .nav-drop-btn.active::after {
   font-weight: 700;
   padding: 0.85rem 0.25rem;
   cursor: pointer;
+}
+.nav-acc-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #1c1c1c;
+}
+.nav-drawer .nav-acc-link {
+  flex: 1;
+  border-bottom: 0;
+  color: #fff;
+  font-weight: 700;
+  padding: 0.85rem 0.25rem;
+}
+.nav-acc-caret {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1rem;
 }
 .nav-acc-panel[hidden] { display: none; }
 .nav-acc-panel a {
