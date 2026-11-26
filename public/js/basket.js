@@ -78,7 +78,7 @@
     ];
     var offered = (line && line.offered) || [line.account_type];
     return types.filter(function (t) { return offered.indexOf(t.id) !== -1; }).map(function (t) {
-      return '<button type="button" class="basket-seg' + (t.id === line.account_type ? ' on' : '') + '" data-act="type" data-type="' + t.id + '">' + t.label + '</button>';
+      return '<button type="button" class="basket-seg is-' + t.id + (t.id === line.account_type ? ' on' : '') + '" data-act="type" data-type="' + t.id + '">' + t.label + '</button>';
     }).join('');
   }
 
@@ -101,19 +101,20 @@
         ? '<img class="basket-cover" src="' + String(line.cover).replace(/"/g, '') + '" alt="">'
         : '<div class="basket-cover ph">No cover</div>';
       var price = line.price == null ? '…' : ('₱' + money(line.price));
+      var title = line.game_title || 'Game';
       return '<article class="basket-line" data-i="' + index + '">' +
         cover +
-        '<div><h3>' + escapeHtml(line.game_title || 'Game') + '</h3>' +
-        '<p>' + escapeHtml(line.type_name || '') + (line.plan ? ' · ' + escapeHtml(line.plan) : '') + '</p>' +
-        '<div class="basket-controls">' +
-          '<div class="basket-segs">' + typeButtons(line) + '</div>' +
-          '<div class="basket-plan" role="group" aria-label="Weekly or Monthly">' +
-            '<button type="button" class="basket-plan-btn' + (Number(line.days) === 7 ? ' on' : '') + '" data-act="days" data-days="7">Weekly</button>' +
-            '<button type="button" class="basket-plan-btn' + (Number(line.days) === 30 ? ' on' : '') + '" data-act="days" data-days="30">Monthly</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="basket-price">' + price + '</div></div>' +
-        '<button type="button" class="basket-remove" data-act="remove" aria-label="Remove">×</button></article>';
+        '<div class="basket-main">' +
+          '<div class="basket-title-row"><h3>' + escapeHtml(title) + '</h3>' +
+          '<div class="basket-price">' + price + '</div></div>' +
+          '<div class="basket-meta">' +
+            '<div class="basket-segs">' + typeButtons(line) + '</div>' +
+            '<div class="basket-plan" role="group" aria-label="Weekly or Monthly">' +
+              '<button type="button" class="basket-plan-btn' + (Number(line.days) === 7 ? ' on' : '') + '" data-act="days" data-days="7">Weekly</button>' +
+              '<button type="button" class="basket-plan-btn' + (Number(line.days) === 30 ? ' on' : '') + '" data-act="days" data-days="30">Monthly</button>' +
+            '</div>' +
+          '</div></div>' +
+        '<button type="button" class="basket-remove" data-act="remove" aria-label="Remove ' + escapeHtml(title) + '">×</button></article>';
     }).join('');
     var labels = (data && data.labels) || {};
     document.getElementById('basketSubtotal').textContent = peso(labels.subtotal || '0');
@@ -139,7 +140,7 @@
 
   function escapeHtml(value) {
     return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   function payload(code) {
