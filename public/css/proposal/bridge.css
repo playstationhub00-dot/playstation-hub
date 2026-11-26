@@ -677,7 +677,8 @@ body.hub .rcard .gc-band {
   letter-spacing: 0.08em;
   color: #111;
 }
-body.hub .rcard .gc-band-ico { display: inline-flex; width: 14px; height: 14px; }
+body.hub .rcard .gc-band > * { position: relative; z-index: 1; }
+body.hub a.rcard.gc2-full .gc-band { opacity: 1; filter: none; }
 body.hub .rcard .gc-band-ico svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; }
 body.hub .rcard .gc-band::after {
   content: '';
@@ -714,14 +715,29 @@ body.hub .rcard .gc2-title {
   overflow: hidden;
   min-height: 1.25em;
 }
-body.hub .rcard .gc-title-text { display: inline-block; white-space: nowrap; }
+body.hub .rcard .gc2-title,
 body.hub .rcard .gc2-title.is-marquee {
-  text-overflow: clip;
-  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent);
-  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent);
+  text-overflow: ellipsis;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+body.hub .rcard .gc-title-text,
+body.hub .rcard .gc2-title.is-marquee .gc-title-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: none;
+  transform: none;
+}
+body.hub .rcard .gc2-title.is-marquee {
+  text-overflow: ellipsis;
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 body.hub .rcard .gc2-title.is-marquee .gc-title-text {
-  animation: gc-title-scroll var(--gc-dur, 8s) linear infinite;
+  animation: none;
+  transform: none;
 }
 @keyframes gc-title-scroll {
   0%, 20% { transform: translateX(0); }
