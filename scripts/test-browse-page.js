@@ -267,7 +267,8 @@ async function main() {
     assert.ok(js.includes("location.hash = ''"), 'clears the hash so :target un-matches');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
     const bridge = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'proposal', 'bridge.css'), 'utf8');
-    assert.ok(bridge.includes('grid-template-columns: repeat(4, minmax(0, 1fr));'), 'four cards a row on a desktop');
+    assert.ok(bridge.includes('grid-template-columns: repeat(5, minmax(0, 1fr));'), 'five cards a row from a desktop width');
+    assert.ok(bridge.includes('grid-template-columns: repeat(4, minmax(0, 1fr));'), 'four cards on a narrower desktop');
     assert.ok(/\.bf-top \{ position: sticky; top: 64px;/.test(css), 'search, tabs and bar pinned under the menu');
     assert.ok(/\.bf-results \[hidden\] \{ display: none; \}/.test(css), 'hidden cards stay hidden');
   });
