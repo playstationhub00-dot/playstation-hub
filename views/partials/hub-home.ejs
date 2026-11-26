@@ -48,6 +48,26 @@
   </div>
 </section>
 
+<% const hhPopular = (home && home.popularGames) ? home.popularGames : []; %>
+<% if (hhPopular.length) { %>
+<section class="section" id="popularGamesSection">
+  <div class="wrap">
+    <div class="row-head">
+      <div>
+        <h2>Popular games</h2>
+        <p class="lede">Most rented by players</p>
+      </div>
+      <a href="/browse?tab=most-rented">View all ›</a>
+    </div>
+    <div class="card-grid">
+      <% hhPopular.forEach(function (g) { %>
+        <%- include('game-card', { game: g, showWeekly: true }) %>
+      <% }) %>
+    </div>
+  </div>
+</section>
+<% } %>
+
 <%
   const hhToday = new Date().toISOString().slice(0, 10);
   const hhSeenSoon = {};
