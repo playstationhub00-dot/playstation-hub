@@ -53,6 +53,20 @@ check('only the first name is sent, never the full name', () => {
   assert.ok(!msg.includes('Paredes'), 'surname must not leave the site');
 });
 
+check('a decoded sign-in link is in the alert for the owner to tap', () => {
+  const url = 'https://login.playstation.com/activate?code=abc123';
+  const msg = tg.formatQrAlert(ORDER, { signinUrl: url, expiresAt: '5:42 PM', adminUrl: 'https://x/admin' });
+  assert.ok(msg.includes('Open sign-in: ' + url), msg);
+  assert.ok(!/Photo uploaded/.test(msg), 'a tappable link replaces the scan instruction');
+  assert.ok(msg.includes('https://x/admin'));
+});
+
+check('a code and a link can both be in the alert', () => {
+  const msg = tg.formatQrAlert(ORDER, { code: 'ABCD1234', signinUrl: 'https://id.sony.com/signin' });
+  assert.ok(msg.includes('Code: ABCD1234'));
+  assert.ok(msg.includes('Open sign-in: https://id.sony.com/signin'));
+});
+
 check('a photo alert says so instead of showing a code', () => {
   // No code to type means the owner has to open admin, and the message should
   // say that rather than looking like a code alert with a blank field.

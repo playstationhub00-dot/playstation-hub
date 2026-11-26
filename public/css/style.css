@@ -3790,6 +3790,29 @@ body.light-mode .oq-card-n, body.light-mode .oq-card-lbl { color: #666; }
   background: #111; border: 1px solid #2a2a2a; border-radius: 8px; padding: 0.3rem 0.6rem;
 }
 .oq-signin-code .rem-copy { padding: 0.3rem 0.6rem; font-size: 0.75rem; }
+/* Sign-in panel. The owner uses a phone, so every control is a full-width
+   thumb target. Open sign-in is the decoded Sony link. */
+.oq-signin { margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.5rem; background: #111; border: 1px solid #2a2a2a; border-radius: 12px; padding: 0.75rem; }
+.oq-signin-form { display: flex; flex-direction: column; gap: 0.55rem; margin: 0; }
+.oq-signin-lbl { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #8a8a8a; }
+.oq-signin-acct { width: 100%; box-sizing: border-box; min-height: 44px; background: #0d0d0d; color: #fff; border: 1px solid #333; border-radius: 10px; padding: 0.45rem 0.7rem; font-size: 16px; font-family: inherit; }
+.oq-signin .oq-code { font-size: 1.45rem; padding: 0.55rem 0.75rem; }
+.oq-signin .oq-signin-code { justify-content: space-between; }
+.oq-signin .oq-code-copy { min-height: 44px; padding: 0.45rem 0.9rem; font-size: 0.85rem; }
+.oq-open-signin, .oq-signin .oq-btn-go, .oq-signin .oq-btn-ghost, .oq-signin-photo {
+  display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;
+  min-height: 48px; border-radius: 10px; font-weight: 800; font-size: 1rem; text-decoration: none; text-align: center;
+}
+.oq-open-signin { background: var(--ps-blue); color: #fff; }
+.oq-signin-photo { background: transparent; color: var(--ps-blue); border: 1px solid #2a2a2a; font-size: 0.9rem; }
+.oq-signin-note { margin: 0; font-size: 0.8rem; color: #f59e0b; line-height: 1.4; }
+.oq-signin form { margin: 0; }
+@media (min-width: 720px) {
+  .oq-signin { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+  .oq-signin-form { flex: 1 1 280px; }
+  .oq-signin > form:last-child { flex: 0 0 auto; align-self: flex-end; }
+  .oq-signin > form:last-child .oq-btn-ghost { width: auto; min-height: 48px; padding: 0 1rem; }
+}
 .oq-method { background: #1a1a1a; color: #aaa; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.5px; padding: 0.1rem 0.4rem; border-radius: 4px; margin-right: 0.4rem; }
 /* The fee-inclusive figure a PayPal customer was actually asked to send. */
 .oq-expected { font-size: 0.75rem; opacity: 0.75; margin-left: 0.4rem; white-space: nowrap; }
@@ -3929,6 +3952,10 @@ body.light-mode .oq-more-item { color: #333; }
 body.light-mode .oq-more-item:hover { background: #f2f4f7; color: #111; }
 body.light-mode .oq-more-danger { color: #dc2626; }
 body.light-mode .oq-btn-ghost { color: #555; border-color: #ccc; }
+body.light-mode .oq-signin { background: #f7f7f8; border-color: #e2e2e2; }
+body.light-mode .oq-signin-acct { background: #fff; color: #111; border-color: #ccc; }
+body.light-mode .oq-signin .oq-code { color: #111; background: #fff; border-color: #ddd; }
+body.light-mode .oq-signin-photo { border-color: #ccc; }
 body.light-mode .oq-zone-n,
 body.light-mode .oq-zone-sub,
 body.light-mode .oq-period label,

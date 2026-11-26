@@ -464,11 +464,24 @@
 
   <% if (order.state === 'awaiting_qr') { %>
   <div class="ord-step" id="ordQrStep">
-    <%# The order has come back here from qr_pending because the ten minutes ran
-        out. Without saying so, the page simply reappears asking for a code, which
-        reads as though the first one was never received — and the usual next move
-        is to message and ask what went wrong rather than to send another. %>
-    <% if (order.qr_expired_at) { %>
+    <%# Back from qr_pending either because the ten minutes ran out, or because
+        the owner could not use the code and asked for another. Without saying
+        so, the page simply reappears asking for a code, which reads as though
+        the first one was never received. %>
+    <%
+      const signinFailedAt = order.signin_failed_at || '';
+      const signinExpiredAt = order.qr_expired_at || '';
+      const signinFailed = signinFailedAt && signinFailedAt >= signinExpiredAt;
+    %>
+    <% if (signinFailed) { %>
+    <div class="ord-expired">
+      <div class="ord-expired-t">That sign-in didn't go through</div>
+      <p class="ord-expired-p">
+        We couldn't use the last QR. Nothing is lost and you don't need to pay again —
+        bring the screen up once more and send a fresh QR, or the code shown under it.
+      </p>
+    </div>
+    <% } else if (order.qr_expired_at) { %>
     <div class="ord-expired">
       <div class="ord-expired-t">⏳ That code ran out</div>
       <p class="ord-expired-p">
@@ -494,7 +507,7 @@
       <% } %>
     </div>
     <% } %>
-    <div class="ord-step-label"><%= order.qr_expired_at ? 'Send a fresh code' : 'Send your sign-in code' %></div>
+    <div class="ord-step-label"><%= (order.qr_expired_at || order.signin_failed_at) ? 'Send a fresh code' : 'Send your sign-in code' %></div>
     <% if (ownerOnline) { %>
     <div class="ord-online">🟢 We're online right now — send your code and we'll sign you in straight away.</div>
     <% } else { %>
