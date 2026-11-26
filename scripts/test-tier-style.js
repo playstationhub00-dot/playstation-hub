@@ -52,7 +52,37 @@ ok('GTA VI shows ULTIMATE even when the category is named New Games', () => {
   );
   assert.deepStrictEqual(
     T.storefrontBand(Object.assign({ title: 'Misnamed release' }, prices), namedNew),
+    { key: 'new', label: 'NEW GAMES' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand(Object.assign({ title: 'Misnamed release' }, prices), null),
     { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Anything' }, { name: '  Ultimate  ' }),
+    { key: 'ultimate', label: 'ULTIMATE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Account' }, { name: ' Deluxe ' }),
+    { key: 'deluxe', label: 'DELUXE' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Plus' }, { name: 'PS Plus Deluxe' }),
+    { key: 'psplus', label: 'PS PLUS DELUXE' }
+  );
+  const deluxePrices = { nt_price_7d: 299, nt_price_30d: 599, tr_price_7d: 349, tr_price_30d: 699 };
+  assert.deepStrictEqual(T.storefrontBand(Object.assign({ title: 'Bundle', is_bundle: true }, deluxePrices), null), { key: 'deluxe', label: 'DELUXE' });
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Overlap', nt_price_7d: 199, nt_price_30d: 499, tr_price_7d: 249, tr_price_30d: 549 }, null),
+    { key: 'regular', label: 'REGULAR' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Trophy only', tr_price_7d: 249, tr_price_30d: 549 }, null),
+    { key: 'regular', label: 'REGULAR' }
+  );
+  assert.deepStrictEqual(
+    T.storefrontBand({ title: 'Special only', nt_price_7d: 249, nt_price_30d: 549 }, null),
+    { key: 'special', label: 'SPECIAL' }
   );
   assert.deepStrictEqual(
     T.storefrontBand({ title: 'Anything' }, { name: 'GTA VI Ultimate' }),

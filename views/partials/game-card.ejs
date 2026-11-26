@@ -58,8 +58,8 @@
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
   const gcBundle = resolveBundleInfo(game);
-  // Band from the price category, with GTA VI forced to ULTIMATE (lib/tier-style.js).
-  const gcBand = (!game.is_bundle && typeof storefrontBand === 'function') ? storefrontBand(game) : null;
+  // Band from the price category. Bundles keep theirs too (lib/tier-style.js).
+  const gcBand = (typeof storefrontBand === 'function') ? storefrontBand(game) : null;
   const gcBandKey = gcBand ? gcBand.key : '';
   const gcBandLabel = gcBand ? gcBand.label : '';
   const gcBundleParent = findBundleContaining(game);
