@@ -3209,7 +3209,19 @@ app.get('/browse', (req, res) => {
   const todayIso = new Date().toISOString().slice(0, 10);
   const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo, ranks.get(Number(g.id)), todayIso));
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
-  const soon = upcoming.map((u, i) => ({ id: u.id, title: u.title, text: u.title.toLowerCase(), order: i }));
+  const soon = upcoming.map((u, i) => ({
+    id: u.id,
+    title: u.title,
+    text: [u.title, u.genre || '', u.description || ''].join('\n'),
+    order: i,
+    release: u.release_date && u.release_date !== 'TBA' ? u.release_date : '',
+    cover: u.cover_image || '',
+    ps4: u.platform === 'PS4' || u.platform === 'PS4/PS5',
+    ps5: !u.platform || u.platform === 'PS5' || u.platform === 'PS4/PS5',
+    genres: browseCore.genreParts(u.genre),
+    weekly: Number(u.nt_price_7d) || null,
+    soon: true
+  }));
   const ps = browsePsplusData(accountSummaryMap);
   const weeks = facts.map(f => f.weekly).filter(n => n > 0);
   const week = weeks.length

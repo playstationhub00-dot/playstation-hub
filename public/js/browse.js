@@ -19,9 +19,10 @@
   var copy = function (s) { return JSON.parse(JSON.stringify(s)); };
   var panel = $('bfPanel'), form = $('bfForm'), search = $('bfSearch');
 
-  var gameCards = {}, soonCards = {};
+  var gameCards = {}, soonCards = {}, comingCards = {};
   each(document, '#bfGrid .bf-item[data-id]', function (el) { gameCards[el.getAttribute('data-id')] = el; });
   each(document, '#bfSoonGrid .bf-item[data-soon]', function (el) { soonCards[el.getAttribute('data-soon')] = el; });
+  each(document, '#bfComing .bf-item[data-coming]', function (el) { comingCards[el.getAttribute('data-coming')] = el; });
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -50,6 +51,15 @@
       '<div class="gc2-scrim"></div><div class="gc2-body"><span class="tier-pill tier-gold">PS Plus</span>' +
       '<div class="gc2-title">' + esc(p.n) + '</div>' +
       '<div class="gc2-price">via PS Plus' + (data.psplusFrom ? ' · from <b>₱' + data.psplusFrom + '</b>' : '') + '</div></div></a>';
+  }
+  function renderSoon(v) {
+    var sec = $('bfSoonSec');
+    if (!sec || !C.soonMatches) return;
+    var hits = v.kind === 'games' ? C.soonMatches(data, state) : [];
+    sec.hidden = !hits.length;
+    var count = $('bfSoonCount');
+    if (count) count.textContent = hits.length ? String(hits.length) : '';
+    if ($('bfComing')) place(comingCards, $('bfComing'), hits.map(function (x) { return x.id; }));
   }
   function renderPsplus(v) {
     $('bfPsplus').hidden = v.kind !== 'psplus';
@@ -102,8 +112,15 @@
       return '<p class="cat-desc"><b>' + esc(n.name) + '</b> — ' + esc(n.desc) + '</p>';
     }).join('');
     $('bfEmpty').hidden = v.count > 0;
+    var emptyText = $('bfEmptyText');
+    if (emptyText) emptyText.textContent = state.search ? 'No games match "' + state.search + '".' : 'No games match.';
+    var clearSearch = $('bfClearSearch');
+    if (clearSearch) clearSearch.hidden = !state.search;
     $('bfReset').href = C.href(C.resetState(state));
     renderPsplus(v);
+    renderSoon(v);
+    var searchX = $('bfSearchX');
+    if (searchX) searchX.hidden = !state.search;
     syncRange();
     if (!draft) {
       draft = copy(state);
@@ -134,6 +151,21 @@
     toTop();
   });
   search.addEventListener('input', function () { go(C.withSearch(state, search.value)); });
+  search.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    search.value = '';
+    go(C.withSearch(state, ''));
+  });
+  if ($('bfSearchX')) $('bfSearchX').addEventListener('click', function () {
+    search.value = '';
+    go(C.withSearch(state, ''));
+    search.focus();
+  });
+  if ($('bfClearSearch')) $('bfClearSearch').addEventListener('click', function () {
+    search.value = '';
+    go(C.withSearch(state, ''));
+  });
   $('bfSearchForm').addEventListener('submit', function (e) {
     e.preventDefault();
     search.blur();
@@ -315,7 +347,8 @@
       return '<div class="qv-row">' +
         '<span class="qv-name qv-' + kind + '">' + icon + esc(r.label) + '</span>' +
         '<span class="qv-st qv-st-' + st + '"><i></i>' + esc(r.status) + '</span>' +
-        '<div class="qv-prices"><span>Weekly<b>' + peso(r.week) + '</b></span><span>Monthly<b>' + peso(r.month) + '</b></span></div>' +
+        '<span class="qv-price">Weekly<b>' + peso(r.week) + '</b></span>' +
+        '<span class="qv-price">Monthly<b>' + peso(r.month) + '</b></span>' +
         '</div>';
     }).join('');
     var add = card.querySelector('.basket-add');
@@ -347,6 +380,13 @@
   });
   $('qvClose').addEventListener('click', closeQuick);
   $('qvBackdrop').addEventListener('click', closeQuick);
+  document.addEventListener('click', function (e) {
+    var reserve = e.target.closest && e.target.closest('.bf-reserve');
+    if (!reserve) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (typeof openReserveModal === 'function') openReserveModal(reserve.getAttribute('data-reserve') || '');
+  });
 
   // Old links to the Coming soon slider (/browse#comingSoon) open its tab.
   if (location.hash === '#comingSoon') {

@@ -347,9 +347,25 @@
     return out;
   }
 
+  function fold(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/['’`]/g, '')
+      .replace(/[®™©]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   function searchHit(text, s) {
-    var q = s.search.toLowerCase();
-    return !q || String(text).toLowerCase().indexOf(q) >= 0;
+    var q = fold(s.search);
+    if (!q) return true;
+    var hay = fold(text);
+    if (hay.indexOf(q) >= 0) return true;
+    // "cod" is the short name players type for Call of Duty.
+    if (/(^| )cod( |$)/.test(q) && hay.indexOf(q.replace(/\bcod\b/g, 'call of duty')) >= 0) return true;
+    return false;
   }
 
   // open = a slot is free and it is not the last one; last = exactly one slot
@@ -480,6 +496,21 @@
   // The results bar: "Most rented · 12 games".
   function countText(v) { return v.label + ' · ' + plural(v.count, 'game'); }
 
+  function soonHit(f, s) {
+    if (!searchHit(f.text || f.title || '', s)) return false;
+    if ((s.stocks || []).length || (s.accounts || []).length) return false;
+    if (s.consoles.length && !s.consoles.some(function (c) { return f[c]; })) return false;
+    if (s.genres.length && !s.genres.some(function (g) { return (f.genres || []).indexOf(g) >= 0; })) return false;
+    if ((s.bands || []).length && (s.bands || []).indexOf(f.band) < 0) return false;
+    if (s.tiers.length && s.tiers.indexOf(String(f.tier)) < 0) return false;
+    if (s.wmin != null && !(f.weekly >= s.wmin)) return false;
+    if (s.wmax != null && !(f.weekly <= s.wmax)) return false;
+    return true;
+  }
+  function soonMatches(data, s) {
+    return (data.soon || []).filter(function (f) { return soonHit(f, s); });
+  }
+
   // The filter panel's big button for a draft's view.
   function applyLabel(v) {
     return v.count ? { text: 'Show ' + v.count + (v.count === 1 ? ' result' : ' results'), disabled: false } : { text: 'No games match', disabled: true };
@@ -492,7 +523,7 @@
     withSearch: withSearch, clearFilters: clearFilters, resetState: resetState, selectedCount: selectedCount,
     toggle: toggle, isOn: isOn, clearGroup: clearGroup, appliedChips: appliedChips, countText: countText,
     applyLabel: applyLabel, parseBands: parseBands, normalizeBands: normalizeBands, bandOf: bandOf, bandLabel: bandLabel,
-    view: view
+    view: view, fold: fold, soonMatches: soonMatches
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.BrowseFilterCore = api;

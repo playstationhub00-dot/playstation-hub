@@ -29,6 +29,7 @@
     <form class="bf-search" id="bfSearchForm" method="get" action="/browse" role="search">
       <% if (view.tab !== 'all') { %><input type="hidden" name="tab" value="<%= view.tab %>"><% } %>
       <input type="search" id="bfSearch" name="search" value="<%= state.search %>" placeholder="Search games" aria-label="Search games" autocomplete="off" enterkeyhint="search">
+      <button type="button" class="bf-search-x" id="bfSearchX"<%= state.search ? '' : ' hidden' %> aria-label="Clear search">✕</button>
     </form>
     <nav class="bf-tabs" id="bfTabs" aria-label="Collections">
       <% view.tabs.forEach(t => { %><a class="bf-tab<%= t.on ? ' on' : '' %>" data-tab="<%= t.key %>" href="<%= t.href %>"<%- t.on ? ' aria-current="page"' : '' %>><%= t.label %> <span class="bf-tab-n"><%= t.count %></span></a><% }) %>
@@ -106,7 +107,8 @@
   <div class="bf-notes" id="bfNotes"><% view.notes.forEach(n => { %><p class="cat-desc"><b><%= n.name %></b> — <%= n.desc %></p><% }) %></div>
 
   <div class="bf-empty" id="bfEmpty"<%= view.count ? ' hidden' : '' %>>
-    <p>No games match.</p>
+    <p id="bfEmptyText">No games match.</p>
+    <button type="button" class="btn btn-outline" id="bfClearSearch">Clear search</button>
     <a class="btn btn-outline" id="bfReset" href="<%= resetHref %>">Clear filters</a>
   </div>
 
@@ -134,6 +136,36 @@
     <div class="games-grid rentals-grid" id="bfPsGrid"></div>
     <button type="button" class="btn btn-outline bf-ps-all" id="bfPsAll" hidden></button>
   </div>
+
+  <section class="bf-soon-sec" id="bfSoonSec"<%= view.kind === 'games' && soon.length ? '' : ' hidden' %>>
+    <div class="bf-soon-head">
+      <h2>Coming soon <span id="bfSoonCount"><%= soon.length %></span></h2>
+      <p>Reserve your slot before release</p>
+    </div>
+    <div class="games-grid rentals-grid" id="bfComing">
+      <% soon.forEach(u => { %>
+      <div class="bf-item" data-coming="<%= u.id %>">
+        <div class="game-card gc2-card rcard bf-soon-card">
+          <a href="/upcoming/<%= seo.slug(u.title) %>-<%= u.id %>" class="bf-soon-hit">
+            <div class="art gc2-art">
+              <% if (u.cover) { %>
+              <img src="<%= u.cover %>" alt="<%= u.title %>" class="gc2-cover" loading="lazy">
+              <% } else { %>
+              <div class="gc2-cover-placeholder"><span>No cover</span></div>
+              <% } %>
+              <span class="st-badge st-soon"><i class="gc-dot" aria-hidden="true"></i>Coming soon</span>
+            </div>
+            <div class="gc2-title" title="<%= u.title %>"><span class="gc-title-text"><%= u.title %></span></div>
+            <% if (u.release) { %><p class="bf-soon-when">Releases <%= u.release %></p><% } %>
+          </a>
+          <div class="gc-actions">
+            <button type="button" class="rcta rent bf-reserve" data-reserve="<%= u.title %>">Reserve a slot</button>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </section>
 </div>
 </div>
 </div>
