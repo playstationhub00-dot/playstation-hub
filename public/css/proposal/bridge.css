@@ -589,6 +589,27 @@ body.hub .rcard .st-badge {
   font-weight: 800;
   letter-spacing: 0;
   text-transform: none;
+  max-width: calc(100% - 16px);
+  box-sizing: border-box;
+}
+body.hub .rcard { container-type: inline-size; container-name: gamecard; }
+@container gamecard (max-width: 240px) {
+  body.hub .rcard .st-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    max-width: calc(100% - 12px);
+  }
+  body.hub .rcard .gc2-badges {
+    top: 30px;
+    left: 8px;
+    right: auto;
+    align-items: flex-start;
+    max-width: calc(100% - 16px);
+  }
+  body.hub .rcard .gc2-badges .gc2-badge-new {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
 }
 body.hub .rcard .st-avail { background: #178a45; color: #fff; }
 body.hub .rcard .st-last {
@@ -633,6 +654,16 @@ body.hub .gc-full-mark span { font-size: 12px; font-weight: 700; }
 body.hub .rcard .card-ribbon,
 body.hub .rcard .gc2-badge-last { display: none; }
 body.hub .rcard .gc2-badges { top: 8px; left: auto; right: 8px; align-items: flex-end; width: auto; }
+@container gamecard (max-width: 240px) {
+  body.hub .rcard .gc2-badges {
+    top: 30px;
+    left: 8px;
+    right: auto;
+    align-items: flex-start;
+    width: auto;
+    max-width: calc(100% - 16px);
+  }
+}
 body.hub .rcard .gc2-body {
   position: static;
   left: auto;
@@ -788,7 +819,14 @@ body.hub .rcard .gc2-price { margin: 0; padding: 0 10px; font-size: 13px; color:
 body.hub .rcard .gc-price-bit { white-space: nowrap; }
 body.hub .rcard .gc2-price b { color: #F5B800; font-weight: 800; }
 body.hub .rcard .gc2-deal { padding: 0 10px; }
-body.hub .rcard .gc-slots { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 0; }
+body.hub .rcard,
+body.hub .rcard .gc2-body,
+body.hub .rcard .gc2-tags,
+body.hub .rcard .gc-slots,
+body.hub .rcard .slot {
+  min-width: 0;
+}
+body.hub .rcard .gc-slots { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 0; max-width: 100%; }
 body.hub .rcard .slot {
   display: flex;
   align-items: center;
@@ -796,11 +834,14 @@ body.hub .rcard .slot {
   font-size: 12px;
   color: #e8e8e8;
   min-width: 0;
+  max-width: calc(100% - 20px);
   margin: 0 10px;
   padding: 4px 6px;
   border-radius: 6px;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.12);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 body.hub .rcard .slot-tr { border-left: 3px solid #F5B800; }
 body.hub .rcard .slot-tr > span:nth-child(2),
