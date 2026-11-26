@@ -77,6 +77,19 @@ run.push(() => ok('and says so, which is the whole reason the customer is told',
   assert.strictEqual(o.qr_expired_count, 1);
 }));
 
+run.push(() => ok('the typed code and the decoded link are wiped with the photo', async () => {
+  const db = fakeDb([pending({
+    qr_code: 'ABCD1234',
+    qr_signin_url: 'https://login.playstation.com/activate?code=abc'
+  })]);
+  orders.init(async () => db);
+  await orders.expireStaleQrs();
+  assert.strictEqual(db.docs[0].qr_code, null);
+  assert.strictEqual(db.docs[0].qr_signin_url, null);
+  assert.strictEqual(db.docs[0].qr_image, null);
+  assert.strictEqual(db.docs[0].qr_expires_at, null);
+}));
+
 run.push(() => ok('the dead code and its countdown are cleared', async () => {
   const db = fakeDb([pending()]);
   orders.init(async () => db);

@@ -36,7 +36,7 @@ function fixture(over) {
   f = Object.assign({
     orderQueue: [
       lo('PH-0101', 'verifying_payment', { created_at: '2026-09-20T01:00:00Z', fb_name: 'Ana Cruz', payment_method: 'gcash', payment_proof: '/uploads/r.png' }),
-      lo('PH-0102', 'qr_pending', { created_at: '2026-09-22T01:00:00Z', qr_expires_at: '2026-09-25T10:00:00Z', qr_code: 'ABCD-EFGH', fb_name: 'Ben Reyes', account_type: 'tr', days: 7, deposit_due: 100, psid: '123' }),
+      lo('PH-0102', 'qr_pending', { created_at: '2026-09-22T01:00:00Z', qr_expires_at: '2026-09-25T10:00:00Z', qr_code: 'ABCD-EFGH', qr_signin_url: 'https://login.playstation.com/activate?code=sample', fb_name: 'Ben Reyes', account_type: 'tr', days: 7, deposit_due: 100, psid: '123' }),
       lo('PH-0103', 'verifying_return', { created_at: '2026-09-21T01:00:00Z', return_proof: '/uploads/p.png', fb_name: 'Cai Lim' })
     ],
     refundsOwed: [lo('PH-0090', 'closed', { deposit_due: 100, fb_name: 'Dee Santos', game_title: 'Hogwarts Legacy' })],
@@ -65,6 +65,17 @@ function fixture(over) {
     paymongoMode: 'live',
     paymongoHealth: { ok_count: 9, fail_count: 0, last_ok_at: '2026-09-20T03:23:00Z' },
     orderDetail: orderDetail.view,
+    signinAccounts: (o) => {
+      if (!o || o.ref !== 'PH-0102') return { options: [], selectedId: null, slot: 'trophy' };
+      return {
+        slot: 'trophy',
+        selectedId: 4,
+        options: [
+          { id: 4, label: 'PSN Business 2', slot: 'trophy' },
+          { id: 9, label: 'PSN Business 9', slot: 'trophy' }
+        ]
+      };
+    },
     settings: { owner_online: true, payment_methods: [{ key: 'gcash', label: 'GCash', enabled: true, account_number: '09171234567' }] }
   }, over || {});
   // server.js builds the board from these same two lists; a test that passes
@@ -103,6 +114,21 @@ ok('headline counts Do now, Just released, refunds and started-but-unpaid', () =
   assert.ok(html.includes('2 just released'));
   assert.ok(html.includes('2 started but unpaid'));
   assert.ok(html.includes('1 refund'));
+});
+
+ok('a waiting sign-in offers the account, the link, and Signed in', () => {
+  const b = groupBlock(html, 'now');
+  assert.ok(b.includes('class="oq-signin"'));
+  assert.ok(b.includes('action="/admin/orders/PH-0102/signed-in"'));
+  assert.ok(b.includes('action="/admin/orders/PH-0102/signin-failed"'));
+  assert.ok(b.includes('Open sign-in'));
+  assert.ok(b.includes('https://login.playstation.com/activate?code=sample'));
+  assert.ok(b.includes('PSN Business 2'));
+  assert.ok(b.includes('>Signed in<'));
+  assert.ok(b.includes('Failed / ask for new code'));
+  assert.ok(b.includes('ABCD-EFGH'));
+  assert.ok(b.includes('value="4" selected'));
+  assert.ok(!b.includes('action="/admin/orders/PH-0102/advance"'));
 });
 
 ok('Do now: live QR first, then oldest first', () => {

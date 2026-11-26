@@ -22,6 +22,8 @@ const paymongo = require('./lib/paymongo');
 const surcharge = require('./lib/surcharge');
 const fx = require('./lib/fx');
 const signinCode = require('./lib/signin-code');
+const signinQr = require('./lib/signin-qr');
+const signinLog = require('./lib/signin-log');
 const telegram = require('./lib/telegram');
 const paymentReminders = require('./lib/payment-reminders');
 const dashboard = require('./lib/dashboard');
@@ -305,7 +307,8 @@ db.defaults({
   loyalty_redemptions: [],
   loyalty_identity: { aliases: {}, rows: {} },
   loyalty_next_id: 1,
-  reveal_log: []
+  reveal_log: [],
+  signin_log: []
 }).write();
 
 // Ensure accounts collection exists for pre-existing databases
@@ -317,6 +320,7 @@ if (db.get('nextAccountId').value() === undefined) db.set('nextAccountId', 1).wr
 if (db.get('slot_history').value() === undefined) db.set('slot_history', []).write();
 if (db.get('nextSlotHistoryId').value() === undefined) db.set('nextSlotHistoryId', 1).write();
 if (db.get('reveal_log').value() === undefined) db.set('reveal_log', []).write();
+if (db.get('signin_log').value() === undefined) db.set('signin_log', []).write();
 if (!db.get('slot_history_started_at').value()) db.set('slot_history_started_at', new Date().toISOString()).write();
 if (db.get('month_logs').value() === undefined) db.set('month_logs', []).write();
 if (db.get('loyalty_redemptions').value() === undefined) db.set('loyalty_redemptions', []).write();
@@ -468,6 +472,29 @@ async function processUploadedImage(file, maxDim = 900) {
   }
 }
 
+// Read a console QR before the upload is resized to WebP. JPEG and PNG go
+// through the pure decoder. Anything else (WebP, HEIC) is turned into pixels
+// with sharp, which already resizes every upload, and then the same decoder.
+// A miss returns '' and the photo is shown as it is today.
+async function readSigninUrl(filePath) {
+  let buf;
+  try { buf = fs.readFileSync(filePath); }
+  catch (e) { return ''; }
+  const direct = signinQr.urlFromImage(buf);
+  if (direct) return direct;
+  try {
+    const { data, info } = await sharp(filePath)
+      .rotate()
+      .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return signinQr.urlFromPixels(new Uint8ClampedArray(data), info.width, info.height);
+  } catch (e) {
+    return '';
+  }
+}
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 // Expose account-summary helper to every EJS template (e.g. partials/game-card.ejs)
@@ -504,6 +531,11 @@ app.locals.browseBands = () => getBrowseBands();
 app.locals.gameSpecialDeal = (game, promo) => gameDiscount.specialDeal(game, promo);
 // Expose template rendering so admin views can build filled-in customer messages
 app.locals.renderTemplate = (kind, customer, tpls, opts) => templates.renderFor(kind, customer, tpls, opts);
+// Free business accounts for the sign-in panel. The order's own account is
+// the default when that slot is still open.
+app.locals.signinAccounts = (order) => signinQr.freeAccounts(getAccounts(), order, {
+  psplusGameId: order && order.is_psplus ? psplusCatalogueId() : null
+});
 
 // Two cache lifetimes used across every static registration below.
 // Immutable is safe only for URLs that are provably unique to their content
@@ -908,6 +940,12 @@ app.get('/admin/logout', (req, res) => {
 
 function getGames() { return db.get('games').value(); }
 function getGame(id) { return db.get('games').find({ id: parseInt(id) }).value(); }
+// PS Plus orders store game_id 'psplus'. The catalogue row, when there is one,
+// is what the account's game_ids actually point at.
+function psplusCatalogueId() {
+  const g = getGames().find(game => game && game.title && /ps\s*plus|playstation plus/i.test(game.title));
+  return g ? g.id : null;
+}
 function newId() {
   const id = db.get('nextId').value();
   db.set('nextId', id + 1).write();
@@ -4649,14 +4687,17 @@ async function createOrderNotified(fields) {
   return placed;
 }
 
-function notifyOwnerSignin(order, code) {
+function notifyOwnerSignin(order, codeOrInfo) {
   try {
     if (!telegram.isConfigured(process.env)) return;
     if (!telegram.isAlertEnabled(getSiteSettings(), 'signin')) return;
+    const info = (codeOrInfo && typeof codeOrInfo === 'object') ? codeOrInfo : { code: codeOrInfo };
+    const signinUrl = info.signinUrl ? signinQr.acceptedSigninUrl(info.signinUrl) : '';
     const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS)
       .toLocaleTimeString('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' });
     const text = telegram.formatQrAlert(order, {
-      code: code || null,
+      code: info.code || null,
+      signinUrl: signinUrl || null,
       expiresAt,
       adminUrl: SITE_URL + '/admin?tab=orders'
     });
@@ -4668,6 +4709,26 @@ function notifyOwnerSignin(order, code) {
   } catch (e) {
     console.error('[telegram]', e.message);
   }
+}
+
+// Same shape as the reveal log: who did it, which order, which account, which
+// method. The link and the code are not written here.
+function recordSigninAction(action, order, choice) {
+  const method = (choice && choice.method) || signinQr.methodOf(order);
+  const accountId = choice && choice.accountId;
+  try {
+    const next = signinLog.append(db.get('signin_log').value(), {
+      actor: 'admin',
+      action,
+      ref: order.ref,
+      account_id: accountId,
+      method
+    });
+    db.set('signin_log', next).write();
+  } catch (e) {
+    console.error('[signin]', action, order && order.ref, e.message);
+  }
+  console.log('[signin]', action, order && order.ref, method, accountId || '');
 }
 
 // Today's USD/PHP rate for the PayPal panel's dollar estimate. Cached in
@@ -5371,17 +5432,23 @@ app.post('/order/:ref/qr', uploadOrderFile.single('qr'), asyncRoute(async (req, 
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
   if (!req.file) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=no_file');
+  // Decode before the resize: processUploadedImage replaces the file with WebP.
+  // A non-Sony code, or a photo we cannot read, leaves signinUrl empty and the
+  // owner still gets the picture.
+  const signinUrl = await readSigninUrl(req.file.path);
   const qrPath = await processUploadedImage(req.file, 1400);
   const expiresAt = new Date(Date.now() + orders.QR_WINDOW_MS).toISOString();
   const r = await orders.transition(order.ref, 'qr_pending', {
     qr_image: qrPath,
+    qr_code: null,
+    qr_signin_url: signinUrl || null,
     qr_expires_at: expiresAt
   });
   if (!r) {
     cleanupOrphanedUpload(qrPath);
     return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
   }
-  notifyOwnerSignin(order, null);
+  notifyOwnerSignin(order, { signinUrl: signinUrl || null });
   res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=qr_sent');
 }));
 
@@ -5401,6 +5468,8 @@ app.post('/order/:ref/signin-code', express.urlencoded({ extended: false }), asy
   const code = signinCode.normalizeCode(req.body.code);
   const r = await orders.transition(order.ref, 'qr_pending', {
     qr_code: code,
+    qr_signin_url: null,
+    qr_image: null,
     qr_expires_at: new Date(Date.now() + orders.QR_WINDOW_MS).toISOString()
   });
   if (!r) return res.redirect('/order/' + order.ref + '?k=' + order.url_key + '&msg=stale');
@@ -5447,10 +5516,54 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     });
     return res.redirect('/admin?tab=orders&msg=' + (r.ok ? 'order_advanced' : 'order_stale'));
   }
+  const result = await advanceOwnerOrder(order, {});
+  const back = req.body && req.body.return_to === 'returns' ? 'returns' : 'orders';
+  res.redirect('/admin?tab=' + back + '&msg=' + result.redirectMsg);
+}));
+
+// The sign-in panel. Signed in does what advance does for a waiting QR, and
+// also seats the account the owner picked. Asking for a fresh code sends the
+// customer back to the upload step with the dead link wiped.
+app.post('/admin/orders/:ref/signed-in', requireAuth, asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (order.state !== 'qr_pending') return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const choice = signinQr.resolveChoice(getAccounts(), order, req.body && req.body.account_id, {
+    psplusGameId: order.is_psplus ? psplusCatalogueId() : null
+  });
+  if (!choice.ok) return res.redirect('/admin?tab=orders&msg=' + choice.reason);
+  const at = new Date().toISOString();
+  const result = await advanceOwnerOrder(order, {
+    extraPatch: signinQr.activationPatch(order, choice, at),
+    history: signinQr.historyExtra(order, choice),
+    assign: choice.accountId ? { accountId: choice.accountId, slot: choice.slot } : null
+  });
+  if (result.ok) recordSigninAction('signed_in', order, choice);
+  res.redirect('/admin?tab=orders&msg=' + (result.ok ? 'signin_done' : result.redirectMsg));
+}));
+
+app.post('/admin/orders/:ref/signin-failed', requireAuth, asyncRoute(async (req, res) => {
+  const order = await orders.getByRef(req.params.ref);
+  if (!order) return res.redirect('/admin?tab=orders');
+  if (order.state !== 'qr_pending') return res.redirect('/admin?tab=orders&msg=order_bad_state');
+  const at = new Date().toISOString();
+  const method = signinQr.methodOf(order);
+  const r = await orders.transition(order.ref, 'awaiting_qr', signinQr.failedPatch(at), {
+    history: { method, via: 'ask_fresh' }
+  });
+  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  recordSigninAction('ask_fresh', order, { method });
+  res.redirect('/admin?tab=orders&msg=signin_asked');
+}));
+
+// Shared by the queue's ordinary advance button and Signed in. A plain
+// advance passes no account; Signed in passes the seat and the history line.
+async function advanceOwnerOrder(order, opts) {
+  opts = opts || {};
   let to = ORDER_ADVANCE[order.state];
   if (order.is_reservation && order.state === 'verifying_payment') to = 'reserved';
-  if (!to) return res.redirect('/admin?tab=orders&msg=order_bad_state');
-  const patch = {};
+  if (!to) return { ok: false, redirectMsg: 'order_bad_state' };
+  const patch = Object.assign({}, opts.extraPatch || {});
   // Owner confirming a payment is the moment it becomes true, not whenever the
   // customer originally claimed to have sent it — stamped here so the order
   // page can show a receipt line, same as the gateway webhook already does.
@@ -5474,8 +5587,12 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
       patch.end_date = '';
     }
   }
-  const r = await orders.transition(order.ref, to, patch);
-  if (!r) return res.redirect('/admin?tab=orders&msg=order_stale');
+  const r = await orders.transition(order.ref, to, patch, { history: opts.history });
+  if (!r) return { ok: false, redirectMsg: 'order_stale' };
+
+  // The customer row this activation seats, when there is one. A fresh rental
+  // or purchase mints it below; a released reservation already has one.
+  let seatedCustomerId = order.customer_id || null;
 
   // A web order is otherwise invisible to the revenue ledger, the expiry
   // reminder panel, and top-games — all of which read the customers table,
@@ -5487,6 +5604,7 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     // slot to 'buyed', mirroring what the admin UI already does manually
     // for a Messenger-arranged sale (POST /admin/accounts/:id/slot/:type).
     const customerId = newCustomerId();
+    seatedCustomerId = customerId;
     db.get('customers').push({
       id: customerId,
       customer_name: order.fb_name,
@@ -5509,7 +5627,7 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
         ? [{ amount: order.amount_due, date: patch.start_date, kind: 'purchase' }]
         : [],
     }).write();
-    if (order.account_id && order.slot_type) {
+    if (!opts.assign && order.account_id && order.slot_type) {
       const account = getAccount(order.account_id);
       if (account) {
         const before = snapshotSlots(account);
@@ -5532,6 +5650,7 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
   if (to === 'active' && !order.customer_id && !order.is_buy) {
     const game = order.is_psplus ? null : getGame(order.game_id);
     const customerId = newCustomerId();
+    seatedCustomerId = customerId;
     db.get('customers').push({
       id: customerId,
       customer_name: order.fb_name,
@@ -5653,9 +5772,25 @@ app.post('/admin/orders/:ref/advance', requireAuth, asyncRoute(async (req, res) 
     }
   }
 
-  const back = req.body && req.body.return_to === 'returns' ? 'returns' : 'orders';
-  res.redirect('/admin?tab=' + back + '&msg=order_advanced');
-}));
+  if (to === 'active' && opts.assign && opts.assign.accountId && seatedCustomerId) {
+    const assignStr = opts.assign.accountId + ':' + opts.assign.slot;
+    if (!slotIsOpen(assignStr)) {
+      console.error('[signin] slot was not free', order.ref, assignStr);
+    } else {
+      const placed = applyAccountAssignment(assignStr, {
+        customerId: seatedCustomerId,
+        customerName: order.fb_name,
+        status: order.is_buy ? 'bought' : 'renting',
+        endDate: order.is_buy ? '' : (patch.end_date || ''),
+        startDate: order.is_buy ? '' : (patch.start_date || ''),
+        history: { how: 'new', game: order.game_title || '' }
+      });
+      if (!placed) console.error('[signin] could not fill slot', order.ref, assignStr);
+    }
+  }
+
+  return { ok: true, redirectMsg: 'order_advanced' };
+}
 
 app.post('/admin/orders/:ref/reject', requireAuth, asyncRoute(async (req, res) => {
   const order = await orders.getByRef(req.params.ref);
@@ -8150,7 +8285,7 @@ app.post('/admin/hero-slides/delete', requireAuth, (req, res) => {
 // Apply/clear an account slot from a customer assignment string "id:type"
 // Returns true on success, false if the target slot doesn't exist / is disabled (caller must
 // surface this rather than leaving the customer marked active with nothing actually reserved).
-function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate, history }) {
+function applyAccountAssignment(assignStr, { customerId, customerName, status, endDate, history, startDate }) {
   if (!assignStr || !assignStr.includes(':')) return true;
   const [idPart, type] = assignStr.split(':');
   const account = getAccount(idPart);
@@ -8159,7 +8294,7 @@ function applyAccountAssignment(assignStr, { customerId, customerName, status, e
   if (!slot || !slot.enabled) return false;
   const before = snapshotSlots(account);
   if (status === 'bought') { slot.status = 'buyed'; slot.start = ''; slot.end = ''; }
-  else { slot.status = 'rented'; slot.start = new Date().toISOString().slice(0, 10); slot.end = endDate || ''; }
+  else { slot.status = 'rented'; slot.start = startDate || new Date().toISOString().slice(0, 10); slot.end = endDate || ''; }
   slot.renter_id = customerId;
   slot.renter_name = customerName;
   account.slots[type] = slot;

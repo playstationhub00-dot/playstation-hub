@@ -115,25 +115,53 @@
           <% } %>
         </div>
       <% } %>
-      <% if (o.state === 'qr_pending' && o.qr_code) { %>
-        <%# Typed codes go straight into the PlayStation App, so the code itself
-            is the thing the owner needs — big enough to read at a glance and
-            one tap to copy, rather than a link to open. %>
-        <div class="oq-proof oq-signin-code">
-          <code class="oq-code"><%= o.qr_code %></code>
-          <button type="button" class="rem-copy oq-code-copy" data-msg="<%= o.qr_code %>" title="Copy this sign-in code">📋 Copy</button>
+      <% if (o.state === 'qr_pending') {
+        const signinPick = (typeof signinAccounts === 'function') ? signinAccounts(o) : null;
+      %>
+        <%# The owner does this on a phone already signed into the business
+            account. Open sign-in is the decoded Sony link. The code stays for
+            when the photo did not decode. Signed in seats the account. %>
+        <div class="oq-signin">
+          <form method="POST" action="/admin/orders/<%= o.ref %>/signed-in" class="oq-signin-form">
+            <% if (signinPick && signinPick.options && signinPick.options.length) { %>
+            <label class="oq-signin-lbl">Account
+              <select name="account_id" class="oq-signin-acct">
+                <% signinPick.options.forEach(a => { %>
+                <option value="<%= a.id %>"<%= a.id === signinPick.selectedId ? ' selected' : '' %>><%= a.label %></option>
+                <% }) %>
+              </select>
+            </label>
+            <% } else if (signinPick) { %>
+            <p class="oq-signin-note">No free <%= nyType(o.account_type) %> slot is linked to this game. Signed in still starts the rental.</p>
+            <% } %>
+            <% if (o.qr_code) { %>
+            <div class="oq-signin-code">
+              <code class="oq-code"><%= o.qr_code %></code>
+              <button type="button" class="rem-copy oq-code-copy" data-msg="<%= o.qr_code %>" title="Copy this sign-in code">Copy</button>
+            </div>
+            <% } %>
+            <% if (o.qr_signin_url) { %>
+            <a class="oq-open-signin" href="<%= o.qr_signin_url %>" target="_blank" rel="noopener noreferrer">Open sign-in</a>
+            <% } else if (o.qr_image) { %>
+            <a class="oq-signin-photo" href="<%= o.qr_image %>" target="_blank" rel="noopener">Open QR photo</a>
+            <% } %>
+            <button type="submit" class="oq-btn-go">Signed in</button>
+          </form>
+          <form method="POST" action="/admin/orders/<%= o.ref %>/signin-failed" onsubmit="return confirm('Ask them for a fresh sign-in code? The one they sent will be cleared.');">
+            <button type="submit" class="oq-btn-ghost">Failed / ask for new code</button>
+          </form>
         </div>
-      <% } else if (o.state === 'qr_pending' && o.qr_image) { %>
-        <div class="oq-proof"><a href="<%= o.qr_image %>" target="_blank" rel="noopener">Open QR to scan →</a></div>
       <% } %>
       <% if (o.state === 'verifying_return' && o.return_proof) { %>
         <div class="oq-proof"><a href="<%= o.return_proof %>" target="_blank" rel="noopener">View return proof →</a></div>
       <% } %>
     </div>
     <div class="oq-actions">
+      <% if (o.state !== 'qr_pending') { %>
       <form method="POST" action="/admin/orders/<%= o.ref %>/advance">
         <button type="submit" class="oq-btn-go"><%= queueAction(o) %></button>
       </form>
+      <% } %>
       <details class="oq-more">
         <summary class="oq-more-btn" title="More actions" aria-label="More actions">More</summary>
         <div class="oq-more-menu">
