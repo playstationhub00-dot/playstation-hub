@@ -16,7 +16,7 @@
   let gcPill = 'Available', gcPillClass = 'st-avail';
   if (!totalSlots) { gcPill = 'Full'; gcPillClass = 'st-full'; }
   else if (isLastSlot) { gcPill = 'Last slot'; gcPillClass = 'st-last'; }
-  const gcState = n => n > 1 ? { cls: 'ok', text: 'Available' } : n === 1 ? { cls: 'last', text: 'Last slot' } : { cls: 'full', text: 'In line' };
+  const gcState = n => n > 1 ? { cls: 'ok', text: 'Available' } : n === 1 ? { cls: 'last', text: 'Last slot' } : { cls: 'full', text: 'Full' };
   const gcNt = gcState(ntSlots), gcTr = gcState(trSlots), gcPs4 = gcState(ps4Slots);
   // Gated on slot state for the same reason as the detail page: a card must never
   // advertise "Buy ₱X" for an account that has already been sold, since the detail
