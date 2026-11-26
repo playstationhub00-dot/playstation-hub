@@ -2670,6 +2670,8 @@ app.get('/', (req, res) => {
   // The arcade-store homepage blocks (lib/home-view.js, views/partials/home/*).
   const homeReviews = reviewBlockLocals('');
   const withWeekly = g => ({ game: g, weekly: homeView.weeklyFrom(g, s.promo) });
+  const shownNew = (newReleasesRaw.length ? newReleasesRaw : all).slice(0, 6);
+  const shownNewIds = new Set(shownNew.map(g => Number(g.id)));
   const home = {
     banner: homeView.bannerGames(all, s.home_banner_ids, newReleasesRaw).map(withWeekly),
     topRented: homeView.topRented(all, homeCustomers, new Date()).map(withWeekly),
@@ -2684,10 +2686,11 @@ app.get('/', (req, res) => {
     prices: homeView.playerPrices(all, psplusFromWeekly()),
     quickGenres: homeView.quickGenres(all),
     newGames: newReleasesRaw,
-    // Same order as Browse → Most popular: rentals started in the last 30 days
-    // from customer records, then the all-time renters figure. Empty when
-    // nobody has rented, so the row stays off the page.
-    popularGames: homeView.rentalRanking(all, homeCustomers, new Date()).slice(0, 6),
+    // Skip the games New releases actually draws and fill with the next
+    // most-rented titles. Browse → Most popular is not filtered this way.
+    popularGames: homeView.rentalRanking(all, homeCustomers, new Date())
+      .filter(g => !shownNewIds.has(Number(g.id)))
+      .slice(0, 6),
     bands: getBrowseBands(),
     hasPs4: all.some(g => g.platform === 'PS4' || g.platform === 'PS4/PS5')
   };
