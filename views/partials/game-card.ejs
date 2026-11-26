@@ -58,8 +58,10 @@
   const gcNeverRented = (game.renters || 0) === 0;
   const gcShowDaysLeft = gcIsNew && gcNeverRented;
   const gcBundle = resolveBundleInfo(game);
-  // The game's tier pill (lib/tier-style.js) — bundles already say "Bundle · N games".
-  const gcTier = (!game.is_bundle && typeof gameTier === 'function') ? gameTier(game) : null;
+  // Band from the price category, with GTA VI forced to ULTIMATE (lib/tier-style.js).
+  const gcBand = (!game.is_bundle && typeof storefrontBand === 'function') ? storefrontBand(game) : null;
+  const gcBandKey = gcBand ? gcBand.key : '';
+  const gcBandLabel = gcBand ? gcBand.label : '';
   const gcBundleParent = findBundleContaining(game);
   const gcBuyFrom = [buyNt, buyTr].filter(p => p > 0).length ? Math.min(...[buyNt, buyTr].filter(p => p > 0)) : null;
   const gcPromoBadge = (typeof promoBadgeFor === 'function') ? promoBadgeFor(game.id) : null;
@@ -71,21 +73,6 @@
   const basketLead = basketTypes[0] || 'nt';
   const basketWeek = basketLead === 'nt' ? (game.nt_price_7d || 0) : ((game.tr_price_7d || 0) || (game.nt_price_7d || 0));
   const basketDays = basketWeek > 0 ? 7 : 30;
-  const gcBandName = String((gcTier && gcTier.name) || '');
-  const gcBandKey = /ps\s*plus|playstation plus/i.test(gcBandName) ? 'psplus'
-    : /gta|ultimate/i.test(gcBandName) ? 'ultimate'
-    : /new games/i.test(gcBandName) ? 'new'
-    : /deluxe/i.test(gcBandName) ? 'deluxe'
-    : /special/i.test(gcBandName) ? 'special'
-    : /regular/i.test(gcBandName) ? 'regular'
-    : (gcTier ? 'other' : '');
-  const gcBandLabel = gcBandKey === 'ultimate' ? 'ULTIMATE'
-    : gcBandKey === 'psplus' ? 'PS PLUS DELUXE'
-    : gcBandKey === 'new' ? 'NEW GAMES'
-    : gcBandKey === 'deluxe' ? 'DELUXE'
-    : gcBandKey === 'special' ? 'SPECIAL'
-    : gcBandKey === 'regular' ? 'REGULAR'
-    : gcBandName.toUpperCase();
   const gcWeekBases = [game.nt_price_7d, hasTrophy ? game.tr_price_7d : 0].filter(p => p > 0);
   const gcMonthBases = [game.nt_price_30d, hasTrophy ? game.tr_price_30d : 0].filter(p => p > 0);
   const gcWeekShow = gcWeekBases.length ? Math.min.apply(null, gcWeekBases.map(b => gcFinal(b, 7))) : null;
@@ -124,7 +111,7 @@
   </div>
 
   <div class="body gc2-body">
-    <% if (gcTier) { %>
+    <% if (gcBand) { %>
     <div class="gc-band gc-band-<%= gcBandKey %>">
       <span class="gc-band-ico" aria-hidden="true">
         <% if (gcBandKey === 'special') { %><svg viewBox="0 0 16 16"><path d="M8 1.5l1.7 3.6 4 .5-2.9 2.7.8 3.9L8 10.3 4.4 12.2l.8-3.9L2.3 5.6l4-.5z"/></svg>

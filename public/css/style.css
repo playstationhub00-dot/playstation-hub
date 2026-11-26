@@ -3188,6 +3188,7 @@ footer {
    (.gc2-body) puts a dark glow on its text for the cover art, and inherited by
    the tag it smeared the letters. Every fill keeps white text at 4.5:1 or more. */
 .tier-pill { display: inline-block; align-self: flex-start; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; line-height: 1.4; padding: 0.16rem 0.55rem; border-radius: 20px; white-space: nowrap; color: #fff; text-shadow: none; box-shadow: 0 2px 6px rgba(0,0,0,.45); }
+.tier-pill.tier-ultimate { background: linear-gradient(90deg, #6b1d3a, #e0b15a); color: #fff; }
 .usd-tier-pill { font-size: 0.7rem; align-self: center; }
 .tier-blue { background: #2563EB; color: #fff; }
 .tier-purple { background: #7C3AED; color: #fff; }
