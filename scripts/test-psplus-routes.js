@@ -80,7 +80,7 @@ async function main() {
 
   await okAsync('the nav marks Browse while PS Plus Deluxe stays linked from the menu', async () => {
     const r = await get('/ps-plus');
-    assert.ok(r.body.includes('class="nav-drop-btn active"'), 'Browse is the current menu');
+    assert.ok(r.body.includes('class="nav-drop-link active"'), 'Browse is the current menu');
     assert.ok(r.body.includes('href="/browse?tab=psplus"'), 'PS Plus Deluxe stays in the menu');
     assert.ok(r.body.includes('href="/ps-plus"'), 'the PS Plus page itself stays linked');
   });
@@ -103,7 +103,8 @@ async function main() {
 
   await okAsync('the top bar is Home, Browse, Category, Request, Guides, and FAQ', async () => {
     const nav = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'nav.ejs'), 'utf8');
-    assert.ok(nav.includes('>Browse</button>'));
+    assert.ok(nav.includes('href="/browse" class="nav-drop-link'));
+    assert.ok(nav.includes('aria-label="Open Browse menu"'));
     assert.ok(nav.includes('>Category</button>'));
     assert.ok(nav.includes('>Request</a>'));
     assert.ok(nav.includes('>Guides</a>'));
