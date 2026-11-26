@@ -81,7 +81,16 @@ body.browse-page.hub .bf-body { padding: 0; overflow: visible; }
 body.browse-page.hub .bf-sec-head h3 {
   font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: #888;
 }
-body.browse-page.hub .bf-sec { display: flex; flex-wrap: wrap; gap: 6px; }
+body.browse-page.hub .bf-sec { display: block; }
+body.browse-page.hub .bf-opt {
+  display: flex;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 7px 0;
+  gap: 8px;
+  font-size: 13px;
+}
 body.browse-page.hub .bf-sec-head { width: 100%; margin: 10px 0 4px; }
 body.browse-page.hub .bf-opt {
   display: inline-flex;
@@ -99,8 +108,8 @@ body.browse-page.hub .bf-results { padding-top: 0; }
 body.browse-page.hub .games-grid,
 body.browse-page.hub .rentals-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 body.browse-page.hub .rcard {
   background: #141414;
@@ -119,6 +128,10 @@ body.browse-page.hub .rcard .art img,
 body.browse-page.hub .rcard .gc2-cover { width: 100%; height: 100%; object-fit: cover; }
 body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margin: 8px 0; }
 
+@media (min-width: 701px) {
+  body.browse-page.hub .bf-open { display: none; }
+  body.browse-page.hub .bf-sort { margin-left: auto; }
+}
 @media (max-width: 1100px) {
   body.browse-page.hub .games-grid,
   body.browse-page.hub .rentals-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -128,14 +141,35 @@ body.browse-page.hub .bf-full-head { grid-column: 1 / -1; font-size: 16px; margi
   body.browse-page.hub .bf-top-in,
   body.browse-page.hub .bf-layout { width: calc(100% - 32px); }
   body.browse-page.hub .bf-layout { grid-template-columns: 1fr; padding: 0 0 80px; }
-  body.browse-page.hub .bf-panel { display: none; position: fixed; inset: 0; z-index: 2000; border-radius: 0; top: auto; }
-  body.browse-page.hub .bf-panel.bf-show { display: block; }
+  body.browse-page.hub .bf-panel { display: none; position: fixed; inset: 0; z-index: 4000; border-radius: 0; top: auto; }
+  body.browse-page.hub .bf-panel.bf-show {
+    display: flex !important;
+    align-items: flex-end;
+    background: rgba(0,0,0,0.72);
+  }
+  body.browse-page.hub .bf-panel.bf-show .bf-backdrop { display: block; }
+  body.browse-page.hub .bf-panel.bf-show .bf-sheet {
+    position: relative;
+    background: #161616 !important;
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 18px 18px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
   body.browse-page.hub .bf-backdrop { display: block; }
   body.browse-page.hub .bf-foot, body.browse-page.hub .bf-x { display: flex; }
-  body.browse-page.hub .bf-sheet { background: #121212; border-radius: 18px 18px 0 0; position: fixed; left: 0; right: 0; bottom: 0; max-height: 86vh; width: 100%; }
+  body.browse-page.hub .bf-sheet {
+    background: #121212; border-radius: 18px 18px 0 0; position: fixed; left: 0; right: 0; bottom: 0;
+    max-height: 86vh; width: 100%; display: flex; flex-direction: column; overflow: hidden;
+  }
+  body.browse-page.hub .bf-body { overflow: auto; flex: 1; }
+  body.browse-page.hub .bf-foot { position: sticky; bottom: 0; background: #121212; padding: 12px 14px 16px; }
   body.browse-page.hub .games-grid,
   body.browse-page.hub .rentals-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.browse-page.hub .bf-open { display: inline-flex !important; }
+  body.browse-page.hub.bf-lock #bfOpen { display: none !important; }
 }
 
 /* One container. Sections must not add a second max-width inside .wrap. */

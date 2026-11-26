@@ -124,19 +124,19 @@ async function main() {
 
   console.log('\nthe page');
   await okAsync('title, search box, the tab row with counts (no Bundles tab: there are none), All games on', async () => {
-    assert.ok(all.includes('<h1>Browse PS5 &amp; PS4 games</h1>'));
-    assert.ok(opening(all, 'bfSearch').includes('placeholder="Search 6 games…"'));
+    assert.ok(all.includes('<h1>Browse games</h1>'));
+    assert.ok(opening(all, 'bfSearch').includes('placeholder="Search games"'));
     assert.ok(opening(all, 'bfSearch').includes('value=""'));
     assert.deepStrictEqual(tabs(all).map(t => t.key + ' ' + t.count), ['all 6', 'most-rented 3', 'new 3', 'coming-soon 3', 'deals 1', 'available 5', 'buy 1', 'psplus 2']);
     assert.deepStrictEqual(tabs(all).filter(t => t.on).map(t => t.key), ['all']);
     assert.ok(all.includes('data-tab="all" href="/browse" aria-current="page"'));
     assert.deepStrictEqual(tabs(all).slice(1, 4).map(t => t.href), ['/browse?tab=most-rented', '/browse?tab=new', '/browse?tab=coming-soon']);
-    assert.strictEqual(countOf(all), 'All games · 6 games');
+    assert.strictEqual(countOf(all), '6 games');
   });
   await okAsync('All games: every game, most rented first, then the never-rented A–Z', async () => {
-    assert.deepStrictEqual(shown(all), [3, 2, 5, 6, 1, 4]);
+    assert.deepStrictEqual(shown(all), [1, 3, 2, 6, 4, 5]);
     assert.deepStrictEqual(ranks(all), ['hidden #1', 'hidden #2', 'hidden #3'], 'badges wait for the Most rented tab');
-    assert.deepStrictEqual(sorts(all), ['*most-rented', 'newest', 'price-asc', 'price-desc', 'az']);
+    assert.deepStrictEqual(sorts(all), ['*newest', 'price-asc', 'most-rented', 'avail']);
     assert.ok(opening(all, 'bfSoonGrid').includes(' hidden') && opening(all, 'bfPsplus').includes(' hidden'));
     assert.ok(opening(all, 'bfEmpty').includes(' hidden'));
   });
@@ -152,13 +152,13 @@ async function main() {
     assert.deepStrictEqual(allCards(h).sort(), [1, 2, 3, 4, 5, 6], 'every card is on the page for the other tabs');
     assert.deepStrictEqual(ranks(h), ['#1', '#2', '#3']);
     assert.ok(h.includes('data-tab="most-rented" href="/browse?tab=most-rented" aria-current="page"'));
-    assert.strictEqual(countOf(h), 'Most rented · 3 games');
-    assert.deepStrictEqual(ranks(await page('/browse?tab=most-rented&sort=az')).sort(), ['hidden #1', 'hidden #2', 'hidden #3'], 'only in Most rented order');
+    assert.strictEqual(countOf(h), '3 games');
+    assert.deepStrictEqual(ranks(await page('/browse?tab=most-rented&sort=price-asc')).sort(), ['hidden #1', 'hidden #2', 'hidden #3'], 'only in Most rented order');
   });
   await okAsync('New releases: released games, newest first (TBA and undated left out)', async () => {
     const h = await page('/browse?tab=new');
     assert.deepStrictEqual(shown(h), [1, 3, 2]);
-    assert.deepStrictEqual(sorts(h), ['*newest', 'most-rented', 'price-asc', 'price-desc', 'az']);
+    assert.deepStrictEqual(sorts(h), ['*newest', 'price-asc', 'most-rented', 'avail']);
   });
   await okAsync('Coming soon: every Coming soon game, soonest first, TBA last; no filters', async () => {
     const h = await page('/browse?tab=coming-soon');
@@ -168,12 +168,12 @@ async function main() {
     assert.ok(between(h, 'bfSoonGrid', 'bfPsplus').includes('href="/upcoming/zzyzx-marvel-3" class="game-card upcoming-card'));
     assert.deepStrictEqual(sorts(h), ['*release', 'az']);
     assert.ok(opening(h, 'bfOpen').includes(' hidden'), 'no Filters button');
-    assert.strictEqual(countOf(h), 'Coming soon · 3 games');
+    assert.strictEqual(countOf(h), '3 games');
   });
   await okAsync('Deals, Available now and Buy to keep', async () => {
     assert.deepStrictEqual(shown(await page('/browse?tab=deals')), [3]);
-    assert.deepStrictEqual(sorts(await page('/browse?tab=deals')).slice(0, 2), ['*discount', 'most-rented']);
-    assert.deepStrictEqual(shown(await page('/browse?tab=available')), [3, 2, 5, 6, 1]);
+    assert.deepStrictEqual(sorts(await page('/browse?tab=deals')).slice(0, 2), ['*discount', 'newest']);
+    assert.deepStrictEqual(shown(await page('/browse?tab=available')), [1, 3, 2, 6, 5]);
     assert.deepStrictEqual(shown(await page('/browse?tab=buy')), [4]);
   });
   await okAsync('PS Plus Deluxe: the account to rent, then its games (drawn by the page script), A–Z only', async () => {
@@ -184,12 +184,12 @@ async function main() {
     assert.ok(lead.includes('Hundreds of games, one account') && lead.includes('from <b>₱159</b>/week') && lead.includes('>Rent</span>'));
     assert.ok(opening(h, 'bfSortWrap').includes(' hidden'), 'one order: no Sort menu');
     assert.deepStrictEqual(browseData(h).psplus.map(p => p.k).sort(), ['days-gone', 'returnal'], 'hidden games left out');
-    assert.strictEqual(countOf(h), 'PS Plus Deluxe · 2 games');
+    assert.strictEqual(countOf(h), '2 games');
   });
   await okAsync('unknown or empty tabs open All games; an unknown sort falls back', async () => {
     const h = await page('/browse?tab=bundles&sort=cheapest');
     assert.deepStrictEqual(tabs(h).filter(t => t.on).map(t => t.key), ['all']);
-    assert.deepStrictEqual(shown(h), [3, 2, 5, 6, 1, 4]);
+    assert.deepStrictEqual(shown(h), [1, 3, 2, 6, 4, 5]);
     assert.strictEqual(browseData(h).state.tab, 'all');
   });
 
@@ -203,8 +203,8 @@ async function main() {
   });
   await okAsync('?sort= orders the grid and stays out of the tab links', async () => {
     const h = await page('/browse?sort=az');
-    assert.deepStrictEqual(shown(h), [6, 1, 4, 2, 5, 3]);
-    assert.deepStrictEqual(sorts(h), ['most-rented', 'newest', 'price-asc', 'price-desc', '*az']);
+    assert.deepStrictEqual(shown(h), [1, 3, 2, 6, 4, 5]);
+    assert.deepStrictEqual(sorts(h), ['*newest', 'price-asc', 'most-rented', 'avail']);
     assert.strictEqual(tabs(h)[1].href, '/browse?tab=most-rented');
     assert.deepStrictEqual(shown(await page('/browse?sort=price-asc')), [5, 3, 4, 2, 6, 1], 'Tekken\'s 40% deal makes it ₱149; ties by title');
   });
@@ -214,7 +214,7 @@ async function main() {
     assert.deepStrictEqual(barChips(h).map(c => c.label + ' ' + c.href), ['PS4 ✕ /browse?tab=most-rented&price=low', 'Under ₱180 ✕ /browse?tab=most-rented&console=ps4']);
     assert.ok(between(h, 'bfChips', 'bfPanel').includes('<a class="bf-clear" href="/browse?tab=most-rented" data-clear-all="1">Clear all</a>'));
     assert.ok(opening(h, 'bfOpen').includes('bf-open bf-has'));
-    assert.ok(h.includes('<span id="bfOpenN"> · 2</span>'));
+    assert.ok(h.includes('<span id="bfOpenN">2</span>'));
   });
   await okAsync('old links: Show ticks open their tab, PS4 links still pick PS4, quick picks open All games', async () => {
     assert.deepStrictEqual(tabs(await page('/browse?avail=1')).filter(t => t.on).map(t => t.key), ['available']);
@@ -237,9 +237,11 @@ async function main() {
   await okAsync('the filter panel: tier, console, genre and price rows; a plain form that keeps tab, sort and search', async () => {
     const h = await page('/browse?tab=deals&sort=az&search=zzyzx');
     const form = between(h, 'bfForm', 'bfGo');
-    assert.deepStrictEqual([...form.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['stock', 'account', 'tier', 'console', 'genre', 'price']);
-    ['<input type="hidden" name="tab" value="deals">', '<input type="hidden" name="sort" value="az">', '<input type="hidden" name="search" value="zzyzx">'].forEach(t => assert.ok(form.includes(t), t));
-    assert.ok(/<label class="bf-opt" data-group="tier" data-value="2">[\s\S]*?Big recent AAA games · from ₱149[\s\S]*?<input type="checkbox" name="tier" value="2">/.test(form));
+    assert.deepStrictEqual([...form.matchAll(/<section class="bf-sec" data-group="(\w+)">/g)].map(m => m[1]), ['stock', 'band', 'console', 'account', 'genre']);
+    ['<input type="hidden" name="tab" value="deals">', '<input type="hidden" name="search" value="zzyzx">'].forEach(t => assert.ok(form.includes(t), t));
+    assert.ok(!form.includes('name="sort"'), 'an unsupported sort is not kept');
+    assert.ok(form.includes('data-group="band" data-value="deluxe"'));
+    assert.ok(form.includes('id="bfWmin"'));
     assert.ok(!between(all, 'bfForm', 'bfGo').includes('name="tab"'), 'All games needs no tab field');
   });
 
@@ -250,7 +252,7 @@ async function main() {
     assert.deepStrictEqual([tekken.tier, tekken.rank, tekken.released, tekken.deal, tekken.availPs4], ['2', 1, '2024-01-26', 40, true]);
     assert.deepStrictEqual([d.games.find(g => g.id === 5).released, d.games.find(g => g.id === 1).rank], [null, null]);
     assert.deepStrictEqual(d.soon.map(u => [u.id, u.order]), [[3, 0], [1, 1], [2, 2]]);
-    assert.deepStrictEqual(d.state, { tab: 'all', sort: '', search: '', tiers: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [] });
+    assert.deepStrictEqual(d.state, { tab: 'all', sort: '', search: '', tiers: [], bands: [], consoles: [], genres: [], prices: [], stocks: [], accounts: [], wmin: null, wmax: null });
     assert.deepStrictEqual(d.ctx.tiers[1], { id: '2', name: 'Deluxe', desc: 'Big recent AAA games' });
     assert.strictEqual(d.psplusFrom, 159);
     assert.ok(all.includes('\\u003c/script>\\u003cb>favourite'), 'a description cannot close the script');
@@ -260,8 +262,8 @@ async function main() {
     assert.ok(js.includes("location.hash === '#comingSoon'"), 'old #comingSoon links open the Coming soon tab');
     assert.ok(js.includes("location.hash = ''"), 'clears the hash so :target un-matches');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'browse-filters.css'), 'utf8');
-    const gridCss = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'style.css'), 'utf8');
-    assert.ok(gridCss.includes('.games-grid, .buy-single-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }'), 'ten cards a row on a wide screen');
+    const bridge = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', 'proposal', 'bridge.css'), 'utf8');
+    assert.ok(bridge.includes('grid-template-columns: repeat(4, minmax(0, 1fr));'), 'four cards a row on a desktop');
     assert.ok(/\.bf-top \{ position: sticky; top: 64px;/.test(css), 'search, tabs and bar pinned under the menu');
     assert.ok(/\.bf-results \[hidden\] \{ display: none; \}/.test(css), 'hidden cards stay hidden');
   });

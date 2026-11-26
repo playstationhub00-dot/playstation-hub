@@ -46,12 +46,13 @@ const chip = (view, group, value) => view.groups.find(x => x.key === group).chip
 console.log('\nURL');
 ok('parses tab, sort, search and every filter and writes them back in a stable order', () => {
   const s = st({ tab: 'deals', sort: 'az', search: ' elden ', tier: '2,3,abc', console: 'ps4,xbox', genre: 'Action,RPG', price: 'low,bogus' });
-  assert.strictEqual(C.toQuery(s), 'tab=deals&sort=az&search=elden&tier=2,3&console=ps4&genre=Action,RPG&price=low');
+  assert.strictEqual(C.toQuery(s), 'tab=deals&search=elden&tier=2,3&console=ps4&genre=Action,RPG&price=low');
   assert.strictEqual(C.href(C.emptyState()), '/browse');
 });
 ok('the tab\'s default order and All games stay out of the address', () => {
   assert.strictEqual(C.toQuery(st({ tab: 'new', sort: 'newest' })), 'tab=new');
-  assert.strictEqual(C.toQuery(st({ tab: 'all', sort: 'most-rented' })), '');
+  assert.strictEqual(C.toQuery(st({ tab: 'all', sort: 'newest' })), '');
+  assert.strictEqual(C.toQuery(st({ tab: 'all', sort: 'most-rented' })), 'sort=most-rented');
   assert.strictEqual(C.toQuery(st({ tab: 'coming-soon', sort: 'price-asc' })), 'tab=coming-soon', 'a sort the tab does not offer is dropped');
 });
 ok('unknown tab → All games; unknown sort → the tab\'s default', () => {
@@ -80,12 +81,12 @@ ok('clean state drops tiers and genres with no chip and a tab with no games', ()
 
 console.log('\nTabs');
 ok('each tab holds its own games, in its default order', () => {
-  assert.deepStrictEqual(v({}).ids, [2, 1, 4, 7, 6, 3, 5], 'All games: most rented, then the never-rented A–Z');
+  assert.deepStrictEqual(v({}).ids, [6, 2, 1, 7, 4, 3, 5], 'All games: newest first, undated last');
   assert.deepStrictEqual(v({ tab: 'most-rented' }).ids, [2, 1, 4, 7], 'Most rented: rented games only');
   assert.deepStrictEqual(v({ tab: 'new' }).ids, [6, 2, 1, 7, 4], 'New releases: newest first');
   assert.deepStrictEqual(v({ tab: 'coming-soon' }).ids, [11, 12, 13], 'Coming soon: the site\'s Coming soon order');
   assert.deepStrictEqual(v({ tab: 'deals' }).ids, [4, 2], 'Deals: biggest discount first');
-  assert.deepStrictEqual(v({ tab: 'available' }).ids, [2, 1, 4, 7, 6, 5]);
+  assert.deepStrictEqual(v({ tab: 'available' }).ids, [6, 2, 1, 7, 4, 5]);
   assert.deepStrictEqual(v({ tab: 'buy' }).ids, [3]);
   assert.deepStrictEqual(v({ tab: 'bundles' }).ids, [5]);
   const ps = v({ tab: 'psplus' });
@@ -110,24 +111,24 @@ ok('the tab row: every tab with games, its count for the search and filters, its
 console.log('\nSort');
 ok('the Sort menu offers each tab its own choices, its default first', () => {
   const keys = q => v(q).sorts.map(o => o.key);
-  assert.deepStrictEqual(keys({}), ['most-rented', 'newest', 'price-asc', 'price-desc', 'az']);
-  assert.deepStrictEqual(keys({ tab: 'new' }), ['newest', 'most-rented', 'price-asc', 'price-desc', 'az']);
-  assert.deepStrictEqual(keys({ tab: 'deals' }), ['discount', 'most-rented', 'newest', 'price-asc', 'price-desc', 'az']);
+  assert.deepStrictEqual(keys({}), ['newest', 'price-asc', 'most-rented', 'avail']);
+  assert.deepStrictEqual(keys({ tab: 'new' }), ['newest', 'price-asc', 'most-rented', 'avail']);
+  assert.deepStrictEqual(keys({ tab: 'deals' }), ['discount', 'newest', 'price-asc', 'most-rented', 'avail']);
   assert.deepStrictEqual(keys({ tab: 'coming-soon' }), ['release', 'az']);
   assert.deepStrictEqual(keys({ tab: 'psplus' }), ['az']);
-  assert.deepStrictEqual(v({ sort: 'az' }).sorts.filter(o => o.on).map(o => o.label), ['A–Z']);
+  assert.deepStrictEqual(v({ sort: 'newest' }).sorts.filter(o => o.on).map(o => o.label), ['Newest first']);
 });
 ok('every order: ties by title, missing prices and dates last', () => {
   assert.deepStrictEqual(v({ sort: 'newest' }).ids, [6, 2, 1, 7, 4, 3, 5]);
   assert.deepStrictEqual(v({ sort: 'price-asc' }).ids, [4, 3, 1, 2, 5, 6, 7]);
-  assert.deepStrictEqual(v({ sort: 'price-desc' }).ids, [6, 5, 1, 2, 3, 4, 7]);
-  assert.deepStrictEqual(v({ sort: 'az' }).ids, [6, 7, 3, 1, 4, 5, 2]);
+  assert.deepStrictEqual(v({ sort: 'avail' }).ids, [6, 7, 1, 4, 5, 2, 3], 'open games before a full one, then A–Z');
+  assert.deepStrictEqual(v({ sort: 'az' }).ids, [6, 2, 1, 7, 4, 3, 5], 'a sort the catalog does not offer falls back to newest');
   assert.deepStrictEqual(v({ tab: 'coming-soon', sort: 'az' }).ids, [13, 12, 11]);
   assert.strictEqual(C.href(C.withSort(st({ tab: 'deals' }), 'price-asc')), '/browse?tab=deals&sort=price-asc');
 });
 ok('#1–#10 badges only on Most rented in Most rented order', () => {
   assert.strictEqual(v({ tab: 'most-rented' }).ranked, true);
-  assert.strictEqual(v({ tab: 'most-rented', sort: 'az' }).ranked, false);
+  assert.strictEqual(v({ tab: 'most-rented', sort: 'price-asc' }).ranked, false);
   assert.strictEqual(v({}).ranked, false);
 });
 
@@ -141,7 +142,7 @@ ok('search matches the game\'s text on game tabs, the title on Coming soon, the 
 ok('filters work on top of a tab', () => {
   assert.deepStrictEqual(v({ tab: 'most-rented', console: 'ps4', price: 'low' }).ids, [4]);
   assert.deepStrictEqual(v({ tab: 'available', console: 'ps4' }).ids, [2], 'PS4 only: a PS4 slot must be free');
-  assert.deepStrictEqual(v({ tab: 'available', console: 'ps4,ps5' }).ids, [2, 1, 4, 7, 6, 5]);
+  assert.deepStrictEqual(v({ tab: 'available', console: 'ps4,ps5' }).ids, [6, 2, 1, 7, 4, 5]);
   assert.deepStrictEqual(v({ tier: '2', genre: 'RPG' }).ids, [1]);
 });
 ok('filters do not apply on Coming soon or PS Plus Deluxe (the panel keeps All games\' rows)', () => {
@@ -166,9 +167,9 @@ ok('the filter bar: one chip per filter (no search chip); Clear all and the empt
   const s = st({ tab: 'deals', sort: 'az', search: 'x', tier: '2', console: 'ps4', genre: 'Action', price: 'low' });
   const chips = C.appliedChips(s, ctx);
   assert.deepStrictEqual(chips.map(c => c.label), ['Deluxe', 'PS4', 'Action', 'Under ₱200']);
-  assert.strictEqual(chips[1].href, '/browse?tab=deals&sort=az&search=x&tier=2&genre=Action&price=low');
-  assert.strictEqual(C.href(C.clearFilters(s)), '/browse?tab=deals&sort=az&search=x');
-  assert.strictEqual(C.href(C.resetState(s)), '/browse?tab=deals&sort=az');
+  assert.strictEqual(chips[1].href, '/browse?tab=deals&search=x&tier=2&genre=Action&price=low');
+  assert.strictEqual(C.href(C.clearFilters(s)), '/browse?tab=deals&search=x');
+  assert.strictEqual(C.href(C.resetState(s)), '/browse?tab=deals');
   assert.strictEqual(C.selectedCount(s), 4);
   assert.deepStrictEqual(C.clearGroup(s, 'genre').genres, []);
 });
@@ -190,7 +191,7 @@ ok('availability and account type narrow the grid', () => {
 ok('the results bar and the panel button', () => {
   assert.strictEqual(C.countText(v({ tab: 'most-rented' })), 'Most rented · 4 games');
   assert.strictEqual(C.countText(v({ tab: 'buy' })), 'Buy to keep · 1 game');
-  assert.deepStrictEqual(C.applyLabel(v({ tab: 'deals' })), { text: 'Show 2 games', disabled: false });
+  assert.deepStrictEqual(C.applyLabel(v({ tab: 'deals' })), { text: 'Show 2 results', disabled: false });
   assert.deepStrictEqual(C.applyLabel(v({ search: 'zzz' })), { text: 'No games match', disabled: true });
 });
 
