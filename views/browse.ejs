@@ -145,19 +145,17 @@
     <div class="games-grid rentals-grid" id="bfComing">
       <% soon.forEach(u => { %>
       <div class="bf-item" data-coming="<%= u.id %>">
-        <div class="game-card gc2-card rcard bf-soon-card">
-          <a href="/upcoming/<%= seo.slug(u.title) %>-<%= u.id %>" class="bf-soon-hit">
-            <div class="art gc2-art">
-              <% if (u.cover) { %>
-              <img src="<%= u.cover %>" alt="<%= u.title %>" class="gc2-cover" loading="lazy">
-              <% } else { %>
-              <div class="gc2-cover-placeholder"><span>No cover</span></div>
-              <% } %>
-              <span class="st-badge st-soon"><i class="gc-dot" aria-hidden="true"></i>Coming soon</span>
-            </div>
-            <div class="gc2-title" title="<%= u.title %>"><span class="gc-title-text"><%= u.title %></span></div>
-            <% if (u.release) { %><p class="bf-soon-when">Releases <%= u.release %></p><% } %>
-          </a>
+        <div class="game-card gc2-card rcard bf-soon-card" tabindex="0" role="button" aria-haspopup="dialog" aria-label="<%= u.title %>, coming soon">
+          <div class="art gc2-art">
+            <% if (u.cover) { %>
+            <img src="<%= u.cover %>" alt="" class="gc2-cover" loading="lazy">
+            <% } else { %>
+            <div class="gc2-cover-placeholder"><span>No cover</span></div>
+            <% } %>
+            <span class="st-badge st-soon"><i class="gc-dot" aria-hidden="true"></i>Coming soon</span>
+          </div>
+          <div class="gc2-title" title="<%= u.title %>"><span class="gc-title-text"><%= u.title %></span></div>
+          <% if (u.release) { %><p class="bf-soon-when">Releases <%= u.release %></p><% } %>
           <div class="gc-actions">
             <button type="button" class="rcta rent bf-reserve" data-reserve="<%= u.title %>">Reserve a slot</button>
           </div>
@@ -203,6 +201,11 @@
       <div class="qv-band" id="qvBand"></div>
       <h2 id="qvTitle"></h2>
       <p class="qv-meta" id="qvMeta"></p>
+      <div class="qv-soon" id="qvSoon" hidden>
+        <span class="qv-soon-pill"><i aria-hidden="true"></i>Coming soon</span>
+        <span class="qv-soon-when" id="qvWhen"></span>
+      </div>
+      <p class="qv-desc" id="qvDesc" hidden></p>
       <div class="qv-rows" id="qvRows"></div>
       <div class="qv-actions" id="qvActions"></div>
       <a class="qv-full" id="qvFull" href="/browse">View full page</a>

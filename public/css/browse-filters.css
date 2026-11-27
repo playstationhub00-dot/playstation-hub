@@ -128,18 +128,18 @@ body.bf-lock { overflow: hidden; }
    the border takes the theme accent. Mouse/trackpad only; keyboard focus gets
    the outline; reduced motion keeps the cards still. The rank badge sits
    outside the card, so it rides up with it. */
-#bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, .bf-rank { transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
-#bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover { transition: transform 0.35s ease; }
+#bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, #bfComing .game-card, .bf-rank { transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease; }
+#bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover, #bfComing .gc2-cover { transition: transform 0.35s ease; }
 @media (hover: hover) {
-  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover { transform: translateY(-6px); border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
-  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover { transform: scale(1.06); }
+  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover, #bfComing .game-card:hover { transform: translateY(-6px); border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); }
+  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover, #bfComing .game-card:hover .gc2-cover { transform: scale(1.06); }
   #bfGrid .bf-item:hover .bf-rank { transform: translateY(-6px); }
 }
-#bfGrid .game-card:focus-visible, #bfSoonGrid .game-card:focus-visible, #bfPsGrid .game-card:focus-visible { border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); outline: none; }
+#bfGrid .game-card:focus-visible, #bfSoonGrid .game-card:focus-visible, #bfPsGrid .game-card:focus-visible, #bfComing .game-card:focus-visible { border-color: var(--theme-btn, #F5B800); box-shadow: 0 0 0 1px var(--theme-btn, #F5B800); outline: none; }
 @media (prefers-reduced-motion: reduce) {
-  #bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, .bf-rank, #bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover { transition: none; }
-  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover, #bfGrid .bf-item:hover .bf-rank { transform: none; }
-  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover { transform: none; }
+  #bfGrid .game-card, #bfSoonGrid .game-card, #bfPsGrid .game-card, #bfComing .game-card, .bf-rank, #bfGrid .gc2-cover, #bfSoonGrid .cs-cover-img, #bfPsGrid .gc2-cover, #bfComing .gc2-cover { transition: none; }
+  #bfGrid .game-card:hover, #bfSoonGrid .game-card:hover, #bfPsGrid .game-card:hover, #bfComing .game-card:hover, #bfGrid .bf-item:hover .bf-rank { transform: none; }
+  #bfGrid .game-card:hover .gc2-cover, #bfSoonGrid .game-card:hover .cs-cover-img, #bfPsGrid .game-card:hover .gc2-cover, #bfComing .game-card:hover .gc2-cover { transform: none; }
 }
 
 .bf-range-label { margin: 0 0 8px; color: #ddd; font-size: 13px; }
@@ -208,6 +208,19 @@ body.bf-lock { overflow: hidden; }
 .qv .gc-band-psplus { background: linear-gradient(90deg, #1d4f9c, #5aa2ff); color: #fff; }
 .qv-body h2 { margin: 0; font-size: 26px; line-height: 1.15; }
 .qv-meta { margin: 0; color: #9a9a9a; font-size: 13px; }
+.qv-soon { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.qv-soon[hidden] { display: none !important; }
+.qv-soon-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #F5B800; color: #111; border-radius: 99px;
+  padding: 4px 10px; font-size: 12px; font-weight: 800;
+}
+.qv-soon-pill i { width: 7px; height: 7px; border-radius: 50%; background: #111; display: block; }
+.qv-soon-when { color: #ddd; font-size: 13px; font-weight: 700; }
+.qv-desc { margin: 0; color: #cfcfcf; font-size: 14px; line-height: 1.45; white-space: pre-line; }
+.qv-desc[hidden] { display: none !important; }
+.qv-st-expect { color: #F5B800; background: rgba(245, 184, 0, 0.16); }
+.qv-actions .qv-reserve { grid-column: 1 / -1; }
 #qvRows {
   display: grid;
   grid-template-columns: max-content max-content minmax(0, 1fr) minmax(0, 1fr);
@@ -314,6 +327,7 @@ body.qv-lock .mobile-fab { display: none !important; }
 .bf-soon-head h2 { margin: 16px 0 0; font-size: 22px; }
 .bf-soon-head h2 span { color: #9a9a9a; font-size: 16px; margin-left: 6px; }
 .bf-soon-head p { margin: 4px 0 16px; color: #9a9a9a; }
+.bf-soon-card { cursor: pointer; }
 .bf-soon-card .bf-soon-hit {
   display: flex;
   flex-direction: column;
