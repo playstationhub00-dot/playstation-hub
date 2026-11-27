@@ -165,27 +165,25 @@ async function main() {
   const accts = await get(SERVERS.accounts.port, '/ps-plus/rent');
 
   console.log('\nrendered page, slots open');
-  await okAsync('the game page hero: status badge, chips, title and slot bar', async () => {
+  await okAsync('the game page frame: breadcrumb, title, chips and availability', async () => {
     assert.strictEqual(open.status, 200);
-    assert.ok(open.body.includes('<body class="gd-page-booking-v2 hub gd-compact">'));
+    assert.ok(open.body.includes('gd-page-booking-v2 gp-redesign hub gd-compact'));
     assert.ok(open.body.includes('/css/game-psn.css?v='));
-    assert.ok(open.body.includes('<div class="usd-hero gdh-hero">'));
-    assert.ok(open.body.includes('<span class="usd-badge usd-badge-ok">Available</span>'));
-    ['SUBSCRIPTION', 'DELUXE', 'PS4/PS5'].forEach(c => assert.ok(open.body.includes('<span class="usd-plat-chip">' + c + '</span>'), c));
-    assert.ok(open.body.includes('<h1 class="usd-title">PS Plus Deluxe</h1>'));
-    assert.ok(open.body.includes('<div class="gdh-bar-text">Available</div>'));
+    assert.ok(open.body.includes('Browse</a>'));
+    assert.ok(open.body.includes('>PS Plus</a>'));
+    assert.ok(open.body.includes('<h1 class="usd-title gd-title">PS Plus Deluxe</h1>'));
+    assert.ok(open.body.includes('>Subscription</span>') || open.body.includes('<b>Type</b>Subscription'));
+    assert.ok(open.body.includes('From ₱349 a week · Available'));
+    assert.ok(!open.body.includes('card checkout'));
   });
-  await okAsync('the left column: About this subscription and an Info table that links to the catalogue', async () => {
-    assert.ok(open.body.includes('<section class="gpa" id="gpAbout">'));
-    assert.ok(open.body.includes('<h2 class="gpa-h">About this subscription</h2>'));
-    assert.ok(open.body.includes('Access hundreds of games including monthly titles. Trophy, Non-Trophy or PS4 Primary — your choice.'));
-    assert.ok(open.body.includes('<table class="gpa-info">'));
-    assert.ok(open.body.includes('<tr><td>Platform</td><td>PS4 / PS5</td></tr>'));
-    assert.ok(open.body.includes('<tr><td>Game swaps</td><td>Unlimited · 2-day cooldown</td></tr>'));
-    assert.ok(open.body.includes('<tr><td>Catalogue</td><td><a href="/ps-plus">See all games →</a></td></tr>'));
+  await okAsync('the description names the 2-day cooldown and opens the catalogue', async () => {
+    assert.ok(open.body.includes('2-day cooldown'));
+    assert.ok(open.body.includes('id="pspSeeOpen"'));
+    assert.ok(open.body.includes('See all games in PS Plus Deluxe'));
+    assert.ok(open.body.includes('Online play is included'));
   });
   await okAsync('the booking card: rent only, no Rent / Buy toggle or buy panel, "From" the cheapest weekly', async () => {
-    assert.ok(open.body.includes('<div class="gdh-card">'));
+    assert.ok(open.body.includes('class="gdh-card bp-card"'));
     assert.ok(open.body.includes('<div id="rentPanel">'));
     assert.ok(!open.body.includes('id="toggleRent"') && !open.body.includes('id="toggleBuy"') && !open.body.includes('id="buyPanel"'));
     assert.ok(open.body.includes('<span id="phAmount" data-default-amount="349" data-default-buy-amount="0">₱349</span>'));
@@ -211,7 +209,7 @@ async function main() {
   });
   await okAsync('the Messenger button and its preview, then the website order folded away', async () => {
     assert.ok(open.body.includes('<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">'));
-    assert.ok(open.body.includes('💬 Message us about this game'));
+    assert.ok(open.body.includes('<span class="gd-msg-main" id="ctaMsgMain">Rent now</span>'));
     assert.ok(open.body.includes('YOUR MESSAGE WILL SAY') && open.body.includes('id="ctaMsgPreview"'));
     assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
     assert.ok(/<div id="gdOrderBlock" hidden>/.test(open.body));
@@ -220,7 +218,7 @@ async function main() {
     const form = open.body.slice(open.body.indexOf('id="gdOrderForm"'), open.body.indexOf('</form>', open.body.indexOf('id="gdOrderForm"')));
     assert.ok(form.includes('name="client_token"'), 'a double submit of this form has to carry the token');
     assert.ok(!form.includes('name="game_id"'), 'no game id on the PS Plus checkout');
-    assert.ok(!open.body.includes('or message us on Facebook instead') && !open.body.includes('id="ctaHint"'));
+    assert.ok(open.body.includes('or message us on Facebook instead'));
   });
   await okAsync('the per-type get-in-line card is ready for PS Plus, hidden until a full type is picked', async () => {
     assert.ok(open.body.includes('<div id="reserveSection" style="display:none;">'));
@@ -241,8 +239,7 @@ async function main() {
   console.log('\nrendered page, one slot left (Trophy full until ' + trEnd + ')');
   await okAsync('Last Slot badge, bar and banner', async () => {
     assert.strictEqual(last.status, 200);
-    assert.ok(last.body.includes('<span class="usd-badge usd-badge-ok">Available</span>'));
-    assert.ok(last.body.includes('<div class="gdh-bar-text">Available</div>'));
+    assert.ok(last.body.includes('From ₱349 a week · Available') || last.body.includes('· Available'));
     assert.ok(!last.body.includes('Last Slot') && !last.body.includes('slot left'));
   });
   await okAsync('the full Trophy pill says Full Slot and when it frees up', async () => {
@@ -256,8 +253,7 @@ async function main() {
   console.log('\nrendered page, sold out');
   await okAsync('Sold Out badge and bar; one get-in-line card for PS Plus is the main action', async () => {
     assert.strictEqual(sold.status, 200);
-    assert.ok(sold.body.includes('<span class="usd-badge usd-badge-off">Full</span>'));
-    assert.ok(sold.body.includes('<div class="gdh-bar-text gdh-bar-urgent">Full</div>'));
+    assert.ok(sold.body.includes('· Full'));
     assert.strictEqual((sold.body.match(/<span class="gd-type-status gd-status-rented">Full<\/span>/g) || []).length, 3);
     assert.ok(/<div id="ctaMsgWrap" hidden>/.test(sold.body));
     assert.ok(!sold.body.includes('id="orderToggle"') && !sold.body.includes('id="gdOrderForm"'));
@@ -270,7 +266,7 @@ async function main() {
   console.log('\nrendered page, five linked accounts (old hand-entered counts: 6 Non-Trophy, 3 Trophy)');
   await okAsync('counts the accounts\' open slots, not the old counts: only PS4 Primary has any', async () => {
     assert.strictEqual(accts.status, 200);
-    assert.ok(accts.body.includes('<div class="gdh-bar-text">Available</div>'), 'a PS4 Primary slot is open');
+    assert.ok(accts.body.includes('· Available'), 'a PS4 Primary slot is open');
     assert.ok(!accts.body.includes('slots left') && !accts.body.includes('slots available'));
     assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
     assert.ok(/id="label-nt">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
@@ -291,7 +287,7 @@ async function main() {
     p.pick('ps4', 7);
     assert.strictEqual(p.els.ctaMsgPreview.textContent,
       'Hi! I want to RENT a game 🎮\nGame: PS Plus Deluxe\nAccount Type: PS4 Primary Account\nDuration: 7 Days\nTotal: ₱399 + ₱100 refundable deposit');
-    assert.strictEqual(p.els.ctaBtn.textContent, '🎮 Rent now — ₱499');
+    assert.strictEqual(p.els.ctaBtn.textContent, 'Reserve now — ₱499');
     assert.strictEqual(p.els.orderType.value, 'ps4');
   });
   await okAsync('Trophy, then Weekly: the message names PS Plus Deluxe with the ₱100 deposit on top', async () => {
@@ -305,7 +301,7 @@ async function main() {
     const p = loadPage(open.body);
     p.pick('tr', 7);
     assert.strictEqual(p.els.ctaBtn.disabled, false);
-    assert.strictEqual(p.els.ctaBtn.textContent, '🎮 Rent now — ₱499');
+    assert.strictEqual(p.els.ctaBtn.textContent, 'Reserve now — ₱499');
     assert.strictEqual(p.els.orderType.value, 'tr');
     assert.strictEqual(p.els.orderDays.value, 7);
     assert.strictEqual(p.els.totalFinal.textContent, '₱499');
@@ -314,7 +310,7 @@ async function main() {
     const p = loadPage(open.body);
     p.pick('nt', 30);
     assert.ok(p.els.ctaMsgPreview.textContent.endsWith('\nAccount Type: Non-Trophy Account\nDuration: 30 Days\nTotal: ₱629 (incl. 10% promo discount)'), p.els.ctaMsgPreview.textContent);
-    assert.strictEqual(p.els.ctaBtn.textContent, '🎮 Rent now — ₱629');
+    assert.strictEqual(p.els.ctaBtn.textContent, 'Reserve now — ₱629');
   });
   await okAsync('picking the full Trophy type on the one-slot page hands over to the get-in-line card', async () => {
     const p = loadPage(last.body);

@@ -2145,7 +2145,19 @@ app.get('/ps-plus/rent', async (req, res) => {
   try {
     queues = queueRules.buildQueue(await orders.listQueueCandidates('psplus'), new Date(), req.sessionId);
   } catch (e) { console.error('[psplus queue]', e.message); }
-  res.render('psplus-rent', { prices, slots, psplusCover, nextDays, promo: settings.promo, announcement: getAnnouncement(), announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues });
+  const catalog = psplusCatalogView.buildPublicCatalog({
+    games: psplusCatalogStore.all(), siteGames: getGames(), entries: getPsplus(), slugFor: gameSlug, monthlyCovers: psplusMonthlyCoversStore.all()
+  });
+  const deluxeGames = catalog.items.map(it => ({
+    n: it.n || '',
+    c: it.c || (it.i ? (String(it.i).includes('?') ? it.i : it.i + '?w=320') : '')
+  }));
+  const psplusTitle = psplusGame ? psplusGame.title : 'PS Plus Deluxe';
+  res.render('psplus-rent', Object.assign({
+    prices, slots, psplusCover, nextDays, promo: settings.promo, announcement: getAnnouncement(),
+    announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues,
+    deluxeGames
+  }, reviewBlockLocals(psplusTitle)));
 });
 
 // PS Plus admin CRUD
