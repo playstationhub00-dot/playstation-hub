@@ -367,6 +367,7 @@
     bandEl.hidden = !band;
     $('qvTitle').textContent = fact.title;
     $('qvMeta').textContent = [fact.platform, fact.genreLabel].filter(Boolean).join(' · ');
+    $('qvRows').hidden = false;
     $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
       var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
       var st = r.status === 'Last slot' ? 'last' : r.status === 'Full' ? 'full' : 'ok';
@@ -414,9 +415,11 @@
     $('qvSoon').hidden = false;
     $('qvWhen').hidden = !when;
     $('qvWhen').textContent = when;
-    $('qvDesc').hidden = !fact.description;
-    $('qvDesc').textContent = fact.description || '';
-    $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
+    $('qvDesc').hidden = true;
+    $('qvDesc').textContent = '';
+    var rows = fact.rows || [];
+    $('qvRows').hidden = !rows.length;
+    $('qvRows').innerHTML = rows.map(function (r) {
       var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
       return '<div class="qv-row">' +
         '<span class="qv-name qv-' + kind + '">' + rowIcon(kind) + esc(r.label) + '</span>' +
