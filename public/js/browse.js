@@ -323,12 +323,43 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
   function peso(n) { return n == null ? '—' : '₱' + n; }
+  function releaseWords(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return 'Releases ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+  function rowIcon(kind) {
+    if (kind === 'tr') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg>';
+    if (kind === 'ps4') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/></svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg>';
+  }
+  function showQuick() {
+    lastFocus = document.activeElement;
+    $('qv').hidden = false;
+    document.body.classList.add('qv-lock');
+    document.addEventListener('keydown', onQvKey);
+    $('qvClose').focus();
+  }
+  function clearSoonBits() {
+    $('qvSoon').hidden = true;
+    $('qvWhen').hidden = true;
+    $('qvWhen').textContent = '';
+    $('qvDesc').hidden = true;
+    $('qvDesc').textContent = '';
+    $('qvFull').hidden = false;
+  }
+  function paintCover(card) {
+    var img = card && card.querySelector('img');
+    $('qvCover').innerHTML = img ? '<img src="' + esc(img.getAttribute('src')) + '" alt="">' : '<div class="qv-cover-empty">No cover</div>';
+  }
   function openQuick(id) {
     var fact = (data.games || []).filter(function (g) { return String(g.id) === String(id); })[0];
     var card = gameCards[id];
     if (!fact || !card) return;
-    var img = card.querySelector('img');
-    $('qvCover').innerHTML = img ? '<img src="' + esc(img.getAttribute('src')) + '" alt="">' : '<div class="qv-cover-empty">No cover</div>';
+    clearSoonBits();
+    paintCover(card);
     var band = card.querySelector('.gc-band');
     var bandEl = $('qvBand');
     bandEl.className = 'qv-band' + (band ? ' ' + band.className : '');
@@ -339,13 +370,8 @@
     $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
       var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
       var st = r.status === 'Last slot' ? 'last' : r.status === 'Full' ? 'full' : 'ok';
-      var icon = kind === 'tr'
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H5a3 3 0 0 0 3 3M17 6h2a3 3 0 0 1-3 3"/></svg>'
-        : kind === 'ps4'
-        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="2.5"/><path d="M8 12h.01M11 12h.01M14.5 10.5h.01M16.8 13h.01"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 12h4M9 10v4M16.5 11h.01M18.5 13.5h.01"/></svg>';
       return '<div class="qv-row">' +
-        '<span class="qv-name qv-' + kind + '">' + icon + esc(r.label) + '</span>' +
+        '<span class="qv-name qv-' + kind + '">' + rowIcon(kind) + esc(r.label) + '</span>' +
         '<span class="qv-st qv-st-' + st + '"><i></i>' + esc(r.status) + '</span>' +
         '<span class="qv-price">Weekly<b>' + peso(r.week) + '</b></span>' +
         '<span class="qv-price">Monthly<b>' + peso(r.month) + '</b></span>' +
@@ -365,11 +391,44 @@
     }
     $('qvActions').innerHTML = actions;
     $('qvFull').href = fact.href;
-    lastFocus = document.activeElement;
-    $('qv').hidden = false;
-    document.body.classList.add('qv-lock');
-    document.addEventListener('keydown', onQvKey);
-    $('qvClose').focus();
+    showQuick();
+  }
+  function openSoon(id) {
+    var fact = (data.soon || []).filter(function (g) { return String(g.id) === String(id); })[0];
+    var card = comingCards[id];
+    if (!fact || !card) return;
+    paintCover(card);
+    var bandEl = $('qvBand');
+    if (fact.band && fact.band.key) {
+      bandEl.className = 'qv-band gc-band gc-band-' + fact.band.key;
+      bandEl.textContent = fact.band.label || '';
+      bandEl.hidden = false;
+    } else {
+      bandEl.className = 'qv-band';
+      bandEl.textContent = '';
+      bandEl.hidden = true;
+    }
+    $('qvTitle').textContent = fact.title;
+    $('qvMeta').textContent = [fact.platform, fact.genreLabel].filter(Boolean).join(' · ');
+    var when = releaseWords(fact.release);
+    $('qvSoon').hidden = false;
+    $('qvWhen').hidden = !when;
+    $('qvWhen').textContent = when;
+    $('qvDesc').hidden = !fact.description;
+    $('qvDesc').textContent = fact.description || '';
+    $('qvRows').innerHTML = (fact.rows || []).map(function (r) {
+      var kind = r.label === 'Trophy' ? 'tr' : r.label === 'PS4 Primary' ? 'ps4' : 'nt';
+      return '<div class="qv-row">' +
+        '<span class="qv-name qv-' + kind + '">' + rowIcon(kind) + esc(r.label) + '</span>' +
+        '<span class="qv-st qv-st-expect">Expected</span>' +
+        '<span class="qv-price">Weekly<b>' + peso(r.week) + '</b></span>' +
+        '<span class="qv-price">Monthly<b>' + peso(r.month) + '</b></span>' +
+        '</div>';
+    }).join('');
+    $('qvActions').innerHTML = '<button type="button" class="rcta rent bf-reserve qv-reserve" data-reserve="' + esc(fact.title) + '">Reserve a slot</button>';
+    $('qvFull').hidden = !fact.href;
+    $('qvFull').href = fact.href || '#';
+    showQuick();
   }
   $('bfGrid').addEventListener('click', function (e) {
     if (e.target.closest('.basket-add, .rcta, .bf-ask, button')) return;
@@ -378,6 +437,24 @@
     e.preventDefault();
     openQuick(item.getAttribute('data-id'));
   });
+  var coming = $('bfComing');
+  if (coming) {
+    coming.addEventListener('click', function (e) {
+      if (e.target.closest('.bf-reserve, button')) return;
+      var item = e.target.closest('.bf-item[data-coming]');
+      if (!item) return;
+      e.preventDefault();
+      openSoon(item.getAttribute('data-coming'));
+    });
+    coming.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (e.target.closest('.bf-reserve, button')) return;
+      var card = e.target.closest('.bf-soon-card');
+      if (!card) return;
+      e.preventDefault();
+      openSoon(card.parentNode.getAttribute('data-coming'));
+    });
+  }
   $('qvClose').addEventListener('click', closeQuick);
   $('qvBackdrop').addEventListener('click', closeQuick);
   document.addEventListener('click', function (e) {
@@ -385,6 +462,7 @@
     if (!reserve) return;
     e.preventDefault();
     e.stopPropagation();
+    if (reserve.closest('#qv')) closeQuick();
     if (typeof openReserveModal === 'function') openReserveModal(reserve.getAttribute('data-reserve') || '');
   });
 

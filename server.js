@@ -3211,19 +3211,38 @@ app.get('/browse', (req, res) => {
   const todayIso = new Date().toISOString().slice(0, 10);
   const facts = allGames.map(g => browseGameFacts(g, accountSummaryMap, promo, ranks.get(Number(g.id)), todayIso));
   const upcoming = sortUpcoming(getUpcoming()).map(resolveUpcomingSlots);
-  const soon = upcoming.map((u, i) => ({
-    id: u.id,
-    title: u.title,
-    text: [u.title, u.genre || '', u.description || ''].join('\n'),
-    order: i,
-    release: u.release_date && u.release_date !== 'TBA' ? u.release_date : '',
-    cover: u.cover_image || '',
-    ps4: u.platform === 'PS4' || u.platform === 'PS4/PS5',
-    ps5: !u.platform || u.platform === 'PS5' || u.platform === 'PS4/PS5',
-    genres: browseCore.genreParts(u.genre),
-    weekly: Number(u.nt_price_7d) || null,
-    soon: true
-  }));
+  const soon = upcoming.map((u, i) => {
+    const money = n => { const v = Number(n); return v > 0 ? v : null; };
+    const ntW = money(u.nt_price_7d), ntM = money(u.nt_price_30d);
+    const trW = money(u.tr_price_7d), trM = money(u.tr_price_30d);
+    const rows = [];
+    if (trW || trM) rows.push({ label: 'Trophy', week: trW, month: trM });
+    if (ntW || ntM) rows.push({ label: 'Non-Trophy', week: ntW, month: ntM });
+    if ((u.platform === 'PS4' || u.platform === 'PS4/PS5') && (trW || trM || ntW || ntM)) {
+      rows.push({ label: 'PS4 Primary', week: trW || ntW, month: trM || ntM });
+    }
+    const cat = u.price_category_id ? getPriceCategory(u.price_category_id) : null;
+    const band = cat ? tierStyle.storefrontBand(u, { name: cat.name }) : null;
+    return {
+      id: u.id,
+      title: u.title,
+      text: [u.title, u.genre || '', u.description || ''].join('\n'),
+      order: i,
+      release: u.release_date && u.release_date !== 'TBA' ? u.release_date : '',
+      cover: u.cover_image || '',
+      ps4: u.platform === 'PS4' || u.platform === 'PS4/PS5',
+      ps5: !u.platform || u.platform === 'PS5' || u.platform === 'PS4/PS5',
+      genres: browseCore.genreParts(u.genre),
+      weekly: Number(u.nt_price_7d) || null,
+      soon: true,
+      platform: u.platform || '',
+      genreLabel: browseCore.genreParts(u.genre).join(' · '),
+      description: String(u.description || '').trim(),
+      href: '/upcoming/' + seo.slug(u.title) + '-' + u.id,
+      band: band ? { key: band.key, label: band.label } : null,
+      rows
+    };
+  });
   const ps = browsePsplusData(accountSummaryMap);
   const weeks = facts.map(f => f.weekly).filter(n => n > 0);
   const week = weeks.length
