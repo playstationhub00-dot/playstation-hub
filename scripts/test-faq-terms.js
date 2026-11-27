@@ -139,7 +139,7 @@ ok('privacy and data deletion are public pages linked from the footer', () => {
   assert.ok(footer.includes('href="/terms"'));
 });
 
-ok('the shared payment sentence matches the helper, including card and bank only when on', () => {
+ok('the shared payment sentence never names card checkout', () => {
   const file = path.join(ROOT, 'views/partials/pay-note.ejs');
   const src = fs.readFileSync(file, 'utf8');
   function note(extra) {
@@ -154,7 +154,7 @@ ok('the shared payment sentence matches the helper, including card and bank only
     note(withExtras),
     pay.paymentNote({ payViaGateway: true, payment_methods: withExtras.settings.payment_methods })
   );
-  assert.ok(note(withExtras).includes('card checkout is also available'));
+  assert.ok(!note(withExtras).toLowerCase().includes('card'));
   assert.ok(note(withExtras).includes('bank transfer is also available'));
 });
 
