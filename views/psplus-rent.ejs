@@ -4,21 +4,17 @@
   <%- include('partials/head', { page: 'ps-plus', canonicalPath: '/ps-plus/rent', title: 'Rent PS Plus Deluxe | PlayStation Hub' }) %>
   <link rel="stylesheet" href="/css/style.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
+  <link rel="stylesheet" href="/css/psplus-detail.css?v=<%= assetV %>">
 </head>
-<body class="gd-page-booking-v2 hub gd-compact">
+<body class="gd-page-booking-v2 gp-redesign hub gd-compact psp-rent">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'psplus' }) %>
 
 <%#
-  PS Plus Deluxe, laid out like a game page (views/game-detail.ejs): the same
-  hero, booking card, type pills, setup guide, Messenger-first button and
-  "Or order here on the website" fold, with the same element ids, so it runs
-  on the game page's own script (public/js/game-detail.js) and cannot drift
-  from it. What stays PS Plus's own: the checkout (/order/create-psplus), its
-  prices and its waiting line (game_id 'psplus'). Like a game page it has
-  Trophy ('tr'), Non-Trophy ('nt') and PS4 Primary ('ps4', at the Trophy
-  price), with the deposit on Trophy and PS4 Primary. Rent only.
-  See docs/superpowers/specs/2026-10-26-psplus-rent-page-like-game-page-design.md.
+  PS Plus Deluxe, in the new game-page frame (gp-redesign). Checkout stays
+  /order/create-psplus, prices stay the PS Plus prices, and the waiting line
+  stays game_id 'psplus'. Rent only: no Buy panel. The same element ids drive
+  public/js/game-detail.js.
 %>
 <%
   const ntSlots  = slots.nt_slots || 0;
@@ -28,18 +24,10 @@
   const ntAvail  = ntSlots > 0;
   const ps4Avail = ps4Slots > 0;
   const allUnavail = !trAvail && !ntAvail && !ps4Avail;
-  const totalSlots = trSlots + ntSlots + ps4Slots;
   const psNext = (typeof nextDays !== 'undefined' && nextDays) ? nextDays : {};
   const trNext = psNext.tr != null ? psNext.tr : null;
   const ntNext = psNext.nt != null ? psNext.nt : null;
   const ps4Next = psNext.ps4 != null ? psNext.ps4 : null;
-  const psStatus = allUnavail
-    ? { label: 'Full', cls: 'usd-badge-off' }
-    : { label: 'Available', cls: 'usd-badge-ok' };
-  let psBarText = allUnavail ? 'Full' : 'Available';
-  const psBarUrgent = allUnavail;
-  // Cheapest live rent across both types and durations — the "From ₱X" the
-  // price header and the sticky bar show before anything is picked.
   const psPairs = [
     [prices.nt_price_7d, 7], [prices.nt_price_30d, 30], [prices.tr_price_7d, 7], [prices.tr_price_30d, 30]
   ].filter(([base]) => base > 0).map(([base, d]) => {
@@ -47,112 +35,104 @@
     return pct > 0 ? base - Math.round(base * pct / 100) : base;
   });
   const psFromPrice = psPairs.length ? Math.min(...psPairs) : 0;
+  const weekFrom = prices.nt_price_7d || psFromPrice;
+  const deluxeList = Array.isArray(deluxeGames) ? deluxeGames : [];
+  const deluxeCount = deluxeList.length;
+  const deluxePreview = deluxeList.slice(0, 6);
+  const lateFee = promo.late_fee_per_day != null ? promo.late_fee_per_day : 20;
+  const deposit = promo.deposit || 0;
 %>
 
 <div class="gd-page">
-  <div class="gd-back"><a href="/ps-plus">← Back to PS Plus</a></div>
-
-  <div class="usd-hero gdh-hero">
-    <div class="usd-hero-placeholder"></div>
-    <div class="usd-hero-scrim"></div>
-    <div class="usd-hero-in">
-      <div class="usd-badge-row">
-        <span class="usd-badge <%= psStatus.cls %>"><%= psStatus.label %></span>
-        <span class="usd-plat-chip">SUBSCRIPTION</span>
-        <span class="usd-plat-chip">DELUXE</span>
-        <span class="usd-plat-chip">PS4/PS5</span>
-      </div>
-      <h1 class="usd-title">PS Plus Deluxe</h1>
-      <div class="usd-hero-foot">
-        <div class="gdh-bar-text<%= psBarUrgent ? ' gdh-bar-urgent' : '' %>"><%= psBarText %></div>
-        <%- include('partials/brand-logo', { logoVariant: 'light', logoClass: 'usd-hero-brand', logoAlt: '', logoHidden: true }) %>
-      </div>
-    </div>
+  <div class="gd-back gp-crumb">
+    <a href="/browse">Browse</a>
+    <span> / </span>
+    <a href="/ps-plus">PS Plus</a>
+    <span> / </span>
+    <b>PS Plus Deluxe</b>
   </div>
 
-  <div class="gd-layout">
-
-    <!-- LEFT: the PS Plus cover, then what it is and the facts a game page
-         shows under "Game info". -->
-    <div class="gd-cover-col">
-      <% if (psplusCover) { %>
-      <img src="<%= psplusCover %>" alt="PS Plus Deluxe" class="gd-cover gdh-poster" width="760" height="1140"
-        onerror="this.style.display='none';document.getElementById('psCoverFallback').style.display='flex'">
-      <% } %>
-      <div id="psCoverFallback" class="gd-cover gd-cover-placeholder" style="display:<%= psplusCover ? 'none' : 'flex' %>;background:linear-gradient(135deg,#1a1000,#2a1f00);align-items:center;justify-content:center;">
-        <div style="text-align:center;">
-          <div style="font-size:3rem;">🏆</div>
-          <div style="font-size:1rem;font-weight:900;color:#FFD700;margin-top:0.5rem;">PS PLUS</div>
-          <div style="font-size:0.8rem;color:#886600;">DELUXE</div>
+  <div class="gp-grid">
+    <div class="gp-hero psp-hero">
+      <div class="gd-cover-col">
+        <% if (psplusCover) { %>
+        <img src="<%= psplusCover %>" alt="PS Plus Deluxe" class="gd-cover gdh-poster" width="760" height="1140"
+          onerror="this.style.display='none';document.getElementById('psCoverFallback').style.display='flex'">
+        <% } %>
+        <div id="psCoverFallback" class="gd-cover gd-cover-placeholder" style="display:<%= psplusCover ? 'none' : 'flex' %>;">
+          <span>PS Plus Deluxe</span>
         </div>
+        <span class="psp-plat">PS4/PS5</span>
       </div>
-      <div class="gd-platform-badge">PS4/PS5</div>
-      <% if (allUnavail) { %>
-        <div class="gc-slot-banner gc-slot-banner-none" style="z-index:3;">Full</div>
-      <% } %>
-      <section class="gpa" id="gpAbout">
-        <h2 class="gpa-h">About this subscription</h2>
-        <div class="gpa-text" id="gpaText">
-          <p><%- include('partials/swap-line') %></p>
-          <p>Access hundreds of games including monthly titles. Trophy, Non-Trophy or PS4 Primary — your choice.</p>
+      <div class="gp-title psp-title-top">
+        <div class="gd-kicker">PS4/PS5 · From ₱<%= weekFrom %> a week · <%= allUnavail ? 'Full' : 'Available' %></div>
+        <span class="psp-badge">PS Plus Deluxe</span>
+        <h1 class="usd-title gd-title">PS Plus Deluxe</h1>
+      </div>
+      <div class="psp-title-rest">
+        <div class="gd-specs">
+          <span class="gd-spec"><b>Platform</b>PS4/PS5</span>
+          <span class="gd-spec"><b>Type</b>Subscription</span>
+          <span class="gd-spec"><b>Tier</b>Deluxe</span>
         </div>
-        <h2 class="gpa-h">Info</h2>
-        <table class="gpa-info">
-          <tr><td>Platform</td><td>PS4 / PS5</td></tr>
-          <tr><td>Game swaps</td><td>Unlimited · 2-day cooldown</td></tr>
-          <tr><td>Games</td><td>Hundreds, including monthly titles</td></tr>
-          <tr><td>Catalogue</td><td><a href="/ps-plus">See all games →</a></td></tr>
-        </table>
-      </section>
+        <div class="gd-about">
+          <p>One rental, every game in the Deluxe catalogue. Play weekly or monthly on Trophy, Non-Trophy or PS4 Primary. Unlimited game swaps while your rental is active, with a 2-day cooldown. Online play is included.</p>
+        </div>
+        <button type="button" class="psp-see" id="pspSeeOpen">See all games in PS Plus Deluxe</button>
+      </div>
     </div>
 
-    <!-- RIGHT: the booking card -->
-    <div class="gd-detail-col">
-      <div class="gdh-card">
-
-      <!-- ══ PRICE HEADER ══ -->
-      <div class="gd-price-header">
-        <div>
-          <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
-          <div class="gd-ph-amount">
-            <span id="phAmount" data-default-amount="<%= psFromPrice %>" data-default-buy-amount="0">₱<%= psFromPrice %></span>
-          </div>
-          <div class="gd-ph-rider" id="phRider" style="display:none;"></div>
-        </div>
-        <div class="gd-ph-save-wrap">
-          <span class="gd-ph-was" id="phWas" style="display:none;"></span>
-          <span class="gd-ph-save" id="phSave" style="display:none;"></span>
-        </div>
-      </div>
-
-      <!-- Rent only: PS Plus has no Buy Permanent, so there is no toggle and
-           #rentPanel is always the panel showing. -->
+    <div class="gd-detail-col gp-panel">
+      <div class="gdh-card bp-card">
       <div id="rentPanel">
+        <div class="gd-price-header">
+          <div>
+            <div class="gd-ph-amount">
+              <span id="phAmount" data-default-amount="<%= psFromPrice %>" data-default-buy-amount="0">₱<%= psFromPrice %></span>
+            </div>
+            <div class="gd-ph-kicker" id="phKicker" data-default-kicker="From">From</div>
+            <div class="gd-ph-rider" id="phRider" style="display:none;"></div>
+          </div>
+          <div class="gd-ph-save-wrap">
+            <span class="gd-ph-was" id="phWas" style="display:none;"></span>
+            <span class="gd-ph-save" id="phSave" style="display:none;"></span>
+          </div>
+        </div>
 
+        <div class="bp-label">Account</div>
         <div class="gd-type-options" id="typeOptions">
           <label class="gd-type-card gd-type-pill" id="label-tr">
             <input type="radio" name="rentalType" value="tr" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🏆</span>
-            <span class="gd-type-name">Trophy</span>
-            <span class="gd-type-status <%= trAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= trAvail ? 'Available' : 'Full' %></span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Trophy</span>
+              <span class="bp-type-sub">Your profile · ₱<%= deposit %> refundable deposit</span>
+            </span>
+            <% if (trAvail) { %><span class="gd-type-status gd-status-avail">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% } %>
           </label>
           <label class="gd-type-card gd-type-pill" id="label-nt">
             <input type="radio" name="rentalType" value="nt" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🎮</span>
-            <span class="gd-type-name">Non-Trophy</span>
-            <span class="gd-type-status <%= ntAvail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ntAvail ? 'Available' : 'Full' %></span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">Non-Trophy</span>
+              <span class="bp-type-sub">Our account · no deposit</span>
+            </span>
+            <% if (ntAvail) { %><span class="gd-type-status gd-status-avail">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% } %>
           </label>
           <label class="gd-type-card gd-type-pill" id="label-ps4">
             <input type="radio" name="rentalType" value="ps4" class="gd-type-radio" onchange="onTypeChange(this)">
             <span class="gd-type-icon">🕹️</span>
-            <span class="gd-type-name">PS4 Primary</span>
-            <span class="gd-type-status <%= ps4Avail ? 'gd-status-avail' : 'gd-status-rented' %>"><%= ps4Avail ? 'Available' : 'Full' %></span>
+            <span class="bp-type-copy">
+              <span class="gd-type-name">PS4 Primary</span>
+              <span class="bp-type-sub">Your PS4 · ₱<%= deposit %> refundable deposit</span>
+            </span>
+            <% if (ps4Avail) { %><span class="gd-type-status gd-status-avail">Available</span>
+            <% } else { %><span class="gd-type-status gd-status-rented">Full</span><% } %>
           </label>
         </div>
-
         <%
-          // One slot per pill, in pill order, so each "Available in N days"
-          // lands under its own card (same reasoning as views/game-detail.ejs).
           const soonSlots = [
             (!trAvail && trNext != null && trNext > 0) ? { icon: '🏆', days: trNext } : null,
             (!ntAvail && ntNext != null && ntNext > 0) ? { icon: '🎮', days: ntNext } : null,
@@ -170,11 +150,8 @@
           <% }) %>
         </div>
         <% } %>
-
-        <button type="button" class="gd-setup-toggle" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">
-          <span>How setup works</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
+        <%- include('partials/account-guide-link') %>
+        <button type="button" class="gd-fold bp-setup" id="setupToggle" aria-expanded="false" onclick="toggleSetupPanel()">How setup works</button>
         <div class="gd-type-setup" id="typeSetupWrap" data-open="0">
           <div class="gd-setup-block" id="setup-tr">
             <p>✅ Play on <strong>YOUR OWN account</strong> and earn trophies on your profile.</p>
@@ -200,61 +177,51 @@
           </div>
         </div>
 
+        <div class="bp-label">Plan</div>
         <div class="gd-duration-grid" id="durationGrid" style="margin-top:0.75rem;">
-          <% RENTAL_DURATIONS.forEach(({ days: d, label: durLabel }) => { const pct = gameDiscountPct(prices, d, promo); %>
+          <% RENTAL_DURATIONS.forEach(({ days: d }) => { const pct = gameDiscountPct(prices, d, promo); %>
           <button class="gd-dur-btn" data-days="<%= d %>" onclick="onDurChange(this)">
-            <span class="gd-dur-days"><%= durLabel %></span>
+            <span class="gd-dur-days"><%= d === 7 ? 'Weekly' : 'Monthly' %></span>
             <span class="gd-dur-price" id="price-<%= d %>"><%- rentPriceHtml(prices, 'nt', d, promo) %></span>
+            <% if (d === 30) { %><span class="gd-dur-save" id="durSave" hidden></span><% } %>
             <% if (pct > 0) { %><span class="gd-dur-promo"><%= pct %>% OFF</span><% } %>
           </button>
           <% }) %>
         </div>
 
+        <div class="bp-label">Fees &amp; payment</div>
+        <p class="gd-fine">Trophy and PS4 Primary: ₱<%= deposit %> refundable deposit · ₱<%= lateFee %> per late day, taken from the deposit. Return on time and you get the deposit back. Non-Trophy has no deposit and no late fee.</p>
+        <p class="gd-fine gd-payline">GCash, Maya or QR Ph for local customers · PayPal for international customers · bank transfer is also available.</p>
+
         <div id="ctaMsgWrap"<%= allUnavail ? ' hidden' : '' %>>
         <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">
-          <span class="gd-msg-main" id="ctaMsgMain"><%= allUnavail ? '💬 Ask us about this game' : '💬 Message us about this game' %></span>
+          <span class="gd-msg-main" id="ctaMsgMain"><%= allUnavail ? '💬 Ask us about this game' : 'Rent now' %></span>
           <span class="gd-msg-sub" id="ctaMsgSub"><%= allUnavail ? "We'll tell you when it frees up — or suggest a similar one" : 'Opens Messenger · we reply fastest there' %></span>
         </a>
         <div class="gd-msg-preview">
           <div class="gd-msg-preview-label">YOUR MESSAGE WILL SAY</div>
           <div class="gd-msg-preview-text" id="ctaMsgPreview"></div>
         </div>
-        </div><!-- /ctaMsgWrap -->
+        </div>
         <% if (!allUnavail) { %>
         <button type="button" class="gd-alt-order" id="orderToggle" aria-expanded="<%= order_error === '1' ? 'true' : 'false' %>" aria-controls="gdOrderBlock" onclick="toggleOrderBlock()">
           Or order here on the website
-          <small><%- include('partials/pay-note').trim() %></small>
         </button>
         <div id="gdOrderBlock"<%= order_error === '1' ? '' : ' hidden' %>>
-        <% } %>
-
-        <div class="gd-total-box" id="totalBox">
-          <div class="gd-total-label">ORDER SUMMARY</div>
-          <div class="gd-total-rows" id="totalRows"></div>
-          <div class="gd-total-final">
-            <span>To send now</span>
-            <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
-          </div>
-          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
-          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
-        </div>
-
-        <% if (!allUnavail) { %>
         <form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" data-order-once>
           <%- include('partials/order-token') %>
           <input type="hidden" name="account_type" id="orderType" value="">
           <input type="hidden" name="days" id="orderDays" value="">
           <input type="text" name="fb_name" id="orderFbName" class="gd-order-name" placeholder="Your Facebook name" required autocomplete="off">
           <button type="submit" class="gd-order-btn gd-cta-wait" id="ctaBtn" disabled>Pick an account type</button>
-          <div class="gd-order-sub" id="ctaSub" style="display:none;"><%- include('partials/pay-note').trim() %></div>
+          <div class="gd-order-sub" id="ctaSub" style="display:none;">GCash, Maya or QR Ph for local customers · PayPal for international customers · bank transfer is also available.</div>
         </form>
-        </div><!-- /gdOrderBlock -->
-
+        </div>
+        <a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-ask">or message us on Facebook instead</a>
         <div id="ctaValidationMsg" style="display:none;text-align:center;margin-top:0.5rem;font-size:0.82rem;color:#ef4444;font-weight:600;"></div>
         <% if (order_error === '1') { %>
         <div class="gd-order-error">⚠️ Please pick an account type and duration, and enter your Facebook name, before continuing.</div>
         <% } %>
-
         <div id="reserveSection" style="display:none;">
           <%- include('partials/queue-line', { queues: queues, activeType: 'tr', selfRef: null, suffix: '', hideStrip: true }) %>
           <%- include('partials/noslot-options', { game_id: 'psplus', suffix: '', resValMsgId: 'reserveValidationMsg2', variant: 'card' }) %>
@@ -265,10 +232,90 @@
         <%- include('partials/noslot-options', { game_id: 'psplus', suffix: 'All', resValMsgId: 'reserveValidationMsg1', variant: 'card' }) %>
         </div>
         <% } %>
+        <div class="gd-total-box" id="totalBox">
+          <div class="gd-total-label">ORDER SUMMARY</div>
+          <div class="gd-total-rows" id="totalRows"></div>
+          <div class="gd-total-final">
+            <span>To send now</span>
+            <span id="totalFinal" style="color:var(--ps-blue);font-size:1.2rem;font-weight:900;"></span>
+          </div>
+          <div class="gd-total-refund" id="totalRefund" style="display:none;"></div>
+          <div class="gd-total-hint" id="totalHint" style="display:none;"></div>
+        </div>
+      </div>
+      </div>
+    </div>
 
-      </div><!-- /rentPanel -->
-
-      </div><!-- /gdh-card -->
+    <div class="gp-tabs" id="gpTabs">
+      <div class="gp-tablist gd-tabs" role="tablist">
+        <button type="button" class="gp-tab gd-tab on" role="tab" aria-selected="true" onclick="gpTab('gpPaneBefore', this)">Why rent it</button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneGames', this)">Included games</button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneSignin', this)">Sign-in</button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneFaq', this)">FAQ</button>
+        <button type="button" class="gp-tab gd-tab" role="tab" aria-selected="false" onclick="gpTab('gpPaneReviews', this)">Reviews</button>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneBefore">
+        <p class="gp-online"><span aria-hidden="true">🌐</span> <b>Online play</b> is included with this Deluxe rental.</p>
+        <div class="gp-why">
+          <article class="gp-why-card">
+            <header><span aria-hidden="true">🏆</span> <b>Trophy</b> <em>YOUR ACCOUNT</em></header>
+            <p>Play on your own profile and earn trophies. ₱<%= deposit %> refundable deposit.</p>
+            <ol>
+              <li><span>1</span><div>On your console, open the PSN sign-in screen and send us the QR or code on Messenger. We never ask for a password.</div></li>
+              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-on">Enable</span></span></div></li>
+              <li><span>3</span><div>Download a Deluxe game, switch back to your own profile, and play.</div></li>
+            </ol>
+            <p class="gp-why-note">Keep Console Sharing on for the whole rental.</p>
+          </article>
+          <article class="gp-why-card">
+            <header><span aria-hidden="true">🎮</span> <b>Non-Trophy</b> <em>OUR ACCOUNT</em></header>
+            <p>Play on our account. Trophies won't show on your profile. No deposit.</p>
+            <ol>
+              <li><span>1</span><div>Open the PSN sign-in screen and send us the QR or code on Messenger.</div></li>
+              <li><span>2</span><div>Go to <span class="gp-path"><span>Settings</span><span>Users and Accounts</span><span>Other</span><span>Console Sharing and Offline Play</span><span class="is-off">Leave disabled</span></span></div></li>
+              <li><span>3</span><div>Download a Deluxe game and play on our account.</div></li>
+            </ol>
+            <p class="gp-why-note">On PS4, choose Do Not Activate if you're asked.</p>
+          </article>
+        </div>
+        <p class="gp-why-ps4"><span aria-hidden="true">🕹️</span> <b>PS4 Primary</b> Your PS4. Activate as primary. ₱<%= deposit %> refundable deposit.</p>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneGames" hidden>
+        <div class="psp-inc-head">
+          <div>
+            <h2>Included in this rental</h2>
+            <p><%= deluxeCount %> games in the Deluxe catalogue, including this month’s titles. Titles below are from the live PS Plus page.</p>
+          </div>
+          <button type="button" class="psp-see" id="pspSeeTab">See all <%= deluxeCount %> games</button>
+        </div>
+        <div class="psp-preview">
+          <% deluxePreview.forEach(g => { %>
+          <div class="psp-tile">
+            <% if (g.c) { %><img src="<%= g.c %>" alt="" loading="lazy"><% } else { %><div class="psp-ph"></div><% } %>
+            <b><%= g.n %></b>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneSignin" hidden>
+        <div class="how-mini">
+          <div class="how-step"><div class="num">STEP 1</div><h3>Place the order</h3><p>Pick Trophy, Non-Trophy or PS4 Primary, and Weekly or Monthly.</p></div>
+          <div class="how-step"><div class="num">STEP 2</div><h3>Pay</h3><p>GCash, Maya or QR Ph for local customers. PayPal for international customers. Bank transfer is also available.</p></div>
+          <div class="how-step"><div class="num">STEP 3</div><h3>Scan the QR</h3><p>Bring up the sign-in screen on your console and send the QR or code. We never ask for your PSN password.</p></div>
+          <div class="how-step"><div class="num">STEP 4</div><h3>Play or swap</h3><p>Unlimited game swaps while the rental is active, with a 2-day cooldown, when a slot is free.</p></div>
+        </div>
+        <p class="how-note"><a href="/how-to-sign-in">Full sign-in steps</a></p>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneFaq" hidden>
+        <p class="gp-details-copy">Deposit, payment, and how to sign in are on the <a href="/faq">FAQ</a>. Game swaps stay unlimited while the rental is active, with a 2-day cooldown.</p>
+      </div>
+      <div class="gp-pane gd-panel" id="gpPaneReviews" hidden>
+        <% if (typeof reviews !== 'undefined') { %>
+        <%- include('partials/review-block', { reviews: reviews, reviewStats: reviewStats, recommend: (typeof recommend !== 'undefined' ? recommend : null), reviewBadge: reviewBadge, reviewDisplayName: reviewDisplayName }) %>
+        <% } else { %>
+        <p class="gp-details-copy">Reviews for this rental show here once renters leave them.</p>
+        <% } %>
+      </div>
     </div>
   </div>
 
@@ -277,16 +324,28 @@
       <div class="gd-sb-kicker" id="gdSbKicker">From</div>
       <div class="gd-sb-amount" id="gdSbAmount">₱<%= psFromPrice %></div>
     </div>
-    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? '💬 Ask us' : '💬 Message us' %></button>
+    <button type="button" class="gd-sb-btn" id="gdSbBtn" onclick="handleStickyBarClick()"><%= allUnavail ? '💬 Ask us' : 'Rent now' %></button>
   </div>
 </div>
+
+<div class="psp-modal" id="pspModal" hidden>
+  <button type="button" class="psp-back" id="pspBack" aria-label="Close"></button>
+  <div class="psp-sheet" role="dialog" aria-modal="true" aria-labelledby="pspModalTitle">
+    <button type="button" class="psp-x" id="pspClose" aria-label="Close">✕</button>
+    <h2 id="pspModalTitle">Games in PS Plus Deluxe</h2>
+    <p class="psp-count"><span id="pspCount"><%= deluxeCount %></span> games</p>
+    <input type="search" id="pspSearch" placeholder="Search the Deluxe catalogue" aria-label="Search the Deluxe catalogue" autocomplete="off">
+    <div class="psp-grid" id="pspGrid"></div>
+    <button type="button" class="psp-more" id="pspMore" hidden>Show more</button>
+    <p class="psp-foot" id="pspFoot"></p>
+  </div>
+</div>
+<script type="application/json" id="pspData"><%- JSON.stringify(deluxeList).replace(/</g, '\\u003c') %></script>
 
 <%- include('partials/footer') %>
 
 <script>const RENTAL_DURATIONS = <%- JSON.stringify(RENTAL_DURATIONS.map(d => d.days)) %>;</script>
 <script>
-// The globals public/js/game-detail.js reads, filled with PS Plus's own
-// prices: PS4 Primary at the Trophy price, like a game page, and nothing to buy.
 const PRICES = {
   nt: { 7: <%= prices.nt_price_7d %>, 30: <%= prices.nt_price_30d %> },
   tr: { 7: <%= prices.tr_price_7d %>, 30: <%= prices.tr_price_30d %> },
@@ -303,8 +362,17 @@ const ALL_UNAVAIL = <%= allUnavail ? 'true' : 'false' %>;
 const NEXT_DAYS = <%- JSON.stringify({ tr: trNext, nt: ntNext, ps4: ps4Next }) %>;
 const gameTitle = 'PS Plus Deluxe';
 const gdSlideCount = 0;
+function gpTab(id, btn) {
+  document.querySelectorAll('#gpTabs .gp-pane').forEach(function (p) { p.hidden = p.id !== id; });
+  document.querySelectorAll('#gpTabs .gp-tab').forEach(function (b) {
+    var on = b === btn;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
 </script>
 <script src="/js/messenger-text.js?v=<%= assetV %>"></script>
 <script src="/js/game-detail.js?v=<%= assetV %>"></script>
+<script src="/js/psplus-catalogue.js?v=<%= assetV %>"></script>
 </body>
 </html>
