@@ -415,9 +415,23 @@
     release: function (a, b) { return a.order - b.order; },
     az: function () { return 0; }
   };
+  // Pins lead only the untouched All games / Newest first view. Any search,
+  // filter, other tab, or other sort uses the normal order. Most recently
+  // pinned first; games with no pin stay in the sort they already had.
+  function pinsFirst(s) {
+    return s.tab === 'all' && sortOf(s) === 'newest' && !String(s.search || '').trim() && selectedCount(s) === 0;
+  }
   // Ties (and A–Z) by title; PS Plus games by name.
-  function ordered(items, sort) {
+  function ordered(items, sort, pin) {
     return items.slice().sort(function (a, b) {
+      if (pin) {
+        var ap = a.pinned ? 1 : 0, bp = b.pinned ? 1 : 0;
+        if (ap !== bp) return bp - ap;
+        if (ap) {
+          var byPin = cmp(a.pinnedAt, b.pinnedAt, -1);
+          if (byPin) return byPin;
+        }
+      }
       return ORDER[sort](a, b) || String(a.title || a.n).localeCompare(String(b.title || b.n));
     });
   }
@@ -469,8 +483,8 @@
     var newIds = newestIds(data.games);
     var kind = kindOf(s.tab);
     var sort = sortOf(s);
-    var hits = ordered(matches(data, s, ctx, newIds), sort);
     var games = kind === 'games';
+    var hits = ordered(matches(data, s, ctx, newIds), sort, games && pinsFirst(s));
     return {
       tab: s.tab,
       label: tabLabel(s.tab),

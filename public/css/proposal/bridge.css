@@ -739,6 +739,29 @@ body.hub .rcard { container-type: inline-size; container-name: gamecard; }
     padding: 2px 6px;
   }
 }
+body.hub .rcard .gc-pin {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: calc(100% - 16px);
+  background: #F5B800;
+  color: #111;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+body.hub .rcard .gc-pin svg { width: 11px; height: 11px; fill: currentColor; display: block; }
+@container gamecard (max-width: 220px) {
+  body.hub .rcard .gc-pin { top: 6px; right: 6px; font-size: 9px; padding: 2px 5px; gap: 2px; }
+  body.hub .rcard .gc-pin svg { width: 9px; height: 9px; }
+}
 body.hub .rcard .st-avail { background: #178a45; color: #fff; }
 body.hub .rcard .st-last {
   background: #dc2626;

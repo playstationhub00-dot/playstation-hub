@@ -57,8 +57,8 @@ ok('the All chip matches every row', () => {
 });
 
 ok('each chip matches only rows carrying it', () => {
-  ['new', 'soldout', 'never', 'bundle'].forEach(chip => {
-    const others = ['new', 'soldout', 'never', 'bundle'].filter(c => c !== chip);
+  ['new', 'soldout', 'pinned', 'never', 'bundle'].forEach(chip => {
+    const others = ['new', 'soldout', 'pinned', 'never', 'bundle'].filter(c => c !== chip);
     assert.strictEqual(F.rowMatches(row([chip], 'PS5'), st({ chip })), true, chip);
     assert.strictEqual(F.rowMatches(row(others, 'PS5'), st({ chip })), false, chip);
   });

@@ -110,10 +110,10 @@ ok('+ Add New → Price Category opens the categories form instead of scrolling 
 
 console.log('\nAll games');
 
-ok('toolbar: search, five chips with counts, platform and sort', () => {
+ok('toolbar: search, six chips with counts, platform and sort', () => {
   const p = panel(html, 'all');
   assert.ok(p.includes('id="gmSearch"'));
-  [['all', 'All', 3], ['new', '🆕 New', 1], ['soldout', '⛔ Sold out', 1], ['never', '💤 Not rented yet', 1], ['bundle', '📦 Bundles', 1]]
+  [['all', 'All', 3], ['new', '🆕 New', 1], ['soldout', '⛔ Sold out', 1], ['pinned', '📌 Pinned', 0], ['never', '💤 Not rented yet', 1], ['bundle', '📦 Bundles', 1]]
     .forEach(([k, label, n]) => assert.ok(p.includes('data-gm-chip="' + k + '">' + label + ' <span class="gm-chip-n">' + n + '</span>'), k));
   assert.ok(p.includes('<select id="gmPlatform"'));
   ['all', 'PS5', 'PS4', 'PS4/PS5'].forEach(v => assert.ok(p.includes('<option value="' + v + '">'), v));
