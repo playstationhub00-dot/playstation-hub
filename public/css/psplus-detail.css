@@ -5,6 +5,23 @@
   font-size: 11px; font-weight: 800;
 }
 body.gp-redesign.hub .gd-cover-col { position: relative; }
+body.psp-rent .psp-hero {
+  grid-template-areas: "cover title" "cover rest";
+}
+body.psp-rent .psp-hero .gd-cover-col { grid-area: cover; }
+body.psp-rent .psp-title-top { grid-area: title; }
+body.psp-rent .psp-title-rest { grid-area: rest; min-width: 0; }
+@media (max-width: 900px) {
+  body.psp-rent .psp-hero {
+    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-areas: "cover title" "rest rest";
+  }
+  body.psp-rent .psp-title-rest .gd-specs { margin-top: 4px; }
+}
+@media (max-width: 820px) {
+  body.psp-rent .phs-launcher { bottom: 96px; }
+  body.psp-rent .phs-panel { bottom: 156px; }
+}
 .psp-badge {
   display: inline-flex; margin: 0 0 8px; padding: 3px 8px; border-radius: 999px;
   background: #1d4ed8; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.06em;

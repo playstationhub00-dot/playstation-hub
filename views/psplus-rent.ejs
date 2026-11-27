@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/css/game-psn.css?v=<%= assetV %>">
   <link rel="stylesheet" href="/css/psplus-detail.css?v=<%= assetV %>">
 </head>
-<body class="gd-page-booking-v2 gp-redesign hub gd-compact">
+<body class="gd-page-booking-v2 gp-redesign hub gd-compact psp-rent">
 <%- include('partials/announcement') %>
 <%- include('partials/nav', { active: 'psplus' }) %>
 
@@ -53,7 +53,7 @@
   </div>
 
   <div class="gp-grid">
-    <div class="gp-hero">
+    <div class="gp-hero psp-hero">
       <div class="gd-cover-col">
         <% if (psplusCover) { %>
         <img src="<%= psplusCover %>" alt="PS Plus Deluxe" class="gd-cover gdh-poster" width="760" height="1140"
@@ -64,10 +64,12 @@
         </div>
         <span class="psp-plat">PS4/PS5</span>
       </div>
-      <div class="gp-title">
+      <div class="gp-title psp-title-top">
         <div class="gd-kicker">PS4/PS5 · From ₱<%= weekFrom %> a week · <%= allUnavail ? 'Full' : 'Available' %></div>
         <span class="psp-badge">PS Plus Deluxe</span>
         <h1 class="usd-title gd-title">PS Plus Deluxe</h1>
+      </div>
+      <div class="psp-title-rest">
         <div class="gd-specs">
           <span class="gd-spec"><b>Platform</b>PS4/PS5</span>
           <span class="gd-spec"><b>Type</b>Subscription</span>
