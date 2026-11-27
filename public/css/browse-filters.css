@@ -188,10 +188,10 @@ body.bf-lock { overflow: hidden; }
   width: min(760px, 100%);
   max-height: min(86vh, 720px);
   background: #141414; color: #fff;
-  border: 1px solid #2a2a2a; border-radius: 16px; overflow: auto;
+  border: 1px solid #2a2a2a; border-radius: 16px; overflow: hidden;
 }
-.qv-cover { background: #0d0d0d; min-height: 280px; }
-.qv-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.qv-cover { position: relative; background: #0d0d0d; overflow: hidden; min-height: 0; }
+.qv-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block; }
 .qv-cover-empty { display: grid; place-items: center; height: 100%; color: #666; }
 .qv-body { padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 10px; }
 .qv-x {
@@ -200,6 +200,7 @@ body.bf-lock { overflow: hidden; }
   background: #111; color: #fff; cursor: pointer; font-size: 16px;
 }
 .qv-band { display: flex; justify-content: center; align-items: center; min-height: 28px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; }
+.qv-band[hidden] { display: none !important; }
 .qv .gc-band-regular { background: linear-gradient(90deg, #6e747c, #c5cad1); color: #111; }
 .qv .gc-band-special { background: linear-gradient(90deg, #8a4e28, #e0a36a); color: #111; }
 .qv .gc-band-deluxe { background: linear-gradient(90deg, #5a2d86, #c9a6ff); color: #fff; }
@@ -229,6 +230,7 @@ body.bf-lock { overflow: hidden; }
   align-items: center;
   width: 100%;
 }
+#qvRows[hidden] { display: none !important; }
 .qv-row { display: contents; }
 .qv-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 800; font-size: 15px; white-space: nowrap; }
 .qv-name svg { width: 16px; height: 16px; display: block; }
@@ -306,9 +308,9 @@ body.qv-lock .mobile-fab { display: none !important; }
 @media (max-width: 700px) {
   .qv { align-items: flex-end; padding: 0; }
   .qv-panel { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); width: 100%; max-height: 92vh; min-height: 0; border-radius: 18px 18px 0 0; overflow: hidden; }
-  .qv-cover { max-height: 140px; }
-  .qv-body { min-height: 0; overflow: hidden; padding: 16px 14px 14px; }
-  #qvRows { column-gap: 8px; row-gap: 10px; flex: 1 1 auto; min-height: 0; overflow: auto; }
+  .qv-cover { height: 140px; max-height: 140px; }
+  .qv-body { min-height: 0; overflow: visible; padding: 16px 14px calc(14px + env(safe-area-inset-bottom)); }
+  #qvRows { column-gap: 8px; row-gap: 10px; flex: none; overflow: visible; }
   .qv-price { padding: 5px 6px; }
   #bfOpenN:not(:empty) {
     display: inline;
