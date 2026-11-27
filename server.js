@@ -534,8 +534,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // are per-URL, so views append ?v=<assetV> to bust it. A redeploy rewrites
 // every file's mtime, which is exactly when the version should change.
 // How It Works, game pages and the footer all call this so the local /
-// international split cannot drift. Card and bank stay in the sentence only
-// when that method is actually on (see lib/payment-copy.js).
+// international split cannot drift. The sentence never names card checkout
+// (see lib/payment-copy.js).
 app.locals.seo = seo;
 app.locals.policy = require('./lib/policy-copy');
 app.locals.faqPages = require('./lib/faq-pages');
@@ -2156,7 +2156,7 @@ app.get('/ps-plus/rent', async (req, res) => {
   res.render('psplus-rent', Object.assign({
     prices, slots, psplusCover, nextDays, promo: settings.promo, announcement: getAnnouncement(),
     announcements: getAnnouncements(), settings, order_error: req.query.order_error || null, queues,
-    deluxeGames
+    deluxeGames, voucherHint: vouchers.hintFor(promoContext().live)
   }, reviewBlockLocals(psplusTitle)));
 });
 

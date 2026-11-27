@@ -207,18 +207,25 @@ async function main() {
     assert.ok(/<span class="gd-dur-price" id="price-30"><span class="gd-dur-price-orig">₱699<\/span> ₱629<\/span>/.test(open.body), 'monthly shows the 10% promo');
     assert.ok(open.body.includes('<span class="gd-dur-promo">10% OFF</span>'));
   });
-  await okAsync('the Messenger button and its preview, then the website order folded away', async () => {
+  await okAsync('the panel matches the game card: totals, voucher, fees, and the PS Plus order form', async () => {
     assert.ok(open.body.includes('<a href="http://m.me/PlaystationHub00" target="_blank" rel="noopener" class="gd-msg-primary" id="ctaMsgPrimary" data-track-source="game">'));
     assert.ok(open.body.includes('<span class="gd-msg-main" id="ctaMsgMain">Rent now</span>'));
     assert.ok(open.body.includes('YOUR MESSAGE WILL SAY') && open.body.includes('id="ctaMsgPreview"'));
-    assert.ok(open.body.includes('id="orderToggle"') && open.body.includes('Or order here on the website'));
-    assert.ok(/<div id="gdOrderBlock" hidden>/.test(open.body));
+    assert.ok(open.body.includes('Have a voucher?'));
+    assert.ok(open.body.includes('>Total to send</span>'));
+    assert.ok(open.body.includes('Fees &amp; payment') || open.body.includes('Fees & payment'));
+    assert.ok(!open.body.includes('To send now') && !open.body.includes('ORDER SUMMARY'));
+    assert.ok(!open.body.includes('Or order here on the website'));
+    assert.ok(!/<div id="gdOrderBlock" hidden>/.test(open.body));
     assert.ok(open.body.includes('<form method="POST" action="/order/create-psplus" class="gd-order-form" id="gdOrderForm" data-order-once>'));
     assert.ok(open.body.includes('name="account_type" id="orderType"') && open.body.includes('name="days" id="orderDays"') && open.body.includes('name="fb_name" id="orderFbName"'));
+    assert.ok(open.body.includes('GCash or Maya for local customers · PayPal for international customers · bank transfer is also available'));
     const form = open.body.slice(open.body.indexOf('id="gdOrderForm"'), open.body.indexOf('</form>', open.body.indexOf('id="gdOrderForm"')));
     assert.ok(form.includes('name="client_token"'), 'a double submit of this form has to carry the token');
     assert.ok(!form.includes('name="game_id"'), 'no game id on the PS Plus checkout');
     assert.ok(open.body.includes('or message us on Facebook instead'));
+    assert.ok(open.body.includes('Non-Trophy: free 3-hour trial, no deposit.'));
+    assert.ok(open.body.includes('Trophy vs Non-Trophy vs PS4 Primary'));
   });
   await okAsync('the per-type get-in-line card is ready for PS Plus, hidden until a full type is picked', async () => {
     assert.ok(open.body.includes('<div id="reserveSection" style="display:none;">'));
@@ -242,10 +249,11 @@ async function main() {
     assert.ok(last.body.includes('From ₱349 a week · Available') || last.body.includes('· Available'));
     assert.ok(!last.body.includes('Last Slot') && !last.body.includes('slot left'));
   });
-  await okAsync('the full Trophy pill says Full Slot and when it frees up', async () => {
+  await okAsync('the full Trophy pill says Full and when it frees up', async () => {
     const n = daysUntil(trEnd);
     assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(last.body));
-    assert.ok(last.body.includes('<span class="gd-avail-soon">🏆 Available in <strong>' + n + ' days</strong></span>'));
+    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-wait">Available in /.test(last.body));
+    assert.ok(last.body.includes('Available in ' + n + ' days'));
     assert.ok(last.body.includes('const NEXT_DAYS = {"tr":' + n + ',"nt":null,"ps4":null};'));
     assert.ok(last.body.includes('const AVAIL = { nt: true, tr: false, ps4: false };'));
   });
@@ -270,14 +278,15 @@ async function main() {
     assert.ok(!accts.body.includes('slots left') && !accts.body.includes('slots available'));
     assert.ok(/id="label-tr">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
     assert.ok(/id="label-nt">[\s\S]*?<span class="gd-type-status gd-status-rented">Full<\/span>/.test(accts.body));
-    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-type-status gd-status-avail">Available<\/span>/.test(accts.body));
+    assert.ok(/id="label-ps4">[\s\S]*?<span class="gd-wait is-now">Available<\/span>/.test(accts.body));
     assert.ok(accts.body.includes('const AVAIL = { nt: false, tr: false, ps4: true };'));
   });
   await okAsync('each full type says when its soonest slot frees up; a slot in maintenance never counts', async () => {
     const tr = daysUntil(localDate(9)), nt = daysUntil(localDate(11)), ps4 = daysUntil(localDate(15));
-    assert.ok(accts.body.includes('<span class="gd-avail-soon">🏆 Available in <strong>' + tr + ' days</strong></span>'));
-    assert.ok(accts.body.includes('<span class="gd-avail-soon">🎮 Available in <strong>' + nt + ' days</strong></span>'));
-    assert.ok(!accts.body.includes('🕹️ Available in'), 'PS4 Primary has a slot now');
+    assert.ok(/id="label-tr">[\s\S]*?<span class="gd-wait">Available in /.test(accts.body));
+    assert.ok(/id="label-nt">[\s\S]*?<span class="gd-wait">Available in /.test(accts.body));
+    assert.ok(accts.body.includes('Available in ' + tr + ' days') && accts.body.includes('Available in ' + nt + ' days'));
+    assert.ok(!/id="label-ps4">[\s\S]*?Available in /.test(accts.body), 'PS4 Primary has a slot now');
     assert.ok(accts.body.includes('const NEXT_DAYS = {"tr":' + tr + ',"nt":' + nt + ',"ps4":' + ps4 + '};'));
   });
 
