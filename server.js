@@ -3034,6 +3034,8 @@ function browseGameFacts(g, accountSummaryMap, promo, rank, todayIso) {
     buy: (g.buy_nt_price || 0) > 0 || (g.buy_tr_price || 0) > 0,
     bundle: !!g.is_bundle,
     rank: rank || null,
+    pinned: !!g.pinned,
+    pinnedAt: g.pinned && g.pinnedAt ? g.pinnedAt : null,
     released: g.release_date && g.release_date !== 'TBA' && g.release_date <= todayIso ? g.release_date : null,
     deal: (gameDiscount.specialDeal(g, promo) || {}).pct || 0
   };
@@ -7950,6 +7952,19 @@ app.post('/admin/games/:id/stocked', requireAuth, (req, res) => {
   const game = getGame(req.params.id);
   if (!game) return res.redirect('/admin');
   db.get('games').find({ id: parseInt(req.params.id) }).assign({ stocked: !game.stocked }).write();
+  res.redirect('/admin?msg=updated');
+});
+
+// Pin to the top of Browse. Only the default Newest view uses this; the
+// Games list itself keeps its own sort. Unpinning clears the timestamp.
+app.post('/admin/games/:id/pin', requireAuth, (req, res) => {
+  const game = getGame(req.params.id);
+  if (!game) return res.redirect('/admin');
+  const pinned = !game.pinned;
+  db.get('games').find({ id: parseInt(req.params.id) }).assign({
+    pinned,
+    pinnedAt: pinned ? new Date().toISOString() : null
+  }).write();
   res.redirect('/admin?msg=updated');
 });
 

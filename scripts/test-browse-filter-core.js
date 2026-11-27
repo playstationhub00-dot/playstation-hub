@@ -80,6 +80,19 @@ ok('clean state drops tiers and genres with no chip and a tab with no games', ()
 });
 
 console.log('\nTabs');
+ok('pinned games lead only the default Newest view, most recently pinned first', () => {
+  const pinned = games.map(f => Object.assign({}, f));
+  pinned[0].pinned = true; pinned[0].pinnedAt = '2026-11-01T00:00:00.000Z';
+  pinned[3].pinned = true; pinned[3].pinnedAt = '2026-11-20T00:00:00.000Z';
+  const d = { games: pinned, soon, psplus };
+  const view = q => C.view(d, C.cleanState(st(q), ctx, d), ctx);
+  assert.deepStrictEqual(view({}).ids, [4, 1, 6, 2, 7, 3, 5], 'GTA was pinned after Elden, so it leads');
+  assert.deepStrictEqual(view({ sort: 'price-asc' }).ids, v({ sort: 'price-asc' }).ids, 'another sort ignores pins');
+  assert.deepStrictEqual(view({ search: 'elden' }).ids, v({ search: 'elden' }).ids, 'search ignores pins');
+  assert.deepStrictEqual(view({ stock: 'open' }).ids, [6, 2, 1, 7, 4, 5], 'a filter ignores pins');
+  assert.deepStrictEqual(view({ tab: 'new' }).ids, [6, 2, 1, 7, 4], 'New releases stays newest');
+  assert.deepStrictEqual(view({ tab: 'coming-soon' }).ids, [11, 12, 13], 'Coming soon is not the rental grid');
+});
 ok('each tab holds its own games, in its default order', () => {
   assert.deepStrictEqual(v({}).ids, [6, 2, 1, 7, 4, 3, 5], 'All games: newest first, undated last');
   assert.deepStrictEqual(v({ tab: 'most-rented' }).ids, [2, 1, 4, 7], 'Most rented: rented games only');

@@ -8,7 +8,7 @@
   const gmCounts = gamesView.counts;
   const gmPeso = v => v ? '₱' + Number(v).toLocaleString() : 'not set';
   const gmSlot = (free, cap) => (cap ? free + '/' + cap : String(free));
-  const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['never', '💤 Not rented yet'], ['bundle', '📦 Bundles']];
+  const gmChips = [['all', 'All'], ['new', '🆕 New'], ['soldout', '⛔ Sold out'], ['pinned', '📌 Pinned'], ['never', '💤 Not rented yet'], ['bundle', '📦 Bundles']];
   const psnList = (typeof games !== 'undefined' && Array.isArray(games)) ? games : [];
   const PSN_FRESH = 7 * 24 * 60 * 60 * 1000;
   const psnDue = psnList.filter(g => {
@@ -64,7 +64,7 @@
 <% if (!gmRows.length) { %>
 <div class="gm-empty">No games yet. Use + Add New to add one.</div>
 <% } else { %>
-<div class="gm-head gm-grid" id="gmHead" aria-hidden="true"><span>Game</span><span>Non-Trophy free</span><span>Trophy free</span><span>Weekly / monthly</span><span>Rental state</span><span>Earned</span><span></span></div>
+<div class="gm-head gm-grid" id="gmHead" aria-hidden="true"><span>Game</span><span>Pin</span><span>Non-Trophy free</span><span>Trophy free</span><span>Weekly / monthly</span><span>Rental state</span><span>Earned</span><span></span></div>
 <div class="gm-list" id="gmList">
   <% gmRows.forEach(r => { %>
   <div class="gm-row gm-grid" data-gm-game data-id="<%= r.id %>" data-chips="<%= r.chips.join(' ') %>" data-platform="<%= r.platform %>" data-s="<%= r.search %>" data-title="<%= r.title %>" data-earned="<%= r.money.earned %>" data-slots="<%= r.slots.total %>">
@@ -81,6 +81,13 @@
         </div>
         <% } %>
       </div>
+    </div>
+    <div class="gm-c-pin">
+      <form method="POST" action="/admin/games/<%= r.id %>/pin">
+        <button type="submit" class="gm-pin<%= r.pinned ? ' gm-pin-on' : '' %>" data-tip="<%= r.pinned ? 'Pinned to top of Browse' : 'Pin to top of Browse' %>" title="<%= r.pinned ? 'Pinned to top of Browse' : 'Pin to top of Browse' %>" aria-label="<%= r.pinned ? 'Pinned to top of Browse' : 'Pin to top of Browse' %>" aria-pressed="<%= r.pinned ? 'true' : 'false' %>">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.2-5.8-6.2-10.2a6.2 6.2 0 0 1 12.4 0C18.2 15.2 12 21 12 21z"/><circle cx="12" cy="10.6" r="1.7"/></svg>
+        </button>
+      </form>
     </div>
     <div class="gm-c-nt">
       <span class="gm-slot<%= r.slots.nt ? '' : ' gm-slot-zero' %>">Non-Trophy <%= gmSlot(r.slots.nt, r.slots.ntCap) %></span>

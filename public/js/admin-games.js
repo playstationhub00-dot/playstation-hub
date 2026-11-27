@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  var CHIPS = ['all', 'new', 'soldout', 'never', 'bundle'];
+  var CHIPS = ['all', 'new', 'soldout', 'pinned', 'never', 'bundle'];
   var PLATFORMS = ['all', 'PS5', 'PS4', 'PS4/PS5'];
   var SORTS = ['newest', 'az', 'earned', 'slots'];
   var SUBTABS = ['all', 'soon', 'requests', 'categories'];
